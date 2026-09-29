@@ -92,7 +92,7 @@ Prérequis (Node 20+, pnpm, Rust) et détails : [`docs/DEMARRAGE.md`](docs/DEMAR
 
 ## Contribuer
 
-Les contributions sont les bienvenues : voir [`CONTRIBUTING.md`](CONTRIBUTING.md). Commencez par les issues étiquetées `good first issue`.
+Les contributions sont les bienvenues : voir [`CONTRIBUTING.md`](CONTRIBUTING.md). Les règles de travail (workflow, Definition of Done, règles bloquantes) sont dans [`AGENTS.md`](AGENTS.md), pour les humains comme pour les assistants de code. Commencez par les issues étiquetées `good first issue`.
 
 ## Licence
 

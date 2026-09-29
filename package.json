@@ -10,7 +10,9 @@
     "dev:ui": "pnpm --filter @olc/desktop dev",
     "build:desktop": "pnpm --filter @olc/desktop tauri build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test && cargo test -p lcu-connector"
+    "test": "pnpm -r test && cargo test -p lcu-connector",
+    "lint": "pnpm typecheck && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "format": "cargo fmt --all"
   },
   "devDependencies": {
     "typescript": "^5.8.0"

@@ -21,10 +21,14 @@ pub fn default_lockfile_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     if cfg!(target_os = "windows") {
         for drive in ["C", "D", "E"] {
-            paths.push(PathBuf::from(format!(r"{drive}:\Riot Games\League of Legends\lockfile")));
+            paths.push(PathBuf::from(format!(
+                r"{drive}:\Riot Games\League of Legends\lockfile"
+            )));
         }
     } else if cfg!(target_os = "macos") {
-        paths.push(PathBuf::from("/Applications/League of Legends.app/Contents/LoL/lockfile"));
+        paths.push(PathBuf::from(
+            "/Applications/League of Legends.app/Contents/LoL/lockfile",
+        ));
     }
     paths
 }
@@ -62,7 +66,10 @@ fn client_cmdline() -> Option<String> {
             .output()
             .ok()?
     } else {
-        Command::new("ps").args(["-A", "-o", "args="]).output().ok()?
+        Command::new("ps")
+            .args(["-A", "-o", "args="])
+            .output()
+            .ok()?
     };
     String::from_utf8_lossy(&output.stdout)
         .lines()

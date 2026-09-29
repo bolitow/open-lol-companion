@@ -35,6 +35,8 @@ Autres commandes :
 | `pnpm dev:ui` | Interface seule dans le navigateur (http://localhost:1420), sans Rust |
 | `pnpm test` | Tests TypeScript + tests du connecteur LCU |
 | `pnpm typecheck` | Vérification des types |
+| `pnpm lint` | Typage + `cargo fmt --check` + `cargo clippy` (doit être à 0 avant une PR) |
+| `pnpm format` | Formate le code Rust |
 | `pnpm build:desktop` | Installeur de production pour votre OS |
 
 ## 3. Vérifier la connexion au client LoL
@@ -64,6 +66,7 @@ Règle d'or : ce qui touche au système (fichiers, processus, réseau local, sec
 
 ## 5. Première contribution
 
+0. Lisez [`AGENTS.md`](../AGENTS.md) : workflow, Definition of Done et règles bloquantes.
 1. Prenez un ticket du [sprint en cours](sprint-1.md) ou étiqueté `good first issue`.
 2. Branche `feat/…` ou `fix/…`, puis pull request vers `main`.
 3. La CI compile et teste sur Linux, Windows et macOS : elle doit être verte.
