@@ -24,6 +24,8 @@ Tailles : S ≤ 1 jour, M ≤ 3 jours, L ≤ 1 semaine.
 
 ## Définition de « terminé »
 
+Le bloc « Definition of Done » de [`AGENTS.md`](../AGENTS.md) §4 est rempli dans chaque PR. En particulier :
+
 - Le code est fusionné dans `main` par pull request, CI verte sur les trois OS.
 - Testé à la main sur Windows **et** macOS (ou signalé dans la PR si un seul OS était disponible).
 - Aucune chaîne de texte en dur dans l'interface une fois #21 fusionné.

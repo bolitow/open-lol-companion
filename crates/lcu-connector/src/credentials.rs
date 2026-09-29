@@ -75,23 +75,36 @@ impl Credentials {
 
     /// URL du WebSocket (protocole WAMP) pour s'abonner aux événements.
     pub fn websocket_url(&self) -> String {
-        let scheme = if self.protocol == "https" { "wss" } else { "ws" };
+        let scheme = if self.protocol == "https" {
+            "wss"
+        } else {
+            "ws"
+        };
         format!("{scheme}://127.0.0.1:{}", self.port)
     }
 
     /// Valeur de l'en-tête `Authorization` : Basic base64("riot:<mot de passe>").
     pub fn authorization_header(&self) -> String {
-        format!("Basic {}", STANDARD.encode(format!("riot:{}", self.password)))
+        format!(
+            "Basic {}",
+            STANDARD.encode(format!("riot:{}", self.password))
+        )
     }
 }
 
 fn parse_num<T: std::str::FromStr>(field: &'static str, value: &str) -> Result<T, ParseError> {
-    value.parse().map_err(|_| ParseError::InvalidField { field, value: value.to_string() })
+    value.parse().map_err(|_| ParseError::InvalidField {
+        field,
+        value: value.to_string(),
+    })
 }
 
 fn non_empty(field: &'static str, value: &str) -> Result<String, ParseError> {
     if value.is_empty() {
-        Err(ParseError::InvalidField { field, value: String::new() })
+        Err(ParseError::InvalidField {
+            field,
+            value: String::new(),
+        })
     } else {
         Ok(value.to_string())
     }
@@ -101,7 +114,9 @@ fn non_empty(field: &'static str, value: &str) -> Result<String, ParseError> {
 fn arg_value<'a>(cmdline: &'a str, key: &str) -> Option<&'a str> {
     let start = cmdline.find(key)? + key.len();
     let rest = &cmdline[start..];
-    let end = rest.find(|c: char| c == '"' || c.is_whitespace()).unwrap_or(rest.len());
+    let end = rest
+        .find(|c: char| c == '"' || c.is_whitespace())
+        .unwrap_or(rest.len());
     Some(&rest[..end]).filter(|v| !v.is_empty())
 }
 
@@ -129,14 +144,20 @@ mod tests {
     #[test]
     fn refuse_les_lockfiles_invalides() {
         assert_eq!(Credentials::from_lockfile("  "), Err(ParseError::Empty));
-        assert_eq!(Credentials::from_lockfile("a:b:c"), Err(ParseError::FieldCount(3)));
+        assert_eq!(
+            Credentials::from_lockfile("a:b:c"),
+            Err(ParseError::FieldCount(3))
+        );
         assert!(matches!(
             Credentials::from_lockfile("LeagueClient:1:notaport:pw:https"),
             Err(ParseError::InvalidField { field: "port", .. })
         ));
         assert!(matches!(
             Credentials::from_lockfile("LeagueClient:1:2::https"),
-            Err(ParseError::InvalidField { field: "password", .. })
+            Err(ParseError::InvalidField {
+                field: "password",
+                ..
+            })
         ));
     }
 
@@ -144,7 +165,10 @@ mod tests {
     fn lit_les_arguments_windows_entre_guillemets() {
         let cmd = r#""C:/Riot Games/League of Legends/LeagueClientUx.exe" "--riotclient-auth-token=x" "--app-port=61234" "--remoting-auth-token=tok_EN" "--app-pid=4242""#;
         let c = Credentials::from_process_args(cmd).unwrap();
-        assert_eq!((c.port, c.pid, c.password.as_str()), (61234, 4242, "tok_EN"));
+        assert_eq!(
+            (c.port, c.pid, c.password.as_str()),
+            (61234, 4242, "tok_EN")
+        );
     }
 
     #[test]

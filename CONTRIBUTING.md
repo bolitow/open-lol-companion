@@ -4,9 +4,10 @@ Merci de votre intérêt ! Le projet est en phase de cadrage : les premières co
 
 ## Avant de coder
 
-1. Lisez le [cahier des charges](docs/cahier-des-charges.md), en particulier la section 2 (conformité Riot).
-2. Choisissez une issue (idéalement `good first issue`) et signalez en commentaire que vous la prenez.
-3. Pour une nouvelle fonctionnalité, ouvrez d'abord une issue pour en discuter.
+1. Lisez [`AGENTS.md`](AGENTS.md) : ce sont les règles de travail du projet (workflow, Definition of Done, anti-patterns), identiques pour les humains et les assistants de code.
+2. Lisez le [cahier des charges](docs/cahier-des-charges.md), en particulier la section 2 (conformité Riot).
+3. Choisissez une issue (idéalement `good first issue`) et signalez en commentaire que vous la prenez.
+4. Pour une nouvelle fonctionnalité, ouvrez d'abord une issue pour en discuter.
 
 ## Règles non négociables
 
@@ -18,9 +19,10 @@ Merci de votre intérêt ! Le projet est en phase de cadrage : les premières co
 ## Workflow
 
 1. Forkez le dépôt et créez une branche : `feat/draft-lane-swap`, `fix/overlay-dpi`…
-2. Commits courts et explicites (convention [Conventional Commits](https://www.conventionalcommits.org/fr/) conseillée).
+2. Commits au format [Conventional Commits](https://www.conventionalcommits.org/fr/), en français (détail : [`rules/documentation.md`](rules/documentation.md)).
 3. Ouvrez une pull request vers `main` en liant l'issue (`Closes #12`).
-4. La CI doit passer et une revue est requise avant la fusion.
+4. Remplissez le bloc « Definition of Done » du modèle de PR et ajoutez vos lignes au [`CHANGELOG.md`](CHANGELOG.md).
+5. La CI doit passer (Linux, Windows, macOS) et une revue est requise avant la fusion.
 
 ## Tester sur les deux OS
 
