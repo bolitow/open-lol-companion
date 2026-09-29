@@ -3,16 +3,89 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, "chore/**", "feat/**", "fix/**"]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   secrets-scan:
+    name: Recherche de secrets
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Recherche de secrets (gitleaks)
-        uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  lockfiles:
+    name: Lockfiles
+    # Génère pnpm-lock.yaml et Cargo.lock s'ils manquent (premier push) et les commite sur la branche.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Générer les lockfiles manquants
+        run: |
+          [ -f pnpm-lock.yaml ] || pnpm install --lockfile-only
+          [ -f Cargo.lock ] || cargo generate-lockfile
+          if [ -n "$(git status --porcelain -- pnpm-lock.yaml Cargo.lock)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add pnpm-lock.yaml Cargo.lock
+            git commit -m "chore: génération des lockfiles"
+            git push
+          fi
+
+  checks:
+    name: Tests et typage (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Dépendances
+        run: if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install --no-frozen-lockfile; fi
+      - run: pnpm typecheck
+      - run: pnpm --filter @olc/shared test
+      - run: pnpm --filter @olc/desktop build
+      - run: cargo test -p lcu-connector
+
+  desktop:
+    name: App desktop (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Dépendances
+        run: if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install --no-frozen-lockfile; fi
+      - name: Tests du connecteur LCU
+        run: cargo test -p lcu-connector
+      - name: Compilation de l'app (debug, sans installeur)
+        run: pnpm --filter @olc/desktop tauri build --debug --no-bundle

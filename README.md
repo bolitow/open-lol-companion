@@ -4,7 +4,11 @@ Application compagnon **League of Legends** gratuite et open source, pour **Wind
 
 Draft assisté par IA, import automatique des runes, sorts et items, overlays en jeu, enregistrement des parties avec clips et replays, analyse post-game et site de statistiques. Tout est gratuit, sans publicité et sans abonnement.
 
-> ⚠️ Projet en phase de cadrage : aucune version utilisable n'est encore publiée. Le cahier des charges complet est dans [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md).
+> ⚠️ Projet en tout début de développement : aucune version utilisable n'est encore publiée.
+>
+> - Cahier des charges : [`docs/cahier-des-charges.md`](docs/cahier-des-charges.md)
+> - Lancer le projet en local : [`docs/DEMARRAGE.md`](docs/DEMARRAGE.md)
+> - Sprint en cours : [`docs/sprint-1.md`](docs/sprint-1.md)
 
 ## Fonctionnalités prévues
 
@@ -45,6 +49,7 @@ L'app ne parle à Riot qu'en local (client LoL). Les statistiques agrégées vie
 
 ```
 apps/desktop        App Tauri (Windows + macOS) : draft, imports, overlays, enregistrement
+crates/lcu-connector  Connexion au client League of Legends (Rust)
 apps/web            Site Next.js : tierlist, builds, profils, leaderboards
 services/api        API interne consommée par l'app et le site
 services/collector  Workers de collecte Riot API et agrégation des stats
@@ -75,6 +80,15 @@ Le projet respecte la [Developer API Policy](https://support-developer.riotgames
 - la clé API Riot n'est **jamais** commitée ni embarquée dans l'app : elle reste dans les secrets du backend.
 
 Toute contribution qui enfreint ces règles sera refusée.
+
+## Démarrage rapide
+
+```bash
+pnpm install
+pnpm dev
+```
+
+Prérequis (Node 20+, pnpm, Rust) et détails : [`docs/DEMARRAGE.md`](docs/DEMARRAGE.md).
 
 ## Contribuer
 
