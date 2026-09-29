@@ -17,7 +17,11 @@ fn lcu_status() -> LcuStatus {
             port: Some(creds.port),
             message: format!("API locale sur {}", creds.base_url()),
         },
-        Err(e) => LcuStatus { connected: false, port: None, message: e.to_string() },
+        Err(e) => LcuStatus {
+            connected: false,
+            port: None,
+            message: e.to_string(),
+        },
     }
 }
 
