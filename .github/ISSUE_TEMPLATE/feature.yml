@@ -1,0 +1,19 @@
+name: Fonctionnalité
+description: Proposer une fonctionnalité
+labels: ["enhancement"]
+body:
+  - type: textarea
+    attributes:
+      label: Besoin
+      description: Quel problème de joueur cela résout-il ?
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Proposition
+  - type: checkboxes
+    attributes:
+      label: Conformité Riot
+      options:
+        - label: Cette fonctionnalité n'utilise que des informations visibles dans le client de jeu et n'automatise aucune décision.
+          required: true

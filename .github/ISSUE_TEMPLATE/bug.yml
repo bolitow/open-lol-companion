@@ -1,0 +1,19 @@
+name: Bug
+description: Signaler un problème
+labels: ["bug"]
+body:
+  - type: textarea
+    attributes:
+      label: Ce qui se passe
+      description: Étapes pour reproduire, résultat obtenu, résultat attendu.
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Système
+      options: ["Windows 10", "Windows 11", "macOS (Apple Silicon)", "macOS (Intel)", "Site web"]
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: Version de l'app et patch LoL
