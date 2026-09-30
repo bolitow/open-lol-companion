@@ -321,6 +321,14 @@ impl<T: Transport> Collector<T> {
 
         match failure {
             Some(e) => Err(e),
+            // Les dernières tâches peuvent avoir terminé toute la collecte en
+            // consommant exactement le budget. Après leur drainage, il n'y a
+            // alors aucune raison de demander une reprise ou un budget supérieur.
+            None if stop == Some(StopReason::CallBudget)
+                && self.storage.next_due_in(run.id, target).await?.is_none() =>
+            {
+                Ok(StopReason::Finished)
+            }
             None => Ok(stop.unwrap_or(StopReason::Finished)),
         }
     }

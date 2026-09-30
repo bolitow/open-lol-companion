@@ -69,6 +69,10 @@ Avec une clé de développement (100 requêtes / 2 min), il faut **au moins 45 m
 
 Codes de sortie : `0` cible atteinte, `2` exécution terminée sous la cible, `3` exécution en pause (arrêt demandé, budget, durée ou clé refusée), `1` erreur.
 
+Si le dernier appel consomme exactement le budget et qu'aucun travail nécessaire ne reste,
+l'exécution se termine normalement (`0`, ou `2` si les sources sont épuisées sous la cible).
+Le budget ne provoque une pause que lorsqu'il reste du travail à effectuer.
+
 ## Arrêt et reprise
 
 Tout l'avancement vit dans PostgreSQL (`collection_jobs`). Chaque résultat est écrit dans la même transaction que l'état de son travail et le compteur d'appels.

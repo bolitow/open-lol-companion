@@ -408,6 +408,67 @@ async fn le_budget_d_appels_arrete_la_collecte_en_gardant_la_progression() {
 }
 
 #[tokio::test]
+async fn exact_call_budget_finishes_completed_collection() {
+    for concurrency in [1, 2] {
+        let db = db_or_skip!();
+        let fake = FakeRiot::default();
+        fake.league_page("GOLD", "I", 1, &["seed-a"]);
+        fake.history("seed-a", &["EUW1_1", "EUW1_2"]);
+        fake.game("EUW1_1", recent());
+        fake.game("EUW1_2", recent());
+        let collector = Collector::new(
+            db.storage.clone(),
+            fake,
+            RuntimeOptions {
+                concurrency,
+                ..fast_options()
+            },
+        );
+        let p = RunParams {
+            call_budget: 4,
+            ..params(1, 1)
+        };
+        let run_id = collector.start_run(&p, now_ms()).await.unwrap();
+        let outcome = collector.execute(run_id, never()).await.unwrap();
+        let r = report::generate(&db.storage, run_id).await.unwrap();
+        let resumed = collector.execute(run_id, never()).await.unwrap();
+        let calls = collector.calls();
+        db.cleanup().await;
+
+        assert_eq!(outcome.status, RunStatus::Completed);
+        assert_eq!(outcome.reason, StopReason::Finished);
+        assert_eq!(r.matches.retained, 1);
+        assert_eq!(r.timelines.available, 1);
+        // La candidate restante n'empêche pas la clôture une fois la cible atteinte.
+        assert_eq!(r.matches.not_fetched, 1);
+        assert_eq!(resumed.status, RunStatus::Completed);
+        assert_eq!(calls, 4);
+    }
+}
+
+#[tokio::test]
+async fn exact_call_budget_finishes_exhausted_sources() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed-a"]);
+    fake.history("seed-a", &[]);
+    let collector = Collector::new(db.storage.clone(), fake, fast_options());
+    let p = RunParams {
+        call_budget: 2,
+        ..params(1, 1)
+    };
+    let run_id = collector.start_run(&p, now_ms()).await.unwrap();
+    let outcome = collector.execute(run_id, never()).await.unwrap();
+    let calls = collector.calls();
+    db.cleanup().await;
+
+    assert_eq!(outcome.status, RunStatus::Incomplete);
+    assert_eq!(outcome.reason, StopReason::Finished);
+    assert_eq!(outcome.retained, 0);
+    assert_eq!(calls, 2);
+}
+
+#[tokio::test]
 async fn l_arret_demande_met_l_execution_en_pause() {
     let db = db_or_skip!();
     let fake = FakeRiot::default();

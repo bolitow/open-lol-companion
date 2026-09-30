@@ -18,6 +18,10 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 - `pnpm test` et la CI lancent aussi les tests du collecteur (PostgreSQL 17 en CI Linux, compilation et tests sous Windows et macOS quand le collecteur change) (#17).
 - Code Rust formaté avec `cargo fmt`.
 
+### Corrigé
+
+- Collecteur : une exécution dont le dernier appel consomme exactement le budget est terminée normalement, au lieu d'exiger une reprise inutile (#17).
+
 ## [0.1.0] — 2026-09-29
 
 ### Ajouté
