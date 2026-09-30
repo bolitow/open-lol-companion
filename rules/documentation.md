@@ -32,4 +32,4 @@ Types : `feat`, `fix`, `docs`, `test`, `refactor`, `perf`, `chore`, `ci`. Porté
 
 - Titre au format commit, description via le modèle (`.github/pull_request_template.md`) avec le bloc DoD.
 - `Closes #…` pour chaque ticket terminé.
-- CI verte sur Linux, Windows et macOS + une revue avant fusion ; fusion par *merge commit* ou *squash* selon la taille.
+- CI verte (Linux ; Windows et macOS si l'app, le connecteur ou `@olc/shared` changent) + une revue avant fusion ; fusion par *merge commit* ou *squash* selon la taille. Une PR en brouillon ne lance pas les builds Windows et macOS.
