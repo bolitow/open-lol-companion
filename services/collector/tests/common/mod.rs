@@ -64,6 +64,17 @@ impl TestDb {
         })
     }
 
+    /// Autre pool sur la même base : simule un second processus, qui a ses propres
+    /// connexions et les perd toutes s'il est tué.
+    pub async fn separate_storage(&self) -> Storage {
+        let pool = PgPoolOptions::new()
+            .max_connections(4)
+            .connect_with(self.admin.clone().database(&self.name))
+            .await
+            .unwrap();
+        Storage::from_pool(pool)
+    }
+
     pub async fn cleanup(self) {
         self.storage.pool().close().await;
         if let Ok(mut conn) = self.admin.connect().await {

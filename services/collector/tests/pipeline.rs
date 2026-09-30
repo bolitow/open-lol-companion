@@ -300,16 +300,21 @@ async fn apres_un_arret_brutal_la_timeline_reprend_sans_retelecharger_le_detail(
     fake.league_page("GOLD", "I", 1, &["seed-a"]);
     fake.history("seed-a", &["EUW1_1"]);
     fake.game("EUW1_1", recent());
-    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    // Le processus « tué » a son propre pool, comme un vrai processus.
+    let crashed = db.separate_storage().await;
+    let collector = Collector::new(crashed.clone(), fake.clone(), fast_options());
     let run_id = collector.start_run(&params(1, 1), now_ms()).await.unwrap();
     let task = {
         let collector = collector.clone();
         tokio::spawn(async move { collector.execute(run_id, never()).await })
     };
-    // Le détail est enregistré, la timeline est en cours : on tue le processus.
+    // Le détail est enregistré, la timeline est en cours : on tue le processus,
+    // ce qui ferme aussi ses connexions (et annule ses transactions ouvertes).
     notify.notified().await;
     task.abort();
     let _ = task.await;
+    drop(collector);
+    crashed.pool().close().await;
     assert_eq!(db.scalar("SELECT count(*) FROM matches").await, 1);
     assert_eq!(
         db.scalar(

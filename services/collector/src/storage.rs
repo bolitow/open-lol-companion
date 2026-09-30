@@ -157,8 +157,12 @@ pub struct CollectorLock {
 }
 
 impl CollectorLock {
-    /// Ferme la connexion et relâche le verrou immédiatement.
-    pub async fn release(self) {
+    /// Relâche le verrou immédiatement puis ferme la connexion.
+    pub async fn release(mut self) {
+        let _ = sqlx::query("SELECT pg_advisory_unlock($1)")
+            .bind(COLLECTOR_LOCK_KEY)
+            .execute(&mut self.conn)
+            .await;
         let _ = self.conn.close().await;
     }
 }
@@ -375,7 +379,10 @@ impl Storage {
     }
 
     /// Réserve le prochain travail exécutable. Les détails de parties ne sont plus
-    /// réservés une fois la cible atteinte (parties retenues + détails en cours).
+    /// réservés une fois la cible atteinte (parties retenues + détails en cours), ni
+    /// tant qu'une découverte est en attente ou en cours : l'ordre d'alternance entre
+    /// joueurs ne dépend ainsi pas du moment où chaque historique arrive. Une découverte
+    /// en attente de nouvelle tentative ne bloque pas les détails.
     pub async fn claim_next(&self, run_id: i64, target: i64) -> Result<Option<Job>, StorageError> {
         let mut tx = self.pool.begin().await?;
         let row = sqlx::query(
@@ -389,7 +396,12 @@ impl Storage {
              WHERE j.run_id = $1
                AND j.state IN ('pending', 'retry_wait')
                AND j.next_attempt_at <= now()
-               AND (j.kind <> 'match' OR counts.engaged < $2)
+               AND (j.kind <> 'match' OR (
+                        counts.engaged < $2
+                        AND NOT EXISTS (
+                            SELECT 1 FROM collection_jobs d
+                            WHERE d.run_id = $1 AND d.kind IN ('seed_page', 'match_ids')
+                              AND d.state IN ('pending', 'running'))))
              ORDER BY CASE j.kind WHEN 'seed_page' THEN 0 WHEN 'match_ids' THEN 1
                                   WHEN 'timeline' THEN 2 ELSE 3 END,
                       j.sort_key, j.id
