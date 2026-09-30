@@ -1,0 +1,33 @@
+[package]
+name = "olc-collector"
+version = "0.1.0"
+description = "Collecteur Riot API : seeds league-v4, parties et timelines match-v5, stockage PostgreSQL reprenable."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish = false
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync", "signal"] }
+rustls.workspace = true
+reqwest.workspace = true
+# Racines publiques embarquées : même comportement sur Windows, macOS et Linux.
+webpki-roots = "1"
+# Requêtes vérifiées à l'exécution uniquement (pas de `query!`) : compiler ne demande pas de base.
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "json", "migrate", "macros"] }
+clap = { version = "4.5", features = ["derive", "env"] }
+dotenvy = "0.15"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[features]
+# Réponses Riot synthétiques pour les tests d'intégration (`tests/`).
+test-fixtures = []
+
+[dev-dependencies]
+olc-collector = { path = ".", features = ["test-fixtures"] }
+tokio = { workspace = true, features = ["test-util"] }

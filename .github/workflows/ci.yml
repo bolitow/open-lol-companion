@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       desktop: ${{ steps.filter.outputs.desktop }}
+      collector: ${{ steps.filter.outputs.collector }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -45,10 +46,28 @@ jobs:
               - "Cargo.lock"
               - "pnpm-lock.yaml"
               - ".github/workflows/ci.yml"
+            collector:
+              - "services/collector/**"
+              - "Cargo.toml"
+              - "Cargo.lock"
+              - ".github/workflows/ci.yml"
 
   checks:
     name: Tests et typage (Linux)
     runs-on: ubuntu-latest
+    # Base jetable pour les tests d'intégration du collecteur (aucun appel à Riot).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -63,11 +82,37 @@ jobs:
       - run: pnpm typecheck
       - name: Formatage Rust
         run: cargo fmt --all --check
-      - name: Clippy (connecteur LCU)
-        run: cargo clippy -p lcu-connector --all-targets -- -D warnings
+      - name: Clippy (connecteur LCU et collecteur)
+        run: cargo clippy -p lcu-connector -p olc-collector --all-targets -- -D warnings
       - run: pnpm --filter @olc/shared test
       - run: pnpm --filter @olc/desktop build
       - run: cargo test -p lcu-connector
+      - name: Tests du collecteur (PostgreSQL)
+        run: cargo test -p olc-collector
+        env:
+          OLC_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  # Le collecteur doit aussi tourner sur les postes de développement Windows et macOS
+  # (tests sans PostgreSQL : ceux qui en ont besoin sont ignorés).
+  collector:
+    name: Collecteur (${{ matrix.os }})
+    needs: changes
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (needs.changes.outputs.collector == 'true' && !github.event.pull_request.draft)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p olc-collector
+      - run: cargo clippy -p olc-collector --all-targets -- -D warnings
 
   # Windows et macOS : les runners les plus lents. Seulement si le code de l'app ou
   # du connecteur change, et pas sur une PR en brouillon.
