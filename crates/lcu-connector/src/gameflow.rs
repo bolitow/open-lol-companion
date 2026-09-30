@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::JsonApiEvent;
+
 /// Phase de jeu renvoyée par `GET /lol-gameflow/v1/gameflow-phase`.
 /// L'app change d'écran selon cette valeur (section 4.3 du cahier des charges).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,6 +38,14 @@ impl GameflowPhase {
     pub fn is_in_game(self) -> bool {
         matches!(self, Self::GameStart | Self::InProgress | Self::Reconnect)
     }
+
+    /// Nouvelle phase portée par un événement WebSocket, s'il concerne cet endpoint.
+    pub fn from_event(event: &JsonApiEvent) -> Option<Self> {
+        if event.uri != Self::ENDPOINT {
+            return None;
+        }
+        Self::deserialize(&event.data).ok()
+    }
 }
 
 #[cfg(test)]
@@ -48,6 +58,26 @@ mod tests {
         assert!(p.is_champ_select());
         let p: GameflowPhase = serde_json::from_str("\"InProgress\"").unwrap();
         assert!(p.is_in_game());
+    }
+
+    #[test]
+    fn lit_la_phase_d_un_evenement() {
+        let event = |uri: &str, data| JsonApiEvent {
+            uri: uri.into(),
+            event_type: "Update".into(),
+            data,
+        };
+        let phase = GameflowPhase::from_event(&event(GameflowPhase::ENDPOINT, "Lobby".into()));
+        assert_eq!(phase, Some(GameflowPhase::Lobby));
+        assert_eq!(
+            GameflowPhase::from_event(&event("/lol-chat/v1/me", "Lobby".into())),
+            None
+        );
+        // Suppression de la ressource : pas de donnée, pas de phase.
+        assert_eq!(
+            GameflowPhase::from_event(&event(GameflowPhase::ENDPOINT, serde_json::Value::Null)),
+            None
+        );
     }
 
     #[test]
