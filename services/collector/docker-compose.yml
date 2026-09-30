@@ -1,0 +1,22 @@
+# PostgreSQL local pour le collecteur (Windows, macOS, Linux avec Docker Desktop ou équivalent).
+# Lancement : docker compose -f services/collector/docker-compose.yml up -d
+# Identifiants de développement uniquement : ne pas réutiliser sur un serveur.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: olc
+    ports:
+      - "5432:5432"
+    volumes:
+      - olc-collector-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  olc-collector-data:

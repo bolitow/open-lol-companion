@@ -33,7 +33,7 @@ Autres commandes :
 | Commande | Effet |
 | --- | --- |
 | `pnpm dev:ui` | Interface seule dans le navigateur (http://localhost:1420), sans Rust |
-| `pnpm test` | Tests TypeScript + tests du connecteur LCU |
+| `pnpm test` | Tests TypeScript + tests Rust du connecteur LCU et du collecteur |
 | `pnpm typecheck` | Vérification des types |
 | `pnpm lint` | Typage + `cargo fmt --check` + `cargo clippy` (doit être à 0 avant une PR) |
 | `pnpm format` | Formate le code Rust |
@@ -52,6 +52,16 @@ OLC_LOL_LOCKFILE=/tmp/lockfile pnpm dev
 
 (Sous PowerShell : `$env:OLC_LOL_LOCKFILE="C:\temp\lockfile"; pnpm dev`.)
 
+## 3 bis. Collecteur Riot (backend, facultatif)
+
+Le collecteur `services/collector` récupère des parties via l'API Riot et les stocke dans PostgreSQL. Il ne dépend ni de l'app ni du client LoL.
+
+1. PostgreSQL : `docker compose -f services/collector/docker-compose.yml up -d` (ou une installation locale).
+2. Copiez `services/collector/.env.example` en `.env` à la racine, renseignez `RIOT_API_KEY` (clé de développement du Developer Portal, valable 24 h) et `DATABASE_URL`.
+3. `cargo run -p olc-collector --release -- run --target 50` pour un petit essai, puis `report <n°>`.
+
+Tests PostgreSQL : définissez `OLC_TEST_DATABASE_URL` (ex. `postgres://postgres:postgres@localhost:5432/postgres`) ; sans elle, `pnpm test` les ignore. Détails : [`services/collector/README.md`](../services/collector/README.md).
+
 ## 4. Où coder quoi
 
 | Dossier | Contenu | Langage |
@@ -60,7 +70,8 @@ OLC_LOL_LOCKFILE=/tmp/lockfile pnpm dev
 | `apps/desktop/src-tauri` | Cœur de l'app : commandes appelées par l'interface, overlays, capture | Rust |
 | `apps/desktop/src` | Interface de l'app | React + TypeScript |
 | `packages/shared` | Types et utilitaires partagés (phases, Data Dragon) | TypeScript |
-| `apps/web`, `services/*` | Site et backend (pas encore initialisés) | — |
+| `services/collector` | Collecteur Riot API (parties, timelines) vers PostgreSQL | Rust |
+| `apps/web`, `services/api` | Site et API (pas encore initialisés) | — |
 
 Règle d'or : ce qui touche au système (fichiers, processus, réseau local, secrets) vit en Rust ; l'interface appelle des commandes Tauri (`invoke("…")`) et ne voit jamais de mot de passe.
 

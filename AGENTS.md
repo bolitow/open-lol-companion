@@ -135,7 +135,7 @@ Ne lire un fichier `rules/` que si la tâche touche son sujet — jamais par pr�
 | -------------------- | --------------------------------------------------------------- |
 | `pnpm install`       | Dépendances JS                                                  |
 | `pnpm dev`           | App desktop en développement                                    |
-| `pnpm test`          | Tests TypeScript + `cargo test -p lcu-connector`                |
+| `pnpm test`          | Tests TypeScript + tests Rust du connecteur LCU et du collecteur |
 | `pnpm lint`          | Typage TS + `cargo fmt --check` + `cargo clippy -D warnings`    |
 | `pnpm format`        | Formate le code Rust                                            |
 | `pnpm build:desktop` | Installeur de production pour l'OS courant                      |
