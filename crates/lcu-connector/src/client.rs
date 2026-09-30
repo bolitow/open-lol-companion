@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
+use reqwest::header::HeaderValue;
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
 use rustls::crypto::{ring, verify_tls12_signature, verify_tls13_signature, CryptoProvider};
 use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
-use rustls::{ClientConfig, DigitallySignedStruct, SignatureScheme};
+use rustls::{CertificateError, ClientConfig, DigitallySignedStruct, SignatureScheme};
 use serde::de::DeserializeOwned;
 use thiserror::Error;
 
@@ -15,6 +16,10 @@ pub enum ClientError {
     Http(#[from] reqwest::Error),
     #[error("WebSocket du client LoL : {0}")]
     WebSocket(#[from] tokio_tungstenite::tungstenite::Error),
+    #[error("configuration TLS invalide : {0}")]
+    Tls(#[from] rustls::Error),
+    #[error("en-tête d'authentification invalide")]
+    Header(#[from] reqwest::header::InvalidHeaderValue),
 }
 
 /// Client HTTPS de la League Client API, lié à une session du client
@@ -28,13 +33,10 @@ pub struct LcuClient {
 impl LcuClient {
     pub fn new(creds: &Credentials) -> Result<Self, ClientError> {
         let mut headers = reqwest::header::HeaderMap::new();
-        let mut auth = reqwest::header::HeaderValue::from_str(&creds.authorization_header())
-            .expect("en-tête base64 toujours valide");
-        auth.set_sensitive(true);
-        headers.insert(reqwest::header::AUTHORIZATION, auth);
+        headers.insert(reqwest::header::AUTHORIZATION, auth_header(creds)?);
 
         let http = reqwest::Client::builder()
-            .use_preconfigured_tls((*tls_config()).clone())
+            .use_preconfigured_tls(tls_config()?)
             .default_headers(headers)
             .build()?;
         Ok(Self {
@@ -59,23 +61,31 @@ impl LcuClient {
     }
 }
 
+/// En-tête `Authorization` commun au HTTP et au WebSocket, masqué dans les logs des librairies.
+pub(crate) fn auth_header(creds: &Credentials) -> Result<HeaderValue, ClientError> {
+    let mut value = HeaderValue::from_str(&creds.authorization_header())?;
+    value.set_sensitive(true);
+    Ok(value)
+}
+
+/// Seul hôte pour lequel le certificat du client LoL est accepté (voir `Credentials::base_url`).
+const LOCALHOST: &str = "127.0.0.1";
+
 /// Configuration TLS commune au client HTTPS et au WebSocket.
 ///
-/// Le client LoL présente un certificat auto-signé par Riot. On accepte donc le
-/// certificat sans le vérifier ; c'est sans risque ici car on ne se connecte
-/// qu'à `127.0.0.1` (voir `Credentials::base_url`) : rien ne transite hors de la machine.
-pub(crate) fn tls_config() -> Arc<ClientConfig> {
+/// Le client LoL présente un certificat auto-signé par Riot : on l'accepte sans
+/// vérifier sa chaîne, mais uniquement pour `127.0.0.1`. Toute autre destination est refusée.
+pub(crate) fn tls_config() -> Result<ClientConfig, ClientError> {
     let provider = Arc::new(ring::default_provider());
     let config = ClientConfig::builder_with_provider(provider.clone())
-        .with_safe_default_protocol_versions()
-        .expect("versions TLS par défaut supportées par ring")
+        .with_safe_default_protocol_versions()?
         .dangerous()
         .with_custom_certificate_verifier(Arc::new(LocalClientVerifier(provider)))
         .with_no_client_auth();
-    Arc::new(config)
+    Ok(config)
 }
 
-/// Accepte le certificat du client local, mais vérifie quand même les signatures de la poignée de main.
+/// Accepte le certificat du client local (et lui seul), en vérifiant quand même les signatures de la poignée de main.
 #[derive(Debug)]
 struct LocalClientVerifier(Arc<CryptoProvider>);
 
@@ -84,11 +94,17 @@ impl ServerCertVerifier for LocalClientVerifier {
         &self,
         _end_entity: &CertificateDer<'_>,
         _intermediates: &[CertificateDer<'_>],
-        _server_name: &ServerName<'_>,
+        server_name: &ServerName<'_>,
         _ocsp_response: &[u8],
         _now: UnixTime,
     ) -> Result<ServerCertVerified, rustls::Error> {
-        Ok(ServerCertVerified::assertion())
+        if server_name.to_str() == LOCALHOST {
+            Ok(ServerCertVerified::assertion())
+        } else {
+            Err(rustls::Error::InvalidCertificate(
+                CertificateError::NotValidForName,
+            ))
+        }
     }
 
     fn verify_tls12_signature(
@@ -133,5 +149,19 @@ mod tests {
         let creds = Credentials::from_lockfile("LeagueClient:1:2:secret:https").unwrap();
         let client = LcuClient::new(&creds).unwrap();
         assert_eq!(client.base_url, "https://127.0.0.1:2");
+    }
+
+    #[test]
+    fn n_accepte_le_certificat_que_pour_la_machine_locale() {
+        let verifier = LocalClientVerifier(Arc::new(ring::default_provider()));
+        let verify = |host: &'static str| {
+            let name = ServerName::try_from(host).unwrap();
+            let cert = CertificateDer::from(Vec::new());
+            verifier.verify_server_cert(&cert, &[], &name, &[], UnixTime::now())
+        };
+        assert!(verify("127.0.0.1").is_ok());
+        assert!(verify("10.0.0.1").is_err());
+        assert!(verify("localhost").is_err());
+        assert!(verify("example.com").is_err());
     }
 }

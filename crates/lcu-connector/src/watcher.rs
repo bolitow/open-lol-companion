@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Duration;
 
 use futures_util::{SinkExt, StreamExt};
@@ -5,11 +6,11 @@ use serde::Serialize;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
-use tokio_tungstenite::tungstenite::http::HeaderValue;
+use tokio_tungstenite::tungstenite::http::header::AUTHORIZATION;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{Connector, MaybeTlsStream, WebSocketStream};
 
-use crate::client::{tls_config, ClientError, LcuClient};
+use crate::client::{auth_header, tls_config, ClientError, LcuClient};
 use crate::wamp::{parse_event, subscribe_message};
 use crate::{discover, Credentials, GameflowPhase};
 
@@ -64,12 +65,11 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
 /// Ouvre le WebSocket et s'abonne avant de lire la phase courante, pour ne rater aucun changement.
 async fn open_session(creds: &Credentials) -> Result<(Socket, GameflowPhase), ClientError> {
     let mut request = creds.websocket_url().into_client_request()?;
-    let mut auth = HeaderValue::from_str(&creds.authorization_header())
-        .expect("en-tête base64 toujours valide");
-    auth.set_sensitive(true);
-    request.headers_mut().insert("Authorization", auth);
+    request
+        .headers_mut()
+        .insert(AUTHORIZATION, auth_header(creds)?);
 
-    let connector = Connector::Rustls(tls_config());
+    let connector = Connector::Rustls(Arc::new(tls_config()?));
     let (mut socket, _) =
         tokio_tungstenite::connect_async_tls_with_config(request, None, false, Some(connector))
             .await?;
