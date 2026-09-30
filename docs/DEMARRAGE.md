@@ -69,6 +69,6 @@ Règle d'or : ce qui touche au système (fichiers, processus, réseau local, sec
 0. Lisez [`AGENTS.md`](../AGENTS.md) : workflow, Definition of Done et règles bloquantes.
 1. Prenez un ticket du [sprint en cours](sprint-1.md) ou étiqueté `good first issue`.
 2. Branche `feat/…` ou `fix/…`, puis pull request vers `main`.
-3. La CI compile et teste sur Linux, Windows et macOS : elle doit être verte.
+3. La CI tourne sur la PR (pas au push ni après la fusion) : Linux à chaque fois, Windows et macOS quand l'app, le connecteur ou `@olc/shared` changent (et pas en brouillon). Elle doit être verte.
 
 Et avant tout : relisez la section 2 du [cahier des charges](cahier-des-charges.md) sur la conformité Riot.

@@ -22,7 +22,7 @@ Merci de votre intérêt ! Le projet est en phase de cadrage : les premières co
 2. Commits au format [Conventional Commits](https://www.conventionalcommits.org/fr/), en français (détail : [`rules/documentation.md`](rules/documentation.md)).
 3. Ouvrez une pull request vers `main` en liant l'issue (`Closes #12`).
 4. Remplissez le bloc « Definition of Done » du modèle de PR et ajoutez vos lignes au [`CHANGELOG.md`](CHANGELOG.md).
-5. La CI doit passer (Linux, Windows, macOS) et une revue est requise avant la fusion.
+5. La CI doit passer (Linux ; Windows et macOS quand l'app ou le connecteur changent) et une revue est requise avant la fusion.
 
 ## Tester sur les deux OS
 

@@ -1,0 +1,25 @@
+name: Nettoyage des caches
+
+# Les caches d'une PR ne servent qu'à elle : on les supprime dès sa fermeture
+# pour ne pas saturer les 10 Go de cache du dépôt (un cache Tauri pèse 400 à 700 Mo).
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    name: Suppression des caches de la PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supprimer les caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          REF: refs/pull/${{ github.event.pull_request.number }}/merge
+        run: |
+          for id in $(gh cache list --ref "$REF" --limit 100 --json id --jq '.[].id'); do
+            gh cache delete "$id"
+          done
