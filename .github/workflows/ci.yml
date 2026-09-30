@@ -58,7 +58,7 @@ jobs:
     # Base jetable pour les tests d'intégration du collecteur (aucun appel à Riot).
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
         ports:

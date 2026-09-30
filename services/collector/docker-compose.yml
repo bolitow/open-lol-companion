@@ -3,7 +3,7 @@
 # Identifiants de développement uniquement : ne pas réutiliser sur un serveur.
 services:
   postgres:
-    image: postgres:16
+    image: postgres:17
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres

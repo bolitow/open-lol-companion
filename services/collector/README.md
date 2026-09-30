@@ -23,7 +23,7 @@ Il valide la chaîne ; il ne prétend pas représenter toute la population EUW.
 ## Prérequis
 
 - Rust stable (voir [`docs/DEMARRAGE.md`](../../docs/DEMARRAGE.md)).
-- PostgreSQL 14 ou plus. Le plus simple : `docker compose -f services/collector/docker-compose.yml up -d`, sinon une installation locale (Postgres.app ou Homebrew sur macOS, installeur officiel sous Windows).
+- PostgreSQL 17. Le plus simple : `docker compose -f services/collector/docker-compose.yml up -d`, sinon une installation locale (Postgres.app ou Homebrew sur macOS, installeur officiel sous Windows).
 - Une clé Riot (compte [Developer Portal](https://developer.riotgames.com)). La clé de développement **expire après 24 h**.
 
 ## Configuration

@@ -15,7 +15,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 - CI allégée : elle ne tourne plus qu'à l'ouverture et à la mise à jour des PR (plus au push ni après fusion) ; builds Windows et macOS seulement si l'app, le connecteur ou `@olc/shared` changent, et pas en brouillon ; caches d'une PR supprimés à sa fermeture ; plus d'artefact gitleaks.
 - `CLAUDE.md` renvoie désormais vers `AGENTS.md`.
-- `pnpm test` et la CI lancent aussi les tests du collecteur (PostgreSQL en CI Linux, compilation et tests sous Windows et macOS quand le collecteur change) (#17).
+- `pnpm test` et la CI lancent aussi les tests du collecteur (PostgreSQL 17 en CI Linux, compilation et tests sous Windows et macOS quand le collecteur change) (#17).
 - Code Rust formaté avec `cargo fmt`.
 
 ## [0.1.0] — 2026-09-29
