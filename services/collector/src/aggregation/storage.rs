@@ -97,17 +97,7 @@ pub async fn recalculate_filtered(
         }
     }
     let report = accumulator.finish();
-    // En REPEATABLE READ, un concurrent ayant publié après notre instantané provoque
-    // une erreur de sérialisation : il ne peut pas être écrasé par des données anciennes.
-    sqlx::query(
-        "INSERT INTO champion_stats_snapshot (id, source_snapshot_at, published_at, report)
-        VALUES (1, transaction_timestamp(), clock_timestamp(), $1)
-        ON CONFLICT (id) DO UPDATE SET source_snapshot_at = EXCLUDED.source_snapshot_at,
-            published_at = EXCLUDED.published_at, report = EXCLUDED.report",
-    )
-    .bind(sqlx::types::Json(&report))
-    .execute(&mut *tx)
-    .await?;
+    super::snapshot::publish(&mut tx, &report).await?;
     tx.commit().await?;
     Ok(report)
 }

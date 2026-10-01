@@ -10,6 +10,7 @@ use olc_collector::aggregation::{
 use olc_collector::config::RunParams;
 use olc_collector::model::fixtures::match_detail;
 use serde_json::{json, Value};
+use sqlx::Row;
 
 macro_rules! db_or_skip {
     () => {
@@ -36,10 +37,108 @@ async fn insert_match(db: &TestDb, run_id: i64, id: &str) {
 }
 
 async fn published(db: &TestDb) -> Value {
-    sqlx::query_scalar("SELECT report FROM champion_stats_snapshot WHERE id = 1")
-        .fetch_one(db.storage.pool())
+    let rows = sqlx::query("SELECT s.storage_version,s.report,c.section,c.items
+        FROM champion_stats_snapshot s LEFT JOIN champion_stats_snapshot_chunks c
+        ON c.snapshot_id=s.id AND s.storage_version=2 WHERE s.id=1 ORDER BY c.section,c.chunk_index")
+        .fetch_all(db.storage.pool())
         .await
-        .unwrap()
+        .unwrap();
+    let mut report: Value = rows[0].get("report");
+    if rows[0].get::<i16, _>("storage_version") == 2 {
+        for section in [
+            "coverage",
+            "groups",
+            "bans",
+            "builds",
+            "skill_levels",
+            "item_events",
+        ] {
+            report[section] = json!([]);
+        }
+        for row in rows {
+            if let Some(section) = row.get::<Option<String>, _>("section") {
+                let items: Value = row.get("items");
+                report[&section]
+                    .as_array_mut()
+                    .unwrap()
+                    .extend(items.as_array().unwrap().iter().cloned());
+            }
+        }
+    }
+    report
+}
+
+#[tokio::test]
+async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_chunks").await;
+    let teams = json!([
+        {"teamId":100,"bans":(1..=5).map(|turn|json!({"championId":100+turn,"pickTurn":turn})).collect::<Vec<_>>()},
+        {"teamId":200,"bans":(6..=10).map(|turn|json!({"championId":100+turn,"pickTurn":turn})).collect::<Vec<_>>()}
+    ]);
+    sqlx::query("UPDATE matches SET detail=jsonb_set(detail,'{info,teams}',$1) WHERE match_id='EUW1_chunks'")
+        .bind(teams).execute(db.storage.pool()).await.unwrap();
+    let events: Vec<_> = (1..=700)
+        .map(|item| {
+            json!({
+                "type":"ITEM_PURCHASED","timestamp":item,"participantId":1,"itemId":item
+            })
+        })
+        .chain(std::iter::once(
+            json!({"type":"SKILL_LEVEL_UP","timestamp":1000,
+        "participantId":1,"skillSlot":2,"levelUpType":"NORMAL"}),
+        ))
+        .collect();
+    let timeline = json!({"metadata":{"matchId":"EUW1_chunks"},"info":{
+        "participants":(1..=10).map(|id|json!({"participantId":id})).collect::<Vec<_>>(),
+        "frames":[{"timestamp":0,"events":events}]}});
+    sqlx::query("INSERT INTO match_timelines(match_id,status,timeline) VALUES ('EUW1_chunks','available',$1)")
+        .bind(timeline).execute(db.storage.pool()).await.unwrap();
+    let report = recalculate(&db.storage, 1).await.unwrap();
+    assert_eq!(
+        db.scalar("SELECT storage_version::bigint FROM champion_stats_snapshot WHERE id=1")
+            .await,
+        2
+    );
+    assert!(
+        db.scalar("SELECT count(*) FROM champion_stats_snapshot_chunks")
+            .await
+            > 0
+    );
+    assert!(
+        db.scalar(
+            "SELECT count(*) FROM champion_stats_snapshot_chunks WHERE section='item_events'"
+        )
+        .await
+            > 1
+    );
+    let complete = serde_json::to_value(report).unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+    ] {
+        assert!(
+            !complete[section].as_array().unwrap().is_empty(),
+            "{section}"
+        );
+    }
+    assert_eq!(published(&db).await, complete);
+    // Le binaire historique ne sait pas désigner la version de stockage : il doit
+    // échouer plutôt que d'associer de nouvelles métadonnées aux anciens morceaux.
+    assert!(
+        sqlx::query("UPDATE champion_stats_snapshot SET report=$1 WHERE id=1")
+            .bind(&complete)
+            .execute(db.storage.pool())
+            .await
+            .is_err()
+    );
+    assert_eq!(published(&db).await, complete);
+    db.cleanup().await;
 }
 
 #[tokio::test]
@@ -86,6 +185,37 @@ async fn aggregation_recalcule_sans_doubler_les_parties_liees_a_deux_runs() {
     assert_eq!(empty.exclusions.get("remake"), Some(&2));
     assert!(empty.groups.is_empty());
     assert_eq!(published(&db).await["groups"], json!([]));
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM champion_stats_snapshot_chunks")
+            .await,
+        0
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_insertion_partielle_de_morceaux_conserve_l_ancienne_publication() {
+    let db = db_or_skip!();
+    let id = run(&db).await;
+    insert_match(&db, id, "EUW1_before").await;
+    recalculate(&db.storage, 1).await.unwrap();
+    let before = published(&db).await;
+    insert_match(&db, id, "EUW1_after").await;
+    sqlx::raw_sql(
+        "CREATE FUNCTION reject_chunk() RETURNS trigger LANGUAGE plpgsql AS $$
+        BEGIN IF NEW.section='groups' THEN RAISE EXCEPTION 'synthetic chunk failure'; END IF;
+        RETURN NEW; END $$;
+        CREATE TRIGGER reject_chunk BEFORE INSERT ON champion_stats_snapshot_chunks
+        FOR EACH ROW EXECUTE FUNCTION reject_chunk();",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    assert!(matches!(
+        recalculate(&db.storage, 1).await,
+        Err(AggregationError::Database(_))
+    ));
+    assert_eq!(published(&db).await, before);
     db.cleanup().await;
 }
 
@@ -330,6 +460,7 @@ async fn aggregation_filtre_et_lit_les_observations_recentes_et_la_timeline() {
         .any(|b| b.category == "skill_order" && b.selection == vec![2]));
     assert_eq!(report.coverage[0].counts.ranked_participations, 1);
     assert_eq!(report.filters, filters);
+    assert_eq!(published(&db).await, serde_json::to_value(&report).unwrap());
     assert_eq!(
         recalculate_filtered(&db.storage, 1, &filters)
             .await

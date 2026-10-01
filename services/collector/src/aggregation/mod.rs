@@ -3,6 +3,7 @@
 mod builds;
 mod model;
 mod scheduler;
+mod snapshot;
 mod storage;
 
 pub use model::{AggregationOptions, AggregationReport, ChampionStats, GroupKey, Role};
@@ -20,6 +21,8 @@ pub enum AggregationError {
     InvalidThreshold,
     #[error("un autre calcul utilise déjà cette base")]
     Busy,
+    #[error("élément d'agrégation trop volumineux ; l'ancien instantané est conservé")]
+    SnapshotTooLarge,
     #[error("échec PostgreSQL pendant l'agrégation ; aucune nouvelle publication confirmée")]
     Database(#[from] sqlx::Error),
     #[error("rapport d'agrégation non sérialisable")]

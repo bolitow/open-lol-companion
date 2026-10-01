@@ -142,6 +142,46 @@ Aucune nouvelle dépendance ni commande Tauri ; aucun contrat `@olc/shared` modi
 
 ## Campagne longue — en cours
 
+### Incident du deuxième recalcul horaire
+
+Le calcul de 09:44 UTC a échoué à 09:45:35 : la représentation interne du rapport
+dépassait la limite PostgreSQL de 268 435 455 octets pour un objet JSONB.
+Le premier calcul horaire de 08:44 UTC restait publié (869 sources, 851 incluses,
+18 remakes). La collecte et les quotas continuaient normalement ; aucun 401/403.
+
+Le correctif #18 répartit les six listes en morceaux de 512 entrées / 1 Mio de JSON
+au maximum et publie tête et morceaux atomiquement. Les métadonnées et le schéma
+JSON public sont conservés. Le lecteur API, livré séparément par le #19, accepte les anciens et nouveaux formats,
+filtre chaque morceau en SQL et reconstruit les listes côté Rust. Les tests couvrent
+les limites, l'ordre, l'équivalence, la publication vide et les échecs partiels/au commit.
+Un ancien binaire ne peut pas écraser silencieusement un instantané au nouveau format.
+Ce changement évite aussi le buffer de sérialisation du rapport entier à la publication ;
+l'accumulateur reste proportionnel au volume en mémoire.
+
+Le binaire de recette est construit à part depuis le commit `5467fa4`, avec ce seul
+correctif ; les chantiers API/imports en cours ne sont pas déployés dans le runner.
+
+Recalcul de reprise réussi sur un instantané pris à **10:17:44 UTC** : **1 273 sources,
+1 253 incluses, 20 remakes**, aucun autre rejet. Durée **51,27 s**, pic RSS
+**753 975 296 octets** (environ 719 Mio), aucun swap mesuré.
+Les six listes sont publiées intégralement en **2 538 morceaux** : 13 009 groupes,
+2 855 bans, 209 898 builds, 222 754 niveaux de compétences, 849 120 événements
+d'objets et 102 lignes de couverture. Contrôle SQL indépendant : **12 835 participations**
+pour les groupes ALL comme pour la couverture, aucune incohérence victoires/défaites,
+aucune performance d'objet Arena exposée. La base occupe alors environ 456 Mo.
+
+Validation locale du correctif et de sa compatibilité API : **261 tests réussis**
+(253 Rust, 8 TypeScript, y compris les autres chantiers présents dans le dépôt),
+`pnpm lint` sans avertissement. Tests rouges observés avant correction : ancien stockage
+non découpé et lecteur API incapable de lire les morceaux. Preuves locales ignorées :
+`target/ticket18-chunks-full-tests.log`, `target/ticket18-chunks-lint.log`,
+`target/ticket18-chunks-real.log`. Revue indépendante : OK avec réserve de suivi mémoire.
+Le binaire isolé passe aussi **158 tests du collecteur en release** et Clippy sans
+avertissement. Le runner reprend la même campagne à **10:20:20 UTC**, avec un binaire
+copié dans `target/ticket18-runtime/olc-collector` pour rester indépendant des builds
+de développement. L'échéance du 2 octobre à 07:44:36 UTC reste inchangée.
+À la fin de cette recette de 10:20 UTC, le correctif était encore local, sans commit ni push supplémentaires.
+
 Campagne **#1**, démarrée le **1er octobre à 07:44:36 UTC** (09:44:36 Paris),
 échéance **2 octobre à 07:44:36 UTC** (09:44:36 Paris). Runs #3 à #17.
 Le processus local est détaché du terminal ; `caffeinate` maintient l’activité de
@@ -172,3 +212,11 @@ Limites : échantillon issu de seeds classés, pas tous les joueurs Riot ; Swarm
 sur fixture seulement ; pas de recette Windows native ; ni conservation publique
 ni API produit traitées ici. La borne de campagne concerne les appels Riot : une
 finalisation SQL bloquée peut retarder le retour du processus sans nouvel appel.
+
+## Livraison du correctif de stockage
+
+Lot #18 isolé pour la PR #56 : `pnpm test` avec PostgreSQL 17 réussit
+(177 tests Rust et 5 TypeScript), `pnpm lint` et `git diff --check` réussissent.
+Revue stricte indépendante : OK après clarification de la livraison distincte du
+lecteur API par le #19. Aucun import LCU ni mécanisme de quotas #19 dans ce lot.
+La recette native Windows et le bilan final de la campagne restent à consigner.

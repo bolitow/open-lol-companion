@@ -264,8 +264,21 @@ relatifs au début du match, sans identifiant de joueur.
 
 ## Publication, stockage et exploitation
 
-`champion_stats_snapshot` contient une ligne : `source_snapshot_at`, `published_at`,
-`report`. Les lecteurs doivent la lire en une requête. Un recalcul remplace le rapport,
+`champion_stats_snapshot` contient une tête : `source_snapshot_at`, `published_at`,
+`storage_version`, `report`. En stockage v2, `report` contient les métadonnées ;
+les six listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`)
+sont dans `champion_stats_snapshot_chunks`, ordonnées par section et `chunk_index`.
+Chaque morceau contient au plus 512 entrées et 1 Mio de JSON sérialisé avant conversion
+PostgreSQL. Une entrée individuelle dépassant cette borne fait échouer la publication,
+sans supprimer de statistiques. Le rapport JSON public et le CLI restent au schéma 2.
+Les lecteurs doivent lire tête et morceaux en une seule requête ou dans une transaction
+`REPEATABLE READ`, filtrer les morceaux puis reconstruire les listes côté application.
+Ne pas reconstituer le rapport entier en JSONB SQL : sa limite interne est de 256 Mio.
+La migration conserve les anciens rapports complets en stockage v1 jusqu'au prochain
+calcul réussi ; la lecture API des deux formats est livrée séparément par le #19. Un ancien écrivain est refusé après
+le passage en v2, pour éviter un mélange silencieux de versions.
+
+Un recalcul remplace la tête et tous les morceaux dans une seule transaction,
 sans additionner l'ancien. Transaction `REPEATABLE READ`, lecture par lots de 25,
 verrou de calcul distinct de la collecte, publication atomique ; une base sans données
 éligibles publie un bilan vide. Un conflit de publication n'écrase pas un instantané
@@ -280,7 +293,7 @@ Aucun superviseur système n'est installé par le binaire.
 Tables : `collection_runs`, `collection_jobs`, `seed_players`, `run_discoveries`,
 `run_matches`, `matches`, `match_timelines`, `participant_rank_observations`,
 `collection_campaigns`, `campaign_runs`, `static_data_releases`, `static_data_manifest`,
-`champion_stats_snapshot`. Les détails et timelines restent complets en JSONB ; les
+`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB ; les
 observations de rang gardent leur historique daté.
 
 Les lots bornent les données brutes simultanément lues, **pas toute la mémoire** :
