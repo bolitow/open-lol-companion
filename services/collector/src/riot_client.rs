@@ -1,14 +1,11 @@
 //! Client Riot Web API : routage, construction des requêtes, transport HTTPS et
 //! classement des réponses en erreurs exploitables.
 //!
-//! Endpoints (catalogue officiel, vérifié le 30/09/2026) :
-//! - league-v4 : `GET /lol/league/v4/entries/{queue}/{tier}/{division}?page=` sur `euw1` ;
-//! - match-v5 : `GET /lol/match/v5/matches/by-puuid/{puuid}/ids`, `/matches/{matchId}`
-//!   et `/matches/{matchId}/timeline` sur `europe`.
-//!
-//! Sources : <https://developer.riotgames.com/apis#league-v4>,
-//! <https://developer.riotgames.com/apis#match-v5>,
-//! <https://developer.riotgames.com/docs/lol#routing-values>.
+//! Catalogue officiel vérifié le 01/10/2026 : league-v4 (pages par rang, listes
+//! Master/Grandmaster/Challenger et classement par PUUID) sur la plateforme ;
+//! match-v5 (historiques, détails et timelines) sur sa région de routage.
+//! Sources : <https://developer.riotgames.com/api-details/league-v4>,
+//! <https://developer.riotgames.com/api-details/match-v5>.
 
 use std::future::Future;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -21,7 +18,7 @@ use rustls::crypto::ring;
 use rustls::{ClientConfig, RootCertStore};
 use thiserror::Error;
 
-use crate::config::{ApiKey, Division, Tier, RANKED_SOLO_QUEUE, RANKED_SOLO_QUEUE_ID};
+use crate::config::{ApiKey, ConfigError, Division, Tier, RANKED_SOLO_QUEUE, RANKED_SOLO_QUEUE_ID};
 use crate::rate_limit::{parse_retry_after, Governor, LimitScope, RateHeaders};
 
 /// Valeur de routage : plateforme (league-v4) ou région (match-v5).
@@ -29,21 +26,57 @@ use crate::rate_limit::{parse_retry_after, Governor, LimitScope, RateHeaders};
 pub enum Route {
     Euw1,
     Europe,
+    Americas,
+    Asia,
+    Sea,
+    Platform(&'static str),
 }
 
 impl Route {
-    pub fn host(self) -> &'static str {
-        match self {
-            Route::Euw1 => "euw1.api.riotgames.com",
-            Route::Europe => "europe.api.riotgames.com",
-        }
+    pub fn host(self) -> String {
+        let name = match self {
+            Route::Euw1 => "euw1",
+            Route::Europe => "europe",
+            Route::Americas => "americas",
+            Route::Asia => "asia",
+            Route::Sea => "sea",
+            Route::Platform(name) => name,
+        };
+        format!("{name}.api.riotgames.com")
+    }
+
+    /// Routages officiels : catalogue match-v5, vérifié le 01/10/2026.
+    pub fn for_platform(platform: &str) -> Result<(Self, Self), ConfigError> {
+        let (name, region) = match platform {
+            "EUW1" => return Ok((Self::Euw1, Self::Europe)),
+            "EUN1" => ("eun1", Self::Europe),
+            "ME1" => ("me1", Self::Europe),
+            "TR1" => ("tr1", Self::Europe),
+            "RU" => ("ru", Self::Europe),
+            "NA1" => ("na1", Self::Americas),
+            "BR1" => ("br1", Self::Americas),
+            "LA1" => ("la1", Self::Americas),
+            "LA2" => ("la2", Self::Americas),
+            "KR" => ("kr", Self::Asia),
+            "JP1" => ("jp1", Self::Asia),
+            "OC1" => ("oc1", Self::Sea),
+            "SG2" => ("sg2", Self::Sea),
+            "TW2" => ("tw2", Self::Sea),
+            "VN2" => ("vn2", Self::Sea),
+            _ => return Err(ConfigError::Invalid("plateforme inconnue")),
+        };
+        Ok((Self::Platform(name), region))
     }
 }
 
 /// Méthode Riot, clé des quotas par méthode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Endpoint {
+    AccountByRiotId,
+    SummonerByPuuid,
     LeagueEntries,
+    ApexLeague,
+    ParticipantRanks,
     MatchIdsByPuuid,
     Match,
     Timeline,
@@ -52,14 +85,22 @@ pub enum Endpoint {
 impl Endpoint {
     pub fn route(self) -> Route {
         match self {
-            Endpoint::LeagueEntries => Route::Euw1,
+            Endpoint::AccountByRiotId => Route::Europe,
+            Endpoint::SummonerByPuuid => Route::Euw1,
+            Endpoint::LeagueEntries | Endpoint::ApexLeague | Endpoint::ParticipantRanks => {
+                Route::Euw1
+            }
             Endpoint::MatchIdsByPuuid | Endpoint::Match | Endpoint::Timeline => Route::Europe,
         }
     }
 
     pub fn name(self) -> &'static str {
         match self {
+            Endpoint::AccountByRiotId => "account-v1 riot-id",
+            Endpoint::SummonerByPuuid => "summoner-v4 puuid",
             Endpoint::LeagueEntries => "league-v4 entries",
+            Endpoint::ApexLeague => "league-v4 apex",
+            Endpoint::ParticipantRanks => "league-v4 ranks",
             Endpoint::MatchIdsByPuuid => "match-v5 ids",
             Endpoint::Match => "match-v5 match",
             Endpoint::Timeline => "match-v5 timeline",
@@ -72,6 +113,7 @@ impl Endpoint {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Request {
     pub endpoint: Endpoint,
+    pub route: Route,
     pub segments: Vec<String>,
     pub query: Vec<(&'static str, String)>,
 }
@@ -81,6 +123,7 @@ impl Request {
     pub fn league_entries(tier: Tier, division: Division, page: u32) -> Self {
         Self {
             endpoint: Endpoint::LeagueEntries,
+            route: Route::Euw1,
             segments: segs(&[
                 "lol",
                 "league",
@@ -99,6 +142,7 @@ impl Request {
     pub fn match_ids(puuid: &str, start: u32, count: u32, start_time: i64, end_time: i64) -> Self {
         Self {
             endpoint: Endpoint::MatchIdsByPuuid,
+            route: Route::Europe,
             segments: segs(&["lol", "match", "v5", "matches", "by-puuid", puuid, "ids"]),
             query: vec![
                 ("startTime", start_time.to_string()),
@@ -114,6 +158,7 @@ impl Request {
     pub fn match_detail(match_id: &str) -> Self {
         Self {
             endpoint: Endpoint::Match,
+            route: Route::Europe,
             segments: segs(&["lol", "match", "v5", "matches", match_id]),
             query: vec![],
         }
@@ -122,9 +167,77 @@ impl Request {
     pub fn timeline(match_id: &str) -> Self {
         Self {
             endpoint: Endpoint::Timeline,
+            route: Route::Europe,
             segments: segs(&["lol", "match", "v5", "matches", match_id, "timeline"]),
             query: vec![],
         }
+    }
+
+    pub fn league_entries_for(
+        platform: &str,
+        tier: Tier,
+        division: Division,
+        page: u32,
+    ) -> Result<Self, ConfigError> {
+        let route = Route::for_platform(platform)?.0;
+        if tier.is_apex() {
+            let league = match tier {
+                Tier::Master => "masterleagues",
+                Tier::Grandmaster => "grandmasterleagues",
+                _ => "challengerleagues",
+            };
+            return Ok(Self {
+                endpoint: Endpoint::ApexLeague,
+                route,
+                segments: segs(&["lol", "league", "v4", league, "by-queue", RANKED_SOLO_QUEUE]),
+                query: vec![],
+            });
+        }
+        let mut request = Self::league_entries(tier, division, page);
+        request.route = route;
+        Ok(request)
+    }
+
+    pub fn match_ids_for(
+        platform: &str,
+        queue_id: i32,
+        puuid: &str,
+        start: u32,
+        count: u32,
+        start_time: i64,
+        end_time: i64,
+    ) -> Result<Self, ConfigError> {
+        let mut request = Self::match_ids(puuid, start, count, start_time, end_time);
+        request.route = Route::for_platform(platform)?.1;
+        request
+            .query
+            .retain(|(name, _)| !matches!(*name, "queue" | "type"));
+        if queue_id > 0 {
+            request.query.push(("queue", queue_id.to_string()));
+        }
+        Ok(request)
+    }
+
+    pub fn match_detail_for(platform: &str, match_id: &str) -> Result<Self, ConfigError> {
+        let mut request = Self::match_detail(match_id);
+        request.route = Route::for_platform(platform)?.1;
+        Ok(request)
+    }
+
+    pub fn timeline_for(platform: &str, match_id: &str) -> Result<Self, ConfigError> {
+        let mut request = Self::timeline(match_id);
+        request.route = Route::for_platform(platform)?.1;
+        Ok(request)
+    }
+
+    /// Source : https://developer.riotgames.com/api-details/league-v4 (01/10/2026).
+    pub fn participant_ranks(platform: &str, puuid: &str) -> Result<Self, ConfigError> {
+        Ok(Self {
+            endpoint: Endpoint::ParticipantRanks,
+            route: Route::for_platform(platform)?.0,
+            segments: segs(&["lol", "league", "v4", "entries", "by-puuid", puuid]),
+            query: vec![],
+        })
     }
 
     /// URL complète. Contient parfois un PUUID : ne jamais la journaliser.
@@ -245,7 +358,9 @@ impl<T: Transport> RiotClient<T> {
 
     /// Envoie la requête et renvoie le corps d'une réponse 2xx.
     pub async fn get(&self, request: &Request) -> Result<Vec<u8>, RiotError> {
-        self.governor.acquire(request.endpoint).await;
+        self.governor
+            .acquire_on(request.route, request.endpoint)
+            .await;
         self.calls.fetch_add(1, Ordering::Relaxed);
         let res = self
             .transport
@@ -253,14 +368,15 @@ impl<T: Transport> RiotClient<T> {
             .await
             .map_err(RiotError::Transport)?;
         self.governor
-            .observe(request.endpoint, &res.rate_headers())
+            .observe_on(request.route, request.endpoint, &res.rate_headers())
             .await;
         if res.status == 429 {
             let scope = LimitScope::from_header(res.header("x-rate-limit-type"));
             let retry_after = parse_retry_after(res.header("retry-after"));
             let pause = self
                 .governor
-                .on_rate_limited(
+                .on_rate_limited_on(
+                    request.route,
                     request.endpoint,
                     scope,
                     retry_after,
@@ -277,7 +393,8 @@ impl<T: Transport> RiotClient<T> {
 /// Transport HTTPS réel, avec validation normale des certificats publics.
 pub struct HttpsTransport {
     http: reqwest::Client,
-    base_urls: [(Route, Url); 2],
+    base_urls: std::collections::HashMap<Route, Url>,
+    max_response_bytes: Option<usize>,
 }
 
 #[derive(Debug, Error)]
@@ -310,22 +427,31 @@ impl HttpsTransport {
             Url::parse(&format!("https://{}/", route.host()))
                 .map_err(|e| HttpsSetupError::Http(e.to_string()))
         };
+        let mut base_urls = std::collections::HashMap::new();
+        for platform in crate::config::PLATFORMS {
+            let (local, regional) =
+                Route::for_platform(platform).map_err(|e| HttpsSetupError::Http(e.to_string()))?;
+            base_urls.insert(local, base(local)?);
+            base_urls.insert(regional, base(regional)?);
+        }
         Ok(Self {
             http,
-            base_urls: [
-                (Route::Euw1, base(Route::Euw1)?),
-                (Route::Europe, base(Route::Europe)?),
-            ],
+            base_urls,
+            max_response_bytes: None,
         })
     }
 
-    fn base(&self, route: Route) -> &Url {
-        let (_, url) = self
-            .base_urls
-            .iter()
-            .find(|(r, _)| *r == route)
-            .unwrap_or(&self.base_urls[0]);
-        url
+    /// Borne les réponses pendant leur lecture, pour les endpoints publics de l'API interne.
+    /// Les grandes timelines du collecteur conservent leur comportement existant.
+    pub fn with_max_response_bytes(mut self, limit: usize) -> Self {
+        self.max_response_bytes = Some(limit);
+        self
+    }
+
+    fn base(&self, route: Route) -> Result<&Url, TransportError> {
+        self.base_urls
+            .get(&route)
+            .ok_or_else(|| TransportError::Network("routage invalide".into()))
     }
 }
 
@@ -345,7 +471,7 @@ pub fn public_tls_config() -> Result<ClientConfig, rustls::Error> {
 
 impl Transport for HttpsTransport {
     async fn send(&self, request: &Request) -> Result<RawResponse, TransportError> {
-        let url = request.url(self.base(request.endpoint.route()));
+        let url = request.url(self.base(request.route)?);
         let res = self.http.get(url).send().await.map_err(map_reqwest)?;
         let status = res.status().as_u16();
         let headers = res
@@ -353,13 +479,37 @@ impl Transport for HttpsTransport {
             .iter()
             .filter_map(|(k, v)| Some((k.as_str().to_owned(), v.to_str().ok()?.to_owned())))
             .collect();
-        let body = res.bytes().await.map_err(map_reqwest)?.to_vec();
+        let body = read_body(res, self.max_response_bytes).await?;
         Ok(RawResponse {
             status,
             headers,
             body,
         })
     }
+}
+
+async fn read_body(
+    mut response: reqwest::Response,
+    max_bytes: Option<usize>,
+) -> Result<Vec<u8>, TransportError> {
+    let Some(limit) = max_bytes else {
+        return Ok(response.bytes().await.map_err(map_reqwest)?.to_vec());
+    };
+    let too_large = || TransportError::Network("réponse Riot trop volumineuse".into());
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit as u64)
+    {
+        return Err(too_large());
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(map_reqwest)? {
+        if chunk.len() > limit.saturating_sub(body.len()) {
+            return Err(too_large());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
 }
 
 fn map_reqwest(e: reqwest::Error) -> TransportError {
@@ -381,11 +531,71 @@ fn map_reqwest(e: reqwest::Error) -> TransportError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn la_lecture_bornee_refuse_longueur_et_flux_trop_grands() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for (raw, accepted) in [
+            ("HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nabcdefghijklmnop", false),
+            ("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n8\r\nabcdefgh\r\n8\r\nijklmnop\r\n0\r\n\r\n", false),
+            ("HTTP/1.1 200 OK\r\nContent-Length: 8\r\nConnection: close\r\n\r\nabcdefgh", true),
+        ] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut socket,_) = listener.accept().await.unwrap();
+                let mut input = [0; 4096];
+                let mut received = 0;
+                while !input[..received].windows(4).any(|bytes| bytes == b"\r\n\r\n") {
+                    let count = socket.read(&mut input[received..]).await.unwrap();
+                    assert!(count > 0, "requête HTTP incomplète");
+                    received += count;
+                }
+                socket.write_all(raw.as_bytes()).await.unwrap();
+            });
+            let response = reqwest::Client::builder().use_preconfigured_tls(public_tls_config().unwrap()).build().unwrap().get(format!("http://{address}")).send().await.unwrap();
+            let result = read_body(response, Some(10)).await;
+            assert_eq!(result.is_ok(), accepted);
+            server.await.unwrap();
+        }
+    }
     use crate::rate_limit::RateLimiter;
     use std::sync::Mutex;
 
     fn base(route: Route) -> Url {
         Url::parse(&format!("https://{}/", route.host())).unwrap()
+    }
+
+    #[test]
+    fn route_les_requetes_vers_la_plateforme_et_sa_region() {
+        for (platform, region) in [
+            ("NA1", "americas"),
+            ("KR", "asia"),
+            ("SG2", "sea"),
+            ("ME1", "europe"),
+        ] {
+            let r = Request::match_ids_for(platform, 0, "fake", 100, 100, 1, 2).unwrap();
+            assert_eq!(r.route.host(), format!("{region}.api.riotgames.com"));
+            assert!(!r
+                .query
+                .iter()
+                .any(|(name, _)| matches!(*name, "queue" | "type")));
+            let ranked = Request::match_ids_for(platform, 440, "fake", 0, 100, 1, 2).unwrap();
+            assert!(ranked.query.contains(&("queue", "440".into())));
+            let ranks = Request::participant_ranks(platform, "fake").unwrap();
+            assert_eq!(
+                ranks.route.host(),
+                format!("{}.api.riotgames.com", platform.to_lowercase())
+            );
+        }
+        assert!(Request::match_detail_for("PH2", "PH2_1").is_err());
+    }
+
+    #[test]
+    fn les_listes_apex_ne_sont_pas_paginees() {
+        let request = Request::league_entries_for("KR", Tier::Master, Division::I, 1).unwrap();
+        assert!(request.query.is_empty());
+        assert!(request.segments.iter().any(|s| s == "masterleagues"));
     }
 
     #[test]

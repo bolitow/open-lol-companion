@@ -1,0 +1,221 @@
+//! Lecture des instantanés publiés par #18, sans recalcul ni mélange de populations.
+use crate::{error::ApiError, query::StatsQuery};
+use olc_collector::aggregation::*;
+use serde::Serialize;
+use sqlx::{PgPool, Row};
+
+#[derive(Serialize)]
+pub struct SnapshotMeta {
+    pub source_snapshot_at: String,
+    pub published_at: String,
+    pub schema_version: u32,
+    pub min_games: u32,
+    pub rank_scope: String,
+    pub rank_max_age_hours: u32,
+    pub pick_rate_definition: String,
+    pub tier_method: String,
+    pub filters: AggregationOptions,
+    pub coverage: Vec<ScopeCoverage>,
+}
+#[derive(Serialize)]
+pub struct TierlistResponse {
+    pub meta: SnapshotMeta,
+    pub query: StatsQuery,
+    pub total: usize,
+    pub entries: Vec<ChampionStats>,
+    pub bans: Vec<BanStats>,
+}
+#[derive(Serialize)]
+pub struct BuildsResponse {
+    pub meta: SnapshotMeta,
+    pub query: StatsQuery,
+    pub champion_id: u32,
+    pub summary: Option<ChampionStats>,
+    pub total: usize,
+    pub builds: Vec<BuildStats>,
+    pub skill_levels: Vec<SkillStats>,
+    pub item_events: Vec<ItemEventStats>,
+    pub max_build_variants_per_category: u32,
+    pub omitted_build_variants: u64,
+}
+/// Tierlist filtrée sur une population explicite, triée selon le rang publié.
+pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
+    query.validate().map_err(|_| ApiError::InvalidRequest)?;
+    let (meta, report) = load(pool, &query, None).await?;
+    let mut entries: Vec<_> = report
+        .groups
+        .into_iter()
+        .filter(|g| matches(&g.key, &query))
+        .collect();
+    entries.sort_by_key(|g| (g.position.unwrap_or(u32::MAX), g.key.champion_id));
+    let total = entries.len();
+    let entries: Vec<_> = entries
+        .into_iter()
+        .skip(query.offset)
+        .take(query.limit)
+        .collect();
+    let bans = report
+        .bans
+        .into_iter()
+        .filter(|b| {
+            scope_matches(&b.scope, &query)
+                && entries.iter().any(|g| g.key.champion_id == b.champion_id)
+        })
+        .collect();
+    Ok(TierlistResponse {
+        meta,
+        query,
+        total,
+        entries,
+        bans,
+    })
+}
+/// Variantes de build, compétences et achats du champion dans la même population.
+pub async fn builds(
+    pool: &PgPool,
+    query: StatsQuery,
+    champion_id: u32,
+) -> Result<BuildsResponse, ApiError> {
+    query.validate().map_err(|_| ApiError::InvalidRequest)?;
+    if champion_id == 0 {
+        return Err(ApiError::InvalidRequest);
+    }
+    let (meta, report) = load(pool, &query, Some(champion_id)).await?;
+    let selected = |key: &GroupKey| key.champion_id == champion_id && matches(key, &query);
+    let summary = report.groups.into_iter().find(|g| selected(&g.key));
+    let mut variants: Vec<_> = report
+        .builds
+        .into_iter()
+        .filter(|b| selected(&b.key))
+        .collect();
+    variants.sort_by(|a, b| {
+        a.category
+            .cmp(&b.category)
+            .then(b.games.cmp(&a.games))
+            .then(a.selection.cmp(&b.selection))
+    });
+    let total = variants.len();
+    let builds = variants
+        .into_iter()
+        .skip(query.offset)
+        .take(query.limit)
+        .collect();
+    let skill_levels = report
+        .skill_levels
+        .into_iter()
+        .filter(|b| selected(&b.key))
+        .collect();
+    let item_events = report
+        .item_events
+        .into_iter()
+        .filter(|b| selected(&b.key))
+        .collect();
+    Ok(BuildsResponse {
+        meta,
+        query,
+        champion_id,
+        summary,
+        total,
+        builds,
+        skill_levels,
+        item_events,
+        max_build_variants_per_category: report.max_build_variants_per_category,
+        omitted_build_variants: report.omitted_build_variants,
+    })
+}
+
+async fn load(
+    pool: &PgPool,
+    query: &StatsQuery,
+    champion_id: Option<u32>,
+) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
+    // Une lecture cohérente, mais seulement la population demandée sur le réseau et en mémoire Rust.
+    // La tierlist ne charge pas les builds ni les événements de tous les champions.
+    let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":query.role,"rank":query.rank,"champion":champion_id});
+    let population = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
+    let scope = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)";
+    let rows = sqlx::query("SELECT s.source_snapshot_at::text,s.published_at::text,s.storage_version,
+        CASE WHEN s.storage_version=1 THEN
+            (s.report - ARRAY['groups','bans','builds','skill_levels','item_events','coverage']) ||
+            jsonb_build_object(
+                'groups', jsonb_path_query_array(s.report->'groups',$2::jsonpath,$1),
+                'bans', jsonb_path_query_array(s.report->'bans',$3::jsonpath,$1),
+                'coverage', jsonb_path_query_array(s.report->'coverage',$3::jsonpath,$1),
+                'builds', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'builds',$2::jsonpath,$1) ELSE '[]'::jsonb END,
+                'skill_levels', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'skill_levels',$2::jsonpath,$1) ELSE '[]'::jsonb END,
+                'item_events', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'item_events',$2::jsonpath,$1) ELSE '[]'::jsonb END
+            )
+        ELSE s.report || jsonb_build_object('groups','[]'::jsonb,'bans','[]'::jsonb,
+            'coverage','[]'::jsonb,'builds','[]'::jsonb,'skill_levels','[]'::jsonb,'item_events','[]'::jsonb)
+        END AS report,c.section,
+        CASE WHEN c.section IN ('coverage','bans') THEN jsonb_path_query_array(c.items,$3::jsonpath,$1)
+            ELSE jsonb_path_query_array(c.items,$2::jsonpath,$1) END AS items
+        FROM champion_stats_snapshot s LEFT JOIN champion_stats_snapshot_chunks c
+        ON c.snapshot_id=s.id AND s.storage_version=2
+            AND (c.section IN ('coverage','groups','bans') OR $4)
+        WHERE s.id=1 ORDER BY c.section,c.chunk_index")
+        .bind(vars).bind(population).bind(scope).bind(champion_id.is_some()).fetch_all(pool).await?;
+    let row = rows.first().ok_or(ApiError::Unavailable)?;
+    let storage_version: i16 = row.try_get("storage_version")?;
+    if ![1, 2].contains(&storage_version) {
+        return Err(ApiError::Unavailable);
+    }
+    let mut value: serde_json::Value = row.try_get("report")?;
+    // Une seule requête lit la tête et les morceaux de la même publication.
+    // Le filtrage SQL précède le transfert ; aucun JSONB global n'est reconstruit.
+    if storage_version == 2 {
+        for chunk in &rows {
+            if let Some(section) = chunk.try_get::<Option<String>, _>("section")? {
+                let items: sqlx::types::Json<Vec<serde_json::Value>> = chunk.try_get("items")?;
+                value
+                    .get_mut(&section)
+                    .and_then(serde_json::Value::as_array_mut)
+                    .ok_or(ApiError::Unavailable)?
+                    .extend(items.0);
+            }
+        }
+    }
+    let report: AggregationReport =
+        serde_json::from_value(value).map_err(|_| ApiError::Unavailable)?;
+    if report.schema_version != 2 || report.min_games == 0 {
+        return Err(ApiError::Unavailable);
+    }
+    let meta = SnapshotMeta {
+        source_snapshot_at: row.try_get("source_snapshot_at")?,
+        published_at: row.try_get("published_at")?,
+        schema_version: report.schema_version,
+        min_games: report.min_games,
+        rank_scope: report.rank_scope.clone(),
+        rank_max_age_hours: report.rank_max_age_hours,
+        pick_rate_definition: report.pick_rate_definition.clone(),
+        tier_method: report.tier_method.clone(),
+        filters: report.filters.clone(),
+        coverage: report
+            .coverage
+            .iter()
+            .filter(|c| scope_matches(&c.scope, query))
+            .cloned()
+            .collect(),
+    };
+    Ok((meta, report))
+}
+fn scope_matches(scope: &ScopeKey, query: &StatsQuery) -> bool {
+    scope.patch == query.patch
+        && scope.platform_id == query.platform
+        && scope.queue_id == query.queue
+}
+fn matches(key: &GroupKey, query: &StatsQuery) -> bool {
+    let role = match key.role {
+        Role::Top => "TOP",
+        Role::Jungle => "JUNGLE",
+        Role::Middle => "MIDDLE",
+        Role::Bottom => "BOTTOM",
+        Role::Utility => "UTILITY",
+        Role::Unknown => "UNKNOWN",
+    };
+    key.patch == query.patch
+        && key.platform_id == query.platform
+        && key.queue_id == query.queue
+        && key.rank == query.rank
+        && role == query.role
+}
