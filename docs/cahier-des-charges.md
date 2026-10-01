@@ -334,6 +334,14 @@ reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
 Voir [le contrat complet](../services/collector/README.md) et
 [la recette étendue](recettes/2026-10-01-agregation-complete.md).
 
+Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
+CommunityDragon versionné des objets et fragments, sources immuables et
+reconstruction hors ligne. Les valeurs, unités, contradictions et champs non
+interprétés sont exposés par l’API (liste, détail, filtres, diff). Les catalogues
+globaux non versionnés restent datés et distincts des ressources par patch.
+Le [contrat et la matrice des usages](catalogue-jeu.md) séparent ce référentiel
+des nouvelles agrégations #39/#41/#42, modèles IA et écrans aval.
+
 **10.3 Modèles IA**
 
 | Modèle | Entrée | Sortie | Réentraînement |

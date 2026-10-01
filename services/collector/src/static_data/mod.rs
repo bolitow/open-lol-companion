@@ -11,6 +11,15 @@ pub use storage::{
 };
 pub use transport::{StaticResponse, StaticTransport};
 
+/// Validation partagée avant retraitement du cache par le référentiel #61.
+pub(crate) fn validate_cached_bundle(
+    version: &str,
+    value: &serde_json::Value,
+) -> Result<(), StaticError> {
+    let bundle = serde_json::from_value(value.clone()).map_err(|_| StaticError::InvalidDocument)?;
+    download::validate_bundle(&bundle, version)
+}
+
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod test_support;
 

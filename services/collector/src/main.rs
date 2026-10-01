@@ -6,6 +6,7 @@ use std::time::Duration;
 use clap::{Args, Parser, Subcommand};
 use olc_collector::aggregation::{self, AggregationError, AggregationOptions};
 use olc_collector::campaign;
+use olc_collector::catalog::{self, CommunityPolicy};
 use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
 use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
 use olc_collector::report;
@@ -28,6 +29,24 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    /// Normalise les catalogues en cache et archive les sources exactes (#61).
+    Catalog {
+        /// Version Data Dragon ; sinon les versions du manifeste en cache.
+        #[arg(long, conflicts_with = "rebuild")]
+        version: Option<String>,
+        #[arg(long, default_value_t=2, value_parser=clap::value_parser!(u8).range(1..=10))]
+        patch_count: u8,
+        #[arg(long, value_enum, default_value = "required")]
+        community: CommunityPolicy,
+        /// Revérifie le complément public même s'il est archivé pour ce patch.
+        #[arg(long)]
+        refresh: bool,
+        /// Reconstruit une publication depuis ses sources archivées, sans réseau.
+        #[arg(long)]
+        rebuild: Option<String>,
+        #[arg(long)]
+        json: bool,
+    },
     /// Applique les migrations PostgreSQL.
     Migrate,
     /// Synchronise les données publiques FR/EN des derniers patches Data Dragon.
@@ -213,6 +232,75 @@ async fn main() -> ExitCode {
 async fn run(cli: Cli) -> Result<ExitCode, String> {
     let db_url = database_url(std::env::var("DATABASE_URL").ok()).map_err(|e| e.to_string())?;
     match cli.command {
+        Command::Catalog {
+            version,
+            patch_count,
+            community,
+            refresh,
+            rebuild,
+            json,
+        } => {
+            let storage = connect(&db_url, 4).await?;
+            let work = async {
+                let mut manifests = Vec::new();
+                if let Some(publication) = rebuild {
+                    manifests.push(catalog::rebuild(&storage, &publication).await?);
+                } else {
+                    let versions = if let Some(version) = version {
+                        vec![version]
+                    } else {
+                        let available: Option<serde_json::Value> = sqlx::query_scalar(
+                            "SELECT versions FROM static_data_manifest WHERE id=1",
+                        )
+                        .fetch_optional(storage.pool())
+                        .await?;
+                        let available = available.ok_or(catalog::CatalogError::NotFound)?;
+                        available
+                            .as_array()
+                            .ok_or(catalog::CatalogError::InvalidSource)?
+                            .iter()
+                            .take(usize::from(patch_count))
+                            .map(|v| {
+                                v.as_str()
+                                    .map(str::to_owned)
+                                    .ok_or(catalog::CatalogError::InvalidSource)
+                            })
+                            .collect::<Result<Vec<_>, _>>()?
+                    };
+                    if versions.is_empty() {
+                        return Err(catalog::CatalogError::NotFound);
+                    }
+                    for version in versions {
+                        manifests
+                            .push(catalog::build(&storage, &version, community, refresh).await?);
+                    }
+                }
+                Ok::<_, catalog::CatalogError>(manifests)
+            };
+            let manifests = tokio::select! { _=shutdown()=>return Ok(ExitCode::from(3)),result=work=>result.map_err(|e|e.to_string())? };
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string(&manifests).map_err(|e| e.to_string())?
+                );
+            } else {
+                for manifest in manifests {
+                    println!(
+                        "Catalogue {} : {} fiches, {} champs non normalisés, publication {}{}.",
+                        manifest.version,
+                        manifest.coverage.records,
+                        manifest.coverage.unmapped_fields,
+                        manifest.publication_id,
+                        if manifest.degraded {
+                            " (couverture dégradée)"
+                        } else {
+                            ""
+                        }
+                    );
+                }
+            }
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Aggregate {
             min_games,
             watch,

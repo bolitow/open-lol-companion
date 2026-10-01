@@ -1,5 +1,6 @@
 //! API interne REST + WebSocket (#19).
 pub mod auth;
+pub mod catalog;
 pub mod error;
 pub mod profiles;
 pub mod query;

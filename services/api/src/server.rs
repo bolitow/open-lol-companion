@@ -69,6 +69,19 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health))
         .route("/v1/static/manifest", get(manifest))
         .route("/v1/static/{version}/{locale}/{*resource}", get(document))
+        .route(
+            "/v1/catalog/{version}/manifest",
+            get(crate::catalog::manifest),
+        )
+        .route(
+            "/v1/catalog/{version}/{locale}/{kind}",
+            get(crate::catalog::list),
+        )
+        .route(
+            "/v1/catalog/{version}/{locale}/{kind}/{id}",
+            get(crate::catalog::detail),
+        )
+        .route("/v1/catalog-diff", get(crate::catalog::diff))
         .route("/v1/ws", get(crate::realtime::upgrade))
         .fallback(|| async { ApiError::NotFound })
         .layer(DefaultBodyLimit::max(8192))

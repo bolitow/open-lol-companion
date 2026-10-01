@@ -1,0 +1,569 @@
+{
+  "date": "2026-10-01",
+  "environment": "macOS, PostgreSQL 17 isolé, binaires release",
+  "versions": [
+    {
+      "version": "16.19.1",
+      "publication_id": "f1b6a513dd851d49301d638ab4c09d76b2e63e7909a3cfed4878f85b6e39df8c",
+      "degraded": false,
+      "coverage": {
+        "records": 15215,
+        "source_fields": 627535,
+        "normalized_fields": 205877,
+        "unmapped_fields": 421658,
+        "records_with_issues": 3033,
+        "by_kind": {
+          "ability": 2450,
+          "champion": 490,
+          "game_type": 3,
+          "item": 1740,
+          "map": 27,
+          "mode": 22,
+          "profile_icon": 10100,
+          "queue": 99,
+          "rune": 196,
+          "rune_shard": 20,
+          "summoner_spell": 68
+        }
+      },
+      "sources_by_provider": {
+        "ddragon": 504,
+        "riot_catalog": 4,
+        "cdragon": 8
+      },
+      "unique_source_leaves_by_provider": {
+        "ddragon": 476502,
+        "riot_catalog": 497,
+        "cdragon": 747813
+      },
+      "raw_branch_reasons": {
+        "metadata_only": 1505,
+        "resource_auxiliary": 3,
+        "resource_auxiliary:VfxSystemDefinitionData": 726,
+        "resource_auxiliary:SpellObject": 642,
+        "resource_auxiliary:StaticMaterialDef": 10,
+        "resource_auxiliary:ItemGroup": 378,
+        "resource_auxiliary:ItemModifier": 139,
+        "resource_auxiliary:ItemAdviceAttribute": 22,
+        "resource_auxiliary:ItemRecommendationOverrideSet": 37,
+        "resource_auxiliary:BaseItemAdviceSet": 11
+      }
+    },
+    {
+      "version": "16.18.1",
+      "publication_id": "a9ce1b486a3fc002a0ddaee1c4cb57ce4d3392bfabfc4d554eb30559509b28eb",
+      "degraded": false,
+      "coverage": {
+        "records": 15147,
+        "source_fields": 621805,
+        "normalized_fields": 204349,
+        "unmapped_fields": 417456,
+        "records_with_issues": 2999,
+        "by_kind": {
+          "ability": 2410,
+          "champion": 482,
+          "game_type": 3,
+          "item": 1736,
+          "map": 27,
+          "mode": 22,
+          "profile_icon": 10084,
+          "queue": 99,
+          "rune": 196,
+          "rune_shard": 20,
+          "summoner_spell": 68
+        }
+      },
+      "sources_by_provider": {
+        "cdragon": 8,
+        "ddragon": 496,
+        "riot_catalog": 4
+      },
+      "unique_source_leaves_by_provider": {
+        "cdragon": 747571,
+        "ddragon": 471142,
+        "riot_catalog": 497
+      },
+      "raw_branch_reasons": {
+        "resource_auxiliary": 3,
+        "metadata_only": 1481,
+        "resource_auxiliary:VfxSystemDefinitionData": 726,
+        "resource_auxiliary:SpellObject": 642,
+        "resource_auxiliary:StaticMaterialDef": 10,
+        "resource_auxiliary:ItemGroup": 375,
+        "resource_auxiliary:ItemModifier": 139,
+        "resource_auxiliary:ItemAdviceAttribute": 22,
+        "resource_auxiliary:ItemRecommendationOverrideSet": 37,
+        "resource_auxiliary:BaseItemAdviceSet": 11
+      }
+    }
+  ],
+  "entity_counts": [
+    {
+      "kind": "ability",
+      "count": 340,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "ability",
+      "count": 340,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "ability",
+      "count": 865,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "ability",
+      "count": 865,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "champion",
+      "count": 68,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "champion",
+      "count": 68,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "champion",
+      "count": 173,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "champion",
+      "count": 173,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "game_type",
+      "count": 3,
+      "locale": "und",
+      "version": "16.18.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "item",
+      "count": 868,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "item",
+      "count": 868,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "map",
+      "count": 17,
+      "locale": "und",
+      "version": "16.18.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "map",
+      "count": 5,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "map",
+      "count": 5,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "mode",
+      "count": 22,
+      "locale": "und",
+      "version": "16.18.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "profile_icon",
+      "count": 5042,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "profile_icon",
+      "count": 5042,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "queue",
+      "count": 99,
+      "locale": "und",
+      "version": "16.18.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "rune",
+      "count": 98,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune",
+      "count": 98,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune_shard",
+      "count": 10,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune_shard",
+      "count": 10,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "summoner_spell",
+      "count": 34,
+      "locale": "en_US",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "summoner_spell",
+      "count": 34,
+      "locale": "fr_FR",
+      "version": "16.18.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "ability",
+      "count": 360,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "ability",
+      "count": 360,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "ability",
+      "count": 865,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "ability",
+      "count": 865,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "champion",
+      "count": 72,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "champion",
+      "count": 72,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "classic"
+    },
+    {
+      "kind": "champion",
+      "count": 173,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "champion",
+      "count": 173,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "game_type",
+      "count": 3,
+      "locale": "und",
+      "version": "16.19.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "item",
+      "count": 870,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "item",
+      "count": 870,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "map",
+      "count": 17,
+      "locale": "und",
+      "version": "16.19.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "map",
+      "count": 5,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "map",
+      "count": 5,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "mode",
+      "count": 22,
+      "locale": "und",
+      "version": "16.19.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "profile_icon",
+      "count": 5050,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "profile_icon",
+      "count": 5050,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "queue",
+      "count": 99,
+      "locale": "und",
+      "version": "16.19.1",
+      "namespace": "global"
+    },
+    {
+      "kind": "rune",
+      "count": 98,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune",
+      "count": 98,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune_shard",
+      "count": 10,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "rune_shard",
+      "count": 10,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "summoner_spell",
+      "count": 34,
+      "locale": "en_US",
+      "version": "16.19.1",
+      "namespace": "standard"
+    },
+    {
+      "kind": "summoner_spell",
+      "count": 34,
+      "locale": "fr_FR",
+      "version": "16.19.1",
+      "namespace": "standard"
+    }
+  ],
+  "http": [
+    {
+      "path": "/v1/catalog/16.19.1/manifest",
+      "status": 200,
+      "bytes": 550158,
+      "elapsed_ms": 36.01,
+      "total": null,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/item?limit=50",
+      "status": 200,
+      "bytes": 733143,
+      "elapsed_ms": 20.89,
+      "total": 870,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/en_US/item?limit=200",
+      "status": 200,
+      "bytes": 2708770,
+      "elapsed_ms": 37.59,
+      "total": 870,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/item/3078",
+      "status": 200,
+      "bytes": 19206,
+      "elapsed_ms": 2.64,
+      "total": null,
+      "trinity_haste": {
+        "value": 15.0,
+        "unit": "points",
+        "status": "verified",
+        "sources": [
+          {
+            "source_id": "5c82e749dbf8fffc5595698b242dae55b98ccbfe61321c0192f78171faad398a",
+            "pointer": "/Items~13078/mAbilityHasteMod"
+          }
+        ]
+      },
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/item?stat=ability_haste&min_stat=15&map=11",
+      "status": 200,
+      "bytes": 938128,
+      "elapsed_ms": 51.42,
+      "total": 65,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/item?category=AbilityHaste",
+      "status": 200,
+      "bytes": 867544,
+      "elapsed_ms": 47.49,
+      "total": 226,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/und/queue?namespace=global",
+      "status": 200,
+      "bytes": 60812,
+      "elapsed_ms": 3.54,
+      "total": 99,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/champion?namespace=classic",
+      "status": 200,
+      "bytes": 1247524,
+      "elapsed_ms": 15.05,
+      "total": 72,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog/16.19.1/fr_FR/rune_shard",
+      "status": 200,
+      "bytes": 27647,
+      "elapsed_ms": 2.1,
+      "total": 10,
+      "etag_304": true
+    },
+    {
+      "path": "/v1/catalog-diff?from=a9ce1b486a3fc002a0ddaee1c4cb57ce4d3392bfabfc4d554eb30559509b28eb&to=f1b6a513dd851d49301d638ab4c09d76b2e63e7909a3cfed4878f85b6e39df8c&locale=fr_FR&kind=item",
+      "status": 200,
+      "bytes": 4427,
+      "elapsed_ms": 39.19,
+      "total": 870,
+      "etag_304": true
+    }
+  ],
+  "storage": [
+    {
+      "bytes": 32768,
+      "table": "game_catalog_current"
+    },
+    {
+      "bytes": 78520320,
+      "table": "game_catalog_entries"
+    },
+    {
+      "bytes": 344064,
+      "table": "game_catalog_publications"
+    },
+    {
+      "bytes": 475136,
+      "table": "game_catalog_source_refs"
+    },
+    {
+      "bytes": 14049280,
+      "table": "game_catalog_sources"
+    }
+  ],
+  "measurements": {
+    "initial_seconds": 30.38,
+    "initial_peak_rss_bytes": 925990912,
+    "cached_seconds": 4.07,
+    "cached_peak_rss_bytes": 857227264
+  },
+  "checks": {
+    "rust_tests_passed": 318,
+    "typescript_tests_passed": 10,
+    "explicit_recipe_tests_passed": 2,
+    "pnpm_lint": "passed",
+    "offline_rebuild": "identical_manifests",
+    "cached_run": "identical_manifests",
+    "windows_native": "not_run",
+    "remote_ci": "not_run"
+  }
+}
