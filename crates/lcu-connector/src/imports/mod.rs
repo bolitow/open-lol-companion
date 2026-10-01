@@ -1,8 +1,10 @@
 //! Imports explicites dans le client LoL (cahier des charges, section 5.4).
 
+mod items;
 mod runes;
 mod spells;
 
+pub use items::{ImportItemsRequest, ItemBlock, ItemStack};
 pub use runes::ImportRunesRequest;
 pub use spells::{FlashSlot, ImportSpellsRequest};
 
@@ -29,8 +31,12 @@ pub enum ImportError {
     InvalidRunes,
     #[error("sorts d'invocateur invalides")]
     InvalidSpells,
+    #[error("set d'items invalide")]
+    InvalidItems,
     #[error("page de runes de l'application indisponible ou ambiguë")]
     RunePageUnavailable,
+    #[error("priorité du set d'items indisponible")]
+    ItemSetPriorityUnavailable,
 }
 
 impl From<ClientError> for ImportError {

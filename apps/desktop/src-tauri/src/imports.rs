@@ -1,4 +1,6 @@
-use lcu_connector::imports::{ImportError, ImportRunesRequest, ImportSpellsRequest};
+use lcu_connector::imports::{
+    ImportError, ImportItemsRequest, ImportRunesRequest, ImportSpellsRequest,
+};
 use lcu_connector::LcuClient;
 use tauri::async_runtime::{spawn_blocking, Mutex};
 use tauri::State;
@@ -8,6 +10,7 @@ use tauri::State;
 pub(crate) struct ImportLocks {
     runes: Mutex<()>,
     spells: Mutex<()>,
+    items: Mutex<()>,
 }
 
 async fn import_client() -> Result<LcuClient, ImportError> {
@@ -37,4 +40,13 @@ pub(crate) async fn import_spells(
 ) -> Result<(), ImportError> {
     let _guard = locks.spells.lock().await;
     import_client().await?.import_spells(&request).await
+}
+
+#[tauri::command]
+pub(crate) async fn import_items(
+    request: ImportItemsRequest,
+    locks: State<'_, ImportLocks>,
+) -> Result<(), ImportError> {
+    let _guard = locks.items.lock().await;
+    import_client().await?.import_items(&request).await
 }

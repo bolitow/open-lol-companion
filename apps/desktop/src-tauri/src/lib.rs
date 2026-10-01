@@ -35,6 +35,7 @@ pub fn run() {
             lcu_status,
             imports::import_runes,
             imports::import_spells,
+            imports::import_items,
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application");
