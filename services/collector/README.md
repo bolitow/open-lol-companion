@@ -185,6 +185,18 @@ Sources : [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon),
 [League-V4](https://developer.riotgames.com/apis#league-v4),
 [Match-V5](https://developer.riotgames.com/apis#match-v5).
 
+## Référentiel normalisé (#61)
+
+Après `sync-static`, `cargo run -p olc-collector --release -- catalog --json`
+publie les deux patches du cache : objets enrichis, champions/compétences,
+runes/fragments, sorts et catalogues. Aucune clé Riot requise.
+`--community required|optional|off` fixe la politique du complément ;
+`--refresh` le revérifie, `--rebuild <publication_id>` reconstruit sans réseau.
+Les sources exactes sont archivées par empreinte et les fiches publiées atomiquement.
+Les champs inconnus et contradictions restent visibles, sans valeurs fabriquées.
+Contrat complet, stockage, limites et matrice statistique :
+[référentiel du jeu](../../docs/catalogue-jeu.md).
+
 ## Agrégats et contrat statistique (#18)
 
 ```sh

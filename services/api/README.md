@@ -55,6 +55,14 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
 | `/v1/static/{version}/{locale}/{resource}` | Document public, exemple `16.19.1/fr_FR/item.json` |
+| `/v1/catalog/{version}/manifest` | Sources, couverture et inventaire de la publication normalisée |
+| `/v1/catalog/{version}/{locale}/{kind}` | Fiches paginées, recherche et filtres de statistiques/prix/disponibilité |
+| `/v1/catalog/{version}/{locale}/{kind}/{id}` | Fiche, valeurs sourcées et paramètres/limites des effets |
+| `/v1/catalog-diff?from=…&to=…&locale=…&kind=…` | Diff paginé entre deux empreintes de publication |
+
+Les routes `catalog` sont publiques comme les statiques (ETag/304 et cache
+revalidable). Contrats Rust/TypeScript, paramètres précis, langues FR/EN et
+catalogues globaux `und/global` : [référentiel #61](../../docs/catalogue-jeu.md).
 
 Encoder séparément les segments du Riot ID. Plateformes Riot : `EUW1`, `KR`…
 Les origines configurées s'appliquent à CORS et WebSocket ; clients natifs sans

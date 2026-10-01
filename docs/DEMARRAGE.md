@@ -69,6 +69,13 @@ du cache. `--patches 16.19,16.18` fixe une sélection ; `--all-stored` prend tou
 stockage. Les agrégats séparent plateforme/file/rôle/rang observé et exposent taux,
 effectifs, builds et timelines. Les données brutes de joueurs restent privées.
 
+Pour les fiches détaillées du jeu (#61), après `sync-static` :
+`cargo run -p olc-collector --release -- catalog --patch-count 2 --json`.
+Cette commande enrichit les données par CommunityDragon et publie des fiches
+versionnées avec provenance et couverture, sans clé Riot. Reconstruction depuis
+les archives : `catalog --rebuild <publication_id> --json` (sans réseau).
+Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
+
 Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
 `campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`

@@ -5,6 +5,7 @@
 
 pub mod aggregation;
 pub mod campaign;
+pub mod catalog;
 pub mod collector;
 pub mod config;
 pub mod model;
