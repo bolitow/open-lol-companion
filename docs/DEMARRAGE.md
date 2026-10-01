@@ -33,7 +33,7 @@ Autres commandes :
 | Commande | Effet |
 | --- | --- |
 | `pnpm dev:ui` | Interface seule dans le navigateur (http://localhost:1420), sans Rust |
-| `pnpm test` | Tests TypeScript + tests Rust du connecteur LCU et du collecteur |
+| `pnpm test` | Tests TypeScript + tests Rust du connecteur LCU, du collecteur et de l'API |
 | `pnpm typecheck` | Vérification des types |
 | `pnpm lint` | Typage + `cargo fmt --check` + `cargo clippy` (doit être à 0 avant une PR) |
 | `pnpm format` | Formate le code Rust |
@@ -58,9 +58,43 @@ Le collecteur `services/collector` récupère des parties via l'API Riot et les 
 
 1. PostgreSQL : `docker compose -f services/collector/docker-compose.yml up -d` (ou une installation locale).
 2. Copiez `services/collector/.env.example` en `.env` à la racine, renseignez `RIOT_API_KEY` (clé de développement du Developer Portal, valable 24 h) et `DATABASE_URL`.
-3. `cargo run -p olc-collector --release -- run --target 50` pour un petit essai, puis `report <n°>`.
+3. `cargo run -p olc-collector --release -- sync-static` pour synchroniser les deux patches récents en FR/EN.
+4. `cargo run -p olc-collector --release -- run --target 50 --collect-ranks` pour un petit essai, puis `report <n°>`.
 
 Tests PostgreSQL : définissez `OLC_TEST_DATABASE_URL` (ex. `postgres://postgres:postgres@localhost:5432/postgres`) ; sans elle, `pnpm test` les ignore. Détails : [`services/collector/README.md`](../services/collector/README.md).
+
+Pour les statistiques (#18), seule `DATABASE_URL` est nécessaire :
+`cargo run -p olc-collector --release -- aggregate --json` utilise les deux patches
+du cache. `--patches 16.19,16.18` fixe une sélection ; `--all-stored` prend tout le
+stockage. Les agrégats séparent plateforme/file/rôle/rang observé et exposent taux,
+effectifs, builds et timelines. Les données brutes de joueurs restent privées.
+
+Pour les fiches détaillées du jeu (#61), après `sync-static` :
+`cargo run -p olc-collector --release -- catalog --patch-count 2 --json`.
+Cette commande enrichit les données par CommunityDragon et publie des fiches
+versionnées avec provenance et couverture, sans clé Riot. Reconstruction depuis
+les archives : `catalog --rebuild <publication_id> --json` (sans réseau).
+Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
+
+Pour une campagne multirégion bornée :
+`cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
+`campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`
+vérifie les statiques et recalcule chaque heure. La campagne respecte les quotas,
+une échéance persistée et des tranches de 15 minutes par plateforme. Une clé de
+développement peut expirer avant la fin. Aucun superviseur ni service permanent
+n'est installé. Voir [le contrat et les options](../services/collector/README.md).
+
+## 3 ter. API interne (backend, facultatif)
+
+Compléter le `.env` existant avec `services/api/.env.example`, notamment un secret
+JWT aléatoire d'au moins 32 octets. Utiliser la même `DATABASE_URL` que le collecteur.
+`cargo run -p olc-api -- serve` écoute sur `127.0.0.1:3030` ;
+`cargo run -p olc-api -- token --subject development` émet un jeton de lecture
+depuis le serveur. Profils : clé Riot backend requise ; statiques/agrégats sans clé.
+HTTPS/WSS via proxy en production. Les migrations s'appliquent au démarrage ;
+redémarrer le collecteur avec cette version pour partager les quotas.
+
+Routes, variables, cache, WebSocket et PowerShell : [contrat API](../services/api/README.md).
 
 ## 4. Où coder quoi
 
@@ -75,8 +109,9 @@ l'écran build appartient à #13.
 | `apps/desktop/src-tauri` | Cœur de l'app : commandes appelées par l'interface, overlays, capture | Rust |
 | `apps/desktop/src` | Interface de l'app | React + TypeScript |
 | `packages/shared` | Types et utilitaires partagés (phases, Data Dragon) | TypeScript |
-| `services/collector` | Collecteur Riot API (parties, timelines) vers PostgreSQL | Rust |
-| `apps/web`, `services/api` | Site et API (pas encore initialisés) | — |
+| `services/collector` | Collecte Riot multirégion, Data Dragon et agrégats PostgreSQL | Rust |
+| `services/api` | REST/JWT, WebSocket, profils et cache statique | Rust |
+| `apps/web` | Site (pas encore initialisé) | — |
 
 Règle d'or : ce qui touche au système (fichiers, processus, réseau local, secrets) vit en Rust ; l'interface appelle des commandes Tauri (`invoke("…")`) et ne voit jamais de mot de passe.
 

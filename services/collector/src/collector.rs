@@ -17,8 +17,8 @@ use crate::model::{self, MatchCheck};
 use crate::rate_limit::{Governor, RateLimiter};
 use crate::riot_client::{Request, RiotClient, RiotError, Transport};
 use crate::storage::{
-    Job, JobKind, MatchIdsPayload, MatchPayload, RetryKind, RunRecord, RunStatus, SeedPagePayload,
-    Storage, StorageError, TimelinePayload,
+    Job, JobKind, MatchIdsPayload, MatchPayload, ParticipantRankPayload, RetryKind, RunRecord,
+    RunStatus, SeedPagePayload, Storage, StorageError, TimelinePayload,
 };
 
 const DAY_MS: i64 = 24 * 60 * 60 * 1000;
@@ -106,7 +106,7 @@ pub fn decide(
                     Decision::Fail
                 }
             }
-            JobKind::SeedPage | JobKind::MatchIds => Decision::Fail,
+            JobKind::SeedPage | JobKind::MatchIds | JobKind::ParticipantRank => Decision::Fail,
         },
         RiotError::BadRequest => Decision::Fail,
         RiotError::Server(_)
@@ -225,6 +225,10 @@ impl<T: Transport> Collector<T> {
                 return Err(e);
             }
         };
+        if matches!(reason, StopReason::AuthRejected(_)) {
+            // Tous les travailleurs sont drainés : les refus peuvent redevenir rejouables.
+            self.storage.reset_interrupted(run_id).await?;
+        }
         let retained = self.storage.retained_count(run_id).await?;
         let status = match reason {
             StopReason::Finished if retained >= target => RunStatus::Completed,
@@ -302,7 +306,8 @@ impl<T: Transport> Collector<T> {
                 res = tasks.join_next() => match res {
                     Some(Ok(Ok(JobEffect::Continue))) | None => {}
                     Some(Ok(Ok(JobEffect::Suspend(status)))) => {
-                        stop.get_or_insert(StopReason::AuthRejected(status));
+                        // Un refus de clé prime sur une borne détectée pendant la requête.
+                        stop = Some(StopReason::AuthRejected(status));
                     }
                     Some(Ok(Err(e))) => {
                         stop.get_or_insert(StopReason::Interrupted);
@@ -338,7 +343,20 @@ impl<T: Transport> Collector<T> {
         match job.kind {
             JobKind::SeedPage => {
                 let p: SeedPagePayload = job.payload()?;
-                let req = Request::league_entries(p.tier, p.division, p.page);
+                let mut req = Request::league_entries_for(
+                    &run.scope.platform_id,
+                    p.tier,
+                    p.division,
+                    p.page,
+                )?;
+                // La Flex utilise ses propres seeds ; les autres modes partent du classement Solo.
+                if run.scope.queue_id == 440 {
+                    for segment in &mut req.segments {
+                        if segment == "RANKED_SOLO_5x5" {
+                            *segment = "RANKED_FLEX_SR".into();
+                        }
+                    }
+                }
                 match self.client.get(&req).await {
                     Ok(body) => match model::parse_league_entries(&body) {
                         Ok(entries) => {
@@ -367,13 +385,15 @@ impl<T: Transport> Collector<T> {
                     .max_matches_per_seed
                     .saturating_sub(p.start)
                     .clamp(1, 100);
-                let req = Request::match_ids(
+                let req = Request::match_ids_for(
+                    &run.scope.platform_id,
+                    run.scope.queue_id,
                     &p.puuid,
                     p.start,
                     requested,
                     run.scope.window_start_ms / 1000,
                     run.scope.window_end_ms / 1000,
-                );
+                )?;
                 match self.client.get(&req).await {
                     Ok(body) => match model::parse_match_ids(&body) {
                         Ok(ids) => {
@@ -404,7 +424,14 @@ impl<T: Transport> Collector<T> {
                     }
                     return Ok(JobEffect::Continue);
                 }
-                match self.client.get(&Request::match_detail(&p.match_id)).await {
+                match self
+                    .client
+                    .get(&Request::match_detail_for(
+                        &run.scope.platform_id,
+                        &p.match_id,
+                    )?)
+                    .await
+                {
                     Ok(body) => match model::check_match(&body, &p.match_id, &run.scope) {
                         Ok(MatchCheck::Accepted(facts, raw)) => {
                             self.storage.store_match(&job, &p, &facts, &raw).await?;
@@ -421,13 +448,40 @@ impl<T: Transport> Collector<T> {
                     Err(e) => self.handle_error(&job, e).await,
                 }
             }
+            JobKind::ParticipantRank => {
+                let p: ParticipantRankPayload = job.payload()?;
+                if self.storage.ranks_fresh(&p).await? {
+                    self.storage.finish_job(&job, "cached", 0).await?;
+                    return Ok(JobEffect::Continue);
+                }
+                let request = Request::participant_ranks(&p.platform_id, &p.puuid)?;
+                match self.client.get(&request).await {
+                    Ok(body) => match model::parse_participant_ranks(&body) {
+                        Ok(ranks) => {
+                            self.storage
+                                .store_participant_ranks(&job, &p, &ranks)
+                                .await?;
+                            Ok(JobEffect::Continue)
+                        }
+                        Err(message) => {
+                            self.handle_error(&job, RiotError::InvalidBody(message))
+                                .await
+                        }
+                    },
+                    Err(error) => self.handle_error(&job, error).await,
+                }
+            }
             JobKind::Timeline => {
                 let p: TimelinePayload = job.payload()?;
                 if self.storage.timeline_available(&p.match_id).await? {
                     self.storage.finish_job(&job, "already_present", 0).await?;
                     return Ok(JobEffect::Continue);
                 }
-                match self.client.get(&Request::timeline(&p.match_id)).await {
+                match self
+                    .client
+                    .get(&Request::timeline_for(&run.scope.platform_id, &p.match_id)?)
+                    .await
+                {
                     Ok(body) => match model::check_timeline(&body, &p.match_id) {
                         Ok(raw) => {
                             self.storage.store_timeline(&job, &p.match_id, &raw).await?;
@@ -475,7 +529,7 @@ impl<T: Transport> Collector<T> {
             }
             Decision::Suspend(status) => {
                 warn!(status, "clé Riot refusée : collecte suspendue");
-                self.storage.release_job(job, &message, 1).await?;
+                self.storage.suspend_job(job, &message, 1).await?;
                 Ok(JobEffect::Suspend(status))
             }
         }

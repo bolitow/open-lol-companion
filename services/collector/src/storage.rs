@@ -12,8 +12,8 @@ use sqlx::postgres::{PgConnection, PgPool, PgPoolOptions};
 use sqlx::{Connection, Postgres, Row, Transaction};
 use thiserror::Error;
 
-use crate::config::{Division, RunParams, Tier, PLATFORM_ID, RANKED_SOLO_QUEUE_ID};
-use crate::model::{Exclusion, LeagueEntry, MatchFacts, Scope};
+use crate::config::{ConfigError, Division, RunParams, Tier};
+use crate::model::{Exclusion, LeagueEntry, MatchFacts, ParticipantRank, Scope};
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
@@ -22,6 +22,8 @@ const COLLECTOR_LOCK_KEY: i64 = 0x0017_C011_EC70;
 
 #[derive(Debug, Error)]
 pub enum StorageError {
+    #[error(transparent)]
+    Config(#[from] ConfigError),
     #[error("PostgreSQL : {0}")]
     Db(#[from] sqlx::Error),
     #[error("migrations PostgreSQL : {0}")]
@@ -41,6 +43,7 @@ pub enum JobKind {
     MatchIds,
     Match,
     Timeline,
+    ParticipantRank,
 }
 
 impl JobKind {
@@ -50,6 +53,7 @@ impl JobKind {
             JobKind::MatchIds => "match_ids",
             JobKind::Match => "match",
             JobKind::Timeline => "timeline",
+            JobKind::ParticipantRank => "participant_rank",
         }
     }
 
@@ -59,6 +63,7 @@ impl JobKind {
             "match_ids" => Ok(JobKind::MatchIds),
             "match" => Ok(JobKind::Match),
             "timeline" => Ok(JobKind::Timeline),
+            "participant_rank" => Ok(JobKind::ParticipantRank),
             other => Err(StorageError::Corrupt(format!("type de travail {other}"))),
         }
     }
@@ -90,6 +95,12 @@ pub struct MatchPayload {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TimelinePayload {
     pub match_id: String,
+}
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ParticipantRankPayload {
+    pub platform_id: String,
+    pub puuid: String,
 }
 
 /// Travail réservé par le collecteur (état `running`).
@@ -190,6 +201,12 @@ impl Storage {
         &self.pool
     }
 
+    pub(crate) async fn transaction_connection(
+        &self,
+    ) -> Result<crate::transaction::TransactionConnection, sqlx::Error> {
+        crate::transaction::TransactionConnection::acquire(&self.pool).await
+    }
+
     pub async fn migrate(&self) -> Result<(), StorageError> {
         MIGRATOR.run(&self.pool).await?;
         Ok(())
@@ -217,22 +234,35 @@ impl Storage {
         window_start_ms: i64,
         window_end_ms: i64,
     ) -> Result<i64, StorageError> {
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
+        let run_id = Self::create_run_in(&mut tx, params, window_start_ms, window_end_ms).await?;
+        tx.commit().await?;
+        Ok(run_id)
+    }
+
+    /// Partage la transaction de création d'une campagne pour éviter les runs orphelins.
+    pub(crate) async fn create_run_in(
+        tx: &mut Transaction<'_, Postgres>,
+        params: &RunParams,
+        window_start_ms: i64,
+        window_end_ms: i64,
+    ) -> Result<i64, StorageError> {
         let params_json =
             serde_json::to_value(params).map_err(|e| StorageError::Corrupt(e.to_string()))?;
-        let mut tx = self.pool.begin().await?;
         let run_id: i64 = sqlx::query_scalar(
             "INSERT INTO collection_runs
                 (status, platform_id, queue_id, window_start, window_end, target_matches, params)
              VALUES ('running', $1, $2, to_timestamp($3::float8 / 1000), to_timestamp($4::float8 / 1000), $5, $6)
              RETURNING id",
         )
-        .bind(PLATFORM_ID)
-        .bind(RANKED_SOLO_QUEUE_ID)
+        .bind(&params.platform_id)
+        .bind(params.queue_id)
         .bind(window_start_ms)
         .bind(window_end_ms)
         .bind(params.target_matches as i32)
         .bind(params_json)
-        .fetch_one(&mut *tx)
+        .fetch_one(&mut **tx)
         .await?;
         let strata_count = params.strata().len() as i64;
         for (stratum, (tier, division)) in params.strata().into_iter().enumerate() {
@@ -243,7 +273,7 @@ impl Storage {
                 stratum: stratum as u32,
             };
             insert_job(
-                &mut tx,
+                tx,
                 run_id,
                 JobKind::SeedPage,
                 &seed_page_key(&payload),
@@ -252,7 +282,6 @@ impl Storage {
             )
             .await?;
         }
-        tx.commit().await?;
         Ok(run_id)
     }
 
@@ -272,10 +301,11 @@ impl Storage {
         Ok(RunRecord {
             id: row.try_get("id")?,
             status: RunStatus::parse(row.try_get("status")?)?,
-            params,
+            params: params.clone(),
             scope: Scope {
                 platform_id: row.try_get("platform_id")?,
                 queue_id: row.try_get("queue_id")?,
+                patches: params.patches.clone(),
                 window_start_ms: row.try_get("start_ms")?,
                 window_end_ms: row.try_get("end_ms")?,
             },
@@ -344,7 +374,8 @@ impl Storage {
     /// Remet en attente les travaux en échec (après une panne réseau, par exemple)
     /// et rouvre l'exécution. Renvoie le nombre de travaux relancés.
     pub async fn requeue_failed(&self, run_id: i64) -> Result<u64, StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         let res = sqlx::query(
             "UPDATE collection_jobs
              SET state = 'pending', attempts = 0, not_found_count = 0, outcome = NULL,
@@ -384,7 +415,8 @@ impl Storage {
     /// joueurs ne dépend ainsi pas du moment où chaque historique arrive. Une découverte
     /// en attente de nouvelle tentative ne bloque pas les détails.
     pub async fn claim_next(&self, run_id: i64, target: i64) -> Result<Option<Job>, StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         let row = sqlx::query(
             "WITH counts AS (
                  SELECT (SELECT count(*) FROM run_matches WHERE run_id = $1)
@@ -403,7 +435,7 @@ impl Storage {
                             WHERE d.run_id = $1 AND d.kind IN ('seed_page', 'match_ids')
                               AND d.state IN ('pending', 'running'))))
              ORDER BY CASE j.kind WHEN 'seed_page' THEN 0 WHEN 'match_ids' THEN 1
-                                  WHEN 'timeline' THEN 2 ELSE 3 END,
+                                  WHEN 'timeline' THEN 2 WHEN 'participant_rank' THEN 3 ELSE 4 END,
                       j.sort_key, j.id
              LIMIT 1
              FOR UPDATE OF j SKIP LOCKED",
@@ -469,7 +501,8 @@ impl Storage {
         params: &RunParams,
     ) -> Result<u32, StorageError> {
         let strata_count = params.strata().len() as i64;
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         let existing: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM seed_players WHERE run_id = $1 AND tier = $2 AND division = $3",
         )
@@ -496,7 +529,7 @@ impl Storage {
             )
             .bind(job.run_id)
             .bind(puuid)
-            .bind(PLATFORM_ID)
+            .bind(&params.platform_id)
             .bind(payload.tier.as_str())
             .bind(payload.division.as_str())
             .bind(entry.league_points)
@@ -524,7 +557,7 @@ impl Storage {
             .await?;
             inserted += 1;
         }
-        if inserted < capacity && !entries.is_empty() {
+        if !payload.tier.is_apex() && inserted < capacity && !entries.is_empty() {
             let next = SeedPagePayload {
                 page: payload.page + 1,
                 ..payload.clone()
@@ -555,7 +588,8 @@ impl Storage {
         scope: &Scope,
         params: &RunParams,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         for (i, match_id) in ids.iter().enumerate() {
             sqlx::query(
                 "INSERT INTO run_discoveries (run_id, match_id, seed_puuid)
@@ -646,7 +680,8 @@ impl Storage {
         job: &Job,
         payload: &MatchPayload,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         link_match(&mut tx, job, payload, true).await?;
         finish(&mut tx, job, "already_present", 0).await?;
         tx.commit().await?;
@@ -661,7 +696,8 @@ impl Storage {
         facts: &MatchFacts,
         detail: &Value,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         let inserted = sqlx::query(
             "INSERT INTO matches
                 (match_id, platform_id, queue_id, game_version, patch, game_start,
@@ -706,8 +742,55 @@ impl Storage {
         outcome: &str,
         calls: i64,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         finish(&mut tx, job, outcome, calls).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Cache des deux files de classement pendant 24 h ; aucune absence n'est inférée.
+    pub async fn ranks_fresh(
+        &self,
+        payload: &ParticipantRankPayload,
+    ) -> Result<bool, StorageError> {
+        Ok(sqlx::query_scalar(
+            "SELECT count(DISTINCT queue_id) = 2 FROM participant_rank_observations
+             WHERE platform_id = $1 AND puuid = $2 AND observed_at >= now() - interval '24 hours'",
+        )
+        .bind(&payload.platform_id)
+        .bind(&payload.puuid)
+        .fetch_one(&self.pool)
+        .await?)
+    }
+
+    /// Une réponse 200 observe les deux files ; une file absente signifie non classé.
+    pub async fn store_participant_ranks(
+        &self,
+        job: &Job,
+        payload: &ParticipantRankPayload,
+        ranks: &[ParticipantRank],
+    ) -> Result<(), StorageError> {
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
+        for queue_id in [420, 440] {
+            let rank = ranks.iter().find(|r| r.queue_id == queue_id);
+            sqlx::query(
+                "INSERT INTO participant_rank_observations
+                (platform_id, puuid, queue_id, tier, division, league_points, status)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)",
+            )
+            .bind(&payload.platform_id)
+            .bind(&payload.puuid)
+            .bind(queue_id)
+            .bind(rank.map(|r| r.tier.as_str()))
+            .bind(rank.map(|r| r.division.as_str()))
+            .bind(rank.map(|r| r.league_points))
+            .bind(if rank.is_some() { "ranked" } else { "unranked" })
+            .execute(&mut *tx)
+            .await?;
+        }
+        finish(&mut tx, job, "observed", 1).await?;
         tx.commit().await?;
         Ok(())
     }
@@ -728,7 +811,8 @@ impl Storage {
         match_id: &str,
         timeline: &Value,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         sqlx::query(
             "INSERT INTO match_timelines (match_id, status, timeline) VALUES ($1, 'available', $2)
              ON CONFLICT (match_id) DO UPDATE
@@ -750,7 +834,8 @@ impl Storage {
         job: &Job,
         match_id: &str,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         sqlx::query(
             "INSERT INTO match_timelines (match_id, status) VALUES ($1, 'unavailable')
              ON CONFLICT DO NOTHING",
@@ -783,7 +868,8 @@ impl Storage {
             RetryKind::NotFound => (0, 1),
             RetryKind::RateLimited => (0, 0),
         };
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         sqlx::query(
             "UPDATE collection_jobs
              SET state = 'retry_wait', attempts = attempts + $2, not_found_count = not_found_count + $3,
@@ -804,7 +890,8 @@ impl Storage {
 
     /// Échec définitif du travail ; l'exécution continue.
     pub async fn fail_job(&self, job: &Job, error: &str, calls: i64) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
         sqlx::query(
             "UPDATE collection_jobs
              SET state = 'failed', attempts = attempts + 1, last_error = $2, outcome = 'failed', updated_at = now()
@@ -819,21 +906,20 @@ impl Storage {
         Ok(())
     }
 
-    /// Remet un travail en attente sans compter de tentative (collecte suspendue).
-    pub async fn release_job(
+    /// Conserve le travail réservé jusqu'au drainage pour éviter sa relance sur 401/403.
+    pub async fn suspend_job(
         &self,
         job: &Job,
         error: &str,
         calls: i64,
     ) -> Result<(), StorageError> {
-        let mut tx = self.pool.begin().await?;
-        sqlx::query(
-            "UPDATE collection_jobs SET state = 'pending', last_error = $2, updated_at = now() WHERE id = $1",
-        )
-        .bind(job.id)
-        .bind(error)
-        .execute(&mut *tx)
-        .await?;
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
+        sqlx::query("UPDATE collection_jobs SET last_error = $2, updated_at = now() WHERE id = $1")
+            .bind(job.id)
+            .bind(error)
+            .execute(&mut *tx)
+            .await?;
         add_calls(&mut tx, job.run_id, calls).await?;
         tx.commit().await?;
         Ok(())
@@ -925,6 +1011,47 @@ async fn link_match(
             job.sort_key,
         )
         .await?;
+    }
+    // La même partie peut être réutilisée par une exécution qui active les rangs.
+    let rank_source = sqlx::query(
+        "SELECT m.platform_id, m.detail
+        FROM matches m JOIN collection_runs r ON r.id = $1
+        WHERE m.match_id = $2 AND r.params->>'collect_ranks' = 'true'",
+    )
+    .bind(job.run_id)
+    .bind(&payload.match_id)
+    .fetch_optional(&mut **tx)
+    .await?;
+    if let Some(source) = rank_source {
+        let platform_id: String = source.try_get("platform_id")?;
+        let detail: Value = source.try_get("detail")?;
+        if let Some(participants) = detail
+            .pointer("/info/participants")
+            .and_then(Value::as_array)
+        {
+            for participant in participants {
+                let Some(puuid) = participant
+                    .get("puuid")
+                    .and_then(Value::as_str)
+                    .filter(|p| !p.is_empty() && *p != "BOT" && p.bytes().any(|b| b != b'0'))
+                else {
+                    continue;
+                };
+                let rank = ParticipantRankPayload {
+                    platform_id: platform_id.clone(),
+                    puuid: puuid.to_owned(),
+                };
+                insert_job(
+                    tx,
+                    job.run_id,
+                    JobKind::ParticipantRank,
+                    puuid,
+                    &rank,
+                    job.sort_key,
+                )
+                .await?;
+            }
+        }
     }
     Ok(())
 }
