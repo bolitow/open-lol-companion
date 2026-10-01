@@ -88,7 +88,7 @@ flowchart LR
 | Raccourcis globaux | `RegisterHotKey`, layouts AZERTY | Carbon `RegisterEventHotKey` | Remappables |
 | Mises à jour | Installeur NSIS/MSI signé, auto-update | DMG notarisé Apple, auto-update | Releases GitHub, canal stable + bêta |
 
-**Backend** : API Node.js (NestJS) ou Go, PostgreSQL + ClickHouse pour les stats agrégées, Redis pour le cache et les files, workers de collecte Riot API, stockage objet S3. Site web en Next.js (SEO indispensable pour les pages builds/tierlist).
+**Backend** : API Rust/Axum (#19), collecteur Rust et PostgreSQL pour les stats agrégées. ClickHouse et Redis restent des extensions d'infrastructure ; stockage objet S3 prévu pour les médias. Site web en Next.js (SEO indispensable pour les pages builds/tierlist).
 
 **Contraintes macOS**
 
@@ -345,6 +345,14 @@ Voir [le contrat complet](../services/collector/README.md) et
 | Détection de moments | Événements + timeline | Horodatage des clips | — |
 
 **10.4 API interne** : REST + WebSocket pour l'app, authentification JWT, cache CDN pour les données statiques.
+
+Choix du #19 (1er octobre 2026) : Rust/Axum dans `services/api`, instantanés #18
+et contrats TypeScript partagés. Profils par Riot ID actuel, classements horodatés
+et historique match-v5 paginé, sans identités adverses ni parties personnalisées
+publiques. Quotas PostgreSQL communs au collecteur et à l'API ; JWT de lecture
+émis côté serveur, connexion utilisateur/RSO distincte. WebSocket d'annonce des
+publications ; statiques FR/EN avec ETag et cache CDN. La fenêtre temporelle est
+celle du calcul publié. Voir [le contrat API](../services/api/README.md).
 
 ## 11. Modèle économique : gratuit et open source
 

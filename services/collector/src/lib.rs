@@ -11,6 +11,7 @@ pub mod model;
 pub mod rate_limit;
 pub mod report;
 pub mod riot_client;
+pub mod shared_quota;
 pub mod static_data;
 pub mod storage;
 mod transaction;

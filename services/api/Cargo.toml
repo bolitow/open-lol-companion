@@ -1,0 +1,29 @@
+[package]
+name = "olc-api"
+version = "0.1.0"
+description = "API interne REST et WebSocket d'Open LoL Companion."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version = "1.80"
+publish = false
+
+[dependencies]
+olc-collector = { path = "../collector" }
+axum = { version = "0.8.9", features = ["ws"] }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["rt-multi-thread", "macros", "time", "sync", "signal", "net"] }
+futures-util.workspace = true
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "postgres", "json"] }
+jsonwebtoken = { version = "9.3.1", default-features = false }
+sha2 = "0.10"
+clap = { version = "4.5", features = ["derive", "env"] }
+dotenvy = "0.15"
+tower-http = { version = "0.6", features = ["cors"] }
+
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }
+tokio-tungstenite.workspace = true
+olc-collector = { path = "../collector", features = ["test-fixtures"] }

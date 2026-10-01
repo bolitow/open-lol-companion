@@ -6,7 +6,10 @@ mod scheduler;
 mod snapshot;
 mod storage;
 
-pub use model::{AggregationOptions, AggregationReport, ChampionStats, GroupKey, Role};
+pub use model::{
+    AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
+    ItemEventStats, Role, ScopeCoverage, ScopeKey, SkillStats,
+};
 pub use scheduler::run_periodic;
 pub use storage::{recalculate, recalculate_filtered};
 

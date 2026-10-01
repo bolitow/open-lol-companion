@@ -72,6 +72,8 @@ impl Route {
 /// Méthode Riot, clé des quotas par méthode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Endpoint {
+    AccountByRiotId,
+    SummonerByPuuid,
     LeagueEntries,
     ApexLeague,
     ParticipantRanks,
@@ -83,6 +85,8 @@ pub enum Endpoint {
 impl Endpoint {
     pub fn route(self) -> Route {
         match self {
+            Endpoint::AccountByRiotId => Route::Europe,
+            Endpoint::SummonerByPuuid => Route::Euw1,
             Endpoint::LeagueEntries | Endpoint::ApexLeague | Endpoint::ParticipantRanks => {
                 Route::Euw1
             }
@@ -92,6 +96,8 @@ impl Endpoint {
 
     pub fn name(self) -> &'static str {
         match self {
+            Endpoint::AccountByRiotId => "account-v1 riot-id",
+            Endpoint::SummonerByPuuid => "summoner-v4 puuid",
             Endpoint::LeagueEntries => "league-v4 entries",
             Endpoint::ApexLeague => "league-v4 apex",
             Endpoint::ParticipantRanks => "league-v4 ranks",
@@ -388,6 +394,7 @@ impl<T: Transport> RiotClient<T> {
 pub struct HttpsTransport {
     http: reqwest::Client,
     base_urls: std::collections::HashMap<Route, Url>,
+    max_response_bytes: Option<usize>,
 }
 
 #[derive(Debug, Error)]
@@ -427,7 +434,18 @@ impl HttpsTransport {
             base_urls.insert(local, base(local)?);
             base_urls.insert(regional, base(regional)?);
         }
-        Ok(Self { http, base_urls })
+        Ok(Self {
+            http,
+            base_urls,
+            max_response_bytes: None,
+        })
+    }
+
+    /// Borne les réponses pendant leur lecture, pour les endpoints publics de l'API interne.
+    /// Les grandes timelines du collecteur conservent leur comportement existant.
+    pub fn with_max_response_bytes(mut self, limit: usize) -> Self {
+        self.max_response_bytes = Some(limit);
+        self
     }
 
     fn base(&self, route: Route) -> Result<&Url, TransportError> {
@@ -461,13 +479,37 @@ impl Transport for HttpsTransport {
             .iter()
             .filter_map(|(k, v)| Some((k.as_str().to_owned(), v.to_str().ok()?.to_owned())))
             .collect();
-        let body = res.bytes().await.map_err(map_reqwest)?.to_vec();
+        let body = read_body(res, self.max_response_bytes).await?;
         Ok(RawResponse {
             status,
             headers,
             body,
         })
     }
+}
+
+async fn read_body(
+    mut response: reqwest::Response,
+    max_bytes: Option<usize>,
+) -> Result<Vec<u8>, TransportError> {
+    let Some(limit) = max_bytes else {
+        return Ok(response.bytes().await.map_err(map_reqwest)?.to_vec());
+    };
+    let too_large = || TransportError::Network("réponse Riot trop volumineuse".into());
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit as u64)
+    {
+        return Err(too_large());
+    }
+    let mut body = Vec::new();
+    while let Some(chunk) = response.chunk().await.map_err(map_reqwest)? {
+        if chunk.len() > limit.saturating_sub(body.len()) {
+            return Err(too_large());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    Ok(body)
 }
 
 fn map_reqwest(e: reqwest::Error) -> TransportError {
@@ -489,6 +531,34 @@ fn map_reqwest(e: reqwest::Error) -> TransportError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn la_lecture_bornee_refuse_longueur_et_flux_trop_grands() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        for (raw, accepted) in [
+            ("HTTP/1.1 200 OK\r\nContent-Length: 16\r\nConnection: close\r\n\r\nabcdefghijklmnop", false),
+            ("HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n8\r\nabcdefgh\r\n8\r\nijklmnop\r\n0\r\n\r\n", false),
+            ("HTTP/1.1 200 OK\r\nContent-Length: 8\r\nConnection: close\r\n\r\nabcdefgh", true),
+        ] {
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let address = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut socket,_) = listener.accept().await.unwrap();
+                let mut input = [0; 4096];
+                let mut received = 0;
+                while !input[..received].windows(4).any(|bytes| bytes == b"\r\n\r\n") {
+                    let count = socket.read(&mut input[received..]).await.unwrap();
+                    assert!(count > 0, "requête HTTP incomplète");
+                    received += count;
+                }
+                socket.write_all(raw.as_bytes()).await.unwrap();
+            });
+            let response = reqwest::Client::builder().use_preconfigured_tls(public_tls_config().unwrap()).build().unwrap().get(format!("http://{address}")).send().await.unwrap();
+            let result = read_body(response, Some(10)).await;
+            assert_eq!(result.is_ok(), accepted);
+            server.await.unwrap();
+        }
+    }
     use crate::rate_limit::RateLimiter;
     use std::sync::Mutex;
 

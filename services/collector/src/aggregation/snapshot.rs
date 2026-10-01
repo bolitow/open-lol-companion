@@ -34,10 +34,10 @@ pub(super) async fn publish(
     // Vue empruntée : ne pas dupliquer toutes les listes dans un arbre serde_json::Value.
     let metadata = Metadata {
         schema_version: report.schema_version,
-        rank_scope: report.rank_scope,
+        rank_scope: &report.rank_scope,
         rank_max_age_hours: report.rank_max_age_hours,
-        pick_rate_definition: report.pick_rate_definition,
-        tier_method: report.tier_method,
+        pick_rate_definition: &report.pick_rate_definition,
+        tier_method: &report.tier_method,
         min_games: report.min_games,
         filters: &report.filters,
         source_matches: report.source_matches,
