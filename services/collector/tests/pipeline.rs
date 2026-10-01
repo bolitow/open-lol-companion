@@ -22,6 +22,7 @@ fn params(target: u32, seeds: u32) -> RunParams {
         seeds_per_division: seeds,
         max_matches_per_seed: 10,
         call_budget: 1000,
+        ..RunParams::default()
     }
 }
 
@@ -559,5 +560,198 @@ async fn apres_une_panne_reseau_les_travaux_en_echec_peuvent_etre_relances() {
     let outcome = collector.execute(run_id, never()).await.unwrap();
     assert_eq!(outcome.status, RunStatus::Completed);
     assert_eq!(outcome.retained, 3);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn collecte_le_perimetre_configure_et_les_rangs_sans_doublons() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    fake.history("seed", &["KR_1", "KR_2", "KR_old"]);
+    for id in ["KR_1", "KR_2"] {
+        fake.game_with(id, "KR", 450, recent(), true);
+    }
+    let mut old = fixtures::match_detail("KR_old", "KR", 450, recent());
+    old["info"]["gameVersion"] = serde_json::json!("15.18.1");
+    fake.script("matches/KR_old", vec![Ok(common::ok_json(&old))]);
+    fake.script(
+        "ranks/fake-puuid-0",
+        vec![Ok(common::ok_json(&serde_json::json!([
+            {"queueType":"RANKED_SOLO_5x5","tier":"GOLD","rank":"II","leaguePoints":42}
+        ])))],
+    );
+    let params = RunParams {
+        platform_id: "KR".into(),
+        queue_id: 0,
+        patches: vec!["15.19".into()],
+        collect_ranks: true,
+        ..params(10, 1)
+    };
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let run_id = collector.start_run(&params, now_ms()).await.unwrap();
+    let outcome = collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(outcome.retained, 2);
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 10);
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM participant_rank_observations")
+            .await,
+        20
+    );
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM participant_rank_observations WHERE status = 'ranked'")
+            .await,
+        1
+    );
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM collection_jobs WHERE outcome = 'excluded:wrong_patch'")
+            .await,
+        1
+    );
+    // Une nouvelle exécution réutilise les parties et les rangs observés récemment.
+    let next = collector.start_run(&params, now_ms()).await.unwrap();
+    collector.execute(next, never()).await.unwrap();
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 10);
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM participant_rank_observations")
+            .await,
+        20
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_rang_introuvable_reste_inconnu_et_la_reprise_repare_les_erreurs() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    fake.history("seed", &["EUW1_1"]);
+    fake.game("EUW1_1", recent());
+    fake.script("ranks/fake-puuid-0", vec![Ok(status(404, &[]))]);
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let run_id = collector
+        .start_run(
+            &RunParams {
+                collect_ranks: true,
+                ..params(1, 1)
+            },
+            now_ms(),
+        )
+        .await
+        .unwrap();
+    collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(
+        db.scalar(
+            "SELECT count(*) FROM participant_rank_observations WHERE puuid = 'fake-puuid-0'"
+        )
+        .await,
+        0
+    );
+    assert_eq!(db.storage.requeue_failed(run_id).await.unwrap(), 1);
+    collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(db.scalar("SELECT count(*) FROM participant_rank_observations WHERE puuid = 'fake-puuid-0' AND status = 'unranked'").await, 2);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_rangs_expires_sont_reobserves_et_les_bots_ne_sont_pas_interroges() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    fake.history("seed", &["EUW1_1"]);
+    fake.game("EUW1_1", recent());
+    let mut detail = fixtures::match_detail("EUW1_1", "EUW1", 420, recent());
+    detail["info"]["participants"][0]["puuid"] = serde_json::json!("BOT");
+    detail["info"]["participants"][1]["puuid"] = serde_json::json!("");
+    fake.script("matches/EUW1_1", vec![Ok(common::ok_json(&detail))]);
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let params = RunParams {
+        collect_ranks: true,
+        ..params(1, 1)
+    };
+    let first = collector.start_run(&params, now_ms()).await.unwrap();
+    collector.execute(first, never()).await.unwrap();
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 8);
+    sqlx::query(
+        "UPDATE participant_rank_observations SET observed_at = now() - interval '25 hours'",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    let second = collector.start_run(&params, now_ms()).await.unwrap();
+    collector.execute(second, never()).await.unwrap();
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 16);
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM participant_rank_observations")
+            .await,
+        32
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_liste_apex_est_lue_une_fois_et_conserve_son_rang() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.script("apex/masterleagues", vec![Ok(common::ok_json(&serde_json::json!({
+        "tier":"MASTER", "queue":"RANKED_SOLO_5x5", "entries":[{"puuid":"master-seed", "leaguePoints":200}]
+    })))]);
+    fake.history("master-seed", &["NA1_1"]);
+    fake.game_with("NA1_1", "NA1", 420, recent(), true);
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let run_id = collector
+        .start_run(
+            &RunParams {
+                platform_id: "NA1".into(),
+                tiers: vec![Tier::Master],
+                divisions: vec![Division::I, Division::II],
+                ..params(1, 15)
+            },
+            now_ms(),
+        )
+        .await
+        .unwrap();
+    let outcome = collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(outcome.retained, 1);
+    assert_eq!(fake.calls(Endpoint::ApexLeague), 1);
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM seed_players WHERE tier='MASTER' AND platform_id='NA1'")
+            .await,
+        1
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_historique_de_plus_de_cent_parties_reprend_a_la_bonne_page() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    let ids: Vec<String> = (0..105).map(|n| format!("EUW1_page{n}")).collect();
+    let references: Vec<&str> = ids.iter().map(String::as_str).collect();
+    fake.history("seed", &references);
+    for id in &ids {
+        fake.game(id, recent());
+    }
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let params = RunParams {
+        max_matches_per_seed: 105,
+        call_budget: 2,
+        ..params(105, 1)
+    };
+    let run_id = collector.start_run(&params, now_ms()).await.unwrap();
+    assert_eq!(
+        collector.execute(run_id, never()).await.unwrap().reason,
+        StopReason::CallBudget
+    );
+    db.storage.set_call_budget(run_id, 1000).await.unwrap();
+    let outcome = collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(outcome.retained, 105);
+    assert_eq!(fake.calls(Endpoint::MatchIdsByPuuid), 2);
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM match_timelines WHERE status='available'")
+            .await,
+        105
+    );
     db.cleanup().await;
 }

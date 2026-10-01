@@ -75,6 +75,15 @@ impl TestDb {
         Storage::from_pool(pool)
     }
 
+    /// URL de la base jetable pour lancer le vrai binaire en test.
+    pub fn database_url(&self) -> String {
+        self.admin
+            .clone()
+            .database(&self.name)
+            .to_url_lossy()
+            .to_string()
+    }
+
     pub async fn cleanup(self) {
         self.storage.pool().close().await;
         if let Ok(mut conn) = self.admin.connect().await {
@@ -248,6 +257,8 @@ impl FakeRiot {
                 let key = format!("{}/{}/{}", seg[5], seg[6], q("page"));
                 (key.clone(), format!("league/{key}"))
             }
+            Endpoint::ApexLeague => (seg[3].clone(), format!("apex/{}", seg[3])),
+            Endpoint::ParticipantRanks => (seg[5].clone(), format!("ranks/{}", seg[5])),
             Endpoint::MatchIdsByPuuid => (seg[5].clone(), format!("ids/{}", seg[5])),
             Endpoint::Match => (seg[4].clone(), format!("matches/{}", seg[4])),
             Endpoint::Timeline => (seg[4].clone(), format!("matches/{}/timeline", seg[4])),
@@ -261,6 +272,8 @@ impl FakeRiot {
             Endpoint::LeagueEntries => Ok(ok_json(&Value::Array(
                 s.league.get(&key).cloned().unwrap_or_default(),
             ))),
+            Endpoint::ApexLeague => Ok(ok_json(&json!({"entries": []}))),
+            Endpoint::ParticipantRanks => Ok(ok_json(&json!([]))),
             Endpoint::MatchIdsByPuuid => {
                 let all = s.histories.get(&key).cloned().unwrap_or_default();
                 let start: usize = q("start").parse().unwrap();

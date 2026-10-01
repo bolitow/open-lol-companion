@@ -320,6 +320,20 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 
 **10.2 Agrégation** : par patch, rang, région, rôle ; recalcul horaire de la tierlist ; seuils minimaux d'échantillon ; données statiques par patch mises à jour automatiquement.
 
+Extension de #18 (1er octobre 2026) : collecte Rust reprenable sur les plateformes
+Riot, toutes les files accessibles des historiques et les deux patches récents ;
+observations horodatées des rangs Solo/Flex, sans prétendre connaître le rang historique.
+Synchronisation atomique Data Dragon FR/EN (champions standard/Classic, compétences,
+objets, runes, sorts et catalogues). Agrégats par patch/plateforme/file/rôle/rang,
+winrate, part des sélections, bans par draft, builds, achats et ordre des compétences ;
+seuils et couvertures explicites, tiers descriptifs à partir de la borne Wilson.
+Une campagne de recette peut tourner jusqu'à 24 h avec rotation des régions et
+reprise. L'accès à tous les modes ne garantit pas un échantillon exhaustif ou
+représentatif ; les seeds restent issus du classement. Les modes non classés ne
+reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
+Voir [le contrat complet](../services/collector/README.md) et
+[la recette étendue](recettes/2026-10-01-agregation-complete.md).
+
 **10.3 Modèles IA**
 
 | Modèle | Entrée | Sortie | Réentraînement |

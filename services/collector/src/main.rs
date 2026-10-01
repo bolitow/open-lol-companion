@@ -4,10 +4,13 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::{Args, Parser, Subcommand};
+use olc_collector::aggregation::{self, AggregationError, AggregationOptions};
+use olc_collector::campaign;
 use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
 use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
 use olc_collector::report;
 use olc_collector::riot_client::HttpsTransport;
+use olc_collector::static_data;
 use olc_collector::storage::{RunStatus, Storage};
 use tracing_subscriber::EnvFilter;
 
@@ -15,7 +18,7 @@ use tracing_subscriber::EnvFilter;
 #[command(
     name = "olc-collector",
     version,
-    about = "Collecte de parties Ranked Solo/Duo EUW via l'API Riot"
+    about = "Collecte Riot multirégion et agrégation par patch, file, rôle et rang"
 )]
 struct Cli {
     #[command(subcommand)]
@@ -26,6 +29,78 @@ struct Cli {
 enum Command {
     /// Applique les migrations PostgreSQL.
     Migrate,
+    /// Synchronise les données publiques FR/EN des derniers patches Data Dragon.
+    SyncStatic {
+        #[arg(long, default_value_t=2, value_parser=clap::value_parser!(u8).range(1..=10))]
+        patch_count: u8,
+        /// Retélécharge aussi les versions déjà en cache.
+        #[arg(long)]
+        refresh: bool,
+        #[arg(long)]
+        watch: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Recalcule les statistiques des patches sélectionnés (#18).
+    Aggregate {
+        /// Patches techniques explicites ; sinon les deux patches du cache Data Dragon.
+        #[arg(long, value_delimiter = ',', conflicts_with = "all_stored")]
+        patches: Vec<String>,
+        /// Agrège tous les patches stockés, sans résolution Data Dragon.
+        #[arg(long)]
+        all_stored: bool,
+        #[arg(long, value_delimiter = ',')]
+        platforms: Vec<String>,
+        #[arg(long, value_delimiter = ',')]
+        queues: Vec<i32>,
+        /// Borne UTC inclusive, en millisecondes Unix.
+        #[arg(long)]
+        from_ms: Option<i64>,
+        /// Borne UTC exclusive, en millisecondes Unix.
+        #[arg(long)]
+        to_ms: Option<i64>,
+        /// Synchronise les statiques avant chaque calcul (immédiat puis horaire avec --watch).
+        #[arg(long)]
+        sync_static: bool,
+        /// Parties minimales par champion/rôle/patch pour publier taux et position.
+        #[arg(long, default_value_t = 100, value_parser = clap::value_parser!(u32).range(1..))]
+        min_games: u32,
+        /// Recalcule immédiatement puis chaque heure (Ctrl+C pour arrêter).
+        #[arg(long)]
+        watch: bool,
+        /// Rapport JSON complet ; une ligne par publication en mode continu.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Collecte toutes les files sur les plateformes choisies, par tranches reprenables de 15 min.
+    Campaign {
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_value = "EUW1,NA1,KR,OC1,EUN1,BR1,JP1,TW2,TR1,LA1,VN2,ME1,LA2,RU,SG2"
+        )]
+        platforms: Vec<String>,
+        #[arg(long,default_value_t=24,value_parser=clap::value_parser!(u8).range(1..=24))]
+        hours: u8,
+        #[arg(long, default_value_t = 10000)]
+        target_per_platform: u32,
+        #[arg(long, value_delimiter = ',')]
+        patches: Vec<String>,
+        #[arg(long, default_value_t = 5)]
+        seeds_per_division: u32,
+        #[arg(long, default_value_t = 100)]
+        max_matches_per_seed: u32,
+        #[arg(long, default_value_t = 100000)]
+        call_budget_per_platform: u64,
+        #[arg(long, default_value_t = 4)]
+        concurrency: usize,
+    },
+    /// Reprend la campagne avec ses fenêtres, patches et échéance d'origine.
+    CampaignResume {
+        campaign_id: i64,
+        #[command(flatten)]
+        runtime: RuntimeArgs,
+    },
     /// Lance une nouvelle exécution.
     Run {
         #[command(flatten)]
@@ -56,6 +131,19 @@ enum Command {
 
 #[derive(Args)]
 struct ParamsArgs {
+    #[arg(long, default_value = "EUW1")]
+    platform: String,
+    /// Identifiant de file ; 0 découvre toutes les files de l'historique.
+    #[arg(long, default_value_t = 420)]
+    queue: i32,
+    /// Patches techniques explicites ; sinon les deux patches du cache Data Dragon.
+    #[arg(long, value_delimiter = ',', conflicts_with = "all_patches")]
+    patches: Vec<String>,
+    #[arg(long)]
+    all_patches: bool,
+    /// Observe le classement Solo/Flex de chaque participant (cache de 24 h).
+    #[arg(long)]
+    collect_ranks: bool,
     /// Nombre de parties distinctes à retenir.
     #[arg(long, default_value_t = 1000)]
     target: u32,
@@ -93,7 +181,9 @@ impl RuntimeArgs {
     fn options(&self) -> RuntimeOptions {
         RuntimeOptions {
             concurrency: self.concurrency.clamp(1, 16),
-            max_duration: self.max_duration_mins.map(|m| Duration::from_secs(m * 60)),
+            max_duration: self
+                .max_duration_mins
+                .map(|m| Duration::from_secs(m.saturating_mul(60))),
             ..RuntimeOptions::default()
         }
     }
@@ -122,6 +212,65 @@ async fn main() -> ExitCode {
 async fn run(cli: Cli) -> Result<ExitCode, String> {
     let db_url = database_url(std::env::var("DATABASE_URL").ok()).map_err(|e| e.to_string())?;
     match cli.command {
+        Command::Aggregate {
+            min_games,
+            watch,
+            json,
+            patches,
+            all_stored,
+            platforms,
+            queues,
+            from_ms,
+            to_ms,
+            sync_static,
+        } => {
+            aggregate(
+                &db_url,
+                min_games,
+                watch,
+                json,
+                AggregationOptions {
+                    patches,
+                    platforms: platforms
+                        .into_iter()
+                        .map(|p| p.to_ascii_uppercase())
+                        .collect(),
+                    queues,
+                    start_ms: from_ms,
+                    end_ms: to_ms,
+                },
+                all_stored,
+                sync_static,
+            )
+            .await
+        }
+        Command::SyncStatic {
+            patch_count,
+            refresh,
+            watch,
+            json,
+        } => {
+            let storage = connect(&db_url, 2).await?;
+            let sync = || async {
+                let result =
+                    static_data::sync_recent_refresh(&storage, usize::from(patch_count), refresh)
+                        .await?;
+                if json {
+                    println!("{}", serde_json::to_string(&result)?);
+                } else {
+                    println!("Données statiques publiées : {} (FR/EN, champions et compétences, items, runes, sorts, cartes et catalogues).",result.releases.iter().map(|r|r.version.as_str()).collect::<Vec<_>>().join(", "));
+                }
+                Ok::<(), AggregationError>(())
+            };
+            if watch {
+                aggregation::run_periodic(sync, shutdown())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            } else {
+                tokio::select! { _=shutdown()=>return Ok(ExitCode::from(3)),r=sync()=>r.map_err(|e|e.to_string())? }
+            }
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Migrate => {
             let storage = connect(&db_url, 2).await?;
             println!("Migrations appliquées.");
@@ -141,8 +290,93 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             }
             Ok(ExitCode::SUCCESS)
         }
+        Command::Campaign {
+            platforms,
+            hours,
+            target_per_platform,
+            patches,
+            seeds_per_division,
+            max_matches_per_seed,
+            call_budget_per_platform,
+            concurrency,
+        } => {
+            let storage = connect(&db_url, concurrency.clamp(1, 16) as u32 + 3).await?;
+            let patches = if patches.is_empty() {
+                static_data::cached_patches(&storage, 2)
+                    .await
+                    .map_err(|e| e.to_string())?
+            } else {
+                patches
+            };
+            let template = RunParams {
+                queue_id: 0,
+                patches,
+                collect_ranks: true,
+                target_matches: target_per_platform,
+                tiers: vec![
+                    Tier::Iron,
+                    Tier::Bronze,
+                    Tier::Silver,
+                    Tier::Gold,
+                    Tier::Platinum,
+                    Tier::Emerald,
+                    Tier::Diamond,
+                    Tier::Master,
+                    Tier::Grandmaster,
+                    Tier::Challenger,
+                ],
+                window_days: 28,
+                seeds_per_division,
+                max_matches_per_seed,
+                call_budget: call_budget_per_platform,
+                ..RunParams::default()
+            };
+            template.validate().map_err(|e| e.to_string())?;
+            let api_key = ApiKey::from_env_value(std::env::var("RIOT_API_KEY").ok())
+                .map_err(|e| e.to_string())?;
+            let id = campaign::start(
+                &storage,
+                &platforms,
+                &template,
+                now_ms(),
+                Duration::from_secs(u64::from(hours) * 3600),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+            drive_campaign(
+                &storage,
+                &api_key,
+                id,
+                RuntimeOptions {
+                    concurrency: concurrency.clamp(1, 16),
+                    ..RuntimeOptions::default()
+                },
+            )
+            .await
+        }
+        Command::CampaignResume {
+            campaign_id,
+            runtime,
+        } => {
+            let api_key = ApiKey::from_env_value(std::env::var("RIOT_API_KEY").ok())
+                .map_err(|e| e.to_string())?;
+            let storage = connect(&db_url, runtime.options().concurrency as u32 + 3).await?;
+            drive_campaign(&storage, &api_key, campaign_id, runtime.options()).await
+        }
         Command::Run { params, runtime } => {
+            let patches = if params.patches.is_empty() && !params.all_patches {
+                let storage = connect(&db_url, 2).await?;
+                static_data::cached_patches(&storage, 2)
+                    .await
+                    .map_err(|e| e.to_string())?
+            } else {
+                params.patches
+            };
             let params = RunParams {
+                platform_id: params.platform.to_ascii_uppercase(),
+                queue_id: params.queue,
+                patches,
+                collect_ranks: params.collect_ranks,
                 target_matches: params.target,
                 tiers: params.tiers,
                 divisions: params.divisions,
@@ -174,6 +408,62 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
     }
 }
 
+async fn aggregate(
+    db_url: &str,
+    min_games: u32,
+    watch: bool,
+    json: bool,
+    filters: AggregationOptions,
+    all_stored: bool,
+    sync_static: bool,
+) -> Result<ExitCode, String> {
+    let storage = connect(db_url, 2)
+        .await
+        .map_err(|_| "connexion ou migrations PostgreSQL impossibles".to_owned())?;
+    let calculate = || async {
+        if sync_static {
+            static_data::sync_recent(&storage, 2).await?;
+        }
+        let mut selected = filters.clone();
+        if selected.patches.is_empty() && !all_stored {
+            selected.patches = static_data::cached_patches(&storage, 2).await?;
+        }
+        let report = aggregation::recalculate_filtered(&storage, min_games, &selected).await?;
+        if json {
+            println!("{}", serde_json::to_string(&report)?);
+        } else {
+            let eligible = report
+                .groups
+                .iter()
+                .filter(|g| g.position.is_some())
+                .count();
+            println!("Agrégats publiés : {} / {} parties retenues, {} groupes dont {} classés (seuil {}). Rangs observés séparés.",
+                report.included_matches, report.source_matches, report.groups.len(), eligible, report.min_games);
+            for (reason, count) in &report.exclusions {
+                println!("  Exclusions {reason} : {count}");
+            }
+        }
+        Ok::<(), AggregationError>(())
+    };
+    let shutdown = async {
+        if tokio::signal::ctrl_c().await.is_err() {
+            std::future::pending::<()>().await;
+        }
+    };
+    if watch {
+        aggregation::run_periodic(calculate, shutdown)
+            .await
+            .map_err(|e| e.to_string())?;
+    } else {
+        tokio::select! {
+            biased;
+            _ = shutdown => return Ok(ExitCode::from(3)),
+            result = calculate() => result.map_err(|e| e.to_string())?,
+        }
+    }
+    Ok(ExitCode::SUCCESS)
+}
+
 enum Start {
     New(RunParams),
     Resume {
@@ -186,8 +476,11 @@ enum Start {
 async fn connect(db_url: &str, max_connections: u32) -> Result<Storage, String> {
     let storage = Storage::connect(db_url, max_connections)
         .await
-        .map_err(|e| e.to_string())?;
-    storage.migrate().await.map_err(|e| e.to_string())?;
+        .map_err(|_| "connexion PostgreSQL impossible".to_owned())?;
+    storage
+        .migrate()
+        .await
+        .map_err(|_| "migrations PostgreSQL impossibles".to_owned())?;
     Ok(storage)
 }
 
@@ -287,4 +580,33 @@ fn explain(outcome: &RunOutcome, failed_jobs: i64) {
             eprintln!("\nCollecte arrêtée. Pour reprendre : olc-collector resume {id}")
         }
     }
+}
+
+async fn shutdown() {
+    if tokio::signal::ctrl_c().await.is_err() {
+        std::future::pending::<()>().await;
+    }
+}
+
+async fn drive_campaign(
+    storage: &Storage,
+    key: &ApiKey,
+    id: i64,
+    options: RuntimeOptions,
+) -> Result<ExitCode, String> {
+    let transport = HttpsTransport::new(key, Duration::from_secs(15)).map_err(|e| e.to_string())?;
+    eprintln!("Campagne #{id} en cours ; reprise : olc-collector campaign-resume {id}.");
+    let outcome = campaign::execute(storage, transport, options, id, shutdown())
+        .await
+        .map_err(|e| e.to_string())?;
+    println!(
+        "{}",
+        serde_json::to_string(&outcome)
+            .map_err(|_| "bilan de campagne non sérialisable".to_owned())?
+    );
+    Ok(if outcome.status == campaign::CampaignStatus::Finished {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::from(3)
+    })
 }
