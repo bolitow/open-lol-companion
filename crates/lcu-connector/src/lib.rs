@@ -12,8 +12,12 @@ mod client;
 mod credentials;
 mod discovery;
 mod gameflow;
+pub mod imports;
 mod wamp;
 mod watcher;
+
+#[cfg(test)]
+mod test_support;
 
 pub use client::{ClientError, LcuClient};
 pub use credentials::{Credentials, ParseError};

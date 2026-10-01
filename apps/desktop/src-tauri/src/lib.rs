@@ -1,5 +1,7 @@
 use serde::Serialize;
 
+mod imports;
+
 /// Réponse de `lcu_status`, miroir du type `LcuStatus` de `@olc/shared`.
 /// Le mot de passe du client ne quitte jamais le cœur Rust.
 #[derive(Serialize)]
@@ -28,7 +30,8 @@ fn lcu_status() -> LcuStatus {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![lcu_status])
+        .manage(imports::ImportLocks::default())
+        .invoke_handler(tauri::generate_handler![lcu_status, imports::import_runes,])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application");
 }
