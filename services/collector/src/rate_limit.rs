@@ -177,7 +177,7 @@ fn max_opt(a: Option<Instant>, b: Option<Instant>) -> Option<Instant> {
 pub struct RateLimiter {
     initial_app_limits: Vec<(u32, Duration)>,
     app: HashMap<Route, Bucket>,
-    methods: HashMap<Endpoint, Bucket>,
+    methods: HashMap<(Route, Endpoint), Bucket>,
 }
 
 impl RateLimiter {
@@ -199,13 +199,29 @@ impl RateLimiter {
     /// Réserve un envoi si tous les quotas le permettent ; sinon renvoie l'instant
     /// à partir duquel réessayer.
     pub fn try_acquire(&mut self, endpoint: Endpoint, now: Instant) -> Result<(), Instant> {
-        let app_at = self.app_bucket(endpoint.route()).available_at(now);
-        let method_at = self.methods.entry(endpoint).or_default().available_at(now);
+        self.try_acquire_on(endpoint.route(), endpoint, now)
+    }
+
+    pub fn try_acquire_on(
+        &mut self,
+        route: Route,
+        endpoint: Endpoint,
+        now: Instant,
+    ) -> Result<(), Instant> {
+        let app_at = self.app_bucket(route).available_at(now);
+        let method_at = self
+            .methods
+            .entry((route, endpoint))
+            .or_default()
+            .available_at(now);
         match max_opt(app_at, method_at) {
             Some(at) => Err(at),
             None => {
-                self.app_bucket(endpoint.route()).record(now);
-                self.methods.entry(endpoint).or_default().record(now);
+                self.app_bucket(route).record(now);
+                self.methods
+                    .entry((route, endpoint))
+                    .or_default()
+                    .record(now);
                 Ok(())
             }
         }
@@ -213,13 +229,23 @@ impl RateLimiter {
 
     /// Met à jour limites et compteurs à partir des en-têtes d'une réponse.
     pub fn observe(&mut self, endpoint: Endpoint, headers: &RateHeaders<'_>, now: Instant) {
+        self.observe_on(endpoint.route(), endpoint, headers, now)
+    }
+
+    pub fn observe_on(
+        &mut self,
+        route: Route,
+        endpoint: Endpoint,
+        headers: &RateHeaders<'_>,
+        now: Instant,
+    ) {
         if let Some(limits) = headers.app_limit.and_then(parse_limits) {
-            self.app_bucket(endpoint.route()).set_limits(&limits);
+            self.app_bucket(route).set_limits(&limits);
         }
         if let Some(counts) = headers.app_count.and_then(parse_limits) {
-            self.app_bucket(endpoint.route()).sync_counts(&counts, now);
+            self.app_bucket(route).sync_counts(&counts, now);
         }
-        let method = self.methods.entry(endpoint).or_default();
+        let method = self.methods.entry((route, endpoint)).or_default();
         if let Some(limits) = headers.method_limit.and_then(parse_limits) {
             method.set_limits(&limits);
         }
@@ -240,15 +266,34 @@ impl RateLimiter {
         default_pause: Duration,
         now: Instant,
     ) -> Duration {
+        self.on_rate_limited_on(
+            endpoint.route(),
+            endpoint,
+            scope,
+            retry_after,
+            default_pause,
+            now,
+        )
+    }
+
+    pub fn on_rate_limited_on(
+        &mut self,
+        route: Route,
+        endpoint: Endpoint,
+        scope: LimitScope,
+        retry_after: Option<Duration>,
+        default_pause: Duration,
+        now: Instant,
+    ) -> Duration {
         let pause = retry_after.unwrap_or(default_pause);
         let until = now + pause;
         match scope {
-            LimitScope::Method | LimitScope::Service => {
-                self.methods.entry(endpoint).or_default().block(until)
-            }
-            LimitScope::Application | LimitScope::Unknown => {
-                self.app_bucket(endpoint.route()).block(until)
-            }
+            LimitScope::Method | LimitScope::Service => self
+                .methods
+                .entry((route, endpoint))
+                .or_default()
+                .block(until),
+            LimitScope::Application | LimitScope::Unknown => self.app_bucket(route).block(until),
         }
         pause
     }
@@ -278,10 +323,14 @@ impl Governor {
 
     /// Attend qu'un envoi soit autorisé puis le réserve.
     pub async fn acquire(&self, endpoint: Endpoint) {
+        self.acquire_on(endpoint.route(), endpoint).await
+    }
+
+    pub async fn acquire_on(&self, route: Route, endpoint: Endpoint) {
         loop {
             let wait_until = {
                 let mut limiter = self.inner.lock().await;
-                match limiter.try_acquire(endpoint, Instant::now()) {
+                match limiter.try_acquire_on(route, endpoint, Instant::now()) {
                     Ok(()) => return,
                     Err(at) => at,
                 }
@@ -291,10 +340,14 @@ impl Governor {
     }
 
     pub async fn observe(&self, endpoint: Endpoint, headers: &RateHeaders<'_>) {
+        self.observe_on(endpoint.route(), endpoint, headers).await
+    }
+
+    pub async fn observe_on(&self, route: Route, endpoint: Endpoint, headers: &RateHeaders<'_>) {
         self.inner
             .lock()
             .await
-            .observe(endpoint, headers, Instant::now());
+            .observe_on(route, endpoint, headers, Instant::now());
     }
 
     pub async fn on_rate_limited(
@@ -304,7 +357,26 @@ impl Governor {
         retry_after: Option<Duration>,
         default_pause: Duration,
     ) -> Duration {
-        self.inner.lock().await.on_rate_limited(
+        self.on_rate_limited_on(
+            endpoint.route(),
+            endpoint,
+            scope,
+            retry_after,
+            default_pause,
+        )
+        .await
+    }
+
+    pub async fn on_rate_limited_on(
+        &self,
+        route: Route,
+        endpoint: Endpoint,
+        scope: LimitScope,
+        retry_after: Option<Duration>,
+        default_pause: Duration,
+    ) -> Duration {
+        self.inner.lock().await.on_rate_limited_on(
+            route,
             endpoint,
             scope,
             retry_after,
@@ -327,6 +399,28 @@ mod tests {
                 .map(|&(c, s)| (c, Duration::from_secs(s)))
                 .collect(),
         )
+    }
+
+    #[test]
+    fn les_quotas_de_methode_sont_separes_par_region() {
+        let now = Instant::now();
+        let mut limiter = limiter(&[(100, 1)]);
+        limiter.observe_on(
+            Route::Europe,
+            Endpoint::Match,
+            &RateHeaders {
+                method_limit: Some("1:60"),
+                method_count: Some("1:60"),
+                ..RateHeaders::default()
+            },
+            now,
+        );
+        assert!(limiter
+            .try_acquire_on(Route::Europe, Endpoint::Match, now)
+            .is_err());
+        assert!(limiter
+            .try_acquire_on(Route::Asia, Endpoint::Match, now)
+            .is_ok());
     }
 
     #[test]

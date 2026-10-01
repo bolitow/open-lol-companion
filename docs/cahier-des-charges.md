@@ -88,7 +88,7 @@ flowchart LR
 | Raccourcis globaux | `RegisterHotKey`, layouts AZERTY | Carbon `RegisterEventHotKey` | Remappables |
 | Mises à jour | Installeur NSIS/MSI signé, auto-update | DMG notarisé Apple, auto-update | Releases GitHub, canal stable + bêta |
 
-**Backend** : API Node.js (NestJS) ou Go, PostgreSQL + ClickHouse pour les stats agrégées, Redis pour le cache et les files, workers de collecte Riot API, stockage objet S3. Site web en Next.js (SEO indispensable pour les pages builds/tierlist).
+**Backend** : API Rust/Axum (#19), collecteur Rust et PostgreSQL pour les stats agrégées. ClickHouse et Redis restent des extensions d'infrastructure ; stockage objet S3 prévu pour les médias. Site web en Next.js (SEO indispensable pour les pages builds/tierlist).
 
 **Contraintes macOS**
 
@@ -320,6 +320,28 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 
 **10.2 Agrégation** : par patch, rang, région, rôle ; recalcul horaire de la tierlist ; seuils minimaux d'échantillon ; données statiques par patch mises à jour automatiquement.
 
+Extension de #18 (1er octobre 2026) : collecte Rust reprenable sur les plateformes
+Riot, toutes les files accessibles des historiques et les deux patches récents ;
+observations horodatées des rangs Solo/Flex, sans prétendre connaître le rang historique.
+Synchronisation atomique Data Dragon FR/EN (champions standard/Classic, compétences,
+objets, runes, sorts et catalogues). Agrégats par patch/plateforme/file/rôle/rang,
+winrate, part des sélections, bans par draft, builds, achats et ordre des compétences ;
+seuils et couvertures explicites, tiers descriptifs à partir de la borne Wilson.
+Une campagne de recette peut tourner jusqu'à 24 h avec rotation des régions et
+reprise. L'accès à tous les modes ne garantit pas un échantillon exhaustif ou
+représentatif ; les seeds restent issus du classement. Les modes non classés ne
+reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
+Voir [le contrat complet](../services/collector/README.md) et
+[la recette étendue](recettes/2026-10-01-agregation-complete.md).
+
+Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
+CommunityDragon versionné des objets et fragments, sources immuables et
+reconstruction hors ligne. Les valeurs, unités, contradictions et champs non
+interprétés sont exposés par l’API (liste, détail, filtres, diff). Les catalogues
+globaux non versionnés restent datés et distincts des ressources par patch.
+Le [contrat et la matrice des usages](catalogue-jeu.md) séparent ce référentiel
+des nouvelles agrégations #39/#41/#42, modèles IA et écrans aval.
+
 **10.3 Modèles IA**
 
 | Modèle | Entrée | Sortie | Réentraînement |
@@ -331,6 +353,14 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 | Détection de moments | Événements + timeline | Horodatage des clips | — |
 
 **10.4 API interne** : REST + WebSocket pour l'app, authentification JWT, cache CDN pour les données statiques.
+
+Choix du #19 (1er octobre 2026) : Rust/Axum dans `services/api`, instantanés #18
+et contrats TypeScript partagés. Profils par Riot ID actuel, classements horodatés
+et historique match-v5 paginé, sans identités adverses ni parties personnalisées
+publiques. Quotas PostgreSQL communs au collecteur et à l'API ; JWT de lecture
+émis côté serveur, connexion utilisateur/RSO distincte. WebSocket d'annonce des
+publications ; statiques FR/EN avec ETag et cache CDN. La fenêtre temporelle est
+celle du calcul publié. Voir [le contrat API](../services/api/README.md).
 
 ## 11. Modèle économique : gratuit et open source
 

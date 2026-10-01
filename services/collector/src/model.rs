@@ -22,6 +22,7 @@ pub struct LeagueEntry {
 pub struct Scope {
     pub platform_id: String,
     pub queue_id: i32,
+    pub patches: Vec<String>,
     pub window_start_ms: i64,
     pub window_end_ms: i64,
 }
@@ -38,8 +39,11 @@ impl Scope {
         if facts.platform_id != self.platform_id {
             return Err(Exclusion::WrongPlatform);
         }
-        if facts.queue_id != self.queue_id {
+        if self.queue_id != 0 && facts.queue_id != self.queue_id {
             return Err(Exclusion::WrongQueue);
+        }
+        if !self.patches.is_empty() && !self.patches.contains(&facts.patch) {
+            return Err(Exclusion::WrongPatch);
         }
         if facts.game_start_ms < self.window_start_ms || facts.game_start_ms >= self.window_end_ms {
             return Err(Exclusion::OutOfWindow);
@@ -58,6 +62,7 @@ impl Scope {
 pub enum Exclusion {
     WrongPlatform,
     WrongQueue,
+    WrongPatch,
     OutOfWindow,
 }
 
@@ -67,6 +72,7 @@ impl Exclusion {
         match self {
             Exclusion::WrongPlatform => "excluded:wrong_platform",
             Exclusion::WrongQueue => "excluded:wrong_queue",
+            Exclusion::WrongPatch => "excluded:wrong_patch",
             Exclusion::OutOfWindow => "excluded:out_of_window",
         }
     }
@@ -128,6 +134,7 @@ struct MatchInfo {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ParticipantDto {
+    participant_id: u32,
     #[serde(default)]
     game_ended_in_early_surrender: bool,
 }
@@ -150,11 +157,20 @@ pub fn check_match(body: &[u8], expected_id: &str, scope: &Scope) -> Result<Matc
     if dto.metadata.match_id != expected_id {
         return Err("identifiant de partie différent de celui demandé".to_owned());
     }
-    if dto.info.participants.len() != 10 {
+    if !(1..=64).contains(&dto.info.participants.len()) {
         return Err(format!(
-            "{} participants au lieu de 10",
+            "{} participants (attendu : 1 à 64)",
             dto.info.participants.len()
         ));
+    }
+    let mut ids = std::collections::BTreeSet::new();
+    if dto
+        .info
+        .participants
+        .iter()
+        .any(|p| p.participant_id == 0 || p.participant_id > 64 || !ids.insert(p.participant_id))
+    {
+        return Err("identifiants de participants invalides".into());
     }
     let patch = patch_from_version(&dto.info.game_version)
         .ok_or_else(|| "gameVersion illisible".to_owned())?;
@@ -222,12 +238,77 @@ pub fn check_timeline(body: &[u8], expected_id: &str) -> Result<Value, String> {
 
 /// Lit une page de classement.
 pub fn parse_league_entries(body: &[u8]) -> Result<Vec<LeagueEntry>, String> {
-    serde_json::from_slice(body).map_err(|e| format!("classement illisible : {e}"))
+    let value: Value =
+        serde_json::from_slice(body).map_err(|_| "classement illisible".to_owned())?;
+    let entries = if value.is_array() {
+        value
+    } else {
+        value
+            .get("entries")
+            .cloned()
+            .ok_or("classement sans entrées")?
+    };
+    serde_json::from_value(entries).map_err(|_| "entrées de classement illisibles".to_owned())
 }
 
 /// Lit une liste d'identifiants de parties.
 pub fn parse_match_ids(body: &[u8]) -> Result<Vec<String>, String> {
     serde_json::from_slice(body).map_err(|e| format!("liste de parties illisible : {e}"))
+}
+
+/// Classement observé lors de l'appel, jamais un rang historique du match.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ParticipantRank {
+    pub queue_id: i32,
+    pub tier: String,
+    pub division: String,
+    pub league_points: i32,
+}
+
+pub fn parse_participant_ranks(body: &[u8]) -> Result<Vec<ParticipantRank>, String> {
+    let values: Vec<Value> =
+        serde_json::from_slice(body).map_err(|_| "classements illisibles".to_owned())?;
+    let mut result = Vec::new();
+    for value in values {
+        let queue_id = match value.get("queueType").and_then(Value::as_str) {
+            Some("RANKED_SOLO_5x5") => 420,
+            Some("RANKED_FLEX_SR") => 440,
+            Some(_) => continue,
+            None => return Err("file de classement absente".into()),
+        };
+        let tier = value
+            .get("tier")
+            .and_then(Value::as_str)
+            .ok_or("rang absent")?;
+        let division = value
+            .get("rank")
+            .and_then(Value::as_str)
+            .ok_or("division absente")?;
+        let points = value
+            .get("leaguePoints")
+            .and_then(Value::as_i64)
+            .ok_or("points absents")?;
+        tier.parse::<crate::config::Tier>()
+            .map_err(|_| "rang invalide")?;
+        division
+            .parse::<crate::config::Division>()
+            .map_err(|_| "division invalide")?;
+        if points < i32::MIN as i64
+            || points > i32::MAX as i64
+            || result
+                .iter()
+                .any(|r: &ParticipantRank| r.queue_id == queue_id)
+        {
+            return Err("classements incohérents".into());
+        }
+        result.push(ParticipantRank {
+            queue_id,
+            tier: tier.into(),
+            division: division.into(),
+            league_points: points as i32,
+        });
+    }
+    Ok(result)
 }
 
 /// Réponses synthétiques conformes aux schémas Riot, sans donnée de joueur réelle.
@@ -241,6 +322,7 @@ pub mod fixtures {
             .map(|i| {
                 let position = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"][i % 5];
                 json!({
+                    "participantId": i + 1,
                     "puuid": format!("fake-puuid-{i}"),
                     "riotIdGameName": format!("Joueur{i}"),
                     "teamId": if i < 5 { 100 } else { 200 },
@@ -295,6 +377,7 @@ mod tests {
         Scope {
             platform_id: "EUW1".into(),
             queue_id: 420,
+            patches: vec![],
             window_start_ms: 1_000_000,
             window_end_ms: 2_000_000,
         }
@@ -302,6 +385,77 @@ mod tests {
 
     fn body(v: &Value) -> Vec<u8> {
         serde_json::to_vec(v).unwrap()
+    }
+
+    #[test]
+    fn accepte_une_reponse_solo_et_refuse_plus_de_soixante_quatre_participants() {
+        // Fixture synthétique : le catalogue officiel décrit 1810 comme Swarm solo.
+        let mut value = match_detail("EUW1_1", "EUW1", 1810, 1_500_000);
+        let mut all = scope();
+        all.queue_id = 0;
+        value["info"]["participants"]
+            .as_array_mut()
+            .unwrap()
+            .truncate(1);
+        assert!(matches!(
+            check_match(&body(&value), "EUW1_1", &all),
+            Ok(MatchCheck::Accepted(_, _))
+        ));
+        let first = value["info"]["participants"][0].clone();
+        for n in 2..=65 {
+            let mut participant = first.clone();
+            participant["participantId"] = serde_json::json!(n);
+            value["info"]["participants"]
+                .as_array_mut()
+                .unwrap()
+                .push(participant);
+        }
+        assert!(check_match(&body(&value), "EUW1_1", &all).is_err());
+    }
+
+    #[test]
+    fn conserve_un_solde_de_lp_negatif() {
+        let ranks = parse_participant_ranks(
+            br#"[{"queueType":"RANKED_FLEX_SR","tier":"GOLD","rank":"II","leaguePoints":-5}]"#,
+        )
+        .unwrap();
+        assert_eq!(ranks[0].league_points, -5);
+    }
+
+    #[test]
+    fn refuse_identifiants_de_participants_absents_ou_dupliques() {
+        let mut value = match_detail("EUW1_1", "EUW1", 420, 1_500_000);
+        value["info"]["participants"][0]["participantId"] = serde_json::json!(2);
+        assert!(check_match(&body(&value), "EUW1_1", &scope()).is_err());
+    }
+
+    #[test]
+    fn lit_les_deux_classements_sans_inventer_un_historique() {
+        let entries = parse_participant_ranks(
+            br#"[{"queueType":"RANKED_SOLO_5x5","tier":"GOLD","rank":"II","leaguePoints":42}]"#,
+        )
+        .unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].queue_id, 420);
+        assert_eq!(entries[0].tier, "GOLD");
+        assert!(parse_participant_ranks(b"[]").unwrap().is_empty());
+        assert!(parse_participant_ranks(br#"[{"queueType":"RANKED_SOLO_5x5"}]"#).is_err());
+    }
+
+    #[test]
+    fn accepte_une_partie_a_seize_participants() {
+        let mut value = match_detail("EUW1_1", "EUW1", 420, 1_500_000);
+        let participants = value["info"]["participants"].as_array_mut().unwrap();
+        for n in 10..16 {
+            let mut participant = participants[0].clone();
+            participant["puuid"] = serde_json::json!(format!("fake-puuid-{n}"));
+            participant["participantId"] = serde_json::json!(n + 1);
+            participants.push(participant);
+        }
+        assert!(matches!(
+            check_match(&body(&value), "EUW1_1", &scope()),
+            Ok(MatchCheck::Accepted(_, _))
+        ));
     }
 
     #[test]
@@ -350,7 +504,7 @@ mod tests {
         assert!(check_match(b"{pas du json", "EUW1_1", &s).is_err());
         assert!(check_match(b"{}", "EUW1_1", &s).is_err());
         let mut nine = match_detail("EUW1_1", "EUW1", 420, 1_500_000);
-        nine["info"]["participants"].as_array_mut().unwrap().pop();
+        nine["info"]["participants"].as_array_mut().unwrap().clear();
         assert!(check_match(&body(&nine), "EUW1_1", &s).is_err());
     }
 

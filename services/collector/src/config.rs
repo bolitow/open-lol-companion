@@ -13,6 +13,20 @@ pub const RANKED_SOLO_QUEUE_ID: i32 = 420;
 /// Nom de la file côté league-v4.
 pub const RANKED_SOLO_QUEUE: &str = "RANKED_SOLO_5x5";
 
+/// Catalogue officiel league-v4, vérifié le 01/10/2026.
+pub const PLATFORMS: &[&str] = &[
+    "BR1", "EUN1", "EUW1", "JP1", "KR", "LA1", "LA2", "ME1", "NA1", "OC1", "RU", "SG2", "TR1",
+    "TW2", "VN2",
+];
+
+pub fn valid_patch(value: &str) -> bool {
+    let parts: Vec<_> = value.split('.').collect();
+    parts.len() == 2
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()))
+}
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum ConfigError {
     #[error("RIOT_API_KEY est absente ou vide : définissez-la dans l'environnement ou dans un fichier .env")]
@@ -20,7 +34,7 @@ pub enum ConfigError {
     #[error("DATABASE_URL est absente ou vide : définissez-la dans l'environnement ou dans un fichier .env")]
     MissingDatabaseUrl,
     #[error(
-        "rang inconnu « {0} » (attendu : IRON, BRONZE, SILVER, GOLD, PLATINUM, EMERALD ou DIAMOND)"
+        "rang inconnu « {0} » (attendu : IRON, BRONZE, SILVER, GOLD, PLATINUM, EMERALD, DIAMOND, MASTER, GRANDMASTER ou CHALLENGER)"
     )]
     UnknownTier(String),
     #[error("division inconnue « {0} » (attendu : I, II, III ou IV)")]
@@ -62,7 +76,7 @@ pub fn database_url(value: Option<String>) -> Result<String, ConfigError> {
     }
 }
 
-/// Rangs divisés en I à IV (les rangs Master et plus utilisent d'autres endpoints).
+/// Rangs classés ; les rangs Master et plus utilisent une liste sans pagination.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Tier {
@@ -73,9 +87,16 @@ pub enum Tier {
     Platinum,
     Emerald,
     Diamond,
+    Master,
+    Grandmaster,
+    Challenger,
 }
 
 impl Tier {
+    pub fn is_apex(self) -> bool {
+        matches!(self, Self::Master | Self::Grandmaster | Self::Challenger)
+    }
+
     pub fn as_str(self) -> &'static str {
         match self {
             Tier::Iron => "IRON",
@@ -85,6 +106,9 @@ impl Tier {
             Tier::Platinum => "PLATINUM",
             Tier::Emerald => "EMERALD",
             Tier::Diamond => "DIAMOND",
+            Tier::Master => "MASTER",
+            Tier::Grandmaster => "GRANDMASTER",
+            Tier::Challenger => "CHALLENGER",
         }
     }
 }
@@ -101,6 +125,9 @@ impl FromStr for Tier {
             "PLATINUM" => Ok(Tier::Platinum),
             "EMERALD" => Ok(Tier::Emerald),
             "DIAMOND" => Ok(Tier::Diamond),
+            "MASTER" => Ok(Tier::Master),
+            "GRANDMASTER" => Ok(Tier::Grandmaster),
+            "CHALLENGER" => Ok(Tier::Challenger),
             _ => Err(ConfigError::UnknownTier(s.to_owned())),
         }
     }
@@ -142,6 +169,15 @@ impl FromStr for Division {
 /// Paramètres figés d'une exécution, enregistrés dans `collection_runs.params`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RunParams {
+    #[serde(default = "default_platform_id")]
+    pub platform_id: String,
+    /// Zéro signifie toutes les files.
+    #[serde(default = "default_queue_id")]
+    pub queue_id: i32,
+    #[serde(default)]
+    pub patches: Vec<String>,
+    #[serde(default)]
+    pub collect_ranks: bool,
     pub target_matches: u32,
     pub tiers: Vec<Tier>,
     pub divisions: Vec<Division>,
@@ -154,9 +190,20 @@ pub struct RunParams {
     pub call_budget: u64,
 }
 
+fn default_platform_id() -> String {
+    PLATFORM_ID.into()
+}
+fn default_queue_id() -> i32 {
+    RANKED_SOLO_QUEUE_ID
+}
+
 impl Default for RunParams {
     fn default() -> Self {
         Self {
+            platform_id: PLATFORM_ID.into(),
+            queue_id: RANKED_SOLO_QUEUE_ID,
+            patches: Vec::new(),
+            collect_ranks: false,
             target_matches: 1000,
             tiers: vec![Tier::Gold, Tier::Platinum, Tier::Emerald],
             divisions: vec![Division::I, Division::II, Division::III, Division::IV],
@@ -170,6 +217,12 @@ impl Default for RunParams {
 
 impl RunParams {
     pub fn validate(&self) -> Result<(), ConfigError> {
+        if !PLATFORMS.contains(&self.platform_id.as_str()) {
+            return Err(ConfigError::Invalid("plateforme inconnue"));
+        }
+        if self.queue_id < 0 || self.patches.iter().any(|p| !valid_patch(p)) {
+            return Err(ConfigError::Invalid("file ou patch invalide"));
+        }
         if self.target_matches == 0 {
             return Err(ConfigError::Invalid("la cible doit être supérieure à 0"));
         }
@@ -200,7 +253,14 @@ impl RunParams {
     pub fn strata(&self) -> Vec<(Tier, Division)> {
         self.tiers
             .iter()
-            .flat_map(|&t| self.divisions.iter().map(move |&d| (t, d)))
+            .flat_map(|&t| {
+                let divisions = if t.is_apex() {
+                    vec![Division::I]
+                } else {
+                    self.divisions.clone()
+                };
+                divisions.into_iter().map(move |d| (t, d))
+            })
             .collect()
     }
 }
@@ -275,6 +335,39 @@ mod tests {
     use super::*;
 
     #[test]
+    fn conserve_le_perimetre_et_les_anciens_parametres() {
+        let old = serde_json::to_value(RunParams::default()).unwrap();
+        let mut extended = old.clone();
+        extended["platform_id"] = serde_json::json!("KR");
+        extended["queue_id"] = serde_json::json!(0);
+        extended["patches"] = serde_json::json!(["16.19", "16.18"]);
+        extended["collect_ranks"] = serde_json::json!(true);
+        let parsed: RunParams = serde_json::from_value(extended).unwrap();
+        let result = serde_json::to_value(parsed).unwrap();
+        assert_eq!(result["platform_id"], "KR");
+        assert_eq!(result["queue_id"], 0);
+        assert_eq!(result["patches"], serde_json::json!(["16.19", "16.18"]));
+        assert_eq!(result["collect_ranks"], true);
+        let mut old = old;
+        for field in ["platform_id", "queue_id", "patches", "collect_ranks"] {
+            old.as_object_mut().unwrap().remove(field);
+        }
+        let legacy: RunParams = serde_json::from_value(old).unwrap();
+        assert_eq!(legacy.platform_id, "EUW1");
+        assert_eq!(legacy.queue_id, 420);
+        assert!(legacy.patches.is_empty());
+        assert!(!legacy.collect_ranks);
+        assert!(serde_json::from_str::<RunParams>("{}").is_err());
+    }
+
+    #[test]
+    fn les_rangs_apex_sont_acceptes() {
+        for tier in ["MASTER", "GRANDMASTER", "CHALLENGER"] {
+            assert!(tier.parse::<Tier>().is_ok(), "{tier}");
+        }
+    }
+
+    #[test]
     fn la_cle_absente_ou_vide_donne_une_erreur_claire() {
         assert_eq!(
             ApiKey::from_env_value(None).unwrap_err(),
@@ -301,7 +394,7 @@ mod tests {
         assert_eq!("gold".parse::<Tier>().unwrap(), Tier::Gold);
         assert_eq!("iv".parse::<Division>().unwrap(), Division::IV);
         assert!(matches!(
-            "MASTER".parse::<Tier>(),
+            "UNDEFINED".parse::<Tier>(),
             Err(ConfigError::UnknownTier(_))
         ));
         assert!("V".parse::<Division>().is_err());

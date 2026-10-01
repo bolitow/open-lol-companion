@@ -102,18 +102,18 @@ Les tests utilisent un serveur HTTP local simulé et des données sans identité
 réelle ; ils ne modifient pas le client installé. Ils couvrent la validation,
 les payloads, les erreurs et la conservation des données personnelles.
 
-Une recette réelle partielle a été exécutée sur macOS le 1er octobre 2026.
+Des recettes réelles partielles ont été exécutées sur macOS et Windows le 1er octobre 2026.
 Les contrôles restants restent requis avant clôture des tickets : macOS Matthieu,
 Windows Louison. Une lecture de la LCU ne confirme pas à elle seule le rendu visuel
 dans la boutique.
 
 | Scénario | macOS | Windows |
 | --- | --- | --- |
-| Créer puis réimporter les runes, vérifier la page active et les fragments | Validé LCU ; page active confirmée visuellement | À faire |
-| Refuser deux secondaires de la même ligne ; préserver les pages personnelles | Validé dans le client réel | À faire |
+| Créer puis réimporter les runes, vérifier la page active et les fragments | Validé LCU ; page active confirmée visuellement | Validé LCU : page active et neuf identifiants |
+| Refuser deux secondaires de la même ligne ; préserver les pages personnelles | Validé dans le client réel | Validé dans le client réel |
 | Capacité de pages atteinte, page réservée verrouillée ou dupliquée | À faire | À faire |
-| Flash sur D/F et paire sans Flash | Validé par relecture LCU ; sorts initiaux restaurés | À faire |
-| Skin conservé et sortie de sélection | Non confirmé en réel ; couverture simulée | À faire |
+| Flash sur D/F et paire sans Flash | Validé par relecture LCU ; sorts initiaux restaurés | Validé par relecture LCU ; sorts initiaux restaurés |
+| Skin conservé et sortie de sélection | Non confirmé en réel ; couverture simulée | Skin relu conforme ; sortie de sélection non testée |
 | Client fermé/redémarré et erreur réseau | À faire | À faire |
 | Faille, ARAM, Mayhem et Swiftplay selon fonctionnalités du mode | À faire | À faire |
 
@@ -134,9 +134,24 @@ restent indépendants de ce client réel.
   La conservation réelle du skin n’est pas confirmée ; elle reste couverte par
   le test du payload qui contient uniquement les deux sorts.
 
-La version du jeu provient de `GET /lol-patch/v1/game-version`. La recette Windows
-n'a pas été exécutée. Aucun identifiant de joueur ni secret du client n'est conservé
-dans ces preuves.
+La version du jeu provient de `GET /lol-patch/v1/game-version`. Aucun identifiant
+de joueur ni secret du client n'est conservé dans ces preuves.
+
+## Recette réelle Windows — 1er octobre 2026
+
+Louison a testé les commandes Rust de la PR #57 sur Windows 11 Pro 25H2, client
+16.19.823.722 : création d'une page active, neuf identifiants, refus de secondaires
+de même ligne, réimport au même ID et préservation des pages personnelles.
+Les pages initiales et l'ancienne page active ont été restaurées et relues.
+[Compte rendu détaillé](https://github.com/bolitow/open-lol-companion/issues/14#issuecomment-5935051243).
+
+Louison a aussi testé les commandes Rust de la PR #58 en sélection réelle :
+Flash D/F, paire sans Flash et skin identique après chaque import ; les sorts
+initiaux ont été restaurés et vérifiés.
+[Compte rendu des sorts](https://github.com/bolitow/open-lol-companion/issues/15#issuecomment-5935060302).
+
+Le parcours Tauri/invoke et l'écran #13 restent à tester. Les cas de capacité
+pleine, verrouillage et autres modes n'ont pas été reproduits dans le client réel.
 
 Consigner dans chaque ticket : version de l'app et du client, OS, scénario,
 résultat et anomalie éventuelle. Le branchement #13 doit notamment désactiver
