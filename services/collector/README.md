@@ -3,7 +3,8 @@
 Service Rust autonome de collecte Riot, synchronisation Data Dragon et agrégation
 PostgreSQL (#17–18, sections 10.1–10.2 du [cahier des charges](../../docs/cahier-des-charges.md)).
 Il fonctionne sans client LoL ni app desktop. L'API destinée à l'app reste le #19 ;
-les imports côté client restent les #14–16.
+les imports côté client restent les #14–16. Le [service API #19](../api/README.md)
+lit les instantanés et partage les quotas Riot PostgreSQL avec le collecteur.
 
 ## Configuration et démarrage
 

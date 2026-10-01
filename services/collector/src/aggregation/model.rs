@@ -20,7 +20,7 @@ pub enum Role {
 }
 
 /// Filtres d'un instantané. Les listes vides acceptent toutes les valeurs stockées.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct AggregationOptions {
     pub patches: Vec<String>,
     pub platforms: Vec<String>,
@@ -30,7 +30,7 @@ pub struct AggregationOptions {
 }
 
 /// Dimensions sans identifiant de joueur. ALL est une population distincte des rangs observés.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct GroupKey {
     pub patch: String,
     pub platform_id: String,
@@ -40,7 +40,7 @@ pub struct GroupKey {
     pub champion_id: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ChampionStats {
     #[serde(flatten)]
     pub key: GroupKey,
@@ -53,19 +53,19 @@ pub struct ChampionStats {
     pub pick_rate: Option<f64>,
     pub win_rate_lower_bound: Option<f64>,
     pub position: Option<u32>,
-    pub tier: Option<&'static str>,
+    pub tier: Option<String>,
     /// Rang connu comptant le plus de sélections ; ce n'est pas un taux de popularité corrigé.
     pub most_picked_rank: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct ScopeKey {
     pub patch: String,
     pub platform_id: String,
     pub queue_id: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BanStats {
     #[serde(flatten)]
     pub scope: ScopeKey,
@@ -75,7 +75,7 @@ pub struct BanStats {
     pub ban_rate: Option<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BuildStats {
     #[serde(flatten)]
     pub key: GroupKey,
@@ -89,7 +89,7 @@ pub struct BuildStats {
     pub win_rate: Option<f64>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SkillStats {
     #[serde(flatten)]
     pub key: GroupKey,
@@ -100,7 +100,7 @@ pub struct SkillStats {
     pub mean_timestamp_ms: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ItemEventStats {
     #[serde(flatten)]
     pub key: GroupKey,
@@ -110,7 +110,7 @@ pub struct ItemEventStats {
     pub events: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Coverage {
     pub matches: u64,
     pub participations: u64,
@@ -127,7 +127,7 @@ pub struct Coverage {
     pub draft_matches: u64,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScopeCoverage {
     #[serde(flatten)]
     pub scope: ScopeKey,
@@ -136,13 +136,13 @@ pub struct ScopeCoverage {
 }
 
 /// Instantané publiable, exclusivement agrégé. Les rangs reflètent une observation récente.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AggregationReport {
     pub schema_version: u32,
-    pub rank_scope: &'static str,
+    pub rank_scope: String,
     pub rank_max_age_hours: u32,
-    pub pick_rate_definition: &'static str,
-    pub tier_method: &'static str,
+    pub pick_rate_definition: String,
+    pub tier_method: String,
     pub min_games: u32,
     pub filters: AggregationOptions,
     pub source_matches: u64,
@@ -203,10 +203,10 @@ impl Accumulator {
         }
         Ok(Self {
             report: AggregationReport {
-                schema_version: 2, rank_scope: "observed_current_rank_of_same_ranked_queue",
+                schema_version: 2, rank_scope: "observed_current_rank_of_same_ranked_queue".into(),
                 rank_max_age_hours: 24,
-                pick_rate_definition: "champion_participations / bucket_participations * 100",
-                tier_method: "Wilson95 lower bound; S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions",
+                pick_rate_definition: "champion_participations / bucket_participations * 100".into(),
+                tier_method: "Wilson95 lower bound; S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
                 bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![],
@@ -427,13 +427,16 @@ impl Accumulator {
                 g.position = Some(*position);
                 if eligible[&b] >= 5 {
                     let pct = 100 * (*position - 1) / eligible[&b];
-                    g.tier = Some(match pct {
-                        0..=9 => "S",
-                        10..=29 => "A",
-                        30..=59 => "B",
-                        60..=89 => "C",
-                        _ => "D",
-                    });
+                    g.tier = Some(
+                        match pct {
+                            0..=9 => "S",
+                            10..=29 => "A",
+                            30..=59 => "B",
+                            60..=89 => "C",
+                            _ => "D",
+                        }
+                        .into(),
+                    );
                 }
             }
         }

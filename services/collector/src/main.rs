@@ -10,6 +10,7 @@ use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
 use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
 use olc_collector::report;
 use olc_collector::riot_client::HttpsTransport;
+use olc_collector::shared_quota::CoordinatedTransport;
 use olc_collector::static_data;
 use olc_collector::storage::{RunStatus, Storage};
 use tracing_subscriber::EnvFilter;
@@ -492,6 +493,7 @@ async fn collect(db_url: &str, options: RuntimeOptions, start: Start) -> Result<
     let _lock = storage.lock_collector().await.map_err(|e| e.to_string())?;
     let transport =
         HttpsTransport::new(&api_key, Duration::from_secs(15)).map_err(|e| e.to_string())?;
+    let transport = CoordinatedTransport::new(transport, storage.clone());
     let collector = Collector::new(storage.clone(), transport, options);
 
     let run_id = match start {
@@ -595,6 +597,7 @@ async fn drive_campaign(
     options: RuntimeOptions,
 ) -> Result<ExitCode, String> {
     let transport = HttpsTransport::new(key, Duration::from_secs(15)).map_err(|e| e.to_string())?;
+    let transport = CoordinatedTransport::new(transport, storage.clone());
     eprintln!("Campagne #{id} en cours ; reprise : olc-collector campaign-resume {id}.");
     let outcome = campaign::execute(storage, transport, options, id, shutdown())
         .await

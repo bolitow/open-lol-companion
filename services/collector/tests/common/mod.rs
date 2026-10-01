@@ -253,6 +253,7 @@ impl FakeRiot {
         };
         let mut s = self.state.lock().unwrap();
         let (key, path) = match request.endpoint {
+            Endpoint::AccountByRiotId | Endpoint::SummonerByPuuid => return Ok(status(404, &[])),
             Endpoint::LeagueEntries => {
                 let key = format!("{}/{}/{}", seg[5], seg[6], q("page"));
                 (key.clone(), format!("league/{key}"))
@@ -269,6 +270,7 @@ impl FakeRiot {
         }
         let not_found = || Ok(status(404, &[]));
         match request.endpoint {
+            Endpoint::AccountByRiotId | Endpoint::SummonerByPuuid => not_found(),
             Endpoint::LeagueEntries => Ok(ok_json(&Value::Array(
                 s.league.get(&key).cloned().unwrap_or_default(),
             ))),

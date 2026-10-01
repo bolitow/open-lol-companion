@@ -380,7 +380,7 @@ fn le_classement_wilson_et_les_tiers_demandent_assez_de_champions() {
         .filter(|g| g.key.rank == "ALL" && g.key.role == Role::Top)
         .collect();
     assert_eq!(top.len(), 7);
-    assert_eq!(top[0].tier, Some("S"));
+    assert_eq!(top[0].tier.as_deref(), Some("S"));
     assert!(top
         .iter()
         .all(|g| g.win_rate_lower_bound.is_some() && g.tier.is_some()));
