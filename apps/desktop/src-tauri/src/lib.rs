@@ -31,7 +31,11 @@ fn lcu_status() -> LcuStatus {
 pub fn run() {
     tauri::Builder::default()
         .manage(imports::ImportLocks::default())
-        .invoke_handler(tauri::generate_handler![lcu_status, imports::import_runes,])
+        .invoke_handler(tauri::generate_handler![
+            lcu_status,
+            imports::import_runes,
+            imports::import_spells,
+        ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement de l'application");
 }
