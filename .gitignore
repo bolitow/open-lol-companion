@@ -11,6 +11,9 @@ build/
 *.log
 .turbo/
 
+# Documents de planification locaux
+/docs/superpowers/
+
 # Rust / Tauri
 target/
 apps/desktop/src-tauri/gen/

@@ -58,9 +58,24 @@ Le collecteur `services/collector` récupère des parties via l'API Riot et les 
 
 1. PostgreSQL : `docker compose -f services/collector/docker-compose.yml up -d` (ou une installation locale).
 2. Copiez `services/collector/.env.example` en `.env` à la racine, renseignez `RIOT_API_KEY` (clé de développement du Developer Portal, valable 24 h) et `DATABASE_URL`.
-3. `cargo run -p olc-collector --release -- run --target 50` pour un petit essai, puis `report <n°>`.
+3. `cargo run -p olc-collector --release -- sync-static` pour synchroniser les deux patches récents en FR/EN.
+4. `cargo run -p olc-collector --release -- run --target 50 --collect-ranks` pour un petit essai, puis `report <n°>`.
 
 Tests PostgreSQL : définissez `OLC_TEST_DATABASE_URL` (ex. `postgres://postgres:postgres@localhost:5432/postgres`) ; sans elle, `pnpm test` les ignore. Détails : [`services/collector/README.md`](../services/collector/README.md).
+
+Pour les statistiques (#18), seule `DATABASE_URL` est nécessaire :
+`cargo run -p olc-collector --release -- aggregate --json` utilise les deux patches
+du cache. `--patches 16.19,16.18` fixe une sélection ; `--all-stored` prend tout le
+stockage. Les agrégats séparent plateforme/file/rôle/rang observé et exposent taux,
+effectifs, builds et timelines. Les données brutes de joueurs restent privées.
+
+Pour une campagne multirégion bornée :
+`cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
+`campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`
+vérifie les statiques et recalcule chaque heure. La campagne respecte les quotas,
+une échéance persistée et des tranches de 15 minutes par plateforme. Une clé de
+développement peut expirer avant la fin. Aucun superviseur ni service permanent
+n'est installé. Voir [le contrat et les options](../services/collector/README.md).
 
 ## 4. Où coder quoi
 
@@ -70,7 +85,7 @@ Tests PostgreSQL : définissez `OLC_TEST_DATABASE_URL` (ex. `postgres://postgres
 | `apps/desktop/src-tauri` | Cœur de l'app : commandes appelées par l'interface, overlays, capture | Rust |
 | `apps/desktop/src` | Interface de l'app | React + TypeScript |
 | `packages/shared` | Types et utilitaires partagés (phases, Data Dragon) | TypeScript |
-| `services/collector` | Collecteur Riot API (parties, timelines) vers PostgreSQL | Rust |
+| `services/collector` | Collecte Riot multirégion, Data Dragon et agrégats PostgreSQL | Rust |
 | `apps/web`, `services/api` | Site et API (pas encore initialisés) | — |
 
 Règle d'or : ce qui touche au système (fichiers, processus, réseau local, secrets) vit en Rust ; l'interface appelle des commandes Tauri (`invoke("…")`) et ne voit jamais de mot de passe.
