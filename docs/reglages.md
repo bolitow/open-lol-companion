@@ -67,3 +67,7 @@ L’app n’explore pas les dossiers League automatiquement. Les fichiers non r�
 Ce premier export sûr ne contient **pas les logs bruts app/League**, ni l’historique des sessions précédentes. Leur collecte détaillée reste hors périmètre tant qu’un contrat de filtrage plus riche n’est pas validé. Le résumé peut être insuffisant pour diagnostiquer certains problèmes ; cette limite figure dans l’aperçu et le manifeste.
 
 Recette native complémentaire sur Windows/macOS : ouvrir et annuler les deux dialogues, exporter sans logs, puis avec un fichier synthétique ; inspecter les trois entrées ZIP, vérifier le message d’erreur sur fichier binaire/trop gros et destination non inscriptible. Ne pas utiliser de logs personnels pour les tests de CI.
+
+## Intégration de la branche principale
+
+Le panneau « Imports au prépick » de #63 reste disponible en haut à droite des réglages, dépliable avec défilement interne. Son moteur reste monté entre les pages ; la synchronisation conserve les options et gardes livrées dans #69. La recherche locale des six réglages ne filtre pas encore les contrôles internes de ce panneau.

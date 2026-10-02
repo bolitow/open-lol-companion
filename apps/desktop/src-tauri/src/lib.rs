@@ -135,7 +135,8 @@ pub fn run() {
             imports::import_draft_runes,
             imports::import_spells,
             imports::import_draft_spells,
-            imports::import_items
+            imports::import_items,
+            imports::import_selected_build
         ])
         .build(tauri::generate_context!())
         .expect("erreur au lancement de l'application")

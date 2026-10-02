@@ -33,6 +33,13 @@ impl LcuClient {
     /// Source du GET/PUT et du schéma (client 26.16, vérifié le 01/10/2026) :
     /// https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/main/lcu/swagger.json
     pub async fn import_items(&self, request: &ImportItemsRequest) -> Result<(), ImportError> {
+        self.prepare_items(request).await?.apply(self).await
+    }
+
+    pub(super) async fn prepare_items(
+        &self,
+        request: &ImportItemsRequest,
+    ) -> Result<PreparedItems, ImportError> {
         let item_set = build_item_set(request)?;
         let summoner: Value = self.get_json("/lol-summoner/v1/current-summoner").await?;
         let summoner_id = summoner
@@ -43,9 +50,36 @@ impl LcuClient {
         let path = format!("/lol-item-sets/v1/item-sets/{summoner_id}/sets");
         let bundle = self.get_json(&path).await?;
         let merged = merge_item_sets(bundle, item_set)?;
-        self.write_json(reqwest::Method::PUT, &path, &merged)
+        Ok(PreparedItems { path, merged })
+    }
+}
+
+pub(super) struct PreparedItems {
+    path: String,
+    merged: Value,
+}
+impl PreparedItems {
+    pub(super) async fn apply(&self, client: &LcuClient) -> Result<(), ImportError> {
+        client
+            .write_json(reqwest::Method::PUT, &self.path, &self.merged)
             .await?;
         Ok(())
+    }
+    pub(super) async fn confirmed(&self, client: &LcuClient) -> bool {
+        let Ok(actual) = client.get_json::<Value>(&self.path).await else {
+            return false;
+        };
+        let expected = &self.merged["itemSets"][0];
+        actual["itemSets"].as_array().is_some_and(|sets| {
+            let matches: Vec<_> = sets
+                .iter()
+                .filter(|set| set["uid"] == expected["uid"])
+                .collect();
+            matches.len() == 1
+                && ["associatedChampions", "associatedMaps", "blocks"]
+                    .iter()
+                    .all(|field| matches[0][field] == expected[field])
+        })
     }
 }
 

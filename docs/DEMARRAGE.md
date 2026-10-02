@@ -229,3 +229,16 @@ Le desktop utilise le tray Tauri2 et le plugin autostart2.7. Le lancement au dé
 Les tests de `olc-desktop-support` sont inclus dans `pnpm test` et dans la CI Windows/macOS/Linux. Ils ne modifient pas le démarrage du poste. Pour les vérifications manuelles de fermeture, réouverture et ouverture de session, suivre [la recette des réglages](reglages.md#recette-native-à-exécuter-sur-chaque-os).
 
 La commande native `export_diagnostics` utilise le plugin dialog2.8 et produit un ZIP local (crate zip2.4, entrées non compressées et bornées). Aucun endpoint d’envoi ni variable d’environnement supplémentaire. Les tests utilisent uniquement des fichiers synthétiques ; le journal est limité à la session courante. Voir [contenu et limites de l’archive](reglages.md#export-local-des-diagnostics).
+## Tester les imports au prépick (#63, partie client)
+
+Dans **Réglages**, le panneau **Imports au prépick** permet
+l'activation séparée des runes et objets. Les deux options sont initialement
+désactivées. En développement, le minimum initial est **1 partie par variante** ;
+en production, **100**. Ce minimum est réglable de 1 à 1 000 et mémorisé sur
+l'appareil. Sélectionner un champion dans LoL suffit, avant même le verrouillage.
+En personnalisée Faille, choisir aussi le **Poste en personnalisée** (par exemple
+Support pour Bard) : les variantes proviennent alors des statistiques Solo/Duo.
+Une seule page **Open LoL Companion** est réutilisée entre tous les champions ;
+les pages personnelles et les sorts d'invocateur sont conservés.
+Démarrage, méthode, limites et recette :
+[imports automatiques dans le client](imports-automatiques.md).

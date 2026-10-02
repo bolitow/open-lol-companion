@@ -55,3 +55,8 @@ pub use draft_runes::{DraftRuneGuardError, DraftRuneImportError, ImportDraftRune
 
 mod draft_spells;
 pub use draft_spells::ImportDraftSpellsRequest;
+
+mod auto_import;
+pub use auto_import::{
+    AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection,
+};

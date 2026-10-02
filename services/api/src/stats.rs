@@ -129,32 +129,18 @@ async fn load(
     query: &StatsQuery,
     champion_id: Option<u32>,
 ) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
-    // Une lecture cohérente, mais seulement la population demandée sur le réseau et en mémoire Rust.
+    // Une seule lecture cohérente : sélection indexée des morceaux avant le filtre JSON.
     // La tierlist ne charge pas les builds ni les événements de tous les champions.
     let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":query.role,"rank":query.rank,"champion":champion_id});
     let population = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
     let scope = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)";
-    let rows = sqlx::query("SELECT s.source_snapshot_at::text,s.published_at::text,s.storage_version,
-        CASE WHEN s.storage_version=1 THEN
-            (s.report - ARRAY['groups','bans','builds','skill_levels','item_events','coverage']) ||
-            jsonb_build_object(
-                'groups', jsonb_path_query_array(s.report->'groups',$2::jsonpath,$1),
-                'bans', jsonb_path_query_array(s.report->'bans',$3::jsonpath,$1),
-                'coverage', jsonb_path_query_array(s.report->'coverage',$3::jsonpath,$1),
-                'builds', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'builds',$2::jsonpath,$1) ELSE '[]'::jsonb END,
-                'skill_levels', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'skill_levels',$2::jsonpath,$1) ELSE '[]'::jsonb END,
-                'item_events', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'item_events',$2::jsonpath,$1) ELSE '[]'::jsonb END
-            )
-        ELSE s.report || jsonb_build_object('groups','[]'::jsonb,'bans','[]'::jsonb,
-            'coverage','[]'::jsonb,'builds','[]'::jsonb,'skill_levels','[]'::jsonb,'item_events','[]'::jsonb)
-        END AS report,c.section,
-        CASE WHEN c.section IN ('coverage','bans') THEN jsonb_path_query_array(c.items,$3::jsonpath,$1)
-            ELSE jsonb_path_query_array(c.items,$2::jsonpath,$1) END AS items
-        FROM champion_stats_snapshot s LEFT JOIN champion_stats_snapshot_chunks c
-        ON c.snapshot_id=s.id AND s.storage_version=2
-            AND (c.section IN ('coverage','groups','bans') OR $4)
-        WHERE s.id=1 ORDER BY c.section,c.chunk_index")
-        .bind(vars).bind(population).bind(scope).bind(champion_id.is_some()).fetch_all(pool).await?;
+    let rows = sqlx::query(include_str!("sql/stats_snapshot.sql"))
+        .bind(vars)
+        .bind(population)
+        .bind(scope)
+        .bind(champion_id.is_some())
+        .fetch_all(pool)
+        .await?;
     let row = rows.first().ok_or(ApiError::Unavailable)?;
     let storage_version: i16 = row.try_get("storage_version")?;
     if ![1, 2].contains(&storage_version) {

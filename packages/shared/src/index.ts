@@ -14,3 +14,4 @@ export * from "./draftSpellImport";
 export * from "./desktopSettings";
 
 export * from './diagnostics';
+export * from "./autoImport";
