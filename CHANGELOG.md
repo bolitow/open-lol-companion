@@ -6,9 +6,39 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Couverture CI des tests desktop, client de builds et exporteur de catalogue ; rattrapage du compte actif sans bloquer les événements de phase et annulation à la déconnexion (#65, #8).
+
+- Imports runes/objets au prépick du champion, activables séparément : variante valide la plus jouée au poste réel, seuil réglable (1 en dev, 100 en production), effectifs et taux observés ; garde de draft/file/poste juste avant écriture, confirmation et anti-doublons. Personnalisées Faille prises en charge avec poste choisi et source Solo/Duo explicite. Une seule page de runes réutilisée pour tous les champions, sans attendre le verrouillage ni l'identifiant de partie Riot. Aucun changement des sorts ni overlay (#63, partie client).
+
+- Accueil desktop synchronisé au compte League actif : changement automatique, identité conservée hors connexion, consultation des autres joueurs indépendante et état explicite quand le compte ou les statistiques sont indisponibles (#65).
+
 - Commande `import_runes` : validation selon le catalogue du client, secondaires de lignes distinctes et remplacement de la page réservée à l'app (#14).
 - Commande `import_spells` : import en sélection des champions avec Flash sur D/F, sans modifier le skin ni ajouter Flash à un build qui ne le contient pas (#15).
 - Commande `import_items` : set prioritaire par champion/carte, conversion des objets Larme vers leurs formes achetables et conservation des sets personnels ; contrats partagés et erreurs FR/EN pour les trois imports (#16).
+- Synchronisation des imports #14–16 avec `main`, en conservant les gardes du desktop et les recettes des deux OS.
+
+- Joueurs desktop : recherche Riot ID/région, profil et rangs officiels, historique paginé, accès au champion joué et retour conservé ; compte favori mémorisé pour l’accueil, transport Rust et erreurs FR/EN (#64).
+
+- Champions desktop : bibliothèque illustrée FR/EN, recherche globale au clavier, filtre par classe, fiche compétences/builds/catalogue et contexte conservé au retour ; consultation indépendante de la draft et sans import (#13).
+
+- Draft : cartes consultables au clavier/clic, passif au survol, retour nommé vers le pick local et statistiques dans les infobulles (#12, #13).
+
+- Navigation : champion consulté et filtres de préparation conservés au retour, sans réimport ; suivi du pick local repris à une nouvelle draft (#8, #13).
+
+- Draft et imports manuels de runes/sorts étendus aux personnalisées Faille identifiées, avec équipes incomplètes et bots ; autres cartes/modes encore refusés (#12–15).
+
+- Préparation : import manuel de la variante d’objets affichée, ordre et composants conservés, moteur #16 réutilisé sans toucher les sets personnels (#13, #16).
+
+- Préparation : choix et import manuel des deux sorts d’invocateur, position de Flash D/F mémorisée, confirmation depuis League et garde du contexte de draft ; commandes accessibles aussi sans statistiques (#13, #15).
+
+- Compagnon animé dans l’accueil : salut, repos et transformation au clic ; feu WebGL lié à sa silhouette, arrêt hors écran et respect des mouvements réduits. Première validation en rouge sur thème sombre (#1). Accueil limité à une fois par session, gestes accélérés avec anticipation, repos plus discret et feu ascendant sans contour uniforme.
+
+- Préparation : édition des arbres de runes et fragments, réinitialisation et import manuel dans LoL ; contexte de draft et champion revalidés, confirmation de la page équipée, pages personnelles préservées (#13, #14).
+
+- Préparation : builds communautaires reliés à l’API via Rust, filtres champion/poste/région/file/rang, variantes de runes et d’achats, compétences et sorts officiels ; effectifs, seuils et provenance visibles, sans données fictives embarquées ni import automatique (#13).
+
+- Draft : runes équipées suivies depuis LoL, arbres complets consultables et vue agrandie ; catalogue local FR/EN d’objets, composants et infobulles, sans import ni build fictif (#13).
+
 - Référentiel de jeu FR/EN : objets et statistiques enrichies par CommunityDragon, champions/compétences, runes/fragments et catalogues ; sources archivées, couverture explicite, reconstruction hors ligne et API de recherche/diff par patch (#61, sous-ticket de #18).
 - API interne Rust/Axum : tierlist et builds filtrés, profils par Riot ID actuel et historique paginé, accès JWT, notifications WebSocket et statiques FR/EN revalidables par CDN (#19).
 - Quotas Riot PostgreSQL partagés entre l'API et le collecteur, y compris après annulation d'un appel ou réponse 429 (#19).
@@ -16,6 +46,14 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 - Agrégats par patch, région, file, rôle et rang observé : winrate, pickrate, bans, tiers avec seuils, builds, objets, sorts, runes et chronologie des compétences ; publication atomique ponctuelle ou horaire (#18).
 - Synchronisation Data Dragon FR/EN pour les patches récents : champions standard et Classic, compétences et catalogues, cache versionné réutilisable conservé en cas d'échec (#18).
 - Collecte sur les 15 plateformes Riot et toutes les files accessibles, rangs Iron à Challenger, observations Solo/Flex des participants et campagne reprenable jusqu'à 24 heures (#18).
+- Draft réelle en lecture seule : picks/prépicks, bans, chrono et côtés bleu/rouge issus du client ; cartes officielles locales et projection Rust sans identité ni intentions adverses (#12).
+
+- App réelle : socle visuel sombre/clair, navigation et réglages FR/EN persistants ; suivi des phases via le watcher Rust et un snapshot Tauri versionné, sans faux profils ni builds. Les vues métier restent en attente de leurs données (#8, #21 ; préparation #12/#13).
+
+- Prototype : parcours draft simulé (bans, picks, aperçu/prépick, verrouillage, chargement et arrivée en partie), transitions réduisibles, liens directs et galerie conservant 19 wireframes Figma ; publication partageable sur ChatGPT Sites (#4).
+
+- Prototype d’accueil interactif séparé (`/prototype.html`) : thèmes sombre/clair, ouverture animée, recherche clavier, historique et scénarios fictifs de session, réglages FR/EN mémorisés ; tests du modèle et guide de prise en main (#4).
+
 - Règles de développement communes aux contributeurs et aux assistants de code : `AGENTS.md` et dossier `rules/` (workflow, Definition of Done, conformité Riot, revue, documentation).
 - Commandes `pnpm lint` (typage, `cargo fmt`, `cargo clippy`) et `pnpm format`, vérifiées en CI.
 - Connecteur LCU : client HTTPS, WebSocket WAMP et reconnexion automatique au client League of Legends, avec les événements `connected`, `disconnected` et `phaseChanged` pour l'app (#7).
@@ -23,13 +61,27 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
+
 - Documents de planification `docs/superpowers/` exclus du suivi Git (#18).
+- Front réel : panneaux adaptés à la hauteur de fenêtre dès 960×600, sans défilement global ; icônes Lucide à la place des tracés manuels, réglages compacts et textes FR/EN.
+
+- Prototype draft : cartes de champions illustrées, branches principale/secondaire de runes avec toutes leurs options et sélection accentuée, noms accessibles au clavier, suppression du faux statut prépick après ban (#4).
+
+- Prototype draft/build : équipes compactes, champion et matchup illustrés, runes et chemin d’objets nommés, plan de jeu et scaling conservés après verrouillage ; direction graphique validée par Louison et Matthieu (#4).
+
+- Prototype : sphères lumineuses traversant trois profondeurs, reflets de surface synchronisés et transitions de combustion entre pages/phases ; ambiance suspendue pendant ces transitions et omise sans panneau cible (#4).
+
+- Prototype d’accueil : hiérarchie compacte, matières translucides et courbe d’objectif ; combustion WebGL turbulente multicolore, rythme ralenti à 2,75 secondes, seconde vague entre les panneaux, reflet de surface et bords altérés fixes sur la carte de session ; ambiance persistante à trois profondeurs (braises arrière, crépitements sur les cartes, étincelles avant), budget raster partagé et pause dans un onglet masqué ; ouverture interrompue à la première interaction, repli statique sans WebGL (#4).
+
 - CI allégée : elle ne tourne plus qu'à l'ouverture et à la mise à jour des PR (plus au push ni après fusion) ; builds Windows et macOS seulement si l'app, le connecteur ou `@olc/shared` changent, et pas en brouillon ; caches d'une PR supprimés à sa fermeture ; plus d'artefact gitleaks.
 - `CLAUDE.md` renvoie désormais vers `AGENTS.md`.
 - `pnpm test` et la CI lancent aussi les tests du collecteur (PostgreSQL 17 en CI Linux, compilation et tests sous Windows et macOS quand le collecteur change) (#17).
 - Code Rust formaté avec `cargo fmt`.
 
 ### Corrigé
+
+- Listes natives Windows : fond et texte des options accordés au thème pour éviter les libellés clairs sur fond blanc (#13).
 
 - Agrégats : publication atomique des grandes listes en morceaux bornés, pour dépasser la limite d’un objet JSONB unique tout en conservant le schéma JSON public (#18).
 

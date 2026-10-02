@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/lcu-connector", "apps/desktop/src-tauri", "services/collector", "services/api"]
+members = ["crates/lcu-connector", "crates/build-client", "apps/desktop/src-tauri", "services/collector", "services/api"]
 
 [workspace.package]
 edition = "2021"

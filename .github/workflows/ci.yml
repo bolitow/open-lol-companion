@@ -84,10 +84,13 @@ jobs:
       - name: Formatage Rust
         run: cargo fmt --all --check
       - name: Clippy (connecteur LCU, collecteur et API)
-        run: cargo clippy -p lcu-connector -p olc-collector -p olc-api --all-targets -- -D warnings
-      - run: pnpm --filter @olc/shared test
+        run: cargo clippy -p lcu-connector -p olc-build-client -p olc-collector -p olc-api --all-targets -- -D warnings
+      - name: Tests TypeScript (contrats et interface)
+        run: pnpm -r test
       - run: pnpm --filter @olc/desktop build
-      - run: cargo test -p lcu-connector
+      - run: cargo test -p lcu-connector -p olc-build-client
+      - name: Tests de l’exporteur du catalogue desktop
+        run: cargo test -p olc-collector --example export_desktop_catalog
       - name: Tests du backend (PostgreSQL)
         run: cargo test -p olc-collector -p olc-api
         env:
@@ -142,8 +145,10 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: pnpm install --frozen-lockfile
-      - name: Tests du connecteur LCU
-        run: cargo test -p lcu-connector
+      - name: Tests TypeScript (contrats et interface)
+        run: pnpm -r test
+      - name: Tests du connecteur LCU et du client de builds
+        run: cargo test -p lcu-connector -p olc-build-client
       - name: Compilation de l'app (debug, sans installeur)
         run: pnpm --filter @olc/desktop tauri build --debug --no-bundle
       - name: Clippy (workspace complet)

@@ -19,3 +19,6 @@ tauri = { version = "2", features = [] }
 serde.workspace = true
 serde_json.workspace = true
 lcu-connector = { path = "../../../crates/lcu-connector" }
+olc-build-client = { path = "../../../crates/build-client" }
+
+tokio = { workspace = true, features = ["sync"] }

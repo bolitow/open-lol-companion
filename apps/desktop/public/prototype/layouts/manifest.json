@@ -1,0 +1,154 @@
+[
+  {
+    "id": "74:73",
+    "title": "01 · Accueil",
+    "file": "01-accueil.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-73",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:172",
+    "title": "02 · Lobby / attente",
+    "file": "02-lobby-attente.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-172",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:275",
+    "title": "03 · Draft / sélection",
+    "file": "03-draft-selection.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-275",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:370",
+    "title": "04 · Préparation du build",
+    "file": "04-preparation-du-build.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-370",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:463",
+    "title": "05 · En partie",
+    "file": "05-en-partie.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-463",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:528",
+    "title": "06 · Partie · terminée / synthèse",
+    "file": "06-partie-terminee-synthese.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-528",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:632",
+    "title": "07 · Champions · aucune sélection",
+    "file": "07-champions-aucune-selection.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-632",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:729",
+    "title": "08 · Profil joueur · public",
+    "file": "08-profil-joueur-public.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-729",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:824",
+    "title": "09 · Enregistrements / Clips (par défaut)",
+    "file": "09-enregistrements-clips-par-defaut.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-824",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:923",
+    "title": "10 · Lecteur / découpe",
+    "file": "10-lecteur-decoupe.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-923",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:974",
+    "title": "11 · Collection / aucune sélection",
+    "file": "11-collection-aucune-selection.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-974",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1069",
+    "title": "12 · Parties live / spectate",
+    "file": "12-parties-live-spectate.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1069",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1149",
+    "title": "13 · Réglages / recherche par intention",
+    "file": "13-reglages-recherche-par-intention.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1149",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1222",
+    "title": "14 · Overlays / éditeur",
+    "file": "14-overlays-editeur.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1222",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1283",
+    "title": "15 · Mes comptes / association privée",
+    "file": "15-mes-comptes-association-privee.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1283",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1335",
+    "title": "16 · Premier lancement",
+    "file": "16-premier-lancement.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1335",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1400",
+    "title": "17 · Chargement / récupération",
+    "file": "17-chargement-recuperation.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1400",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "74:1456",
+    "title": "18 · Variantes de modes",
+    "file": "18-variantes-de-modes.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=74-1456",
+    "width": 1440,
+    "height": 900
+  },
+  {
+    "id": "138:666",
+    "title": "Draft · après verrouillage · bleu",
+    "file": "19-draft-apres-verrouillage-bleu.png",
+    "figmaUrl": "https://www.figma.com/design/k4SI8lmJungFY3qhYP8ax0?node-id=138-666",
+    "width": 1440,
+    "height": 900
+  }
+]

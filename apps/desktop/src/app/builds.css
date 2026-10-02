@@ -1,0 +1,117 @@
+/* La préparation partage la hauteur disponible ; chaque contenu long défile localement. */
+.build-workspace{display:grid;grid-template-rows:auto minmax(0,1fr) 15px;gap:8px;min-width:0;min-height:0}
+.build-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;min-width:0}
+.build-context{display:flex;align-items:center;gap:9px;min-width:170px;max-width:270px;flex:1}
+.build-context>img{width:32px;height:37px;object-fit:cover;object-position:50% 16%;border-radius:7px;border:1px solid var(--line-strong)}
+.build-context label{flex:1;min-width:0}.build-context small{display:block;color:var(--accent);font-size:9px}.build-context select{font-weight:650;font-size:15px;width:100%;max-width:210px}
+.build-workspace select{background:var(--panel);border:1px solid var(--line);border-radius:5px;padding:4px 6px;color:var(--text);min-width:0;max-width:100%}
+.build-context select{border:0;background:transparent;padding:0}
+.build-mode-switch{display:flex;gap:3px;background:var(--panel);border:1px solid var(--line);padding:3px;border-radius:8px;margin-left:auto}
+.build-mode-switch button{font-size:10px;padding:6px 9px;border-radius:5px;color:var(--muted)}
+.build-mode-switch button[aria-pressed=true]{color:var(--accent);background:var(--accent-soft)}
+.build-scope{display:flex;align-items:center;gap:8px;min-width:0;flex-basis:100%}
+.build-scope label{display:flex;align-items:center;gap:4px;min-width:0}.build-scope label>span{font-size:9px;color:var(--muted)}
+.build-scope select{font-size:10px;padding:3px 4px}.build-patch{font-size:9px;color:var(--muted);margin-left:auto;white-space:nowrap}
+.build-scope .icon-button{width:26px;height:24px;flex-shrink:0}
+.community-build-grid{display:grid;grid-template-columns:minmax(285px,1.08fr) minmax(240px,1fr) minmax(205px,.86fr);min-height:0;min-width:0;gap:12px}
+.community-build-grid>.surface{min-height:0;min-width:0;overflow:hidden}
+.community-runes,.build-item-panel{display:flex;flex-direction:column;padding:10px 12px}
+.community-runes>.rune-panel{flex:1;border:0;box-shadow:none;background:transparent;padding:8px 0 0;overflow:hidden}
+.community-runes>.rune-panel:before,.community-runes>.rune-panel:after{display:none}
+.community-runes .rune-panel header h2{display:none}.community-runes .rune-panel header{min-height:20px;margin-bottom:3px}.community-runes .rune-panel header small{font-size:9px}
+.build-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px;flex-shrink:0;font-weight:600;font-size:12px}
+.build-panel-heading h2{font-size:13px}.build-panel-heading select{max-width:60%;font-size:10px}
+.build-variant-select{font-size:10px!important;max-width:100%;align-self:flex-start;margin-bottom:7px;flex-shrink:0}
+.build-panel-heading .build-variant-select{margin-bottom:0;max-width:60%}
+.build-metrics{display:flex;align-items:center;flex-wrap:wrap;gap:3px 10px;font-size:10px;border-top:1px solid var(--line);padding-top:6px;margin-top:6px;flex-shrink:0}
+.build-metrics small{font-size:9px;color:var(--muted)}.build-metrics>small{flex-basis:100%}
+.build-item-scroll{flex:1;min-height:0}.build-item-sequence{display:grid;grid-template-columns:repeat(auto-fill,minmax(55px,1fr));gap:10px 5px;list-style:none;margin:0;padding:3px}
+.build-item-sequence li{min-width:0}.build-record{width:100%;border-radius:6px;display:flex;flex-direction:column;gap:5px;padding:4px 1px;position:relative}
+.build-record img{width:33px;height:33px;border-radius:5px}.build-record-name{font-size:9px;line-height:1.15;text-align:center;max-width:100%;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sequence-index{position:absolute;left:0;top:0;min-width:14px;padding:1px 3px;border-radius:4px;background:var(--panel);border:1px solid var(--line-strong);font-size:9px;color:var(--accent)}
+.build-missing-record{display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center;font-size:9px;color:var(--muted);position:relative;padding:6px}
+.build-hint{font-size:9px;line-height:1.4;color:var(--muted);margin-top:8px;margin-bottom:0;flex-shrink:0}
+.build-abilities{padding:10px 12px;overflow:auto!important}.build-ability-icons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}.build-ability-icons .build-record-name{display:none}.build-ability-icons .build-record b{font-size:10px;color:var(--accent)}
+.skill-point-sequence{list-style:none;display:flex;flex-wrap:wrap;gap:3px;margin:8px 0 0;padding:0}.skill-point-sequence li{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:19px}.skill-point-sequence small{font-size:8px;color:var(--muted)}.skill-point-sequence strong{font-size:10px;line-height:20px;min-width:19px;text-align:center;border-radius:3px;background:var(--accent-soft);color:var(--accent)}.skill-point-sequence .skill-R{background:var(--accent);color:var(--bg)}
+.build-spells{margin-top:16px;border-top:1px solid var(--line);padding-top:10px}.build-spell-pair{display:flex;gap:8px;max-width:180px}.build-spell-pair .build-record{flex:1}
+.build-empty{color:var(--muted);font-size:11px;padding:12px 4px;line-height:1.5}.community-runes>.build-empty{flex:1}
+.build-status{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;color:var(--muted);font-size:12px;text-align:center;min-height:0}.build-status svg{color:var(--accent)}
+.build-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:9px}.build-footer small{font-size:9px}.build-footer button{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted)}
+.build-source-dialog header h2{flex:1}.build-source-dialog p{font-size:13px;line-height:1.6}.build-source-dialog dl{font-size:12px;line-height:1.6;margin-top:20px}.build-source-dialog dt{color:var(--muted);margin-top:10px}.build-source-dialog dd{margin:0}
+.build-workspace .preparation-grid.live-preparation{padding-bottom:0}
+@media(min-width:760px){.desktop-app .draft-content{grid-template-rows:auto minmax(110px,.62fr) minmax(270px,1.38fr)}}
+@media(min-width:760px) and (max-height:680px){.desktop-app .draft-content{grid-template-rows:auto minmax(90px,.52fr) minmax(230px,1.48fr);gap:8px}.build-toolbar{gap:4px 10px}.build-workspace{gap:6px}.build-context>img{height:30px;width:27px}.build-context select{font-size:13px}.build-mode-switch button{padding:4px 7px}.community-build-grid{gap:8px}.community-runes,.build-item-panel,.build-abilities{padding:8px}.build-panel-heading h2{font-size:12px}}
+@media(max-width:1000px) and (min-width:760px){.community-build-grid{grid-template-columns:minmax(265px,1.13fr) minmax(235px,1fr) minmax(170px,.75fr);gap:8px}.build-scope{gap:6px}.build-scope label>span{display:none}.build-panel-heading{flex-wrap:wrap}.build-panel-heading .build-variant-select{max-width:100%}.build-record img{width:29px;height:29px}.build-abilities{padding:8px}}
+@media(max-width:759px){.build-workspace{display:flex;flex-direction:column}.community-build-grid{grid-template-columns:1fr}.community-build-grid>.surface{min-height:260px;max-height:420px}.build-scope{flex-wrap:wrap}.build-mode-switch{margin-left:0}.build-toolbar{gap:10px}.build-scope label>span{display:none}}
+/* Les filtres tiennent sur une ligne sur desktop ; les arbres gardent la priorité. */
+.community-runes .rune-panel>header .icon-button{height:24px;width:24px}
+@media(min-width:1200px){
+ .build-toolbar{flex-wrap:nowrap;gap:12px}
+ .build-context{flex:0 1 175px;min-width:130px}
+ .build-scope{flex:1;flex-basis:auto;order:1;gap:7px}
+ .build-mode-switch{order:2;margin-left:0;flex-shrink:0}
+ .build-scope label>span{display:none}
+ .build-scope select{max-width:115px}
+ .desktop-app .draft-content{grid-template-rows:auto 160px minmax(290px,1fr)}
+ .draft-heading.screen-heading{display:flex;align-items:center}
+ .draft-heading.screen-heading>div{display:flex;align-items:baseline;gap:18px}
+ .draft-heading.screen-heading h1{font-size:21px}
+ .draft-heading.screen-heading p{font-size:11px;margin:0}
+}
+.live-champion-card .card-badges{top:4px;left:6px;right:6px}
+.live-champion-card .card-badges small,.live-champion-card .card-badges>span{font-size:8px;line-height:1.1;padding:2px 3px}
+.live-champion-card .card-caption{bottom:5px;left:6px;right:6px}
+.live-champion-card .card-caption strong{font-size:11px;line-height:1.2}
+.live-champion-card .card-caption>span{font-size:9px;line-height:1.2}
+.build-rune-actions{display:flex;align-items:center;gap:4px}.build-rune-actions .icon-button{height:23px;width:23px;flex-shrink:0}.build-panel-heading .build-rune-actions .build-variant-select{max-width:140px}
+.community-runes .rune-panel>header{display:none}.community-runes .rune-style-picker select:disabled{opacity:1;color:var(--text);appearance:none;cursor:default}
+@media(min-width:1200px){.desktop-app .draft-content{grid-template-rows:auto 140px minmax(300px,1fr)}.skill-point-sequence{gap:2px}.skill-point-sequence li,.skill-point-sequence strong{min-width:16px}.build-ability-icons .build-record img{width:28px;height:28px}.build-ability-icons .build-record{gap:3px}.build-spells{margin-top:10px;padding-top:8px}.build-spell-pair .build-record-name{-webkit-line-clamp:1}.build-spell-pair .build-record img{width:27px;height:27px}.build-hint{margin-top:6px}}
+@media(min-width:760px){
+ .draft-heading.screen-heading>div{display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 16px}
+ .draft-heading.screen-heading h1{font-size:21px}
+ .draft-heading.screen-heading p{font-size:10px;margin:0}
+ .desktop-app .draft-content{grid-template-rows:auto minmax(120px,.58fr) minmax(230px,1.42fr)}
+ .live-champion-card .card-badges{justify-content:flex-end}
+ .live-champion-card .card-badges>span{display:none}
+ .live-champion-card .card-caption strong{max-width:calc(100% - 20px)}
+}
+@media(min-width:1200px) and (min-height:681px){.desktop-app .draft-content{grid-template-rows:auto 145px minmax(300px,1fr)}}
+@media(min-width:760px){
+ .desktop-app .draft-content .team{padding:8px}
+ .desktop-app .draft-content .team header{margin-bottom:6px}
+ .desktop-app .draft-content .team h2{font-size:13px}
+ .desktop-app .draft-content .team header>span{font-size:9px}
+ .desktop-app .draft-content .draft-bans{min-height:20px;height:20px;margin-top:6px;font-size:9px;flex-shrink:0}
+ .desktop-app .draft-content .ban-portrait{width:19px;height:19px}
+ .desktop-app .draft-content .card-caption strong{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* Petite hauteur : une vraie zone de lecture, pas une bande d’icônes coupées. */
+@media(min-width:960px) and (max-height:680px){
+ .build-toolbar{flex-wrap:nowrap;gap:7px}
+ .build-context{flex:0 1 120px;min-width:105px}
+ .build-scope{flex:1;flex-basis:auto;order:1;gap:5px}
+ .build-mode-switch{order:2;margin-left:0;flex-shrink:0}
+ .build-scope label>span{display:none}
+ .build-scope select{max-width:93px}
+ .build-item-panel{overflow:auto!important}
+ .build-item-scroll{flex:0 0 auto;overflow:visible}
+ .build-panel-heading{flex-wrap:nowrap}
+}
+
+.item-import{margin-top:8px;flex-shrink:0}.item-import .button{font-size:10px;padding:6px 10px}.item-import p{font-size:9px;line-height:1.4;color:var(--muted);margin:5px 0 0}
+/* La carte consultée et le pick réel ont des repères distincts. */
+.champion-card-slot{min-width:0;min-height:0;height:100%}
+.champion-card-slot>.live-champion-card{display:block;padding:0;width:100%;height:100%;text-align:left}
+.champion-card-slot>.live-champion-card>img{width:100%;height:100%;border-radius:0;object-fit:cover}
+.live-champion-card.inspected{outline:2px solid var(--accent);outline-offset:-2px}
+.live-champion-card:focus-visible{outline:2px solid var(--text);outline-offset:2px}
+.live-champion-card .equipped-mark{display:none}
+.build-context{border-left:2px solid var(--accent);padding-left:9px;position:relative}
+.build-context.browsing{border-color:var(--muted);flex-wrap:wrap}
+.build-context .return-pick{display:flex;align-items:center;gap:5px;flex-basis:100%;color:var(--accent);font-size:9px;white-space:nowrap;max-width:100%;overflow:hidden}
+.build-context .return-pick span{overflow:hidden;text-overflow:ellipsis}
+.game-tooltip .tooltip-stats{display:flex;gap:5px 12px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:var(--muted)}
+.game-tooltip .tooltip-stats b{color:var(--text)}
+@media(min-width:960px) and (max-height:680px){.build-context>img{width:25px;height:29px}.build-context .return-pick{font-size:8px}.build-toolbar{min-height:45px}}
+@media(min-width:760px){.desktop-app .live-champion-card .card-badges>span{display:inline;font-size:7px;margin-right:auto}.desktop-app .live-champion-card .card-badges{justify-content:space-between}}

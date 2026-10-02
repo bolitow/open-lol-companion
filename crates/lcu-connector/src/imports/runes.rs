@@ -137,10 +137,31 @@ struct RunePageWrite<'a> {
     current: bool,
 }
 
+pub(super) struct PreparedRunes<'a> {
+    method: Method,
+    path: String,
+    page: RunePageWrite<'a>,
+}
+impl PreparedRunes<'_> {
+    pub(super) async fn apply(self, client: &LcuClient) -> Result<(), ImportError> {
+        client
+            .write_json(self.method, &self.path, &self.page)
+            .await?;
+        Ok(())
+    }
+}
+
 impl LcuClient {
     /// Valide les runes avec le catalogue du client puis importe la page réservée à l'app.
     /// Une page personnelle n'est jamais supprimée pour libérer un emplacement.
     pub async fn import_runes(&self, request: &ImportRunesRequest) -> Result<(), ImportError> {
+        self.prepare_runes(request).await?.apply(self).await
+    }
+
+    pub(super) async fn prepare_runes<'a>(
+        &self,
+        request: &'a ImportRunesRequest,
+    ) -> Result<PreparedRunes<'a>, ImportError> {
         let styles: Vec<RuneStyle> = self.get_json(STYLES_ENDPOINT).await?;
         validate_runes(request, &styles)?;
         let pages: Vec<RunePage> = self.get_json(PAGES_ENDPOINT).await?;
@@ -157,8 +178,7 @@ impl LcuClient {
             Some(id) => (Method::PUT, format!("{PAGES_ENDPOINT}/{id}")),
             None => (Method::POST, PAGES_ENDPOINT.into()),
         };
-        self.write_json(method, &path, &page).await?;
-        Ok(())
+        Ok(PreparedRunes { method, path, page })
     }
 }
 

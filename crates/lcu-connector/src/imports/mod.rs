@@ -3,10 +3,10 @@
 mod items;
 mod runes;
 mod spells;
-
 pub use items::{ImportItemsRequest, ItemBlock, ItemStack};
-pub use runes::ImportRunesRequest;
 pub use spells::{FlashSlot, ImportSpellsRequest};
+
+pub use runes::ImportRunesRequest;
 
 use serde::Serialize;
 use thiserror::Error;
@@ -27,15 +27,15 @@ pub enum ImportError {
     InvalidClientData,
     #[error("sélection des champions inactive")]
     NotInChampSelect,
+    #[error("sorts d’invocateur invalides")]
+    InvalidSpells,
     #[error("page de runes invalide")]
     InvalidRunes,
-    #[error("sorts d'invocateur invalides")]
-    InvalidSpells,
-    #[error("set d'items invalide")]
-    InvalidItems,
     #[error("page de runes de l'application indisponible ou ambiguë")]
     RunePageUnavailable,
-    #[error("priorité du set d'items indisponible")]
+    #[error("set d’items invalide")]
+    InvalidItems,
+    #[error("priorité maximale déjà utilisée par un set d’items")]
     ItemSetPriorityUnavailable,
 }
 
@@ -49,3 +49,14 @@ impl From<ClientError> for ImportError {
         }
     }
 }
+
+mod draft_runes;
+pub use draft_runes::{DraftRuneGuardError, DraftRuneImportError, ImportDraftRunesRequest};
+
+mod draft_spells;
+pub use draft_spells::ImportDraftSpellsRequest;
+
+mod auto_import;
+pub use auto_import::{
+    AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection,
+};

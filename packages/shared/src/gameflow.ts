@@ -1,3 +1,4 @@
+import type {DraftSession} from "./draft";
 /** Phases renvoyées par `GET /lol-gameflow/v1/gameflow-phase` (miroir de `GameflowPhase` côté Rust). */
 export const GAMEFLOW_PHASES = [
   "None",
@@ -44,4 +45,29 @@ export interface LcuStatus {
   connected: boolean;
   port: number | null;
   message: string;
+}
+
+/** Page équipée renvoyée par le client ; les fragments peuvent répéter un identifiant. */
+export interface RunePage {
+  primaryStyleId: number;
+  subStyleId: number;
+  selectedPerkIds: number[];
+  isValid: boolean;
+  isTemporary: boolean;
+  autoModifiedSelections: number[];
+}
+
+/** Identité publique locale ; aucun PUUID, identifiant de session ou secret. */
+export interface LcuAccount { platform:string; game_name:string; tag_line:string }
+
+/** État courant versionné, miroir de `lcu_connector::LcuSession`. */
+export interface LcuSession {
+  /** Identité locale de draft, disponible avant le gameId Riot. */
+  draftId?: string;
+  revision: number;
+  account: LcuAccount | null;
+  connected: boolean;
+  phase: GameflowPhase | null;
+  draft: DraftSession | null;
+  runePage: RunePage | null;
 }

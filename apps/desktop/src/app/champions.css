@@ -1,0 +1,46 @@
+/* Bibliothèque indépendante de la draft, avec défilement limité aux deux panneaux. */
+.screen-champions{overflow:hidden}
+.champions-screen{height:100%;min-height:0;display:flex;flex-direction:column;gap:16px}
+.champions-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-shrink:0}
+.champions-heading .eyebrow{margin-bottom:5px}.champions-heading h1{font-size:28px}.champions-heading p{font-size:12px;color:var(--muted)}
+.champions-workspace{min-height:0;flex:1;display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+.has-selection .champions-workspace{grid-template-columns:minmax(260px,1fr) minmax(365px,1fr)}
+.champions-library{display:flex;flex-direction:column;min-height:0;min-width:0;gap:14px}
+.champions-filters{display:flex;flex-direction:column;gap:10px;flex-shrink:0}
+.champion-query{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:9px 12px;color:var(--muted)}
+.champion-query input{min-width:0;flex:1;border:0;background:transparent;font-size:13px;padding:0;outline-offset:5px}
+.champions-filters>div{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.champions-filters select,.champion-build-filters select{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:11px;max-width:100%;min-width:0}
+.champions-filters small{margin-left:auto;color:var(--muted);font-size:10px}
+.champion-grid-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;padding:2px 6px 12px 2px;flex:1}
+.champion-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:12px;align-content:start}
+.champion-grid>div{min-width:0}
+.champion-tile{position:relative;width:100%;aspect-ratio:0.68;display:block;padding:0;overflow:hidden;border-radius:12px;background:var(--panel);border:1px solid var(--line);isolation:isolate;text-align:left;transition:border-color .18s,transform .18s,box-shadow .18s}
+.champion-tile>img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;opacity:.9}
+.champion-tile::after{content:'';position:absolute;inset:35% 0 0;background:linear-gradient(transparent,rgba(5,7,12,.95));pointer-events:none;z-index:0}
+.champion-tile:hover{border-color:var(--accent);transform:translateY(-2px)}.champion-tile:hover>img{transform:scale(1.035);opacity:1}
+.champion-tile.selected{outline:2px solid var(--accent);outline-offset:-2px;box-shadow:0 0 20px var(--accent-glow)}
+.champion-tile-caption{position:absolute;bottom:13px;left:12px;right:8px;display:flex;flex-direction:column;gap:4px;color:#fff;z-index:1}.champion-tile-caption strong{font-size:15px;font-family:Sora,system-ui,sans-serif;line-height:1.15}.champion-tile-caption small{font-size:9px;color:#d0d4df}
+.champion-selected{position:absolute;top:10px;right:10px;display:grid;place-items:center;border-radius:50%;padding:4px;background:var(--accent);color:var(--bg)}
+.champion-profile{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden!important;animation:champion-arrive .25s ease-out}
+.champion-profile-hero{position:relative;isolation:isolate;min-height:135px;padding:24px;display:flex;align-items:flex-end;border-bottom:1px solid var(--line);overflow:hidden;flex-shrink:0;background:#0b1017;color:white}
+.champion-profile-hero>img{position:absolute;inset:0 0 0 auto;width:60%;height:100%;object-fit:cover;object-position:50% 27%;z-index:-2}
+.champion-profile-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#0b1017 10%,rgba(11,16,23,.85) 42%,transparent 100%);z-index:-1}
+.champion-profile-hero h2{font-size:28px}.champion-profile-hero p{font-size:12px;color:#d0d4df;margin-top:5px}.champion-profile-hero .eyebrow{font-size:9px;color:#f4b47c}.champion-profile-hero>.icon-button{position:absolute;top:8px;right:8px;background:#0b1017b3;color:white;border-radius:50%}
+.champion-tabs{display:flex;gap:4px;padding:8px 14px;border-bottom:1px solid var(--line);flex-shrink:0}.champion-tabs button{flex:1;padding:9px 6px;font-size:12px;color:var(--muted);border-bottom:2px solid transparent}.champion-tabs button[aria-selected=true]{color:var(--text);border-color:var(--accent);background:var(--accent-soft);border-radius:6px 6px 0 0}
+.champion-profile-body{min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:16px;flex:1}
+.champion-stat-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}.champion-stat-strip span{display:flex;flex-direction:column;gap:4px;border-left:1px solid var(--line-strong);padding-left:10px}.champion-stat-strip b{font-size:17px}.champion-stat-strip small{font-size:10px;color:var(--muted)}
+.champion-abilities{display:flex;flex-direction:column;gap:18px}.champion-abilities article{display:flex;align-items:flex-start;gap:12px}.champion-abilities .catalog-button{flex-shrink:0;padding:0;border-radius:9px}.champion-abilities .catalog-button>img{width:42px;height:42px;border-radius:9px}.champion-abilities h3{font-size:13px;margin:3px 0 5px}.champion-abilities small{font-size:10px;color:var(--accent)}.champion-abilities p{font-size:12px;line-height:1.65;color:var(--muted)}
+.champion-detail-link{display:flex;align-items:center;gap:9px;color:var(--accent);font-size:12px;margin-top:22px}.champion-data-version{display:block;color:var(--muted);font-size:9px;margin-top:18px}
+.champion-status{padding:30px 20px;display:flex;align-items:center;flex-direction:column;gap:15px;text-align:center;font-size:12px;color:var(--muted)}.champion-status svg{color:var(--accent)}
+.champion-build-filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.champion-build-filters label{display:flex;flex-direction:column;gap:4px;font-size:10px;color:var(--muted)}
+.champion-caption{font-size:11px;color:var(--muted);line-height:1.5;margin:12px 0}
+.champion-profile .community-build-grid{display:flex;flex-direction:column;gap:15px;min-height:0}.champion-profile .community-build-grid>.surface{min-height:0;max-height:none;flex-shrink:0;overflow:visible!important}.champion-profile .community-runes{min-height:320px!important}.champion-profile .build-item-scroll{max-height:260px}.champion-profile .build-spells{margin-top:0;padding-top:0;border-top:0}.champion-profile .build-spells h3{font-size:13px}
+.champion-profile .build-abilities{padding:15px}.champion-profile .spell-skills-details{margin-top:16px}
+.champion-catalog>.rune-panel{min-height:350px;display:flex;flex-direction:column}.champion-catalog>.item-panel{height:350px;display:flex;flex-direction:column;margin-top:18px}.champion-source{font-size:11px;line-height:1.6;color:var(--muted);margin-top:18px}.champion-source p{margin-top:8px}
+.champion-global-search{min-width:190px}.champion-global-results{width:min(560px,calc(100vw - 36px));right:0;left:auto;max-height:min(580px,70dvh);overflow:auto;z-index:100}.champion-global-results .eyebrow{display:block;padding:10px 8px 6px}.champion-global-results button{width:100%;display:flex;gap:12px;align-items:center;text-align:left;border-radius:8px}.champion-global-results button[aria-selected=true]{background:var(--accent-soft);color:var(--text)}.champion-global-results button img{width:30px;height:38px;object-fit:cover;border-radius:5px}.champion-global-results button span{flex:1}
+@keyframes champion-arrive{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+@media(max-height:680px){.champions-screen{gap:10px}.champions-heading p{display:none}.champions-heading h1{font-size:23px}.champion-profile-hero{min-height:108px;padding:17px}.champion-profile-hero h2{font-size:23px}.champion-profile-body{padding:12px}.champion-grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}}
+@media(max-width:1050px){.champions-heading p{max-width:240px}.app-header nav button{padding-left:7px;padding-right:7px}.champion-global-search kbd{display:none}.champion-tile-caption strong{font-size:13px}}
+@media(max-width:759px){.screen-champions{height:calc(100dvh - 190px);min-height:300px}.has-selection .champions-workspace{grid-template-columns:1fr}.has-selection .champions-library{display:none}.champions-heading p{display:none}.champion-profile-hero{min-height:100px}}
+@media(prefers-reduced-motion:reduce){.champion-profile,.champion-tile,.champion-tile>img{animation:none;transition:none}}
+[data-motion=reduced] .champion-profile,[data-motion=reduced] .champion-tile,[data-motion=reduced] .champion-tile>img{animation:none;transition:none}

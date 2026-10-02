@@ -8,16 +8,23 @@
 //!
 //! Voir la section 4.3 du cahier des charges.
 
+mod account;
+pub use account::LcuAccount;
 mod client;
 mod credentials;
 mod discovery;
+mod draft;
+pub use draft::{DraftSession, DRAFT_ENDPOINT};
 mod gameflow;
 pub mod imports;
-mod wamp;
-mod watcher;
-
+mod runes;
+mod session;
 #[cfg(test)]
 mod test_support;
+pub use runes::{RunePage, RUNES_ENDPOINT};
+mod wamp;
+mod watcher;
+pub use session::LcuSession;
 
 pub use client::{ClientError, LcuClient};
 pub use credentials::{Credentials, ParseError};

@@ -1,0 +1,78 @@
+{
+  "actions": [
+    [
+      {
+        "actorCellId": 0,
+        "championId": 103,
+        "completed": true,
+        "id": 1,
+        "pickTurn": 1,
+        "type": "ban"
+      }
+    ],
+    [
+      {
+        "actorCellId": 0,
+        "championId": 12,
+        "completed": true,
+        "id": 2,
+        "pickTurn": 3,
+        "type": "ban"
+      }
+    ],
+    [
+      {
+        "actorCellId": 0,
+        "championId": 34,
+        "completed": true,
+        "id": 3,
+        "pickTurn": 5,
+        "type": "ban"
+      }
+    ],
+    [
+      {
+        "actorCellId": 0,
+        "championId": 63,
+        "completed": false,
+        "id": 4,
+        "pickTurn": 1,
+        "type": "pick"
+      }
+    ]
+  ],
+  "bans": {
+    "myTeamBans": [
+      103,
+      12,
+      34
+    ],
+    "numBans": 6,
+    "theirTeamBans": []
+  },
+  "localPlayerCellId": 0,
+  "timer": {
+    "adjustedTimeLeftInPhase": 36183,
+    "adjustedTimeLeftInPhaseInSec": 36,
+    "internalNowInEpochMs": 1577066092327,
+    "isInfinite": false,
+    "phase": "BAN_PICK",
+    "timeLeftInPhase": 39183,
+    "timeLeftInPhaseInSec": 39,
+    "totalTimeInPhase": 37494
+  },
+  "isSpectating": false,
+  "benchEnabled": false,
+  "allowRerolling": false,
+  "allowDuplicatePicks": false,
+  "myTeam": [
+    {
+      "cellId": 0,
+      "championId": 63,
+      "championPickIntent": 0,
+      "assignedPosition": "",
+      "team": 1
+    }
+  ],
+  "theirTeam": []
+}

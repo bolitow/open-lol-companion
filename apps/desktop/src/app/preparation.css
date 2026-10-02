@@ -1,0 +1,115 @@
+/* Panneaux du front réel : alternatives discrètes, choix équipés contrastés. */
+.preparation-panel { min-width:0; min-height:0; padding:14px 16px; display:flex; flex-direction:column; overflow:hidden; }
+.preparation-panel>header { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:10px; flex-shrink:0; }
+.preparation-panel h2 { font-size:16px; }
+.preparation-panel small { color:var(--muted); font-size:10px; }
+.preparation-scroll { min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--line-strong) transparent; overscroll-behavior:contain; }
+.rune-panel>.preparation-scroll { flex:1; }
+.preparation-grid.live-preparation { position:relative; padding-bottom:16px; }
+.live-rune-trees { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.live-rune-tree { min-width:0; }
+.live-rune-tree+.live-rune-tree { border-left:1px solid var(--line); padding-left:16px; }
+.rune-style-picker { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.rune-style-picker>img { width:26px; height:26px; object-fit:contain; }
+.rune-style-picker>span { min-width:0; flex:1; }
+.rune-style-picker small { display:block; }
+.rune-style-picker select { display:block; width:100%; background:var(--panel); color:var(--text); font-size:12px; border:0; padding:3px 0; }
+.live-rune-rows { display:grid; gap:7px; }
+.live-rune-row { display:flex; justify-content:center; gap:10px; min-height:30px; }
+.catalog-button { position:relative; display:flex; align-items:center; justify-content:center; flex-shrink:0; border:1px solid transparent; border-radius:50%; padding:3px; }
+.catalog-button img { display:block; object-fit:contain; width:28px; height:28px; }
+.live-rune-row .catalog-button img { opacity:.55; filter:saturate(.55); transition:opacity 150ms,filter 150ms; }
+.live-rune-row .is-equipped { border-color:var(--accent); background:var(--accent-soft); box-shadow:0 0 14px var(--accent-glow); }
+.live-rune-row .is-equipped img,.catalog-button:hover img,.catalog-button:focus-visible img { opacity:1; filter:none; }
+.catalog-button:hover { background:var(--accent-soft); }
+.keystones { min-height:40px; }
+.keystones .catalog-button img { width:36px; height:36px; }
+.equipped-mark { position:absolute; right:-3px; bottom:-1px; border-radius:50%; background:var(--accent); color:var(--bg); display:flex; padding:1px; }
+.live-shards { margin-top:12px; padding-top:8px; border-top:1px solid var(--line); }
+.live-shards .live-rune-row { min-height:23px; gap:13px; }
+.live-shards .catalog-button { padding:1px; }
+.live-shards img { width:20px; height:20px; }
+.catalog-note { display:flex; align-items:start; gap:7px; font-size:11px; line-height:1.4; color:var(--muted); margin-bottom:10px; }
+.item-search { display:flex; align-items:center; gap:8px; padding:7px 9px; border:1px solid var(--line-strong); border-radius:7px; margin-bottom:10px; flex-shrink:0; color:var(--muted); }
+.item-search input { min-width:0; width:100%; border:0; background:transparent; font-size:12px; }
+.item-search .icon-button { width:16px; height:16px; }
+.item-panel>.preparation-scroll { flex:1; }
+.item-catalog-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(62px,1fr)); gap:10px 6px; padding:4px; }
+.item-catalog-card { min-width:0; flex-direction:column; justify-content:start; border-radius:7px; gap:5px; padding:5px 3px; }
+.item-catalog-card img { width:36px; height:36px; border:1px solid var(--line-strong); border-radius:6px; }
+.item-catalog-card span { font-size:10px; line-height:1.2; max-width:100%; text-align:center; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.catalog-footer { display:block; margin-top:8px; font-size:9px!important; line-height:1.3; flex-shrink:0; }
+.catalog-more { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--accent); margin:10px auto; }
+.catalog-version { position:absolute; bottom:0; right:0; color:var(--muted); font-size:9px; }
+.preparation-state { display:flex; align-items:center; justify-content:center; gap:12px; }
+.game-tooltip { position:fixed; z-index:100; width:270px; max-width:calc(100vw - 24px); padding:14px 16px; border:1px solid var(--line-strong); border-top:2px solid var(--accent); border-radius:10px; background:var(--panel); color:var(--text); box-shadow:0 12px 40px #0008; }
+.game-tooltip strong { font-size:13px; }
+.game-tooltip p { font-size:12px; margin-top:7px; line-height:1.5; }
+.game-tooltip small { display:block; color:var(--accent); font-size:10px; margin-top:8px; }
+.game-detail { padding:0; width:min(580px,calc(100vw - 36px)); max-height:calc(100dvh - 36px); border:1px solid var(--line-strong); border-radius:16px; background:var(--panel); color:var(--text); box-shadow:0 30px 100px #0009; }
+.game-detail::backdrop { background:#060910a8; backdrop-filter:blur(6px); }
+.game-detail-shell { display:flex; flex-direction:column; max-height:calc(100dvh - 40px); }
+.game-detail header { display:flex; align-items:center; gap:16px; padding:24px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.game-detail header>img { width:56px; height:56px; object-fit:contain; border-radius:8px; }
+.game-detail header>div { flex:1; min-width:0; }
+.game-detail header small { font-size:10px; color:var(--muted); }
+.game-detail h2 { margin:5px 0; font-size:22px; }
+.item-price { color:var(--accent); font-size:12px; }
+.game-detail-body { overflow:auto; padding:24px; min-height:0; }
+.game-description { white-space:pre-line; font-size:14px; line-height:1.7; color:var(--text); }
+.item-stat-list { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.item-stat-list>span { padding:6px 9px; background:var(--accent-soft); border-radius:6px; font-size:11px; color:var(--muted); }
+.item-stat-list strong { color:var(--text); }
+.item-components { margin-top:20px; border-top:1px solid var(--line); padding-top:12px; }
+.item-components h3 { font-size:12px; font-weight:500; color:var(--muted); }
+.item-components>div { display:flex; flex-wrap:wrap; gap:8px; }
+.item-components button { display:flex; align-items:center; gap:7px; padding:8px; background:var(--accent-soft); border-radius:8px; font-size:12px; }
+.item-components button img { width:30px; height:30px; border-radius:4px; }
+.item-components p { font-size:12px; }
+.game-detail .catalog-note { margin-top:20px; margin-bottom:0; }
+@media(min-width:760px){
+ .desktop-app .draft-content { grid-template-rows:auto minmax(120px,.8fr) minmax(210px,1.4fr); gap:12px; }
+ .preparation-grid.live-preparation { grid-template-columns:minmax(0,1.12fr) minmax(0,1fr); gap:14px; }
+}
+@media(min-width:760px) and (max-height:680px){
+ .desktop-app .draft-content { grid-template-rows:auto minmax(100px,.6fr) minmax(190px,1.4fr); gap:9px; }
+ .draft-heading h1 { font-size:21px; }
+ .draft-heading .eyebrow { display:none; }
+ .preparation-panel { padding:10px 12px; }
+ .preparation-panel>header { margin-bottom:7px; }
+ .live-rune-row { gap:6px; }
+ .live-rune-rows { gap:4px; }
+ .team header { margin-bottom:6px; }
+}
+@media(max-width:759px){
+ .preparation-grid.live-preparation { grid-template-columns:1fr; }
+ .preparation-panel { max-height:450px; }
+}
+@media(prefers-reduced-motion:reduce){.catalog-button img { transition:none; }}
+/* La draft réserve désormais de la hauteur aux arbres, sans agrandir le document. */
+.rune-panel { padding:10px 14px; }
+.rune-panel>header { margin-bottom:6px; }
+.rune-panel>header>div { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.rune-panel .rune-style-picker { margin-bottom:6px; }
+.rune-panel .live-rune-row { min-height:0; }
+.rune-panel .live-rune-rows { gap:4px; }
+.rune-panel .live-rune-row .catalog-button { padding:1px; }
+.rune-panel .live-rune-row img { width:24px; height:24px; }
+.rune-panel .keystones img { width:32px; height:32px; }
+.rune-panel .live-shards { margin-top:6px; padding-top:4px; }
+.rune-panel .live-shards img { width:16px; height:16px; }
+.rune-panel .live-shards .live-rune-row { gap:17px; }
+@media(min-width:760px){
+ .desktop-app .draft-content { grid-template-rows:auto minmax(120px,.85fr) minmax(190px,1.15fr); }
+ .draft-content .draft-heading .eyebrow { display:none; }
+ .draft-content .draft-heading h1 { font-size:24px; }
+ .draft-content .draft-heading p { margin-top:4px; }
+}
+.expanded-runes { position:relative; padding:34px 12px 12px; width:min(620px,calc(100vw - 32px)); max-height:calc(100dvh - 32px); border:1px solid var(--line-strong); border-radius:16px; background:var(--panel); color:var(--text); box-shadow:0 30px 100px #0009; }
+.expanded-runes::backdrop { background:#060910a8; backdrop-filter:blur(6px); }
+.expanded-runes .expanded-close { position:absolute; right:8px; top:4px; }
+.expanded-runes .rune-panel { max-height:calc(100dvh - 88px); border:0; box-shadow:none; }
+.expanded-runes .rune-panel .live-rune-row img { width:34px; height:34px; }
+.expanded-runes .rune-panel .live-shards img { width:22px; height:22px; }
+.expanded-runes .rune-panel .live-rune-rows { gap:12px; }
+.expanded-runes .rune-style-picker { margin:12px 0 18px; }

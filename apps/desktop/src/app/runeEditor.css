@@ -1,0 +1,31 @@
+.rune-workbench{display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden}
+.rune-workbench>.rune-panel{flex:1;min-height:0;border:0;box-shadow:none;background:transparent;padding:0 2px}
+.rune-workbench>.rune-panel:before,.rune-workbench>.rune-panel:after{display:none}
+.live-preparation>.rune-workbench{padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.community-runes>.rune-workbench{flex:1}
+.community-runes .rune-workbench .rune-panel>header{display:flex;justify-content:flex-end;min-height:22px;margin:0}
+.community-runes .rune-workbench .rune-panel>header>div{margin-right:auto}
+.rune-editor-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;padding-top:7px;margin-top:6px;border-top:1px solid var(--line)}
+.rune-editor-actions button{font-size:10px;min-height:27px;border-radius:5px;padding:4px 7px}
+.rune-edit-toggle{color:var(--muted);background:var(--accent-soft)}
+.rune-edit-toggle[aria-pressed=true]{color:var(--accent);outline:1px solid var(--accent)}
+.rune-editor-actions .icon-button{width:27px;height:27px;padding:4px}
+.rune-import-button{display:flex;align-items:center;justify-content:center;gap:5px;margin-left:auto;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line-strong)}
+.rune-editor-actions button:disabled{opacity:.5;cursor:default}
+.rune-import-status{flex-shrink:0;min-height:13px;margin:5px 0 0;color:var(--muted);font-size:9px;line-height:1.4;max-height:42px;overflow:auto;scrollbar-width:thin}
+.rune-import-status.has-error{color:var(--accent)}
+.rune-workbench.is-editing .rune-style-picker select:enabled{appearance:auto;cursor:pointer;background:var(--accent-soft)}
+.rune-workbench.is-editing .catalog-button:enabled{cursor:pointer}
+.rune-editor-dialog .rune-workbench{max-height:calc(100dvh - 88px)}
+.rune-editor-dialog .rune-panel{flex:1 1 auto;max-height:none}
+.rune-editor-dialog .rune-editor-actions{padding:10px 8px 0}
+.rune-editor-dialog .rune-import-status{padding:0 8px 2px;max-height:55px}
+@media(max-height:680px){.rune-editor-actions{margin-top:4px;padding-top:4px}.rune-import-status{margin-top:3px}.rune-editor-dialog .rune-panel .live-rune-rows{gap:7px}}
+/* En petite hauteur, faire défiler le panneau entier : ne pas réduire l’arbre à une bande de quelques pixels. */
+@media(min-width:760px) and (max-height:680px){
+ .community-build-grid>.community-runes{overflow:auto;scrollbar-width:thin;scrollbar-color:var(--line-strong) transparent;overscroll-behavior:contain}
+ .community-runes>.rune-workbench{flex:none;overflow:visible}
+ .community-runes .rune-workbench>.rune-panel{flex:none;overflow:visible}
+ .community-runes .rune-panel>.preparation-scroll{overflow:visible;flex:none}
+ .community-runes .build-panel-heading{position:sticky;top:0;z-index:2;background:var(--panel);padding-bottom:4px}
+}
