@@ -1,8 +1,10 @@
 //! Imports explicites dans le client LoL (cahier des charges, section 5.4).
 
 mod runes;
+mod spells;
 
 pub use runes::ImportRunesRequest;
+pub use spells::{FlashSlot, ImportSpellsRequest};
 
 use serde::Serialize;
 use thiserror::Error;
@@ -21,8 +23,12 @@ pub enum ImportError {
     ClientRejected,
     #[error("réponse du client LoL invalide")]
     InvalidClientData,
+    #[error("sélection des champions inactive")]
+    NotInChampSelect,
     #[error("page de runes invalide")]
     InvalidRunes,
+    #[error("sorts d'invocateur invalides")]
+    InvalidSpells,
     #[error("page de runes de l'application indisponible ou ambiguë")]
     RunePageUnavailable,
 }

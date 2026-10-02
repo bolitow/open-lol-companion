@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { importErrorMessage, type ImportError } from "./imports";
 
 describe("erreurs des imports", () => {
+  it("guide le joueur vers la sélection des champions dans les deux langues", () => {
+    expect(importErrorMessage("notInChampSelect", "fr")).toContain("sélection des champions");
+    expect(importErrorMessage("notInChampSelect", "en")).toContain("champion select");
+  });
+
   it("fournit un message pour chaque code Rust dans les deux langues", () => {
     const errors: ImportError[] = [
       "clientUnavailable",
@@ -9,6 +14,8 @@ describe("erreurs des imports", () => {
       "invalidClientData",
       "invalidRunes",
       "runePageUnavailable",
+      "notInChampSelect",
+      "invalidSpells",
     ];
     for (const error of errors) {
       const french = importErrorMessage(error, "fr");

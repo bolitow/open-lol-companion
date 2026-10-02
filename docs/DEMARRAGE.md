@@ -98,7 +98,7 @@ Routes, variables, cache, WebSocket et PowerShell : [contrat API](../services/ap
 
 ## 4. Où coder quoi
 
-Les commandes Tauri `import_runes` sont décrites
+Les commandes Tauri `import_runes` et `import_spells` sont décrites
 dans le [contrat des imports client](imports-client.md), avec les types, les erreurs
 FR/EN et la recette Windows/macOS à réaliser. Leur déclenchement dans
 l'écran build appartient à #13.
