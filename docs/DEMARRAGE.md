@@ -98,9 +98,14 @@ Routes, variables, cache, WebSocket et PowerShell : [contrat API](../services/ap
 
 ## 4. Où coder quoi
 
+Les commandes Tauri `import_runes` sont décrites
+dans le [contrat des imports client](imports-client.md), avec les types, les erreurs
+FR/EN et la recette Windows/macOS à réaliser. Leur déclenchement dans
+l'écran build appartient à #13.
+
 | Dossier | Contenu | Langage |
 | --- | --- | --- |
-| `crates/lcu-connector` | Détection du client, identifiants, phases de jeu | Rust |
+| `crates/lcu-connector` | Détection du client, identifiants, phases de jeu et imports | Rust |
 | `apps/desktop/src-tauri` | Cœur de l'app : commandes appelées par l'interface, overlays, capture | Rust |
 | `apps/desktop/src` | Interface de l'app | React + TypeScript |
 | `packages/shared` | Types et utilitaires partagés (phases, Data Dragon) | TypeScript |
