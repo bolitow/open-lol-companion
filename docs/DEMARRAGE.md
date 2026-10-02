@@ -216,3 +216,5 @@ progression possible sur une page vide. Parties privées exclues par l’API. Le
 rangs sont ceux du profil acquis à la date affichée, pas ceux au moment des matchs ;
 aucune estimation de MMR. Les commandes HTTP sont limitées à 512 Kio, 60 s par
 requête / 65 s au total, quatre appels simultanés partagés avec les builds.
+
+Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.

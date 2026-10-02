@@ -1,3 +1,4 @@
+use crate::account::{read_account, ACCOUNT_ENDPOINT, REGION_ENDPOINT};
 use crate::draft::{DraftMode, FLOW_ENDPOINT};
 use std::sync::Arc;
 use std::time::Duration;
@@ -25,6 +26,7 @@ pub const RETRY_DELAY: Duration = Duration::from_secs(2);
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum LcuEvent {
     Connected { port: u16 },
+    AccountChanged { account: Option<crate::LcuAccount> },
     Disconnected,
     DraftChanged { draft: Option<DraftSession> },
     PhaseChanged { phase: GameflowPhase },
@@ -53,6 +55,20 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
     };
     let _ = tx.send(LcuEvent::Connected { port: creds.port }).await;
     let _ = tx.send(LcuEvent::PhaseChanged { phase }).await;
+    let Ok(account_client) = LcuClient::new(creds) else {
+        let _ = tx.send(LcuEvent::Disconnected).await;
+        return;
+    };
+    let mut account = read_account(&account_client).await;
+    let _ = tx
+        .send(LcuEvent::AccountChanged {
+            account: account.clone(),
+        })
+        .await;
+    // Rattrape une identité indisponible au login ou un événement perdu, sans polling de l'API publique.
+    let mut account_retry = tokio::time::interval(Duration::from_secs(30));
+    account_retry.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    account_retry.tick().await;
     let _ = tx
         .send(LcuEvent::RunePageChanged {
             page: read_runes(creds).await,
@@ -68,14 +84,44 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
             .await;
     }
 
-    while let Some(Ok(message)) = socket.next().await {
+    loop {
+        let message = tokio::select! {
+            _ = tx.closed() => return,
+            _ = account_retry.tick() => {
+                let next = read_account(&account_client).await;
+                if next != account {
+                    account = next;
+                    if tx.send(LcuEvent::AccountChanged { account: account.clone() }).await.is_err() { return; }
+                }
+                continue;
+            },
+            message = socket.next() => match message { Some(Ok(message)) => message, _ => break },
+        };
         let Message::Text(text) = message else {
             continue;
         };
         let Some(event) = parse_event(&text) else {
             continue;
         };
-        if let Some(phase) = GameflowPhase::from_event(&event) {
+        if event.uri == ACCOUNT_ENDPOINT || event.uri == REGION_ENDPOINT {
+            let next = match event.event_type.as_str() {
+                "Delete" => None,
+                "Create" | "Update" => read_account(&account_client).await,
+                _ => continue,
+            };
+            if next != account {
+                account = next;
+                if tx
+                    .send(LcuEvent::AccountChanged {
+                        account: account.clone(),
+                    })
+                    .await
+                    .is_err()
+                {
+                    return;
+                }
+            }
+        } else if let Some(phase) = GameflowPhase::from_event(&event) {
             if tx.send(LcuEvent::PhaseChanged { phase }).await.is_err() {
                 return;
             }
@@ -230,6 +276,17 @@ mod tests {
             );
             http.write_all(response.as_bytes()).await.unwrap();
 
+            let (mut account_http, _) = listener.accept().await.unwrap();
+            let n = account_http.read(&mut buf).await.unwrap();
+            assert!(String::from_utf8_lossy(&buf[..n])
+                .starts_with("GET /lol-summoner/v1/current-summoner "));
+            account_http
+                .write_all(
+                    b"HTTP/1.1 404 Not Found\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{}",
+                )
+                .await
+                .unwrap();
+
             for iteration in 0..2 {
                 if iteration == 1 {
                     let (mut flow_http, _) = listener.accept().await.unwrap();
@@ -301,6 +358,7 @@ mod tests {
                 LcuEvent::PhaseChanged {
                     phase: GameflowPhase::Lobby
                 },
+                LcuEvent::AccountChanged { account: None },
                 LcuEvent::RunePageChanged {
                     page: RunePage::parse(
                         serde_json::json!({"primaryStyleId":8000,"subStyleId":8200,"selectedPerkIds":[],"isValid":false,"isTemporary":false})
@@ -351,6 +409,73 @@ mod tests {
                 },
                 LcuEvent::RunePageChanged { page: None },
                 LcuEvent::Disconnected,
+            ]
+        );
+    }
+
+    async fn serve_json(listener: &TcpListener, path: &str, body: serde_json::Value) {
+        let (mut http, _) = listener.accept().await.unwrap();
+        let mut buf = [0; 4096];
+        let n = http.read(&mut buf).await.unwrap();
+        assert!(String::from_utf8_lossy(&buf[..n]).starts_with(&format!("GET {path} ")));
+        let body = body.to_string();
+        http.write_all(format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn suit_le_compte_initial_les_changements_et_la_suppression_via_le_websocket() {
+        use serde_json::json;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let creds =
+            Credentials::from_lockfile(&format!("LeagueClient:1:{port}:fixture:http")).unwrap();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            serve_json(&listener, "/lol-gameflow/v1/gameflow-phase", json!("Lobby")).await;
+            for name in ["Alpha", "Beta"] {
+                if name == "Beta" {
+                    // Les données de l'événement ne sont pas considérées comme une lecture atomique.
+                    ws.send(Message::text(json!([8,"OnJsonApiEvent",{"uri":ACCOUNT_ENDPOINT,"eventType":"Update","data":{}}]).to_string())).await.unwrap();
+                }
+                let summoner = json!({"gameName":name,"tagLine":"TAG","puuid":"synthetic-private"});
+                serve_json(&listener, ACCOUNT_ENDPOINT, summoner.clone()).await;
+                serve_json(&listener, REGION_ENDPOINT, json!({"region":"EUW"})).await;
+                serve_json(&listener, ACCOUNT_ENDPOINT, summoner).await;
+                if name == "Alpha" {
+                    serve_json(&listener, RUNES_ENDPOINT, json!({})).await;
+                }
+            }
+            ws.send(Message::text(json!([8,"OnJsonApiEvent",{"uri":ACCOUNT_ENDPOINT,"eventType":"Delete","data":null}]).to_string())).await.unwrap();
+            ws.close(None).await.unwrap();
+        });
+        let (tx, mut rx) = mpsc::channel(32);
+        tokio::time::timeout(Duration::from_secs(8), run_session(&creds, &tx))
+            .await
+            .unwrap();
+        server.await.unwrap();
+        drop(tx);
+        let mut accounts = Vec::new();
+        while let Some(event) = rx.recv().await {
+            if let LcuEvent::AccountChanged { account } = event {
+                accounts.push(account);
+            }
+        }
+        assert_eq!(
+            accounts,
+            vec![
+                Some(crate::LcuAccount {
+                    platform: "EUW1".into(),
+                    game_name: "Alpha".into(),
+                    tag_line: "TAG".into()
+                }),
+                Some(crate::LcuAccount {
+                    platform: "EUW1".into(),
+                    game_name: "Beta".into(),
+                    tag_line: "TAG".into()
+                }),
+                None
             ]
         );
     }

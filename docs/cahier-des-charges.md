@@ -119,6 +119,7 @@ L'app doit s'installer en une minute, se connecter seule au client LoL et rester
 - Connexion via le navigateur (site web → retour dans l'app par deep link).
 - Écran de connexion plein écran si aucun compte n'est connecté.
 - Section « Comptes » : compte Riot détecté, rang, liaison de plusieurs comptes.
+- Accueil : suivre le compte League actif, conserver le dernier compte après fermeture du client et distinguer sa consultation du profil d’un autre joueur. La détection locale ne prouve pas la propriété et ne publie aucune association de comptes ; voir [contrat #65](compte-actif.md).
 - Déconnexion depuis les réglages.
 
 **4.3 Détection du client LoL**

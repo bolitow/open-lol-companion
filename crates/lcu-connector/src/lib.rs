@@ -8,6 +8,8 @@
 //!
 //! Voir la section 4.3 du cahier des charges.
 
+mod account;
+pub use account::LcuAccount;
 mod client;
 mod credentials;
 mod discovery;

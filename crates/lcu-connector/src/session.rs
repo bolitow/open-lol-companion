@@ -7,6 +7,7 @@ use serde::Serialize;
 pub struct LcuSession {
     pub revision: u32,
     pub connected: bool,
+    pub account: Option<crate::LcuAccount>,
     pub phase: Option<GameflowPhase>,
     pub draft: Option<DraftSession>,
     #[serde(rename = "runePage")]
@@ -19,15 +20,22 @@ impl LcuSession {
         match event {
             LcuEvent::Connected { .. } => {
                 self.connected = true;
+                self.account = None;
                 self.phase = None;
                 self.draft = None;
                 self.rune_page = None;
             }
             LcuEvent::Disconnected => {
                 self.connected = false;
+                self.account = None;
                 self.phase = None;
                 self.draft = None;
                 self.rune_page = None;
+            }
+            LcuEvent::AccountChanged { account } => {
+                if self.connected {
+                    self.account = account;
+                }
             }
             LcuEvent::RunePageChanged { page } => {
                 if self.connected {
@@ -52,6 +60,27 @@ impl LcuSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn compte_actif_efface_a_la_deconnexion_et_evenement_tardif_ignore() {
+        let account = crate::LcuAccount {
+            platform: "EUW1".into(),
+            game_name: "Alpha".into(),
+            tag_line: "TEST".into(),
+        };
+        let mut session = LcuSession::default();
+        session.apply(LcuEvent::Connected { port: 1 });
+        session.apply(LcuEvent::AccountChanged {
+            account: Some(account.clone()),
+        });
+        assert_eq!(session.account, Some(account.clone()));
+        session.apply(LcuEvent::Disconnected);
+        assert!(session.account.is_none());
+        session.apply(LcuEvent::AccountChanged {
+            account: Some(account),
+        });
+        assert!(session.account.is_none());
+    }
+
     #[test]
     fn efface_les_runes_a_la_deconnexion_et_ignore_un_evenement_tardif() {
         let page = RunePage::parse(serde_json::json!({"primaryStyleId":8000,"subStyleId":8200,
@@ -129,7 +158,7 @@ mod tests {
         state.apply(LcuEvent::Connected { port: 123 });
         assert_eq!(
             serde_json::to_value(state).unwrap(),
-            serde_json::json!({"revision":1,"connected":true,"phase":null,"draft":null,"runePage":null})
+            serde_json::json!({"revision":1,"connected":true,"account":null,"phase":null,"draft":null,"runePage":null})
         );
     }
 }

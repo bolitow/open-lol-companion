@@ -57,9 +57,13 @@ export interface RunePage {
   autoModifiedSelections: number[];
 }
 
-/** État courant versionné, miroir de `lcu_connector::LcuSession`. Aucun identifiant LCU. */
+/** Identité publique locale ; aucun PUUID, identifiant de session ou secret. */
+export interface LcuAccount { platform:string; game_name:string; tag_line:string }
+
+/** État courant versionné, miroir de `lcu_connector::LcuSession`. */
 export interface LcuSession {
   revision: number;
+  account: LcuAccount | null;
   connected: boolean;
   phase: GameflowPhase | null;
   draft: DraftSession | null;

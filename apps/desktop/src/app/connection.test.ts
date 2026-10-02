@@ -18,9 +18,9 @@ it('transmet les événements et le snapshot sans masquer une erreur', async () 
     const receive = vi.fn();
     const error = vi.fn();
     let event!: (s: LcuSession) => void;
-    const close = connectSession({ listen: async (cb) => { event = cb; return stop; }, read: async () => ({ revision: 0, connected: false, phase: null, draft:null, runePage:null }) }, receive, error);
+    const close = connectSession({ listen: async (cb) => { event = cb; return stop; }, read: async () => ({ revision: 0, connected: false, phase: null, draft:null, runePage:null, account:null }) }, receive, error);
     await new Promise(r => setTimeout(r, 0));
-    event({ revision: 1, connected: true, phase: 'Lobby', draft:null, runePage:null });
+    event({ revision: 1, connected: true, phase: 'Lobby', draft:null, runePage:null, account:null });
     expect(receive).toHaveBeenCalledTimes(2);
     expect(error).not.toHaveBeenCalled();
     close();

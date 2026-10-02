@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { initialState, reduceApp, parsePreferences } from './state';
 import type { LcuSession } from '@olc/shared';
-const snapshot = (revision: number, phase: LcuSession['phase'], connected = true): LcuSession => ({ revision, phase, connected, draft:null, runePage:null });
+const snapshot = (revision: number, phase: LcuSession['phase'], connected = true): LcuSession => ({ revision, phase, connected, draft:null, runePage:null, account:null });
 describe('navigation du client réel', () => {
     it('suit draft, chargement, partie et bilan', () => {
         let state = initialState;

@@ -47,3 +47,58 @@ describe('identité joueur et accueil',()=>{
   store.select(a);await flush();store.pin();expect(store.getSnapshot().home).toEqual(a);expect(store.getSnapshot().storageFailed).toBe(true);
  });
 });
+
+describe('compte League actif',()=>{
+ it('suit A puis B sans changer le joueur consulté, persiste seulement l’identité et conserve B à la fermeture',async()=>{
+  const saved:unknown[]=[],calls:PlayerRequest[]=[];
+  const store=createPlayerStore({profile:async who=>{calls.push(who);return profile(who)},matches:async req=>page(req.player)},null,value=>saved.push(value));
+  const c={...a,game_name:'Viewed'};store.select(c);await flush();
+  store.syncAccount?.(true,a);await flush();
+  expect(store.getSnapshot().home).toEqual(a);
+  store.syncAccount(true,a);await flush();expect(calls.filter(who=>playerKey(who)===playerKey(a))).toHaveLength(1);
+  store.syncAccount(true,b);await flush();store.syncAccount(false,null);
+  expect(store.getSnapshot().home).toEqual(b);expect(store.getSnapshot().viewed).toEqual(c);expect(saved).toEqual([a,b]);
+  expect(store.getSnapshot().entries[playerKey(b)]?.profile).toEqual(profile(b));
+  store.syncAccount(true,b);await flush();expect(calls.filter(who=>playerKey(who)===playerKey(b))).toHaveLength(2);
+ });
+ it('ne laisse pas une réponse tardive de A remplacer B et garde l’identité sans service',async()=>{
+  let resolveA!:(p:Profile)=>void;
+  const store=createPlayerStore({profile:who=>playerKey(who)===playerKey(a)?new Promise(resolve=>{resolveA=resolve}):Promise.reject('not_configured'),matches:async req=>page(req.player)},null,()=>{});
+  store.syncAccount?.(true,a);expect(store.getSnapshot().home).toEqual(a);
+  store.syncAccount(true,b);await flush();resolveA(profile(a));await flush();
+  expect(store.getSnapshot().home).toEqual(b);expect(store.getSnapshot().entries[playerKey(a)]).toBeUndefined();
+  expect(store.getSnapshot().entries[playerKey(b)]?.error).toBe('not_configured');
+  store.syncAccount(true,null);expect(store.getSnapshot().home).toEqual(b);expect(store.getSnapshot().active).toBeNull();
+ });
+ it('empêche un favori manuel de remplacer le compte actif mais autorise le choix hors connexion',async()=>{
+  const store=createPlayerStore({profile:async who=>profile(who),matches:async req=>page(req.player)},null,()=>{});
+  store.syncAccount?.(true,a);expect(store.getSnapshot().home).toEqual(a);store.select(b);await flush();store.pin();store.forget();
+  expect(store.getSnapshot().home).toEqual(a);
+  store.syncAccount(false,null);store.pin();expect(store.getSnapshot().home).toEqual(b);
+ });
+});
+it('conserve profil, historique et position si le rafraîchissement de reconnexion échoue',async()=>{
+ let fail=false;
+ const store=createPlayerStore({profile:async who=>{if(fail)throw 'unavailable';return profile(who)},matches:async req=>page(req.player)},null,()=>{});
+ store.syncAccount(true,a);await flush();store.select(a);store.scroll(240);
+ const before=store.getSnapshot().entries[playerKey(a)]!;
+ store.syncAccount(false,null);fail=true;store.syncAccount(true,a);await flush();
+ const after=store.getSnapshot().entries[playerKey(a)]!;
+ expect(after.profile).toEqual(before.profile);expect(after.historyFetchedAt).toBe(before.historyFetchedAt);expect(after.scrollTop).toBe(240);expect(after.error).toBe('unavailable');
+ store.refresh(a);await flush();expect(store.getSnapshot().entries[playerKey(a)]!.profile).toEqual(before.profile);
+});
+it('reprend à zéro un historique dont la réactualisation a échoué, même après sa dernière page',async()=>{
+ let fail=false;const starts:number[]=[];
+ const store=createPlayerStore({profile:async who=>profile(who),matches:async req=>{starts.push(req.start);if(fail)throw 'unavailable';return page(req.player)}},null,()=>{});
+ store.syncAccount(true,a);await flush();store.syncAccount(false,null);fail=true;store.syncAccount(true,a);await flush();
+ expect(store.getSnapshot().entries[playerKey(a)]!.historyError).toBe('unavailable');
+ fail=false;await store.more(a);
+ expect(starts).toEqual([0,0,0]);expect(store.getSnapshot().entries[playerKey(a)]!.historyError).toBeNull();
+});
+it('empêche une ancienne pagination de prendre la place du rafraîchissement à la reconnexion',async()=>{
+ let pending=false,resolveProfile!:(p:Profile)=>void;const starts:number[]=[];
+ const store=createPlayerStore({profile:who=>pending?new Promise(resolve=>{resolveProfile=resolve}):Promise.resolve(profile(who)),matches:async req=>{starts.push(req.start);return page(req.player,req.start,req.start===0?10:null)}},null,()=>{});
+ store.syncAccount(true,a);await flush();store.syncAccount(false,null);pending=true;store.syncAccount(true,a);
+ await store.more(a);expect(starts).toEqual([0]);
+ resolveProfile(profile(a));await flush();expect(starts).toEqual([0,0]);
+});

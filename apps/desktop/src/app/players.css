@@ -14,3 +14,7 @@
 @media(min-width:760px) and (max-height:680px){.players-screen{gap:10px}.players-heading h1{font-size:21px}.player-search-form{padding:9px 14px}.player-search-form input,.player-search-form select{padding:7px 10px}.player-search-form .button{padding:8px 12px}.player-search-form label{gap:3px}.player-identity h2{font-size:18px}.player-ranks{margin:12px 0;gap:7px}.player-rank{padding:9px}.player-actions{margin:12px 0;gap:6px}.player-profile .player-message{padding:5px 0}.player-match{padding-top:8px;padding-bottom:8px}.player-history>header{margin-bottom:8px}}
 
 .players-screen .button{margin-top:0}.players-screen .player-more{margin:14px auto}.player-actions{align-items:center}.player-actions .button{gap:7px}
+
+.home-player>.home-account-status{letter-spacing:.06em;line-height:1.4}
+@media(min-width:760px) and (max-height:680px){.home-player{padding:12px}.home-player>.eyebrow{font-size:9px;margin-bottom:6px}.home-player .player-identity{gap:9px}.home-player .player-identity h2{font-size:16px;margin:2px 0}.home-player .player-ranks{margin:8px 0;gap:6px}.home-player .player-rank{padding:5px 7px}.home-player .player-rank>div{gap:1px}.home-player .player-rank span,.home-player .player-rank small{font-size:10px}.home-player-actions{margin-top:7px}.home-player-actions .button{padding:5px 9px}.home-player .player-identity{line-height:1.2}.home-player .player-rank{line-height:1.25}.home-player-actions .icon-button{width:28px;height:28px}}
+.home-player-actions .button{margin-top:0}

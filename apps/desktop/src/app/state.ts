@@ -31,7 +31,7 @@ export interface PreparationState {manual:number|null;roleOverride:Role|null;pla
 export const initialPreparation:PreparationState={manual:null,roleOverride:null,platform:'EUW1',queue:420,rank:'ALL',mode:'community'};
 export interface ChampionsState {selected:number|null;query:string;category:string;descending:boolean;scrollTop:number;tab:'abilities'|'builds'|'catalog';role:Role;platform:string;queue:number;rank:string}
 export const initialChampions:ChampionsState={selected:null,query:'',category:'ALL',descending:false,scrollTop:0,tab:'abilities',role:'MIDDLE',platform:'EUW1',queue:420,rank:'ALL'};
-export const initialState: AppState = { session: { revision: -1, connected: false, phase: null, draft:null, runePage:null }, screen: 'dashboard', history: [],preparation:initialPreparation,champions:initialChampions,lastConnectedPhase:null };
+export const initialState: AppState = { session: { revision: -1, connected: false, phase: null, draft:null, runePage:null, account:null }, screen: 'dashboard', history: [],preparation:initialPreparation,champions:initialChampions,lastConnectedPhase:null };
 export type AppAction = {type:'champions';patch:Partial<ChampionsState>} | {
     type:'preparation';patch:Partial<PreparationState>;
 } | {

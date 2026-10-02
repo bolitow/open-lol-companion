@@ -26,6 +26,7 @@ export function App({playersStore}:{playersStore?:PlayerStore}={}) {
     const [storageFailed, setStorageFailed] = useState(false);
     const [reduced, setReduced] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     const connection = useSession(dispatch), t = copy[preferences.locale];
+    useEffect(()=>{players.store.syncAccount(state.session.connected,state.session.account)},[players.store,state.session.connected,state.session.account]);
     const menu = useRef<HTMLDialogElement>(null), heading = useRef<HTMLElement>(null), mounted = useRef(false);
     const pages = Object.keys(t.navigation) as Screen[];
     const navigate = (screen: Screen) => { dispatch({ type: 'navigate', screen }); menu.current?.close(); };
