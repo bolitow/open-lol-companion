@@ -291,6 +291,17 @@ La migration conserve les anciens rapports complets en stockage v1 jusqu'au proc
 calcul réussi ; la lecture API des deux formats est livrée séparément par le #19. Un ancien écrivain est refusé après
 le passage en v2, pour éviter un mélange silencieux de versions.
 
+La migration `0009` ajoute aux morceaux une colonne `populations` calculée et stockée,
+avec un index GIN. Elle regroupe les combinaisons distinctes de dimensions sous leur
+section ; l'API peut sélectionner les morceaux utiles sans parcourir tous les JSON.
+PostgreSQL maintient ces métadonnées à chaque insertion ou modification des entrées,
+sans changement du format publié ni des bornes de morceaux. Les morceaux existants
+sont indexés à la migration, qui réécrit et verrouille cette table ; prévoir une
+fenêtre d'exploitation adaptée. Le coût du calcul et de l'index passe à l'écriture.
+`build.rs` suit le répertoire de migrations pour que les nouveaux fichiers SQL soient
+embarqués même après une compilation incrémentale. Voir la
+[recette de performance](../../docs/recettes/2026-10-02-filtrage-builds.md).
+
 Un recalcul remplace la tête et tous les morceaux dans une seule transaction,
 sans additionner l'ancien. Transaction `REPEATABLE READ`, lecture par lots de 25,
 verrou de calcul distinct de la collecte, publication atomique ; une base sans données

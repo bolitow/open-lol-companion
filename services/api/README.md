@@ -85,10 +85,19 @@ le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
 un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées.
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
-du collecteur. Tête et morceaux sont lus dans une seule requête cohérente ; le filtrage
-par population précède le transfert en Rust. Une tierlist ne charge pas les morceaux
-de builds ou de timelines. Aucun rapport global dépassant la limite JSONB n'est
-reconstitué côté PostgreSQL.
+du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le
+stockage v2, l'index GIN des populations sélectionne les morceaux par section,
+patch, plateforme, file, rôle, rang et champion avant de lire leurs entrées JSON.
+Un filtre fin reste appliqué aux morceaux contenant plusieurs populations. Une
+tierlist ne charge pas les morceaux de builds ou de timelines. Aucun rapport global
+dépassant la limite JSONB n'est reconstitué côté PostgreSQL.
+
+La migration `0009` renseigne l'index des morceaux déjà publiés et s'applique au
+démarrage du service. Elle réécrit et verrouille la table des morceaux : prévoir
+cette opération avant de remettre le service en trafic sur une base volumineuse.
+Les rapports historiques en stockage v1 restent lisibles mais ne bénéficient du
+filtrage indexé qu'après un nouveau calcul du collecteur. Mesures et non-régressions :
+[recette du filtrage des builds](../../docs/recettes/2026-10-02-filtrage-builds.md).
 
 ### Profils, historique et quotas
 

@@ -176,8 +176,117 @@ async fn publish(pool: &PgPool, report: Value) {
     .unwrap();
 }
 
+async fn snapshot_plan(pool: &PgPool, query: &StatsQuery, champion: Option<u32>) -> Value {
+    // EXPLAIN porte sur la requête réellement exécutée par l'API, pas sur une copie simplifiée.
+    let sql = format!(
+        "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {}",
+        include_str!("../src/sql/stats_snapshot.sql")
+    );
+    let vars = json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,
+        "role":query.role,"rank":query.rank,"champion":champion});
+    sqlx::query_scalar(&sql)
+        .bind(vars)
+        .bind("$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))")
+        .bind("$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)")
+        .bind(champion.is_some())
+        .fetch_one(pool).await.unwrap()
+}
+
+fn selected_chunk_rows(plan: &Value) -> u64 {
+    if plan["Relation Name"] == "champion_stats_snapshot_chunks" {
+        return plan["Actual Rows"].as_u64().unwrap() * plan["Actual Loops"].as_u64().unwrap();
+    }
+    plan["Plans"]
+        .as_array()
+        .map_or(0, |children| children.iter().map(selected_chunk_rows).sum())
+}
+
 #[tokio::test]
-async fn le_stockage_en_morceaux_conserve_les_reponses_et_leur_filtrage() {
+async fn une_lecture_de_build_ne_parcourt_pas_les_morceaux_des_autres_populations() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let selected = source["builds"].clone();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+    ] {
+        source.as_object_mut().unwrap().remove(section);
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    // Le morceau utile contient aussi d'autres populations : le filtre fin doit rester actif.
+    sqlx::query("INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items) VALUES (1,'builds',0,$1)")
+        .bind(&selected).execute(db.storage.pool()).await.unwrap();
+    sqlx::query(
+        "INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items)
+        SELECT 1,'builds',n,jsonb_build_array($1::jsonb || jsonb_build_object('champion_id',1000+n))
+        FROM generate_series(1,2048) n",
+    )
+    .bind(&selected[0])
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    sqlx::query("ANALYZE champion_stats_snapshot_chunks")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+
+    let requested = StatsQuery {
+        limit: 1,
+        ..query()
+    };
+    let response = builds(db.storage.pool(), requested.clone(), 1)
+        .await
+        .unwrap();
+    assert_eq!(response.total, 3);
+    assert_eq!(response.builds.len(), 1);
+    for (request, champion, expected_chunks) in [
+        (requested.clone(), Some(1), 1),
+        (requested.clone(), Some(999_999), 0),
+        (
+            StatsQuery {
+                patch: "16.17".into(),
+                ..requested.clone()
+            },
+            Some(1),
+            0,
+        ),
+        // TOP/GOLD et JUNGLE/ALL existent, mais pas JUNGLE/GOLD : ne pas croiser leurs dimensions.
+        (
+            StatsQuery {
+                role: "JUNGLE".into(),
+                rank: "GOLD".into(),
+                ..requested.clone()
+            },
+            Some(1),
+            0,
+        ),
+        (requested, None, 0),
+    ] {
+        let plan = snapshot_plan(db.storage.pool(), &request, champion).await;
+        assert_eq!(
+            plan[0]["Plan"]["Actual Rows"], 1,
+            "la lecture doit retourner uniquement le morceau utile, ou la tête seule"
+        );
+        assert!(
+            plan.to_string().contains("snapshot_chunk_populations_idx"),
+            "les morceaux doivent être sélectionnés par index : {plan}"
+        );
+        assert_eq!(selected_chunk_rows(&plan[0]["Plan"]), expected_chunks);
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_migration_indexe_les_morceaux_existants_sans_changer_les_reponses() {
     let db = db_or_skip!();
     let mut source = report();
     publish(db.storage.pool(), source.clone()).await;
@@ -185,6 +294,14 @@ async fn le_stockage_en_morceaux_conserve_les_reponses_et_leur_filtrage() {
         serde_json::to_value(tierlist(db.storage.pool(), query()).await.unwrap()).unwrap();
     let old_builds =
         serde_json::to_value(builds(db.storage.pool(), query(), 1).await.unwrap()).unwrap();
+    // Reproduire une publication v2 antérieure à 0009, puis migrer ses morceaux déjà présents.
+    sqlx::raw_sql(
+        "ALTER TABLE champion_stats_snapshot_chunks DROP COLUMN populations;
+        DROP FUNCTION snapshot_chunk_populations(TEXT, JSONB);",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
     let mut tx = db.storage.pool().begin().await.unwrap();
     for section in [
         "coverage",
@@ -206,6 +323,12 @@ async fn le_stockage_en_morceaux_conserve_les_reponses_et_leur_filtrage() {
         .await
         .unwrap();
     tx.commit().await.unwrap();
+    sqlx::raw_sql(include_str!(
+        "../../collector/migrations/0009_snapshot_chunk_populations.sql"
+    ))
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
     assert_eq!(
         serde_json::to_value(tierlist(db.storage.pool(), query()).await.unwrap()).unwrap(),
         old_tiers
@@ -213,6 +336,27 @@ async fn le_stockage_en_morceaux_conserve_les_reponses_et_leur_filtrage() {
     assert_eq!(
         serde_json::to_value(builds(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
         old_builds
+    );
+    // Une réécriture du JSON doit déplacer automatiquement les clés indexées.
+    sqlx::query(
+        "UPDATE champion_stats_snapshot_chunks SET items=(
+        SELECT jsonb_agg(item || jsonb_build_object('champion_id',1000))
+        FROM jsonb_array_elements(items) item)
+        WHERE section='builds' AND chunk_index=0",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    assert_eq!(
+        builds(db.storage.pool(), query(), 1).await.unwrap().total,
+        1
+    );
+    assert_eq!(
+        builds(db.storage.pool(), query(), 1000)
+            .await
+            .unwrap()
+            .total,
+        2
     );
     db.cleanup().await;
 }
