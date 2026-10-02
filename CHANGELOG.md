@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Couverture CI des tests desktop, client de builds et exporteur de catalogue ; rattrapage du compte actif sans bloquer les événements de phase et annulation à la déconnexion (#65, #8).
+
 - Accueil desktop synchronisé au compte League actif : changement automatique, identité conservée hors connexion, consultation des autres joueurs indépendante et état explicite quand le compte ou les statistiques sont indisponibles (#65).
 
 - Commande `import_runes` : validation selon le catalogue du client, secondaires de lignes distinctes et remplacement de la page réservée à l'app (#14).

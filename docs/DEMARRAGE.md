@@ -218,3 +218,5 @@ aucune estimation de MMR. Les commandes HTTP sont limitées à 512 Kio, 60 s par
 requête / 65 s au total, quatre appels simultanés partagés avec les builds.
 
 Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.
+
+La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont exécutés sur Linux avec `cargo test -p olc-collector --example export_desktop_catalog`.
