@@ -1,4 +1,4 @@
-# Imports dans le client LoL — #14
+# Imports dans le client LoL — #14, #15, #16
 
 Les commandes Rust sont disponibles pour le branchement de l'écran build (#13).
 Elles ne se déclenchent pas au démarrage : l'interface doit les appeler à la suite
@@ -9,8 +9,11 @@ chaque type. Aucun choix de build ni action dans la partie n'est automatisé ici
 
 | Commande | Requête de `@olc/shared` | Effet |
 | --- | --- | --- |
+| `import_draft_runes` | `ImportDraftRunesRequest` | Runes avec garde du contexte de draft |
+| `import_draft_spells` | `ImportDraftSpellsRequest` | Sorts avec garde du contexte de draft |
 | `import_runes` | `ImportRunesRequest` | Valide puis crée ou remplace la page de l'app |
-| `import_draft_runes` | `ImportDraftRunesRequest` | Même écriture, après validation de la draft réelle et du champion |
+| `import_spells` | `ImportSpellsRequest` | Place les sorts choisis sur D/F pendant la sélection |
+| `import_items` | `ImportItemsRequest` | Insère le set choisi en tête des sets du compte local |
 
 Chaque commande reçoit `{ request: ... }`, résout avec `null` (`ImportResult`)
 et rejette avec un code `ImportError`. `importErrorMessage(error, "fr" | "en")`
@@ -19,16 +22,11 @@ d'erreur LCU, chemin de découverte ou identifiant d'authentification n'est renv
 
 ```ts
 import { invoke } from "@tauri-apps/api/core";
-import { importErrorMessage, type ImportRunesRequest, type ImportResult } from "@olc/shared";
+import { importErrorMessage, type ImportSpellsRequest, type ImportResult } from "@olc/shared";
 
-const request: ImportRunesRequest = {
-  championName: "Jinx",
-  primaryStyleId: 8000,
-  subStyleId: 8200,
-  selectedPerkIds: [8005, 9111, 9104, 8014, 8233, 8236, 5005, 5008, 5001],
-};
+const request: ImportSpellsRequest = { spellIds: [4, 14], flashSlot: "F" };
 try {
-  await invoke<ImportResult>("import_runes", { request });
+  await invoke<ImportResult>("import_spells", { request });
 } catch (error) {
   // À afficher dans l'état d'erreur traduit de l'écran build (#13).
   const message = importErrorMessage(error, "fr");
@@ -36,8 +34,8 @@ try {
 ```
 
 Les types de requêtes sont dans `packages/shared/src/imports.ts` et leurs miroirs
-Rust dans `crates/lcu-connector/src/imports/`. Le nom du champion est fourni par l'appelant
-dans la langue de l'interface.
+Rust dans `crates/lcu-connector/src/imports/`. Les noms des champions et les labels
+des blocs d'items sont fournis par l'appelant dans la langue de l'interface.
 
 ## Runes
 
@@ -70,14 +68,59 @@ sur disque : ne pas l'utiliser pour une page à conserver comme page personnelle
 Renommer la page de l'app hors de ce préfixe la conserve et conduit à une nouvelle
 création au prochain import.
 
+## Sorts
+
+`spellIds` contient exactement deux identifiants positifs différents. `flashSlot`
+est explicitement `"D"` ou `"F"`. Si Flash (4) fait partie de la paire, il est placé
+sur la touche choisie ; sinon l'ordre fourni reste inchangé. Flash n'est jamais
+ajouté à la paire.
+
+Après vérification de la phase `ChampSelect`, le PATCH de
+`/lol-champ-select/v1/session/my-selection` contient seulement `spell1Id` (D)
+et `spell2Id` (F). Le skin est conservé. La disponibilité des sorts pour le mode
+et le compte est contrôlée par le client ; son refus reste visible pour l'interface.
+
+## Items
+
+```json
+{
+  "championId": 81,
+  "championName": "Ezreal",
+  "mapId": 11,
+  "blocks": [{ "label": "Objets principaux", "items": [{ "id": 3042, "count": 1 }] }]
+}
+```
+
+Le compte est lu côté Rust via `/lol-summoner/v1/current-summoner`. Son bundle
+`/lol-item-sets/v1/item-sets/{summonerId}/sets` est lu puis réécrit en conservant
+les sets des autres UID et les métadonnées inconnues. Seul l'UID réservé
+`open-lol-companion-{championId}-{mapId}` est remplacé, ce qui évite les doublons
+sur réimport du même champion et de la même carte.
+
+Le set est de type `custom`, associé au champion et à la carte, inséré en tête
+du tableau avec un `sortrank` supérieur aux autres. Si un set à conserver utilise
+déjà le maximum `i32`, l'import échoue sans modifier les sets personnels. L'ordre
+réel dans la boutique est confirmé sur macOS ; il reste à vérifier sur Windows.
+
+Conversions des objets Larme, vérifiées dans Data Dragon 16.19.1 :
+
+| Forme évoluée | Forme achetable importée |
+| --- | --- |
+| Muramana (3042) | Manamune (3004) |
+| Étreinte du Séraphin (3040) | Bâton de l'archange (3003) |
+| Fimbulvetr (3121) | Approche de l'hiver (3119) |
+
+Les autres identifiants sont conservés. Le nombre d'exemplaires doit être positif ;
+un nom ou un bloc vide est refusé avant accès réseau.
+
 ## Concurrence et erreurs
 
-Les deux commandes Tauri partagent le même verrou. `import_runes` attend son
-acquisition ; `import_draft_runes` refuse immédiatement un appel concurrent
-(`importBusy`), sans mettre une intention ancienne en file. Un appel direct à la
-crate doit lui aussi sérialiser ses lectures/écritures de pages. La LCU ne fournit
-ici aucune transaction globale : l'interface doit afficher le résultat de chaque
-import indépendamment.
+Les commandes Tauri sérialisent les imports du même type ; les trois types peuvent
+fonctionner en parallèle. Un appel direct à la crate doit lui aussi sérialiser
+ses lectures/écritures de pages et de sets. La LCU ne fournit ici aucune transaction
+globale : l'interface doit afficher le résultat de chaque import indépendamment.
+Une modification manuelle simultanée dans le client peut encore entrer en conflit
+avec la lecture puis réécriture des sets.
 
 Chaque requête est bornée à cinq secondes. Les réponses 200/201 et 204 sont
 acceptées pour les écritures, les réponses non réussies deviennent des codes
@@ -90,6 +133,8 @@ n'est effectué.
 
 - [Schéma extrait du client LCU 26.16](https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/main/lcu/swagger.json), endpoints et structures.
 - [Catalogue des styles du client](https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perkstyles.json), lignes et fragments.
+- [Data Dragon 16.19.1 : items](https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/item.json) et [sorts](https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/summoner.json).
+- [Documentation Riot archivée des sets](https://raw.githubusercontent.com/CommunityDragon/HexDocs/master/lol/misc/itemsets.md), rang décroissant.
 - [Politique et limites de la LCU](https://developer.riotgames.com/docs/lol#league-client-api) : API locale non supportée officiellement, susceptible de changer à chaque patch.
 
 Les tests utilisent un serveur HTTP local simulé et des données sans identité
@@ -106,6 +151,11 @@ dans la boutique.
 | Créer puis réimporter les runes, vérifier la page active et les fragments | Validé LCU ; page active confirmée visuellement | Validé LCU : page active et neuf identifiants |
 | Refuser deux secondaires de la même ligne ; préserver les pages personnelles | Validé dans le client réel | Validé dans le client réel |
 | Capacité de pages atteinte, page réservée verrouillée ou dupliquée | À faire | À faire |
+| Flash sur D/F et paire sans Flash | Validé par relecture LCU ; sorts initiaux restaurés | Validé par relecture LCU ; sorts initiaux restaurés |
+| Skin conservé et sortie de sélection | Non confirmé en réel ; couverture simulée | Skin relu conforme ; sortie de sélection non testée |
+| Objets Larme achetables, réimport sans doublon | Validé par relecture LCU | Validé par relecture LCU |
+| Set visible en premier dans la boutique | Confirmé visuellement par Matthieu | Non observé ; priorité LCU vérifiée |
+| Sets personnels conservés, plusieurs champions et cartes | Simulé seulement ; aucun set personnel dans la recette réelle | Quatre sets personnels conservés ; plusieurs cartes/champions non testés |
 | Client fermé/redémarré et erreur réseau | À faire | À faire |
 | Faille, ARAM, Mayhem et Swiftplay selon fonctionnalités du mode | À faire | À faire |
 
@@ -121,6 +171,14 @@ restent indépendants de ce client réel.
   Matthieu confirme visuellement que la page est active. Les noms, arbres et
   runes des quatre pages personnelles sont conservés. Deux
   secondaires de la même ligne sont refusées sans écriture.
+- **Sorts (#15)** : Flash sur D puis F, paire sans Flash (`7`, `14`), valeurs
+  relues dans la session du client. Les sorts initiaux sont restaurés après recette.
+  La conservation réelle du skin n’est pas confirmée ; elle reste couverte par
+  le test du payload qui contient uniquement les deux sorts.
+- **Items (#16)** : set Jinx (`222`) sur la Faille (`11`), réimport sans doublon,
+  premier élément du tableau LCU. Conversions réelles `3042 → 3004`, `3040 → 3003`
+  et `3121 → 3119`. Matthieu confirme visuellement que le set apparaît en premier
+  dans la boutique. Aucun set personnel n'était présent, sa préservation reste simulée.
 
 La version du jeu provient de `GET /lol-patch/v1/game-version`. Aucun identifiant
 de joueur ni secret du client n'est conservé dans ces preuves.
@@ -132,6 +190,17 @@ Louison a testé les commandes Rust de la PR #57 sur Windows 11 Pro 25H2, client
 de même ligne, réimport au même ID et préservation des pages personnelles.
 Les pages initiales et l'ancienne page active ont été restaurées et relues.
 [Compte rendu détaillé](https://github.com/bolitow/open-lol-companion/issues/14#issuecomment-5935051243).
+
+Louison a aussi testé les commandes Rust de la PR #58 en sélection réelle :
+Flash D/F, paire sans Flash et skin identique après chaque import ; les sorts
+initiaux ont été restaurés et vérifiés.
+[Compte rendu des sorts](https://github.com/bolitow/open-lol-companion/issues/15#issuecomment-5935060302).
+
+Pour la PR #59, Louison a vérifié les trois conversions Larme, l'UID unique au
+réimport, la conservation de quatre sets personnels et la priorité dans la LCU.
+Le bundle initial a été restauré et relu. L'ordre visuel dans la boutique Windows
+n'a pas été observé et reste à vérifier.
+[Compte rendu des items](https://github.com/bolitow/open-lol-companion/issues/16#issuecomment-5935062015).
 
 Le parcours Tauri/invoke et l'écran #13 restent à tester. Les cas de capacité
 pleine, verrouillage et autres modes n'ont pas été reproduits dans le client réel.
@@ -230,3 +299,7 @@ Moteur repris sans changement de la PR #59, head `cf04f75` : UID propre à l’a
 Le watcher et la garde d’écriture partagent la classification du gameflow. `gameData.isCustomGame = true` et `map.id = 11`, `map.gameMode = CLASSIC` autorisent une sélection privée avec 1 à 5 alliés et 0 à 5 adversaires, bots compris. Une file inconnue, une autre carte ou un mode alternatif reste refusé. La lecture de contexte est bornée dans le temps ; les événements de gameflow l’actualisent sans polling supplémentaire. La garde relit toujours mode et champion avant chaque import. Les statistiques consultées gardent leur filtre normal/classé explicite : elles ne deviennent pas des statistiques de personnalisées.
 
 ARAM, entraînement, coopératif et modes temporaires restent suivis séparément dans les tickets.
+
+## Synchronisation du 2 octobre 2026
+
+Les PR #57, #58 et #59 sont désormais intégrées depuis `main`. Les moteurs génériques restent ceux de Matthieu ; les gardes de contexte et le support des personnalisées du desktop sont conservés. Les références aux reprises locales ci-dessus décrivent leur intégration initiale.
