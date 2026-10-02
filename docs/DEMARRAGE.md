@@ -221,3 +221,9 @@ Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’
 
 Les [réglages recherchables](reglages.md) regroupent thème, langue, animations et Flash D/F. Les préférences antérieures sont reprises ; les fonctions système du ticket #11 restent séparées.
 La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont exécutés sur Linux avec `cargo test -p olc-collector --example export_desktop_catalog`.
+
+### Réglages système (#11)
+
+Le desktop utilise le tray Tauri2 et le plugin autostart2.7. Le lancement au démarrage n’est jamais activé par l’installation des dépendances ni par le lancement de développement : il faut utiliser le contrôle dédié. Les commandes `desktop_settings`, `set_desktop_setting` et `set_desktop_locale` restent internes au desktop. Le paramètre `--autostart` masque la fenêtre seulement si son tray est disponible.
+
+Les tests de `olc-desktop-support` sont inclus dans `pnpm test` et dans la CI Windows/macOS/Linux. Ils ne modifient pas le démarrage du poste. Pour les vérifications manuelles de fermeture, réouverture et ouverture de session, suivre [la recette des réglages](reglages.md#recette-native-à-exécuter-sur-chaque-os).

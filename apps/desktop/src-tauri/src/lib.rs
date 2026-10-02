@@ -1,3 +1,4 @@
+mod desktop;
 mod imports;
 mod players;
 use lcu_connector::LcuSession;
@@ -56,10 +57,34 @@ fn lcu_session(state: tauri::State<'_, SessionState>) -> Result<LcuSession, &'st
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .arg("--autostart")
+                .build(),
+        )
         .manage(Arc::new(Mutex::new(LcuSession::default())))
         .manage(olc_build_client::BuildClient::from_env())
         .manage(imports::ImportLocks::default())
+        .on_window_event(|window, event| {
+            if window.label() == "main" {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    let state = window.state::<desktop::DesktopState>();
+                    if olc_desktop_support::should_hide_on_close(
+                        state
+                            .close_to_tray
+                            .load(std::sync::atomic::Ordering::Relaxed),
+                        state
+                            .tray_available
+                            .load(std::sync::atomic::Ordering::Relaxed),
+                    ) && window.hide().is_ok()
+                    {
+                        api.prevent_close();
+                    }
+                }
+            }
+        })
         .setup(|app| {
+            desktop::setup(app.handle())?;
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -80,6 +105,9 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            desktop::desktop_settings,
+            desktop::set_desktop_setting,
+            desktop::set_desktop_locale,
             lcu_status,
             lcu_session,
             community_builds,
@@ -91,6 +119,14 @@ pub fn run() {
             imports::import_draft_spells,
             imports::import_items
         ])
-        .run(tauri::generate_context!())
-        .expect("erreur au lancement de l'application");
+        .build(tauri::generate_context!())
+        .expect("erreur au lancement de l'application")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if let tauri::RunEvent::Reopen { .. } = event {
+                desktop::show_main(app);
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }

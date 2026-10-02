@@ -15,10 +15,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
 serde.workspace = true
 serde_json.workspace = true
 lcu-connector = { path = "../../../crates/lcu-connector" }
 olc-build-client = { path = "../../../crates/build-client" }
 
 tokio = { workspace = true, features = ["sync"] }
+tauri-plugin-autostart = "2.7.0"
+
+olc-desktop-support = { path = "../../../crates/desktop-support" }

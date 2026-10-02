@@ -53,7 +53,7 @@ describe('recherche des réglages sans effet de bord',()=>{
   expect(searchSettings('micro','fr','all')).toEqual([]);
   expect(searchSettings('flash','fr','app')).toEqual([]);
   expect(searchSettings('','en','league')).toEqual(['flashSlot']);
-  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot']);
+  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled']);
  });
 });
 it('distingue une panne de sauvegarde Flash d’une panne des préférences de l’application',()=>{
@@ -63,4 +63,17 @@ it('distingue une panne de sauvegarde Flash d’une panne des préférences de l
   expect(store.getSnapshot().storageFailed).toBe(true);
   expect(store.getSnapshot().flashStorageFailed).toBe(failedKey==='olc.flash-slot');
  }
+});
+
+it('indexe les intentions natives sans modifier de réglage',()=>{
+ expect(searchSettings('fermer fenêtre','fr','all')).toEqual(['closeToTray']);
+ expect(searchSettings('lancement démarrage','fr','app')).toEqual(['autostartEnabled']);
+ expect(searchSettings('start login','en','all')).toEqual(['autostartEnabled']);
+});
+it('invalide annuler local après une modification native et notifie les changements locaux',()=>{
+ let changes=0;const store=createSettingsStore(memory(),()=>{changes++});
+ store.change('theme','light');expect(changes).toBe(1);store.clearUndo();store.undo();
+ expect(store.getSnapshot().values.theme).toBe('light');expect(store.getSnapshot().lastChange).toBeNull();
+ store.change('theme','light');expect(changes).toBe(1);
+ store.change('motion',false);store.undo();expect(changes).toBe(3);
 });

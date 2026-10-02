@@ -1,3 +1,5 @@
+import {isTauri} from '@tauri-apps/api/core';
+import {listen} from '@tauri-apps/api/event';
 import {SettingsProvider,useSettings} from './app/SettingsContext';
 import {SettingsScreen,type SettingsView} from './app/SettingsScreen';
 import {usePlayers} from './app/usePlayers';
@@ -29,6 +31,12 @@ function Application({playersStore}:{playersStore?:PlayerStore}) {
     const menu = useRef<HTMLDialogElement>(null), heading = useRef<HTMLElement>(null), mounted = useRef(false);
     const pages = Object.keys(t.navigation) as Screen[];
     const navigate = (screen: Screen) => { dispatch({ type: 'navigate', screen }); menu.current?.close(); };
+    useEffect(()=>{
+        if(!isTauri())return;
+        let disposed=false,unlisten:(()=>void)|undefined;
+        void listen('open-settings',()=>{dispatch({type:'navigate',screen:'settings'});menu.current?.close()}).then(stop=>{if(disposed)stop();else unlisten=stop}).catch(()=>{});
+        return()=>{disposed=true;unlisten?.()};
+    },[]);
     const searchPlayer=(query:string,platform:string)=>{players.store.edit(query,platform);const identity=parsePlayerQuery(query,platform);if(identity)players.store.select(identity);navigate('players');};
     const openChampion = (id:number) => { dispatch({type:'champions',patch:{selected:id,query:'',category:'ALL',scrollTop:0}}); navigate('champions'); };
     useEffect(() => { document.documentElement.dataset.theme = preferences.theme; document.documentElement.lang = preferences.locale; document.documentElement.dataset.motion = preferences.motion && !reduced ? 'full' : 'reduced'; }, [preferences, reduced]);

@@ -10,3 +10,5 @@ export * from "./builds";
 export * from "./imports";
 export * from "./draftRuneImport";
 export * from "./draftSpellImport";
+
+export * from "./desktopSettings";
