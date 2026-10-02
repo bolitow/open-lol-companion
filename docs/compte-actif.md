@@ -2,7 +2,7 @@
 
 Le desktop suit automatiquement le Riot ID du client League et sa région. Consulter un autre joueur ne remplace ni ce compte ni le contexte de draft. Tant que League est connecté, le choix manuel du compte d’accueil est désactivé avec une explication. Hors connexion, le favori manuel reste disponible.
 
-À la fermeture du client, l’accueil garde le dernier compte et les données déjà chargées en mémoire, avec un état déconnecté. Après redémarrage de l’app, seule l’identité est restaurée ; les statistiques et l’historique sont rechargés par le service de profils configuré, sans cache de parties sur disque. Une reconnexion actualise le compte même s’il est inchangé. Les données précédentes restent consultables pendant cette actualisation et en cas d’échec ; Réessayer ne les efface pas. Une pagination ne peut pas concurrencer le rechargement du profil. Une indisponibilité de l’identité locale garde le dernier accueil, sans le présenter comme le compte actif.
+À la fermeture du client, l’accueil garde le dernier compte et les données déjà chargées en mémoire, avec un état déconnecté. Après redémarrage de l’app, seule l’identité est restaurée. Pour le compte actif, le profil et l’historique sont lus dans le client LoL ; les autres comptes utilisent le service public configuré. Aucun cache de parties sur disque. Une reconnexion actualise le compte même s’il est inchangé. Les données précédentes restent consultables pendant cette actualisation et en cas d’échec ; Réessayer ne les efface pas. Une pagination ne peut pas concurrencer le rechargement du profil. Une indisponibilité de l’identité locale garde le dernier accueil, sans le présenter comme le compte actif.
 
 ## Contrat et lecture
 
@@ -18,7 +18,7 @@ Sources : [schéma LCU extrait du client](https://raw.githubusercontent.com/Kebs
 
 Abonnement WebSocket avant les lectures. Une création/modification du compte ou de la région déclenche une relecture ; une suppression invalide le compte actif. Rattrapage toutes les 30 secondes, chaque lecture complète bornée à 3 secondes. Après la lecture initiale, la relecture du compte s’exécute en parallèle de la réception WebSocket : une réponse lente ne retarde pas les phases. Une seule relecture reste en vol ; un nouvel événement de compte la remplace, une suppression ou une fermeture WebSocket l’annule. Les identités inchangées ne produisent pas d’événement supplémentaire ni de requête de statistiques. Les phases de draft ne rechargent pas le profil. La connexion système reste le mécanisme Windows/macOS existant.
 
-L’identité reste visible même si le service de profils est absent, limité ou en erreur ; un message FR/EN explique alors pourquoi les statistiques sont indisponibles. Les anciennes réponses d’un compte supprimé du cache ne peuvent pas remplacer le nouvel accueil. Le cache garde au maximum le compte d’accueil et le joueur consulté.
+Le profil du compte actif ne dépend plus du service public ni du quota du collecteur. Une indisponibilité locale est indiquée sans bascule automatique vers Riot API. Les autres profils restent dépendants du service public. Les anciennes réponses d’un compte supprimé du cache ne peuvent pas remplacer le nouvel accueil. Le cache garde au maximum le compte d’accueil et le joueur consulté.
 
 ## Recette
 
@@ -29,3 +29,15 @@ Recette visuelle isolée : états actif, compte indisponible, déconnecté et se
 À tester ultérieurement avec League réel sur Windows (Louison) et macOS : démarrage avant/après connexion, A→B dans la même région puis une autre région, fermeture/réouverture, login incomplet, service de profils réel, maintien de la consultation d’un autre joueur. Ne pas considérer les tests simulés ou la compilation CI comme cette recette. Aucun lancement de League nécessaire pendant le développement de ce lot.
 
 Hors périmètre : authentification du profil app, vérification de propriété, comptes liés publiquement, suivi d’amis, import automatique #63, modification de la draft.
+
+## Profil, historique local et amis — complément du 2 octobre 2026
+
+Le profil actif utilise désormais `GET /lol-ranked/v1/current-ranked-stats` pour les rangs et `GET /lol-match-history/v1/products/lol/current-summoner/matches?begIndex=…&endIndex=…` pour les parties. Le PUUID est utilisé seulement dans Rust pour retrouver la participation locale, par jointure `participantId`, et vérifier le compte avant/après. Les réponses tardives d'une ancienne connexion sont rejetées même après A→B→A. La lecture complète est bornée à dix secondes. Le DTO desktop ne transmet plus de PUUID, quelle que soit la source.
+
+Le profil affiche sa source (`lcu` ou `api`). L'historique local peut inclure les personnalisées et avertit qu'il dépend des données fournies par le client. `gameCount` n'est jamais présenté comme un total saison. Une pagination reste attachée à sa source et refuse les indices incohérents ; fermer League ne mélange pas les pages locales et publiques. Les données en mémoire restent visibles pendant l'actualisation ; le passage à `EndOfGame` actualise une fois le compte actif, et l'accueil propose aussi Actualiser.
+
+Recette réelle macOS : profil local avec niveau et deux rangs ; dix parties locales en 289 ms, aucune partie omise. Le client annonçait une page suivante, mais la demande suivante renvoyait encore les indices 0–9 : le lecteur l’a refusée sans ajouter de doublons. Une sonde initiale n'avait fourni qu'une personnalisée : la disponibilité dépend aussi du cache/service du client. Aucune garantie de cinquante parties ou d'exhaustivité de saison. Client fermé après redémarrage de l'app, le dernier compte peut être consulté via le service public ; cette voie garde ses contraintes de configuration/quota.
+
+Amis : voir [contrat #71](amis-client.md). Les données client restent séparées du collecteur Riot et des agrégats de builds.
+
+Recette finale du bundle macOS : profil actif, niveau, rangs Solo/Flex et source client LoL visibles, dix parties (dont les personnalisées récentes) dans l'accueil. Les amis sont chargés simultanément, sans appel à l'API publique pour ces lectures. La pagination au-delà de cette première page reste dépendante du service/cache LCU ; ne pas annoncer cinquante parties validées.

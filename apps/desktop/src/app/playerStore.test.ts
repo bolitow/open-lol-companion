@@ -1,10 +1,10 @@
 import {describe,it,expect} from 'vitest';
-import type {Profile,ProfileMatches,PlayerRequest} from '@olc/shared';
+import type {PlayerProfile,PlayerHistory,PlayerRequest} from '@olc/shared';
 import {createPlayerStore,parsePlayerQuery,parseHomePlayer,playerKey} from './playerStore';
 const a:PlayerRequest={platform:'EUW1',game_name:'First Player',tag_line:'TEST'};
 const b:PlayerRequest={...a,game_name:'Second Player'};
-const profile=(who=a):Profile=>({...who,puuid:'synthetic',profile_icon_id:1,summoner_level:42,ranks:[],fetched_at:1});
-const page=(who=a,start=0,next:number|null=null):ProfileMatches=>({...who,start,count:10,next_start:next,fetched_at:1,omitted_matches:0,matches:[]});
+const profile=(who=a):PlayerProfile=>({...who,source:'api',profile_icon_id:1,summoner_level:42,ranks:[],fetched_at:1});
+const page=(who=a,start=0,next:number|null=null):PlayerHistory=>({...who,source:'api',start,count:10,next_start:next,fetched_at:1,omitted_matches:0,matches:[]});
 const flush=()=>new Promise(resolve=>setTimeout(resolve,0));
 describe('identité joueur et accueil',()=>{
  it('normalise la saisie et refuse les chemins ambigus, identités incomplètes ou trop longues',()=>{
@@ -34,7 +34,7 @@ describe('identité joueur et accueil',()=>{
   fail=false;await store.more();entry=store.getSnapshot().entries[playerKey(a)]!;expect(entry.next).toBeNull();expect(starts).toEqual([0,10,10]);
  });
  it('ignore les réponses tardives, refuse un historique incohérent et nettoie les erreurs',async()=>{
-  let done!:(p:Profile)=>void;
+  let done!:(p:PlayerProfile)=>void;
   const store=createPlayerStore({profile:who=>who.game_name===a.game_name?new Promise(resolve=>{done=resolve}):Promise.resolve(profile(b)),matches:async()=>page(a)},null,()=>{});
   store.select(a);await flush();store.select(b);await flush();done(profile(a));await flush();
   expect(store.getSnapshot().viewed).toEqual(b);expect(store.getSnapshot().entries[playerKey(a)]).toBeUndefined();
@@ -62,7 +62,7 @@ describe('compte League actif',()=>{
   store.syncAccount(true,b);await flush();expect(calls.filter(who=>playerKey(who)===playerKey(b))).toHaveLength(2);
  });
  it('ne laisse pas une réponse tardive de A remplacer B et garde l’identité sans service',async()=>{
-  let resolveA!:(p:Profile)=>void;
+  let resolveA!:(p:PlayerProfile)=>void;
   const store=createPlayerStore({profile:who=>playerKey(who)===playerKey(a)?new Promise(resolve=>{resolveA=resolve}):Promise.reject('not_configured'),matches:async req=>page(req.player)},null,()=>{});
   store.syncAccount?.(true,a);expect(store.getSnapshot().home).toEqual(a);
   store.syncAccount(true,b);await flush();resolveA(profile(a));await flush();
@@ -96,9 +96,29 @@ it('reprend à zéro un historique dont la réactualisation a échoué, même ap
  expect(starts).toEqual([0,0,0]);expect(store.getSnapshot().entries[playerKey(a)]!.historyError).toBeNull();
 });
 it('empêche une ancienne pagination de prendre la place du rafraîchissement à la reconnexion',async()=>{
- let pending=false,resolveProfile!:(p:Profile)=>void;const starts:number[]=[];
+ let pending=false,resolveProfile!:(p:PlayerProfile)=>void;const starts:number[]=[];
  const store=createPlayerStore({profile:who=>pending?new Promise(resolve=>{resolveProfile=resolve}):Promise.resolve(profile(who)),matches:async req=>{starts.push(req.start);return page(req.player,req.start,req.start===0?10:null)}},null,()=>{});
  store.syncAccount(true,a);await flush();store.syncAccount(false,null);pending=true;store.syncAccount(true,a);
  await store.more(a);expect(starts).toEqual([0]);
  resolveProfile(profile(a));await flush();expect(starts).toEqual([0,0]);
+});
+
+it('garde la source locale en pagination et refuse une page publique mélangée',async()=>{
+ const requests:string[]=[];
+ const store=createPlayerStore({profile:async who=>({...profile(who),source:'lcu'}),matches:async req=>{
+  requests.push(req.source);return {...page(req.player,req.start,req.start===0?10:null),source:req.start===0?'lcu':'api'};
+ }},null,()=>{});
+ store.syncAccount(true,a);await flush();
+ expect(store.getSnapshot().entries[playerKey(a)]!.historySource).toBe('lcu');
+ store.syncAccount(false,null);await store.more(a);
+ expect(requests).toEqual(['lcu','lcu']);
+ expect(store.getSnapshot().entries[playerKey(a)]!.historyError).toBe('invalid_response');
+ expect(store.getSnapshot().entries[playerKey(a)]!.historySource).toBe('lcu');
+});
+it('actualise le compte actif une seule fois à la fin de partie',async()=>{
+ let profiles=0;
+ const store=createPlayerStore({profile:async who=>{profiles++;return profile(who)},matches:async req=>page(req.player,req.start)},null,()=>{});
+ store.syncAccount(true,a);await flush();
+ store.syncPhase('InProgress');store.syncPhase('EndOfGame');await flush();
+ store.syncPhase('EndOfGame');await flush();expect(profiles).toBe(2);
 });

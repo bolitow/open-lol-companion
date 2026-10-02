@@ -6,6 +6,12 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Amis du compte LoL connecté dans l’accueil, présence, accès au profil si identité complète, états FR/EN et rafraîchissement local indépendant du quota Riot (#71).
+- Profil, rangs et historique du compte actif lus dans le client LoL, source affichée, personnalisées incluses, pagination sans mélange avec le service public et actualisation en fin de partie (#64, #65).
+
+- Données locales en partie (champion, niveau, K/D/A, CS et temps), contexte de draft conservé et builds consultatifs avec effectifs ; lecture bornée et annulation des réponses périmées (#23, #63).
+- Panneau natif transparent sans prise de focus, masqué hors jeu actif, réglages/aperçu/raccourci, placement relatif ; NSPanel et Liquid Glass Apple sur macOS 26+, vibrance native en repli, moteur Windows conditionnel (#22). Recettes LoL réelles macOS et Windows à compléter avant clôture.
+
 - Couverture CI des tests desktop, client de builds et exporteur de catalogue ; rattrapage du compte actif sans bloquer les événements de phase et annulation à la déconnexion (#65, #8).
 
 - Imports runes/objets au prépick du champion, activables séparément : variante valide la plus jouée au poste réel, seuil réglable (1 en dev, 100 en production), effectifs et taux observés ; garde de draft/file/poste juste avant écriture, confirmation et anti-doublons. Personnalisées Faille prises en charge avec poste choisi et source Solo/Duo explicite. Une seule page de runes réutilisée pour tous les champions, sans attendre le verrouillage ni l'identifiant de partie Riot. Aucun changement des sorts ni overlay (#63, partie client).
@@ -80,6 +86,13 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 - Code Rust formaté avec `cargo fmt`.
 
 ### Corrigé
+
+- Compteur CS en partie : précision de la source LoL indiquée en FR/EN ; tests garantissant que chaque valeur reçue est transmise sans arrondi ni seuil de dix (#23).
+
+- Imports : garde de sélection courante, invalidation des reçus lors des échanges et changements de poste manuel, rejet des réponses tardives ; synchronisation du poste avant import (#63).
+- Alerte de raccourci d’overlay conservée après sauvegarde ou changement de langue (#22).
+
+- Overlay macOS : reconnaissance de la fenêtre LoL sans bordure au niveau natif 1000 et panneau placé au-dessus ; le cache suit aussi les changements de niveau. Affichage/masquage Windows explicitement non activants ; tests du moteur ajoutés à la commande globale et aux jobs desktop (#22).
 
 - API builds/tierlist : sélection indexée des morceaux par population avant lecture du JSON, avec migration des instantanés déjà publiés et réponses inchangées (#19).
 - Listes natives Windows : fond et texte des options accordés au thème pour éviter les libellés clairs sur fond blanc (#13).

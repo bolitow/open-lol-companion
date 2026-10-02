@@ -1,0 +1,15 @@
+{
+  "identifier": "overlay",
+  "description": "Lecture des données publiques par le panneau passif",
+  "windows": [
+    "game-overlay"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-live-session",
+    "allow-overlay-state",
+    "allow-community-builds",
+    "allow-overlay-content-height"
+  ]
+}

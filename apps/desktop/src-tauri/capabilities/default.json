@@ -5,6 +5,24 @@
     "main"
   ],
   "permissions": [
-    "core:default"
+    "core:default",
+    "allow-lcu-status",
+    "allow-lcu-session",
+    "allow-friends-state",
+    "allow-community-builds",
+    "allow-player-profile",
+    "allow-player-matches",
+    "allow-import-runes",
+    "allow-import-draft-runes",
+    "allow-import-spells",
+    "allow-import-draft-spells",
+    "allow-import-items",
+    "allow-import-selected-build",
+    "allow-live-session",
+    "allow-live-custom-role",
+    "allow-overlay-state",
+    "allow-overlay-configure",
+    "allow-overlay-preview",
+    "allow-overlay-locale"
   ]
 }

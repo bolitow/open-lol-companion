@@ -151,5 +151,7 @@ jobs:
         run: cargo test -p lcu-connector -p olc-build-client
       - name: Compilation de l'app (debug, sans installeur)
         run: pnpm --filter @olc/desktop tauri build --debug --no-bundle
+      - name: Tests du moteur desktop
+        run: cargo test -p olc-desktop --lib
       - name: Clippy (workspace complet)
         run: cargo clippy --workspace --all-targets -- -D warnings

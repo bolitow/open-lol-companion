@@ -1,4 +1,7 @@
+mod friends;
 mod imports;
+mod live;
+mod overlay;
 mod players;
 use lcu_connector::LcuSession;
 use serde::Serialize;
@@ -55,11 +58,24 @@ fn lcu_session(state: tauri::State<'_, SessionState>) -> Result<LcuSession, &'st
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder =
+        tauri::Builder::default().plugin(tauri_plugin_global_shortcut::Builder::new().build());
+    #[cfg(target_os = "macos")]
+    let builder = builder.plugin(tauri_nspanel::init());
+    builder
         .manage(Arc::new(Mutex::new(LcuSession::default())))
         .manage(olc_build_client::BuildClient::from_env())
         .manage(imports::ImportLocks::default())
+        .manage(players::LocalState::default())
+        .on_window_event(|window, event| {
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                window.app_handle().exit(0);
+            }
+        })
         .setup(|app| {
+            overlay::setup(app.handle());
+            live::setup(app.handle());
+            friends::setup(app.handle());
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -69,17 +85,29 @@ pub fn run() {
                     let snapshot = match state.lock() {
                         Ok(mut session) => {
                             session.apply(event);
+                            handle.state::<imports::ImportLocks>().observe(&session);
+                            players::lcu_changed(&handle, &session);
                             session.clone()
                         }
                         Err(_) => break,
                     };
                     // L'état courant reste lisible si aucune fenêtre n'écoute encore.
+                    live::lcu_changed(&handle, &snapshot);
+                    friends::lcu_changed(&handle, &snapshot);
                     let _ = handle.emit("lcu-session", snapshot);
                 }
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            friends::friends_state,
+            live::live_session,
+            live::live_custom_role,
+            overlay::overlay_state,
+            overlay::overlay_content_height,
+            overlay::overlay_locale,
+            overlay::overlay_configure,
+            overlay::overlay_preview,
             lcu_status,
             lcu_session,
             community_builds,

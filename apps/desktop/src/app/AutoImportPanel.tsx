@@ -1,3 +1,4 @@
+import {syncCustomRole} from './customRoleSync';
 import {useEffect, useMemo, useRef, useState, useSyncExternalStore} from 'react';
 import {invoke} from '@tauri-apps/api/core';
 import {importErrorMessage, type AutoImportReceipt, type BuildReport, type Role, type LcuSession} from '@olc/shared';
@@ -31,6 +32,7 @@ function Progress({progress,locale,label}:{progress:AutoImportProgress;locale:Lo
 export function AutoImportPanel({session,locale,native,visible=true}:{session:LcuSession;locale:Locale;native:boolean;visible?:boolean}) {
     const t = messages[locale], [preferences,setPreferences] = useState(initialPreferences);
     const [catalog,setCatalog] = useState<PreparationCatalog|null>(null), [catalogError,setCatalogError] = useState(false), [attempt,setAttempt] = useState(0), [storageFailed,setStorageFailed] = useState(false);
+    const [syncedRole,setSyncedRole]=useState<Role|null|undefined>(undefined);
     const catalogRef = useRef(catalog); catalogRef.current = catalog;
     const controller = useMemo(()=>createAutoImportController({
         prepare:async(target,minGames)=>{
@@ -42,13 +44,14 @@ export function AutoImportPanel({session,locale,native,visible=true}:{session:Lc
         send:request=>invoke<AutoImportReceipt>('import_selected_build',{request}),
     }),[]);
     const snapshot = useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);
-    const target = catalog && native ? autoImportTarget(session,catalog,locale,preferences.customRole) : null;
+    const target = catalog && native && syncedRole === (preferences.customRole??null) ? autoImportTarget(session,catalog,locale,preferences.customRole) : null;
     useEffect(()=>{
         let active = true; setCatalogError(false);setCatalog(null);
         void loadCatalog(locale).then(value=>{if(active)setCatalog(value);},()=>{if(active)setCatalogError(true);});
         return ()=>{active=false;};
     },[locale,attempt]);
     useEffect(()=>{controller.update(target,preferences);});
+    useEffect(()=>{if(!native)return;return syncCustomRole(role=>invoke<void>('live_custom_role',{role}),preferences.customRole??null,setSyncedRole);},[native,preferences.customRole]);
     useEffect(()=>()=>controller.suspend(),[controller]);
     useEffect(()=>{try {localStorage.setItem(storageKey,JSON.stringify(preferences));setStorageFailed(false);}catch {setStorageFailed(true);}},[preferences]);
     if (!visible) return null;

@@ -1,11 +1,11 @@
 import {useEffect,useState,useSyncExternalStore} from 'react';
 import {invoke,isTauri} from '@tauri-apps/api/core';
-import type {Profile,ProfileMatches} from '@olc/shared';
+import type {PlayerProfile,PlayerHistory} from '@olc/shared';
 import {createPlayerStore,parseHomePlayer,type PlayerTransport,type PlayerStore} from './playerStore';
 const STORAGE_KEY='olc.app.home-player';
 const transport:PlayerTransport={
-    profile:request=>isTauri()?invoke<Profile>('player_profile',{request}):Promise.reject('desktop_required'),
-    matches:request=>isTauri()?invoke<ProfileMatches>('player_matches',{request}):Promise.reject('desktop_required'),
+    profile:request=>isTauri()?invoke<PlayerProfile>('player_profile',{request}):Promise.reject('desktop_required'),
+    matches:request=>isTauri()?invoke<PlayerHistory>('player_matches',{request}):Promise.reject('desktop_required'),
 };
 export function usePlayers(override?:PlayerStore){
     const [store]=useState(()=>{
