@@ -1,5 +1,7 @@
 //! Préférences natives sans dépendance à Tauri ni au client League.
 
+pub mod diagnostics;
+
 use serde::{Deserialize, Serialize};
 use std::fs::{self, File};
 use std::io::{self, Read, Write};
@@ -225,12 +227,21 @@ mod tests {
             locale: Locale::En,
         };
         save_preferences(&path, &old).unwrap();
+        let successes = std::sync::atomic::AtomicUsize::new(0);
         std::thread::scope(|scope| {
             for preferences in [old, new] {
                 let path = &path;
+                let successes = &successes;
                 scope.spawn(move || {
                     for _ in 0..30 {
-                        save_preferences(path, &preferences).unwrap();
+                        // L'OS peut refuser deux remplacements concurrents ; l'intégrité reste obligatoire.
+                        match save_preferences(path, &preferences) {
+                            Ok(()) => {
+                                successes.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            }
+                            Err(PreferenceError::WriteFailed) => {}
+                            result => panic!("résultat inattendu : {result:?}"),
+                        }
                     }
                 });
             }
@@ -239,6 +250,9 @@ mod tests {
                 assert!(observed == old || observed == new);
             }
         });
+        assert!(successes.load(std::sync::atomic::Ordering::Relaxed) > 0);
+        let final_value = load_preferences(&path).unwrap();
+        assert!(final_value == old || final_value == new);
         assert_eq!(fs::read_dir(directory.path()).unwrap().count(), 1);
     }
 

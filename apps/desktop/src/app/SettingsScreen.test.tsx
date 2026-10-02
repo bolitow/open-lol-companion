@@ -18,7 +18,7 @@ describe('réglages natifs visibles',()=>{
  it('présente les deux réglages natifs sans faux commutateur dans le navigateur',()=>{
   const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'',category:'all'}} update={()=>{}}/></SettingsProvider>);
   expect(html).toContain('Fermer en arrière-plan');expect(html).toContain('Lancer à la connexion');
-  expect(html.match(/Disponible dans l’application desktop/g)).toHaveLength(2);
+  expect(html.match(/class="setting-system-note">Disponible dans l’application desktop/g)).toHaveLength(2);
   expect(html).not.toContain('aria-label="Lancer à la connexion"');
  });
  it('annule seulement la dernière mutation entre stockage local et système',async()=>{

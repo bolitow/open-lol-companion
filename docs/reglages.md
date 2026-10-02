@@ -40,7 +40,7 @@ Tests : reprise des clés existantes, synchronisation entre abonnés, annulation
 
 Recette visuelle : fenêtres 960×600 et 1280×800, français/anglais, sombre/clair, recherche et remise à zéro, modification/annulation, changement de page et rechargement. Aucun client League lancé pour cette recette.
 
-Hors lot : export des logs, nouveaux accès contextuels et réglages de clips/overlays non encore implémentés. Les essais natifs Windows/macOS du parcours et des futurs réglages système restent requis avant clôture du ticket #11.
+Hors lot : nouveaux accès contextuels et réglages de clips/overlays non encore implémentés. Les essais natifs Windows/macOS du parcours et des futurs réglages système restent requis avant clôture du ticket #11.
 
 
 ### Recette native à exécuter sur chaque OS
@@ -52,3 +52,18 @@ Hors lot : export des logs, nouveaux accès contextuels et réglages de clips/ov
 5. Vérifier le repli visible si le tray échoue, le message si le stockage est refusé, et l’absence de faux succès lorsque l’OS refuse l’autostart.
 
 Ces recettes restent distinctes des tests unitaires et de la compilation CI. Le ticket #11 reste ouvert jusqu’à leur exécution et aux autres fonctionnalités prévues.
+
+
+## Export local des diagnostics
+
+Le bouton « Exporter un diagnostic » ouvre un aperçu, puis le dialogue natif d’enregistrement. Il n’envoie rien à un serveur. L’archive ZIP contient trois entrées à noms fixes :
+
+- `manifest.json` : version réelle du package Tauri, famille OS/architecture, limites et exclusions.
+- `app-events.json` : au maximum 200 codes techniques de la session courante avec temps relatif (démarrage, connexion/déconnexion, changement de phase ou de réglage système, demandes/fin d’export). Journal en mémoire, perdu à la fermeture ; aucun payload, compte, port, chemin, argument de processus ou message d’erreur libre.
+- `league-summary.json` : vide par défaut. L’option explicite permet de choisir au maximum cinq fichiers texte UTF-8 de 8 Mio chacun dans un dialogue système. Elle exporte uniquement le total de lignes et les nombres de lignes contenant les mots ERROR, WARN/WARNING ou INFO (sans distinction de casse). Ce sont des compteurs lexicaux, pas un diagnostic de cause. Aucun nom de fichier, ligne brute ni identité n’est conservé.
+
+L’app n’explore pas les dossiers League automatiquement. Les fichiers non réguliers, liens symboliques, textes contenant NUL, encodages non UTF-8 et sources trop volumineuses sont refusés. La lecture est bornée même si le fichier grossit. L’archive est écrite dans un temporaire du dossier choisi puis remplacée atomiquement ; un refus laisse l’ancien fichier intact. Deux exports ne peuvent pas ouvrir des dialogues concurrents. Annuler à la sélection ou à l’enregistrement ne crée aucune archive.
+
+Ce premier export sûr ne contient **pas les logs bruts app/League**, ni l’historique des sessions précédentes. Leur collecte détaillée reste hors périmètre tant qu’un contrat de filtrage plus riche n’est pas validé. Le résumé peut être insuffisant pour diagnostiquer certains problèmes ; cette limite figure dans l’aperçu et le manifeste.
+
+Recette native complémentaire sur Windows/macOS : ouvrir et annuler les deux dialogues, exporter sans logs, puis avec un fichier synthétique ; inspecter les trois entrées ZIP, vérifier le message d’erreur sur fichier binaire/trop gros et destination non inscriptible. Ne pas utiliser de logs personnels pour les tests de CI.

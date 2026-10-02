@@ -150,7 +150,7 @@ L'app doit s'installer en une minute, se connecter seule au client LoL et rester
 - Changement de réglage sans rechargement de l'app.
 - Tray : fermer la fenêtre garde l'app active ; lancement au démarrage de l'OS.
 - Accélération matérielle activable/désactivable.
-- Export des logs app + LoL en zip pour le support.
+- Export des logs app + LoL en zip pour le support. Premier lot sûr : journal technique de session à codes fermés et résumé facultatif de logs LoL choisis explicitement, sans lignes brutes ni identités ; limites et extension future détaillées dans [les réglages](reglages.md#export-local-des-diagnostics).
 
 **4.7 Langues** : français, anglais, espagnol, portugais, italien, allemand, coréen (traduction complète, pas seulement les menus).
 

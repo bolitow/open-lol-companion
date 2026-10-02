@@ -1,3 +1,4 @@
+import {DiagnosticsExport} from './DiagnosticsExport';
 import {useEffect,useRef} from 'react';
 import {Icon} from '../ui/Icon';
 import {useSettings} from './SettingsContext';
@@ -41,7 +42,7 @@ export function SettingsScreen({reduced,view,update}:{reduced:boolean;view:Setti
    </section>)}
    {!results.length&&<div className="settings-empty surface"><Icon name="search" size={28}/><h2>{t.empty}</h2><p>{t.emptyHint}</p><button className="button" onClick={()=>{update({query:'',category:'all'});search.current?.focus()}}>{t.showAll}</button></div>}
   </div>
-  <footer className="settings-save surface"><div><p role="status">{desktopState.pending?t.nativePending:nativeIssue??(state.storageFailed?t.storage:localeError?t.localeFailed:t.saved)}</p>{(latest||state.lastChange)&&<small>{t.changed} : {latest?`${t.names[latest.key]} · ${latest.applied?t.nativeEnabled:t.nativeDisabled}`:state.lastChange?`${t.names[state.lastChange.key]} · ${valueLabel(state.lastChange.key)}`:''}</small>}</div>{state.storageFailed&&<button className="button" onClick={store.retrySave}>{t.retry}</button>}{(nativeIssue||(desktopState.native&&native?.autostartEnabled===null))&&<button className="button" disabled={desktopState.pending} onClick={()=>{void desktopStore.load()}}>{t.nativeRetry}</button>}{localeError&&<button className="button" disabled={desktopState.pending} onClick={retryLocale}>{t.localeRetry}</button>}<button className="button" aria-label={t.undoLabel} disabled={desktopState.pending||(!state.lastChange&&!latest)} onClick={undo}><Icon name="replay" size={15}/>{t.undo}</button></footer>
+  <footer className="settings-save surface"><div><p role="status">{desktopState.pending?t.nativePending:nativeIssue??(state.storageFailed?t.storage:localeError?t.localeFailed:t.saved)}</p>{(latest||state.lastChange)&&<small>{t.changed} : {latest?`${t.names[latest.key]} · ${latest.applied?t.nativeEnabled:t.nativeDisabled}`:state.lastChange?`${t.names[state.lastChange.key]} · ${valueLabel(state.lastChange.key)}`:''}</small>}</div>{state.storageFailed&&<button className="button" onClick={store.retrySave}>{t.retry}</button>}{(nativeIssue||(desktopState.native&&native?.autostartEnabled===null))&&<button className="button" disabled={desktopState.pending} onClick={()=>{void desktopStore.load()}}>{t.nativeRetry}</button>}{localeError&&<button className="button" disabled={desktopState.pending} onClick={retryLocale}>{t.localeRetry}</button>}<DiagnosticsExport locale={v.locale}/><button className="button" aria-label={t.undoLabel} disabled={desktopState.pending||(!state.lastChange&&!latest)} onClick={undo}><Icon name="replay" size={15}/>{t.undo}</button></footer>
  </div>;
 }
 

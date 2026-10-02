@@ -25,3 +25,4 @@ tokio = { workspace = true, features = ["sync"] }
 tauri-plugin-autostart = "2.7.0"
 
 olc-desktop-support = { path = "../../../crates/desktop-support" }
+tauri-plugin-dialog = "2.8.1"

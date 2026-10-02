@@ -170,6 +170,10 @@ pub async fn set_desktop_setting(
                 }
             }
         }
+        crate::diagnostics::record(
+            &app,
+            olc_desktop_support::diagnostics::DiagnosticCode::SettingChanged,
+        );
         Ok(snapshot(&app))
     })
     .await

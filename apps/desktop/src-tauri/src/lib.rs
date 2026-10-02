@@ -1,4 +1,5 @@
 mod desktop;
+mod diagnostics;
 mod imports;
 mod players;
 use lcu_connector::LcuSession;
@@ -62,6 +63,8 @@ pub fn run() {
                 .arg("--autostart")
                 .build(),
         )
+        .plugin(tauri_plugin_dialog::init())
+        .manage(diagnostics::DiagnosticsState::default())
         .manage(Arc::new(Mutex::new(LcuSession::default())))
         .manage(olc_build_client::BuildClient::from_env())
         .manage(imports::ImportLocks::default())
@@ -91,6 +94,20 @@ pub fn run() {
             tauri::async_runtime::spawn(lcu_connector::watch(tx));
             tauri::async_runtime::spawn(async move {
                 while let Some(event) = rx.recv().await {
+                    use olc_desktop_support::diagnostics::DiagnosticCode;
+                    let code = match &event {
+                        lcu_connector::LcuEvent::Connected { .. } => {
+                            Some(DiagnosticCode::Connected)
+                        }
+                        lcu_connector::LcuEvent::Disconnected => Some(DiagnosticCode::Disconnected),
+                        lcu_connector::LcuEvent::PhaseChanged { .. } => {
+                            Some(DiagnosticCode::PhaseChanged)
+                        }
+                        _ => None,
+                    };
+                    if let Some(code) = code {
+                        diagnostics::record(&handle, code);
+                    }
                     let snapshot = match state.lock() {
                         Ok(mut session) => {
                             session.apply(event);
@@ -105,6 +122,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            diagnostics::export_diagnostics,
             desktop::desktop_settings,
             desktop::set_desktop_setting,
             desktop::set_desktop_locale,
