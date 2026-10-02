@@ -218,3 +218,5 @@ aucune estimation de MMR. Les commandes HTTP sont limitées à 512 Kio, 60 s par
 requête / 65 s au total, quatre appels simultanés partagés avec les builds.
 
 Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.
+
+Les [réglages recherchables](reglages.md) regroupent thème, langue, animations et Flash D/F. Les préférences antérieures sont reprises ; les fonctions système du ticket #11 restent séparées.

@@ -146,7 +146,7 @@ L'app doit s'installer en une minute, se connecter seule au client LoL et rester
 **4.6 Réglages**
 
 - Deux groupes : **App** (Général, Enregistrement) et **League of Legends** (Jeu, Overlays, Highlights).
-- Barre de recherche indexant chaque réglage, avec surlignage de la ligne trouvée.
+- Recherche locale par nom, synonymes et formulations courantes ; résultats directement modifiables, catégories secondaires, annulation du dernier changement et état de sauvegarde explicite. Le premier lot couvre les préférences existantes ; voir [contrat des réglages](reglages.md).
 - Changement de réglage sans rechargement de l'app.
 - Tray : fermer la fenêtre garde l'app active ; lancement au démarrage de l'OS.
 - Accélération matérielle activable/désactivable.
