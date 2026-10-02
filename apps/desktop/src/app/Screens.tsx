@@ -11,24 +11,26 @@ export function EmptyPanel({ title, description, icon = 'chart' }: {
 }) {
     return <section className="surface empty-panel"><header><Icon name={icon}/><h2>{title}</h2></header><div className="empty-lines" aria-hidden="true"><i /><i /><i /></div><p>{description}</p></section>;
 }
-export function Dashboard({ t, onDraft, companion }: {
+export function Dashboard({ t, onDraft, companion, profile, history }: {
     t: Copy;
     onDraft: () => void;
     companion: ReactNode;
+    profile: ReactNode;
+    history: ReactNode;
 }) {
     return <div className="dashboard-layout">
       <div className="dashboard-main">
         <div className="dashboard-summary">
-          <EmptyPanel title={t.home.profile} description={t.home.profileHint} icon="shield"/>
+          {profile}
           <section className="welcome surface"><div className="welcome-copy"><span className="eyebrow">{t.home.eyebrow}</span><h1>{t.home.title}</h1><p>{t.home.description}</p><button className="button primary" onClick={onDraft}>{t.home.openDraft}<Icon name="arrow" size={18}/></button></div><div className="welcome-companion">{companion}</div></section>
         </div>
-        <EmptyPanel title={t.home.history} description={t.home.historyHint}/>
+        {history}
       </div>
       <aside className="dashboard-aside"><EmptyPanel title={t.home.friends} description={t.home.friendsHint} icon="users"/><EmptyPanel title={t.home.progress} description={t.home.progressHint}/></aside>
     </div>;
 }
 export function GameScreen({ screen, session, t, locale }: {
-    screen: Exclude<Screen, 'settings' | 'dashboard'>;
+    screen: Exclude<Screen, 'settings' | 'dashboard' | 'champions' | 'players'>;
     locale:Locale;
     session: LcuSession;
     t: Copy;

@@ -186,3 +186,28 @@ de consulter et d’éditer, mais n’écrit jamais dans LoL.
 Un import accepté attend la confirmation du client avant d’être présenté comme
 équipé. Après une coupure ou un délai dépassé, vérifier la page dans LoL avant
 de relancer. Détails et limites : [contrat des imports](imports-client.md).
+
+## Profils joueurs dans le desktop (#64)
+
+La recherche globale accepte `Nom#TAG` avec région. La page **Joueurs** affiche le
+profil et l’historique public paginé via les commandes Tauri `player_profile` et
+`player_matches`, vers les routes existantes `/v1/profiles/{platform}/{name}/{tag}`
+et `/matches?start=…&count=…`. Les mêmes variables **Rust uniquement**
+`OLC_API_URL` et `OLC_API_TOKEN` que les builds configurent ce service. L’API doit
+elle-même disposer de son service de profils Riot. Aucun nouveau secret n’est requis
+par React. Une installation non configurée affiche un état explicite ; l’aperçu
+navigateur ne remplace pas le transport Tauri.
+
+**Utiliser pour l’accueil** mémorise uniquement région/nom/tag dans
+`olc.app.home-player`, sans PUUID, jeton ou historique. **Retirer de l’accueil**
+efface ce choix. Le compte reste affiché après fermeture de League ; consultation
+d’un autre profil et navigation vers un champion ne le remplacent pas. Le favori
+ne prouve pas la propriété du compte : synchronisation LCU et liaison multi-comptes
+restent hors de ce lot. Les profils restent consultables client fermé si le service
+est configuré ; aucune partie de League n’est lancée.
+
+Historique : pages de 10, curseur conservé après erreur, dédoublonnage entre pages,
+progression possible sur une page vide. Parties privées exclues par l’API. Les
+rangs sont ceux du profil acquis à la date affichée, pas ceux au moment des matchs ;
+aucune estimation de MMR. Les commandes HTTP sont limitées à 512 Kio, 60 s par
+requête / 65 s au total, quatre appels simultanés partagés avec les builds.

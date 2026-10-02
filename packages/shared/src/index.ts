@@ -1,6 +1,7 @@
 export * from "./gameflow";
 export * from "./ddragon";
 export * from "./api";
+export * from "./players";
 export * from "./catalog";
 
 export * from "./draft";

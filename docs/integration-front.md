@@ -304,3 +304,17 @@ propres ; aucune promesse de build global optimal.
 Maîtrise, matchs récents, recommandations personnalisées, profils de joueurs,
 builds pro et matchups attendent leurs services dédiés. Le site #20 reste à Matthieu.
 Recette et limites : [2026-10-02-champions-desktop.md](recettes/2026-10-02-champions-desktop.md).
+
+## Joueurs et accueil — #64 (2 octobre 2026)
+
+Le front réel Tauri dispose de la recherche Riot ID/région, des rangs Solo/Flex et
+de l’historique public fourni par #19. L’état au niveau de l’app garde au maximum
+le profil de l’accueil et le joueur consulté. Les réponses tardives sont ignorées.
+Les listes défilent dans leurs panneaux ; ouvrir un champion puis revenir conserve
+les parties chargées et la position. Le choix explicite de l’accueil survit aux
+navigations et déconnexions LCU, puis est relu au lancement suivant.
+
+Ce choix est un favori local, pas une connexion Riot vérifiée. Authentification,
+multi-comptes, détection du compte LCU, amis et conseil personnalisé restent à faire.
+Pas de modification du site #20. Recette :
+[profils desktop](recettes/2026-10-02-joueurs-desktop.md).

@@ -1,5 +1,7 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
+pub mod profiles;
+
 use reqwest::{header::HeaderValue, Url};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, net::IpAddr, sync::Arc, time::Duration};

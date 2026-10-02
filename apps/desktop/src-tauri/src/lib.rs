@@ -1,4 +1,5 @@
 mod imports;
+mod players;
 use lcu_connector::LcuSession;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -82,6 +83,8 @@ pub fn run() {
             lcu_status,
             lcu_session,
             community_builds,
+            players::player_profile,
+            players::player_matches,
             imports::import_runes,
             imports::import_draft_runes,
             imports::import_spells,
