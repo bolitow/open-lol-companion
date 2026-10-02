@@ -1,0 +1,316 @@
+{
+  "fr": [
+    {
+      "id": 8100,
+      "name": "Domination",
+      "icon": "rune-tree-8100.png",
+      "rows": [
+        [
+          {
+            "id": 8112,
+            "name": "Électrocution",
+            "icon": "rune-8112.png"
+          },
+          {
+            "id": 8128,
+            "name": "Moisson noire",
+            "icon": "rune-8128.png"
+          },
+          {
+            "id": 9923,
+            "name": "Déluge de lames",
+            "icon": "rune-9923.png"
+          }
+        ],
+        [
+          {
+            "id": 8126,
+            "name": "Coup bas",
+            "icon": "rune-8126.png"
+          },
+          {
+            "id": 8139,
+            "name": "Goût du sang",
+            "icon": "rune-8139.png"
+          },
+          {
+            "id": 8143,
+            "name": "Ruée offensive",
+            "icon": "rune-8143.png"
+          }
+        ],
+        [
+          {
+            "id": 8137,
+            "name": "Sixième sens",
+            "icon": "rune-8137.png"
+          },
+          {
+            "id": 8140,
+            "name": "Souvenirs épouvantables",
+            "icon": "rune-8140.png"
+          },
+          {
+            "id": 8141,
+            "name": "Balise de profondeur",
+            "icon": "rune-8141.png"
+          }
+        ],
+        [
+          {
+            "id": 8135,
+            "name": "Chasseur de trésors",
+            "icon": "rune-8135.png"
+          },
+          {
+            "id": 8105,
+            "name": "Chasseur acharné",
+            "icon": "rune-8105.png"
+          },
+          {
+            "id": 8106,
+            "name": "Chasseur ultime",
+            "icon": "rune-8106.png"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 8200,
+      "name": "Sorcellerie",
+      "icon": "rune-tree-8200.png",
+      "rows": [
+        [
+          {
+            "id": 8214,
+            "name": "Invocation d'Aery",
+            "icon": "rune-8214.png"
+          },
+          {
+            "id": 8229,
+            "name": "Comète arcanique",
+            "icon": "rune-8229.png"
+          },
+          {
+            "id": 8230,
+            "name": "Assaut du maraudeur",
+            "icon": "rune-8230.png"
+          },
+          {
+            "id": 8992,
+            "name": "Toucher de feu mortel",
+            "icon": "rune-8992.png"
+          }
+        ],
+        [
+          {
+            "id": 8224,
+            "name": "Arcaniste axiomatique",
+            "icon": "rune-8224.png"
+          },
+          {
+            "id": 8226,
+            "name": "Ruban de mana",
+            "icon": "rune-8226.png"
+          },
+          {
+            "id": 8275,
+            "name": "Manteau nuageux",
+            "icon": "rune-8275.png"
+          }
+        ],
+        [
+          {
+            "id": 8210,
+            "name": "Transcendance",
+            "icon": "rune-8210.png"
+          },
+          {
+            "id": 8234,
+            "name": "Célérité",
+            "icon": "rune-8234.png"
+          },
+          {
+            "id": 8233,
+            "name": "Concentration absolue",
+            "icon": "rune-8233.png"
+          }
+        ],
+        [
+          {
+            "id": 8237,
+            "name": "Brûlure",
+            "icon": "rune-8237.png"
+          },
+          {
+            "id": 8232,
+            "name": "Marche sur l'eau",
+            "icon": "rune-8232.png"
+          },
+          {
+            "id": 8236,
+            "name": "Tempête menaçante",
+            "icon": "rune-8236.png"
+          }
+        ]
+      ]
+    }
+  ],
+  "en": [
+    {
+      "id": 8100,
+      "name": "Domination",
+      "icon": "rune-tree-8100.png",
+      "rows": [
+        [
+          {
+            "id": 8112,
+            "name": "Electrocute",
+            "icon": "rune-8112.png"
+          },
+          {
+            "id": 8128,
+            "name": "Dark Harvest",
+            "icon": "rune-8128.png"
+          },
+          {
+            "id": 9923,
+            "name": "Hail of Blades",
+            "icon": "rune-9923.png"
+          }
+        ],
+        [
+          {
+            "id": 8126,
+            "name": "Cheap Shot",
+            "icon": "rune-8126.png"
+          },
+          {
+            "id": 8139,
+            "name": "Taste of Blood",
+            "icon": "rune-8139.png"
+          },
+          {
+            "id": 8143,
+            "name": "Sudden Impact",
+            "icon": "rune-8143.png"
+          }
+        ],
+        [
+          {
+            "id": 8137,
+            "name": "Sixth Sense",
+            "icon": "rune-8137.png"
+          },
+          {
+            "id": 8140,
+            "name": "Grisly Mementos",
+            "icon": "rune-8140.png"
+          },
+          {
+            "id": 8141,
+            "name": "Deep Ward",
+            "icon": "rune-8141.png"
+          }
+        ],
+        [
+          {
+            "id": 8135,
+            "name": "Treasure Hunter",
+            "icon": "rune-8135.png"
+          },
+          {
+            "id": 8105,
+            "name": "Relentless Hunter",
+            "icon": "rune-8105.png"
+          },
+          {
+            "id": 8106,
+            "name": "Ultimate Hunter",
+            "icon": "rune-8106.png"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 8200,
+      "name": "Sorcery",
+      "icon": "rune-tree-8200.png",
+      "rows": [
+        [
+          {
+            "id": 8214,
+            "name": "Summon Aery",
+            "icon": "rune-8214.png"
+          },
+          {
+            "id": 8229,
+            "name": "Arcane Comet",
+            "icon": "rune-8229.png"
+          },
+          {
+            "id": 8230,
+            "name": "Stormraider's Surge",
+            "icon": "rune-8230.png"
+          },
+          {
+            "id": 8992,
+            "name": "Deathfire Touch",
+            "icon": "rune-8992.png"
+          }
+        ],
+        [
+          {
+            "id": 8224,
+            "name": "Axiom Arcanist",
+            "icon": "rune-8224.png"
+          },
+          {
+            "id": 8226,
+            "name": "Manaflow Band",
+            "icon": "rune-8226.png"
+          },
+          {
+            "id": 8275,
+            "name": "Nimbus Cloak",
+            "icon": "rune-8275.png"
+          }
+        ],
+        [
+          {
+            "id": 8210,
+            "name": "Transcendence",
+            "icon": "rune-8210.png"
+          },
+          {
+            "id": 8234,
+            "name": "Celerity",
+            "icon": "rune-8234.png"
+          },
+          {
+            "id": 8233,
+            "name": "Absolute Focus",
+            "icon": "rune-8233.png"
+          }
+        ],
+        [
+          {
+            "id": 8237,
+            "name": "Scorch",
+            "icon": "rune-8237.png"
+          },
+          {
+            "id": 8232,
+            "name": "Waterwalking",
+            "icon": "rune-8232.png"
+          },
+          {
+            "id": 8236,
+            "name": "Gathering Storm",
+            "icon": "rune-8236.png"
+          }
+        ]
+      ]
+    }
+  ]
+}

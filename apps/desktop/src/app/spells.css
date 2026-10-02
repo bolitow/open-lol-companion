@@ -1,0 +1,16 @@
+.spell-workbench{min-width:0;padding-top:10px;margin-top:10px;border-top:1px solid var(--line)}
+.spell-workbench .build-panel-heading{flex-wrap:wrap;gap:3px 8px}.spell-workbench header small{font-size:9px;color:var(--muted)}
+.spell-slot-pair{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.spell-slot{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:5px;min-width:0}
+.spell-slot>b{color:var(--accent);font-size:12px;text-align:center}.spell-slot .catalog-button{justify-self:start;border-radius:7px}.spell-slot img{width:34px;height:34px;border-radius:5px;display:block}.spell-slot select{grid-column:1/-1;font-size:10px;width:100%}.spell-empty{height:38px;display:flex;align-items:center;color:var(--muted)}
+.spell-preference{display:flex;align-items:center;gap:5px;margin:7px 0;font-size:10px;color:var(--muted)}.spell-preference>button:not(.icon-button){min-width:26px;height:25px;border:1px solid var(--line);border-radius:5px;color:var(--muted)}.spell-preference>button[aria-pressed=true]{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}.spell-preference .spell-reset{margin-left:auto;width:25px;height:25px}
+.spell-import{margin-top:8px;width:100%;justify-content:space-between}.spell-workbench .rune-import-status{padding-left:0;padding-right:0}
+
+.build-abilities>.build-spells{margin:0;border:0;padding:0}.build-spells>.spell-workbench{border:0;margin:0;padding-top:7px}.spell-import{min-height:27px;padding:4px 7px;border-radius:5px;font-size:10px}.spell-import:disabled{opacity:.5;cursor:default}
+.spell-skills-details{border-top:1px solid var(--line);padding-top:7px;margin-top:10px}.spell-skills-details>summary{font-size:11px;color:var(--muted);cursor:pointer;margin-bottom:8px}
+
+.spell-controls{display:flex;align-items:center;justify-content:space-between;gap:7px}.spell-controls .spell-import{width:auto;margin:0;font-size:9px}.spell-controls .spell-preference{flex-shrink:0;font-size:9px;margin:3px 0;gap:3px}.spell-controls .spell-preference>button:not(.icon-button){min-width:22px;height:23px}.spell-controls .spell-reset{height:22px;width:22px}
+.spell-workbench .build-panel-heading{flex-wrap:nowrap}.spell-workbench .build-panel-heading .build-variant-select{width:100px;font-size:9px}.spell-workbench .build-panel-heading h2{font-size:12px;white-space:nowrap}.spell-custom-label{color:var(--accent);font-size:9px}.spell-slot-pair{margin:6px 0}.spell-skills-details{margin-top:7px}
+@media(max-width:1000px){.spell-workbench .build-panel-heading h2{font-size:10px}.spell-workbench .build-panel-heading .build-variant-select{width:80px}.spell-controls{gap:3px}.spell-controls .spell-import{padding:3px 4px;font-size:8px}.spell-slot img{width:29px;height:29px}.spell-slot select{font-size:9px}.spell-slot-pair{gap:5px}.spell-controls .spell-preference{font-size:8px}}
+
+.live-preparation>.build-abilities>.spell-workbench{border:0;margin:0;padding:0}

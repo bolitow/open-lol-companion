@@ -1,0 +1,26 @@
+export const runeEditorCopy = {
+ fr: {
+  edit:'Modifier',done:'Terminer',reset:'Réinitialiser',import:'Importer dans LoL',pending:'Import en cours…',
+  choose:'Choisir cette rune',custom:'Page personnalisée',selected:'Choix local',
+  equipped:'Équipée dans LoL',accepted:'Import accepté · confirmation du client en attente',
+  manual:'Modifications locales · import manuel',ready:'Prête pour un import manuel.',
+  desktop:'Import disponible dans l’application desktop.',draft:'Import disponible pendant une draft Faille.',
+  champion:'Sélectionnez votre champion dans LoL pour importer sa page.',incomplete:'Complétez les deux arbres et les trois fragments.',
+  draftContextChanged:'La sélection a changé. Vérifiez votre champion dans LoL avant de réessayer.',
+  unsupportedMode:'Import disponible en draft Faille normale, classée ou personnalisée.',
+  importBusy:'Un import est déjà en cours. Attendez son résultat.',
+  clientUnavailable:'Client indisponible ou délai dépassé. Vérifiez la page dans LoL avant de relancer : l’écriture peut avoir abouti.',
+ },
+ en: {
+  edit:'Edit',done:'Done',reset:'Reset',import:'Import into LoL',pending:'Importing…',
+  choose:'Choose this rune',custom:'Custom page',selected:'Local choice',
+  equipped:'Equipped in LoL',accepted:'Import accepted · awaiting client confirmation',
+  manual:'Local changes · manual import',ready:'Ready for manual import.',
+  desktop:'Import is available in the desktop app.',draft:'Import is available during a Rift draft.',
+  champion:'Select your champion in LoL to import its page.',incomplete:'Complete both trees and all three shards.',
+  draftContextChanged:'The selection changed. Check your champion in LoL before trying again.',
+  unsupportedMode:'Import is available in normal, ranked or custom Rift drafts.',
+  importBusy:'An import is already running. Wait for its result.',
+  clientUnavailable:'Client unavailable or request timed out. Check the page in LoL before retrying: the write may have succeeded.',
+ },
+} as const;

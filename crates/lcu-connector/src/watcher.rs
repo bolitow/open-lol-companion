@@ -1,3 +1,4 @@
+use crate::draft::{DraftMode, FLOW_ENDPOINT};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -12,7 +13,9 @@ use tokio_tungstenite::{Connector, MaybeTlsStream, WebSocketStream};
 
 use crate::client::{auth_header, tls_config, ClientError, LcuClient};
 use crate::wamp::{parse_event, subscribe_message};
-use crate::{discover, Credentials, GameflowPhase};
+use crate::{
+    discover, Credentials, DraftSession, GameflowPhase, RunePage, DRAFT_ENDPOINT, RUNES_ENDPOINT,
+};
 
 /// Délai entre deux tentatives de détection du client.
 pub const RETRY_DELAY: Duration = Duration::from_secs(2);
@@ -23,7 +26,9 @@ pub const RETRY_DELAY: Duration = Duration::from_secs(2);
 pub enum LcuEvent {
     Connected { port: u16 },
     Disconnected,
+    DraftChanged { draft: Option<DraftSession> },
     PhaseChanged { phase: GameflowPhase },
+    RunePageChanged { page: Option<RunePage> },
 }
 
 type Socket = WebSocketStream<MaybeTlsStream<TcpStream>>;
@@ -48,18 +53,110 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
     };
     let _ = tx.send(LcuEvent::Connected { port: creds.port }).await;
     let _ = tx.send(LcuEvent::PhaseChanged { phase }).await;
+    let _ = tx
+        .send(LcuEvent::RunePageChanged {
+            page: read_runes(creds).await,
+        })
+        .await;
+    let mut draft_mode = DraftMode::Unsupported;
+    if phase == GameflowPhase::ChampSelect {
+        draft_mode = read_draft_mode(creds).await;
+        let _ = tx
+            .send(LcuEvent::DraftChanged {
+                draft: read_draft(creds, draft_mode).await,
+            })
+            .await;
+    }
 
     while let Some(Ok(message)) = socket.next().await {
         let Message::Text(text) = message else {
             continue;
         };
-        if let Some(phase) = parse_event(&text).and_then(|e| GameflowPhase::from_event(&e)) {
+        let Some(event) = parse_event(&text) else {
+            continue;
+        };
+        if let Some(phase) = GameflowPhase::from_event(&event) {
             if tx.send(LcuEvent::PhaseChanged { phase }).await.is_err() {
+                return;
+            }
+            draft_mode = if phase == GameflowPhase::ChampSelect {
+                read_draft_mode(creds).await
+            } else {
+                DraftMode::Unsupported
+            };
+            if phase == GameflowPhase::ChampSelect {
+                let _ = tx
+                    .send(LcuEvent::RunePageChanged {
+                        page: read_runes(creds).await,
+                    })
+                    .await;
+                let _ = tx
+                    .send(LcuEvent::DraftChanged {
+                        draft: read_draft(creds, draft_mode).await,
+                    })
+                    .await;
+            }
+        } else if event.uri == FLOW_ENDPOINT {
+            let next = DraftMode::from_flow(&event.data);
+            if next != draft_mode {
+                draft_mode = next;
+                let _ = tx
+                    .send(LcuEvent::DraftChanged {
+                        draft: read_draft(creds, draft_mode).await,
+                    })
+                    .await;
+            }
+        } else if event.uri == RUNES_ENDPOINT {
+            let page = match event.event_type.as_str() {
+                "Delete" => None,
+                "Create" | "Update" => RunePage::parse(event.data),
+                _ => continue,
+            };
+            if tx.send(LcuEvent::RunePageChanged { page }).await.is_err() {
+                return;
+            }
+        } else if event.uri == DRAFT_ENDPOINT {
+            let draft = if event.event_type == "Delete" {
+                None
+            } else {
+                DraftSession::parse_for_mode(event.data, draft_mode)
+            };
+            if tx.send(LcuEvent::DraftChanged { draft }).await.is_err() {
                 return;
             }
         }
     }
     let _ = tx.send(LcuEvent::Disconnected).await;
+}
+
+/// Lecture seule ; absence ou erreur signifie indisponible, jamais une page par défaut.
+async fn read_runes(creds: &Credentials) -> Option<RunePage> {
+    let client = LcuClient::new(creds).ok()?;
+    let value = tokio::time::timeout(Duration::from_secs(3), client.get_json(RUNES_ENDPOINT))
+        .await
+        .ok()?
+        .ok()?;
+    RunePage::parse(value)
+}
+
+async fn read_draft_mode(creds: &Credentials) -> DraftMode {
+    let Ok(client) = LcuClient::new(creds) else {
+        return DraftMode::Unsupported;
+    };
+    match tokio::time::timeout(Duration::from_secs(3), client.get_json(FLOW_ENDPOINT)).await {
+        Ok(Ok(flow)) => DraftMode::from_flow(&flow),
+        _ => DraftMode::Unsupported,
+    }
+}
+
+/// Un 404 signifie que la sélection a disparu entre les deux lectures.
+async fn read_draft(creds: &Credentials, mode: DraftMode) -> Option<DraftSession> {
+    let client = LcuClient::new(creds).ok()?;
+    let value = tokio::time::timeout(Duration::from_secs(3), client.get_json(DRAFT_ENDPOINT))
+        .await
+        .ok()?
+        .ok()?;
+    DraftSession::parse_for_mode(value, mode)
 }
 
 /// Ouvre le WebSocket et s'abonne avant de lire la phase courante, pour ne rater aucun changement.
@@ -73,10 +170,8 @@ async fn open_session(creds: &Credentials) -> Result<(Socket, GameflowPhase), Cl
     let (mut socket, _) =
         tokio_tungstenite::connect_async_tls_with_config(request, None, false, Some(connector))
             .await?;
-    socket
-        .send(Message::text(subscribe_message(GameflowPhase::ENDPOINT)))
-        .await?;
-
+    // Le client Riot utilise le topic global et distribue ensuite par URI.
+    socket.send(Message::text(subscribe_message(""))).await?;
     let phase = LcuClient::new(creds)?.gameflow_phase().await?;
     Ok((socket, phase))
 }
@@ -118,12 +213,10 @@ mod tests {
                 })
                 .await
                 .unwrap();
-            let subscribe = ws.next().await.unwrap().unwrap();
             assert_eq!(
-                subscribe.to_text().unwrap(),
-                subscribe_message(GameflowPhase::ENDPOINT)
+                ws.next().await.unwrap().unwrap().to_text().unwrap(),
+                subscribe_message("")
             );
-
             let (mut http, _) = listener.accept().await.unwrap();
             let mut buf = vec![0; 2048];
             let n = http.read(&mut buf).await.unwrap();
@@ -137,12 +230,62 @@ mod tests {
             );
             http.write_all(response.as_bytes()).await.unwrap();
 
-            let event = r#"[8,"OnJsonApiEvent_lol-gameflow_v1_gameflow-phase",{"data":"ChampSelect","eventType":"Update","uri":"/lol-gameflow/v1/gameflow-phase"}]"#;
-            ws.send(Message::text(event)).await.unwrap();
+            for iteration in 0..2 {
+                if iteration == 1 {
+                    let (mut flow_http, _) = listener.accept().await.unwrap();
+                    let n = flow_http.read(&mut buf).await.unwrap();
+                    assert!(String::from_utf8_lossy(&buf[..n])
+                        .starts_with("GET /lol-gameflow/v1/session "));
+                    let body = r#"{}"#; // Contexte pas encore disponible ; l’événement le précisera.
+                    let response=format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",body.len());
+                    flow_http.write_all(response.as_bytes()).await.unwrap();
+                }
+                let (mut perks_http, _) = listener.accept().await.unwrap();
+                let n = perks_http.read(&mut buf).await.unwrap();
+                assert!(String::from_utf8_lossy(&buf[..n])
+                    .starts_with("GET /lol-perks/v1/currentpage "));
+                let body = r#"{"primaryStyleId":8000,"subStyleId":8200,"selectedPerkIds":[],"isValid":false,"isTemporary":false}"#;
+                let response=format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",body.len());
+                perks_http.write_all(response.as_bytes()).await.unwrap();
+                // La seconde lecture est déclenchée par l'entrée en sélection.
+                if iteration == 0 {
+                    ws.send(Message::text(r#"[8,"OnJsonApiEvent",{"data":"ChampSelect","eventType":"Update","uri":"/lol-gameflow/v1/gameflow-phase"}]"#)).await.unwrap();
+                }
+            }
+            let (mut draft_http, _) = listener.accept().await.unwrap();
+            let n = draft_http.read(&mut buf).await.unwrap();
+            assert!(
+                String::from_utf8_lossy(&buf[..n]).starts_with("GET /lol-champ-select/v1/session ")
+            );
+            let body = include_str!("../tests/fixtures/champ-select-public.json");
+            let response=format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",body.len());
+            draft_http.write_all(response.as_bytes()).await.unwrap();
+            // Le gameflow peut préciser le mode après l'entrée en sélection.
+            let custom = serde_json::json!({"phase":"ChampSelect","gameData":{"isCustomGame":true},"map":{"id":11,"gameMode":"CLASSIC"}});
+            let update = serde_json::json!([8,"OnJsonApiEvent",{"uri":FLOW_ENDPOINT,"eventType":"Update","data":custom}]);
+            ws.send(Message::text(update.to_string())).await.unwrap();
+            let (mut refresh, _) = listener.accept().await.unwrap();
+            let n = refresh.read(&mut buf).await.unwrap();
+            assert!(
+                String::from_utf8_lossy(&buf[..n]).starts_with("GET /lol-champ-select/v1/session ")
+            );
+            refresh.write_all(response.as_bytes()).await.unwrap();
+            // Sortir du lobby invalide aussi la classification avant un événement tardif.
+            ws.send(Message::text(r#"[8,"OnJsonApiEvent",{"data":"Lobby","eventType":"Update","uri":"/lol-gameflow/v1/gameflow-phase"}]"#)).await.unwrap();
+            let late = serde_json::json!([8,"OnJsonApiEvent",{"uri":DRAFT_ENDPOINT,"eventType":"Update","data":serde_json::from_str::<serde_json::Value>(body).unwrap()}]);
+            ws.send(Message::text(late.to_string())).await.unwrap();
+            let deleted = serde_json::json!([8,"OnJsonApiEvent_lol-champ-select_v1_session",{"uri":DRAFT_ENDPOINT,"eventType":"Delete","data":null}]);
+            ws.send(Message::text(deleted.to_string())).await.unwrap();
+            let updated = serde_json::json!([8,"OnJsonApiEvent",{"uri":RUNES_ENDPOINT,"eventType":"Update","data":{
+                "primaryStyleId":8100,"subStyleId":8200,"selectedPerkIds":[8112,8126,8140,8106,8210,8236,5008,5008,5011],"isValid":true,"isTemporary":true
+            }}]);
+            ws.send(Message::text(updated.to_string())).await.unwrap();
+            let deleted = serde_json::json!([8,"OnJsonApiEvent",{"uri":RUNES_ENDPOINT,"eventType":"Delete","data":null}]);
+            ws.send(Message::text(deleted.to_string())).await.unwrap();
             ws.close(None).await.unwrap();
         });
 
-        let (tx, mut rx) = mpsc::channel(8);
+        let (tx, mut rx) = mpsc::channel(32);
         run_session(&creds, &tx).await;
         server.await.unwrap();
         drop(tx);
@@ -158,9 +301,55 @@ mod tests {
                 LcuEvent::PhaseChanged {
                     phase: GameflowPhase::Lobby
                 },
+                LcuEvent::RunePageChanged {
+                    page: RunePage::parse(
+                        serde_json::json!({"primaryStyleId":8000,"subStyleId":8200,"selectedPerkIds":[],"isValid":false,"isTemporary":false})
+                    )
+                },
                 LcuEvent::PhaseChanged {
                     phase: GameflowPhase::ChampSelect
                 },
+                LcuEvent::RunePageChanged {
+                    page: RunePage::parse(
+                        serde_json::json!({"primaryStyleId":8000,"subStyleId":8200,"selectedPerkIds":[],"isValid":false,"isTemporary":false})
+                    )
+                },
+                LcuEvent::DraftChanged {
+                    draft: DraftSession::parse(
+                        serde_json::from_str(include_str!(
+                            "../tests/fixtures/champ-select-public.json"
+                        ))
+                        .unwrap()
+                    )
+                },
+                LcuEvent::DraftChanged {
+                    draft: DraftSession::parse_for_mode(
+                        serde_json::from_str(include_str!(
+                            "../tests/fixtures/champ-select-public.json"
+                        ))
+                        .unwrap(),
+                        DraftMode::CustomRift
+                    )
+                },
+                LcuEvent::PhaseChanged {
+                    phase: GameflowPhase::Lobby
+                },
+                LcuEvent::DraftChanged {
+                    draft: DraftSession::parse_for_mode(
+                        serde_json::from_str(include_str!(
+                            "../tests/fixtures/champ-select-public.json"
+                        ))
+                        .unwrap(),
+                        DraftMode::Unsupported
+                    )
+                },
+                LcuEvent::DraftChanged { draft: None },
+                LcuEvent::RunePageChanged {
+                    page: RunePage::parse(
+                        serde_json::json!({"primaryStyleId":8100,"subStyleId":8200,"selectedPerkIds":[8112,8126,8140,8106,8210,8236,5008,5008,5011],"isValid":true,"isTemporary":true})
+                    )
+                },
+                LcuEvent::RunePageChanged { page: None },
                 LcuEvent::Disconnected,
             ]
         );
@@ -176,7 +365,7 @@ mod tests {
             .unwrap()
             .port();
         let creds = Credentials::from_lockfile(&format!("LeagueClient:1:{port}:pw:http")).unwrap();
-        let (tx, mut rx) = mpsc::channel(8);
+        let (tx, mut rx) = mpsc::channel(32);
         run_session(&creds, &tx).await;
         drop(tx);
         assert_eq!(rx.recv().await, None);

@@ -1,0 +1,138 @@
+[
+  {
+    "id": 8000,
+    "allowedSubStyles": [
+      8200,
+      8400,
+      8300,
+      8100
+    ],
+    "slots": [
+      {
+        "type": "kKeyStone",
+        "perks": [
+          8005,
+          8008,
+          8021,
+          8010
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          9101,
+          9111,
+          8009
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          9104,
+          9105,
+          9103
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          8014,
+          8017,
+          8299
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5008,
+          5005,
+          5007
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5008,
+          5010,
+          5001
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5011,
+          5013,
+          5001
+        ]
+      }
+    ]
+  },
+  {
+    "id": 8200,
+    "allowedSubStyles": [
+      8000,
+      8300,
+      8400,
+      8100
+    ],
+    "slots": [
+      {
+        "type": "kKeyStone",
+        "perks": [
+          8214,
+          8229,
+          8230,
+          8992
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          8224,
+          8226,
+          8275
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          8210,
+          8234,
+          8233
+        ]
+      },
+      {
+        "type": "kMixedRegularSplashable",
+        "perks": [
+          8237,
+          8232,
+          8236
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5008,
+          5005,
+          5007
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5008,
+          5010,
+          5001
+        ]
+      },
+      {
+        "type": "kStatMod",
+        "perks": [
+          5011,
+          5013,
+          5001
+        ]
+      }
+    ]
+  }
+]

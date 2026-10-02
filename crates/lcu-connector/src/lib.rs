@@ -11,9 +11,18 @@
 mod client;
 mod credentials;
 mod discovery;
+mod draft;
+pub use draft::{DraftSession, DRAFT_ENDPOINT};
 mod gameflow;
+pub mod imports;
+mod runes;
+mod session;
+#[cfg(test)]
+mod test_support;
+pub use runes::{RunePage, RUNES_ENDPOINT};
 mod wamp;
 mod watcher;
+pub use session::LcuSession;
 
 pub use client::{ClientError, LcuClient};
 pub use credentials::{Credentials, ParseError};

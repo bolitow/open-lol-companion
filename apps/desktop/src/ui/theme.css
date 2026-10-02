@@ -1,0 +1,63 @@
+@font-face {
+  font-family:Sora;
+  src:url('/prototype/assets/Sora.ttf') format('truetype');
+  font-weight:100 800;
+  font-display:swap
+}
+@font-face {
+  font-family:Source Sans;
+  src:url('/prototype/assets/SourceSans3.ttf') format('truetype');
+  font-weight:200 900;
+  font-display:swap
+}
+:root {
+  color-scheme:dark;
+  --bg:#101112;
+  --panel:#191b1e;
+  --panel-raised:#222529;
+  --glass:#1b1d20dd;
+  --text:#f2f0ec;
+  --muted:#a6adba;
+  --subtle:#8792a4;
+  --line:#ffffff12;
+  --line-strong:#ffffff23;
+  --accent:#ff987d;
+  --accent-solid:#b83725;
+  --accent-soft:#ff665715;
+  --accent-glow:#ef4c4340;
+  --good:#6ee3c8;
+  --bad:#ff929a;
+  --shadow:0 14px 32px #0000001c;
+  --input:#121416;
+  --radius:12px;
+  font-family:'Source Sans',system-ui,sans-serif;
+  font-size:16px;
+  font-synthesis:none
+}
+:root[data-theme=light] {
+  color-scheme:light;
+  --bg:#edf1f7;
+  --panel:#fdfefe;
+  --panel-raised:#f3f6fb;
+  --glass:#f8fbffcb;
+  --text:#19273a;
+  --muted:#56667c;
+  --subtle:#61738b;
+  --line:#203b6214;
+  --line-strong:#203b6228;
+  --accent:#175ecc;
+  --accent-solid:#175ecc;
+  --accent-soft:#2267d710;
+  --accent-glow:#3089e52c;
+  --good:#087e6c;
+  --bad:#bd3546;
+  --shadow:0 10px 30px #183b6710;
+  --input:#edf2f8
+}
+
+/* WebView2 ne reprend pas toujours le fond du select dans sa liste native. */
+select option,
+select optgroup {
+  color:var(--text);
+  background-color:var(--panel);
+}
