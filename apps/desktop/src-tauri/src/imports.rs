@@ -9,6 +9,66 @@ pub(crate) struct ImportLocks {
     runes: Mutex<()>,
     spells: Mutex<()>,
     items: Mutex<()>,
+    auto_history: std::sync::Mutex<
+        std::collections::VecDeque<(
+            lcu_connector::imports::AutoImportContext,
+            bool,
+            lcu_connector::imports::AutoImportReceipt,
+        )>,
+    >,
+}
+
+/// L'historique de cette exécution survit aux remontages du webview.
+#[tauri::command]
+pub(crate) async fn import_selected_build(
+    request: lcu_connector::imports::AutoImportRequest,
+    session: State<'_, crate::SessionState>,
+    locks: State<'_, ImportLocks>,
+) -> Result<lcu_connector::imports::AutoImportReceipt, lcu_connector::imports::DraftRuneImportError>
+{
+    use lcu_connector::imports::{AutoImportSelection, DraftRuneGuardError, DraftRuneImportError};
+    let current_draft = || {
+        session.lock().is_ok_and(|state| {
+            state.connected
+                && state.phase == Some(lcu_connector::GameflowPhase::ChampSelect)
+                && state.draft.is_some()
+                && state.draft_id.as_deref() == Some(request.context.draft_id.as_str())
+        })
+    };
+    if !current_draft() {
+        return Err(DraftRuneImportError::Guard(
+            DraftRuneGuardError::DraftContextChanged,
+        ));
+    }
+    let runes = matches!(&request.selection, AutoImportSelection::Runes(_));
+    let lock = if runes { &locks.runes } else { &locks.items };
+    let _guard = lock
+        .try_lock()
+        .map_err(|_| DraftRuneImportError::Guard(DraftRuneGuardError::ImportBusy))?;
+    {
+        let history = locks
+            .auto_history
+            .lock()
+            .map_err(|_| ImportError::ClientUnavailable)?;
+        if let Some((_, _, receipt)) = history
+            .iter()
+            .find(|(context, kind, _)| context.same_selection(&request.context) && *kind == runes)
+        {
+            return Ok(*receipt);
+        }
+    }
+    let receipt = import_client()
+        .await?
+        .import_selected_build(&request, current_draft)
+        .await?;
+    let mut history = locks
+        .auto_history
+        .lock()
+        .map_err(|_| ImportError::ClientUnavailable)?;
+    // Un retour au champion précédent après échange doit réappliquer son build.
+    history.retain(|(_, kind, _)| *kind != runes);
+    history.push_back((request.context, runes, receipt));
+    Ok(receipt)
 }
 
 async fn import_client() -> Result<LcuClient, ImportError> {

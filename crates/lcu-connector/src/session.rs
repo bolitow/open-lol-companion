@@ -6,6 +6,10 @@ use serde::Serialize;
 #[derive(Clone, Default, Serialize)]
 pub struct LcuSession {
     pub revision: u32,
+    #[serde(rename = "draftId", skip_serializing_if = "Option::is_none")]
+    pub draft_id: Option<String>,
+    #[serde(skip)]
+    draft_generation: u64,
     pub connected: bool,
     pub account: Option<crate::LcuAccount>,
     pub phase: Option<GameflowPhase>,
@@ -15,6 +19,11 @@ pub struct LcuSession {
 }
 
 impl LcuSession {
+    fn start_draft(&mut self) {
+        self.draft_generation = self.draft_generation.saturating_add(1);
+        self.draft_id = Some(format!("draft-{}", self.draft_generation));
+    }
+
     pub fn apply(&mut self, event: LcuEvent) {
         self.revision = self.revision.saturating_add(1);
         match event {
@@ -22,6 +31,7 @@ impl LcuSession {
                 self.connected = true;
                 self.account = None;
                 self.phase = None;
+                self.draft_id = None;
                 self.draft = None;
                 self.rune_page = None;
             }
@@ -29,6 +39,7 @@ impl LcuSession {
                 self.connected = false;
                 self.account = None;
                 self.phase = None;
+                self.draft_id = None;
                 self.draft = None;
                 self.rune_page = None;
             }
@@ -44,13 +55,25 @@ impl LcuSession {
             }
             LcuEvent::DraftChanged { draft } => {
                 if self.connected && self.phase == Some(GameflowPhase::ChampSelect) {
+                    if draft.is_some() && self.draft_id.is_none() {
+                        self.start_draft();
+                    }
+                    // Une lecture manquante ne marque pas une nouvelle draft.
+                    // L'identité expire seulement à la sortie de phase/connexion.
                     self.draft = draft;
                 }
             }
             LcuEvent::PhaseChanged { phase } => {
+                if self.connected
+                    && phase == GameflowPhase::ChampSelect
+                    && self.phase != Some(phase)
+                {
+                    self.start_draft();
+                }
                 self.phase = Some(phase);
                 if phase != GameflowPhase::ChampSelect {
                     self.draft = None;
+                    self.draft_id = None;
                 }
             }
         }
@@ -60,6 +83,52 @@ impl LcuSession {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn identifie_la_draft_avant_game_id_sans_changer_aux_evenements_repetes() {
+        let mut session = LcuSession::default();
+        session.apply(LcuEvent::Connected { port: 1 });
+        session.apply(LcuEvent::PhaseChanged {
+            phase: GameflowPhase::ChampSelect,
+        });
+        let before = serde_json::to_value(&session).unwrap()["draftId"].clone();
+        assert!(before.as_str().is_some_and(|id| !id.is_empty()));
+        session.apply(LcuEvent::PhaseChanged {
+            phase: GameflowPhase::ChampSelect,
+        });
+        assert_eq!(serde_json::to_value(&session).unwrap()["draftId"], before);
+        session.apply(LcuEvent::PhaseChanged {
+            phase: GameflowPhase::Lobby,
+        });
+        assert!(serde_json::to_value(&session)
+            .unwrap()
+            .get("draftId")
+            .is_none());
+        session.apply(LcuEvent::PhaseChanged {
+            phase: GameflowPhase::ChampSelect,
+        });
+        assert_ne!(serde_json::to_value(&session).unwrap()["draftId"], before);
+    }
+    #[test]
+    fn une_lecture_de_draft_absente_ne_rearme_pas_les_imports() {
+        let mut session = LcuSession::default();
+        session.apply(LcuEvent::Connected { port: 1 });
+        session.apply(LcuEvent::PhaseChanged {
+            phase: GameflowPhase::ChampSelect,
+        });
+        let draft = DraftSession::parse(
+            serde_json::from_str(include_str!("../tests/fixtures/champ-select-public.json"))
+                .unwrap(),
+        );
+        session.apply(LcuEvent::DraftChanged {
+            draft: draft.clone(),
+        });
+        let id = session.draft_id.clone();
+        session.apply(LcuEvent::DraftChanged { draft: None });
+        assert!(session.draft.is_none());
+        assert_eq!(session.draft_id, id);
+        session.apply(LcuEvent::DraftChanged { draft });
+        assert_eq!(session.draft_id, id);
+    }
     #[test]
     fn compte_actif_efface_a_la_deconnexion_et_evenement_tardif_ignore() {
         let account = crate::LcuAccount {

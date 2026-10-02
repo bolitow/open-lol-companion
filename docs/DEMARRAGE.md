@@ -220,3 +220,17 @@ requête / 65 s au total, quatre appels simultanés partagés avec les builds.
 Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.
 
 La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont exécutés sur Linux avec `cargo test -p olc-collector --example export_desktop_catalog`.
+
+## Tester les imports au prépick (#63, partie client)
+
+Dans **Réglages**, le panneau **Imports au prépick** permet
+l'activation séparée des runes et objets. Les deux options sont initialement
+désactivées. En développement, le minimum initial est **1 partie par variante** ;
+en production, **100**. Ce minimum est réglable de 1 à 1 000 et mémorisé sur
+l'appareil. Sélectionner un champion dans LoL suffit, avant même le verrouillage.
+En personnalisée Faille, choisir aussi le **Poste en personnalisée** (par exemple
+Support pour Bard) : les variantes proviennent alors des statistiques Solo/Duo.
+Une seule page **Open LoL Companion** est réutilisée entre tous les champions ;
+les pages personnelles et les sorts d'invocateur sont conservés.
+Démarrage, méthode, limites et recette :
+[imports automatiques dans le client](imports-automatiques.md).

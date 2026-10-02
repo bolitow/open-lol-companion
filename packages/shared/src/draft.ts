@@ -5,6 +5,8 @@ export interface DraftPlayer {
 }
 export interface DraftTimer {remainingMs:number;observedAtMs:number}
 export interface DraftSession {
+ /** Identité publique de partie, sans perte de précision JavaScript. */
+ gameId?:string;queueId?:number;customGame?:boolean;
  supported:boolean;allySide:'blue'|'red'|null;
  allies:DraftPlayer[];enemies:DraftPlayer[];allyBans:number[];enemyBans:number[];
  timer:DraftTimer|null;

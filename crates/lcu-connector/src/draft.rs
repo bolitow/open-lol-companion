@@ -10,8 +10,8 @@ pub(crate) const FLOW_ENDPOINT: &str = "/lol-gameflow/v1/session";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum DraftMode {
-    StandardRift,
-    CustomRift,
+    StandardRift(Option<u32>),
+    CustomRift(Option<u32>),
     Unsupported,
 }
 impl DraftMode {
@@ -23,7 +23,11 @@ impl DraftMode {
         let data = &flow["gameData"];
         if data["isCustomGame"] == true {
             return if flow["map"]["id"] == 11 && flow["map"]["gameMode"] == "CLASSIC" {
-                Self::CustomRift
+                Self::CustomRift(
+                    data["queue"]["id"]
+                        .as_u64()
+                        .and_then(|id| u32::try_from(id).ok()),
+                )
             } else {
                 Self::Unsupported
             };
@@ -33,7 +37,7 @@ impl DraftMode {
             && queue["gameMode"] == "CLASSIC"
             && matches!(queue["id"].as_u64(), Some(400 | 420 | 440))
         {
-            Self::StandardRift
+            Self::StandardRift(queue["id"].as_u64().map(|id| id as u32))
         } else {
             Self::Unsupported
         }
@@ -68,6 +72,13 @@ pub struct DraftTimer {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct DraftSession {
+    /// Identité de partie publique, en chaîne pour préserver les entiers 64 bits.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub game_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub queue_id: Option<u32>,
+    #[serde(rename = "customGame")]
+    pub custom_game: bool,
     pub supported: bool,
     pub ally_side: Option<Side>,
     pub allies: Vec<DraftPlayer>,
@@ -80,6 +91,8 @@ pub struct DraftSession {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RawSession {
+    #[serde(default)]
+    game_id: Option<u64>,
     my_team: Vec<RawPlayer>,
     their_team: Vec<RawPlayer>,
     actions: Vec<Vec<RawAction>>,
@@ -144,7 +157,7 @@ struct RawTimer {
 }
 impl DraftSession {
     pub fn parse(value: Value) -> Option<Self> {
-        Self::parse_for_mode(value, DraftMode::StandardRift)
+        Self::parse_for_mode(value, DraftMode::StandardRift(None))
     }
     pub(crate) fn parse_for_mode(value: Value, mode: DraftMode) -> Option<Self> {
         let raw: RawSession = serde_json::from_value(value).ok()?;
@@ -154,8 +167,8 @@ impl DraftSession {
             && !raw.is_spectating
             && !raw.skip_champion_select
             && match mode {
-                DraftMode::StandardRift => raw.my_team.len() == 5 && raw.their_team.len() == 5,
-                DraftMode::CustomRift => {
+                DraftMode::StandardRift(_) => raw.my_team.len() == 5 && raw.their_team.len() == 5,
+                DraftMode::CustomRift(_) => {
                     !raw.my_team.is_empty() && raw.my_team.len() <= 5 && raw.their_team.len() <= 5
                 }
                 DraftMode::Unsupported => false,
@@ -227,6 +240,12 @@ impl DraftSession {
             })
             .filter(|_| local.next().is_none());
         Some(Self {
+            game_id: raw.game_id.filter(|id| *id > 0).map(|id| id.to_string()),
+            queue_id: match mode {
+                DraftMode::StandardRift(queue) | DraftMode::CustomRift(queue) => queue,
+                _ => None,
+            },
+            custom_game: matches!(mode, DraftMode::CustomRift(_)),
             local_spells,
             supported,
             ally_side,
@@ -253,11 +272,24 @@ mod tests {
         serde_json::from_str(include_str!("../tests/fixtures/champ-select-public.json")).unwrap()
     }
     #[test]
+    fn projette_la_partie_sans_perte_de_precision_et_la_file_verifiee() {
+        let mut raw = fixture();
+        raw["gameId"] = json!(9007199254740993_u64);
+        let flow = json!({"phase":"ChampSelect","gameData":{"queue":{"id":420,"mapId":11,"gameMode":"CLASSIC"}}});
+        let draft = DraftSession::parse_for_mode(raw, DraftMode::from_flow(&flow)).unwrap();
+        let public = serde_json::to_value(draft).unwrap();
+        assert_eq!(public["gameId"], "9007199254740993");
+        assert_eq!(public["queueId"], 420);
+        let unknown = serde_json::to_value(DraftSession::parse(fixture()).unwrap()).unwrap();
+        assert!(unknown.get("gameId").is_none());
+        assert!(unknown.get("queueId").is_none());
+    }
+    #[test]
     fn personnalisee_identifiee_accepte_equipes_incompletes_sans_debloquer_autres_modes() {
         let raw = fixture();
         let custom = json!({"phase":"ChampSelect","gameData":{"isCustomGame":true,"queue":{"id":0}},"map":{"id":11,"gameMode":"CLASSIC"}});
         let mode = DraftMode::from_flow(&custom);
-        assert_eq!(mode, DraftMode::CustomRift);
+        assert_eq!(mode, DraftMode::CustomRift(Some(0)));
         assert!(
             DraftSession::parse_for_mode(raw.clone(), mode)
                 .unwrap()

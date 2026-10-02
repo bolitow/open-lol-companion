@@ -339,7 +339,7 @@ mod tests {
             let response=format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}",body.len());
             draft_http.write_all(response.as_bytes()).await.unwrap();
             // Le gameflow peut préciser le mode après l'entrée en sélection.
-            let custom = serde_json::json!({"phase":"ChampSelect","gameData":{"isCustomGame":true},"map":{"id":11,"gameMode":"CLASSIC"}});
+            let custom = serde_json::json!({"phase":"ChampSelect","gameData":{"isCustomGame":true,"queue":{"id":3100}},"map":{"id":11,"gameMode":"CLASSIC"}});
             let update = serde_json::json!([8,"OnJsonApiEvent",{"uri":FLOW_ENDPOINT,"eventType":"Update","data":custom}]);
             ws.send(Message::text(update.to_string())).await.unwrap();
             let (mut refresh, _) = listener.accept().await.unwrap();
@@ -407,7 +407,7 @@ mod tests {
                             "../tests/fixtures/champ-select-public.json"
                         ))
                         .unwrap(),
-                        DraftMode::CustomRift
+                        DraftMode::CustomRift(Some(3100))
                     )
                 },
                 LcuEvent::PhaseChanged {
