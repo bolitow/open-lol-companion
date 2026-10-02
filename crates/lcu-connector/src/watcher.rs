@@ -3,6 +3,7 @@ use crate::draft::{DraftMode, FLOW_ENDPOINT};
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures_util::future::{BoxFuture, OptionFuture};
 use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use tokio::net::TcpStream;
@@ -84,11 +85,24 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
             .await;
     }
 
+    // La lecture périodique reste en vol pendant que les événements sont traités.
+    // Une mise à jour remplace la lecture ; Delete et la fin de session l'annulent.
+    let mut account_read: OptionFuture<BoxFuture<'_, Option<crate::LcuAccount>>> = None.into();
+    let mut refreshing = false;
     loop {
         let message = tokio::select! {
             _ = tx.closed() => return,
             _ = account_retry.tick() => {
-                let next = read_account(&account_client).await;
+                if !refreshing {
+                    account_read = Some(Box::pin(read_account(&account_client)) as BoxFuture<'_, _>).into();
+                    refreshing = true;
+                }
+                continue;
+            },
+            result = &mut account_read, if refreshing => {
+                refreshing = false;
+                account_read = None.into();
+                let next = result.flatten();
                 if next != account {
                     account = next;
                     if tx.send(LcuEvent::AccountChanged { account: account.clone() }).await.is_err() { return; }
@@ -97,6 +111,9 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
             },
             message = socket.next() => match message { Some(Ok(message)) => message, _ => break },
         };
+        if matches!(message, Message::Close(_)) {
+            break;
+        }
         let Message::Text(text) = message else {
             continue;
         };
@@ -104,22 +121,26 @@ async fn run_session(creds: &Credentials, tx: &mpsc::Sender<LcuEvent>) {
             continue;
         };
         if event.uri == ACCOUNT_ENDPOINT || event.uri == REGION_ENDPOINT {
-            let next = match event.event_type.as_str() {
-                "Delete" => None,
-                "Create" | "Update" => read_account(&account_client).await,
-                _ => continue,
-            };
-            if next != account {
-                account = next;
-                if tx
-                    .send(LcuEvent::AccountChanged {
-                        account: account.clone(),
-                    })
-                    .await
-                    .is_err()
-                {
-                    return;
+            match event.event_type.as_str() {
+                "Delete" => {
+                    account_read = None.into();
+                    refreshing = false;
+                    if account.take().is_some()
+                        && tx
+                            .send(LcuEvent::AccountChanged { account: None })
+                            .await
+                            .is_err()
+                    {
+                        return;
+                    }
                 }
+                "Create" | "Update" => {
+                    // Une lecture antérieure ne doit pas publier une identité périmée.
+                    account_read =
+                        Some(Box::pin(read_account(&account_client)) as BoxFuture<'_, _>).into();
+                    refreshing = true;
+                }
+                _ => {}
             }
         } else if let Some(phase) = GameflowPhase::from_event(&event) {
             if tx.send(LcuEvent::PhaseChanged { phase }).await.is_err() {
@@ -429,6 +450,7 @@ mod tests {
         let port = listener.local_addr().unwrap().port();
         let creds =
             Credentials::from_lockfile(&format!("LeagueClient:1:{port}:fixture:http")).unwrap();
+        let (observed_tx, observed_rx) = tokio::sync::oneshot::channel();
         let server = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
             let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
@@ -447,21 +469,32 @@ mod tests {
                     serve_json(&listener, RUNES_ENDPOINT, json!({})).await;
                 }
             }
+            observed_rx.await.unwrap();
             ws.send(Message::text(json!([8,"OnJsonApiEvent",{"uri":ACCOUNT_ENDPOINT,"eventType":"Delete","data":null}]).to_string())).await.unwrap();
             ws.close(None).await.unwrap();
         });
         let (tx, mut rx) = mpsc::channel(32);
-        tokio::time::timeout(Duration::from_secs(8), run_session(&creds, &tx))
-            .await
-            .unwrap();
-        server.await.unwrap();
-        drop(tx);
-        let mut accounts = Vec::new();
-        while let Some(event) = rx.recv().await {
-            if let LcuEvent::AccountChanged { account } = event {
-                accounts.push(account);
+        let watcher = tokio::spawn(async move { run_session(&creds, &tx).await });
+        let mut observed_tx = Some(observed_tx);
+        let accounts = tokio::time::timeout(Duration::from_secs(8), async {
+            let mut accounts = Vec::new();
+            while let Some(event) = rx.recv().await {
+                if let LcuEvent::AccountChanged { account } = event {
+                    if account
+                        .as_ref()
+                        .is_some_and(|account| account.game_name == "Beta")
+                    {
+                        observed_tx.take().unwrap().send(()).unwrap();
+                    }
+                    accounts.push(account);
+                }
             }
-        }
+            accounts
+        })
+        .await
+        .unwrap();
+        watcher.await.unwrap();
+        server.await.unwrap();
         assert_eq!(
             accounts,
             vec![
@@ -478,6 +511,192 @@ mod tests {
                 None
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn le_rattrapage_du_compte_ne_bloque_pas_les_evenements_de_phase() {
+        use serde_json::json;
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let creds =
+            Credentials::from_lockfile(&format!("LeagueClient:1:{port}:fixture:http")).unwrap();
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+        let (received_tx, received_rx) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            serve_json(&listener, "/lol-gameflow/v1/gameflow-phase", json!("Lobby")).await;
+            serve_json(&listener, ACCOUNT_ENDPOINT, json!({})).await;
+            // read_account demande la région avant de valider l'identité.
+            serve_json(&listener, REGION_ENDPOINT, json!({"region":"EUW"})).await;
+            serve_json(&listener, RUNES_ENDPOINT, json!({})).await;
+            ready_tx.send(()).unwrap();
+            let (mut http, _) = listener.accept().await.unwrap();
+            let mut buf = [0; 4096];
+            let n = http.read(&mut buf).await.unwrap();
+            assert!(
+                String::from_utf8_lossy(&buf[..n]).starts_with(&format!("GET {ACCOUNT_ENDPOINT} "))
+            );
+            ws.send(Message::text(json!([8,"OnJsonApiEvent",{"uri":"/lol-gameflow/v1/gameflow-phase","eventType":"Update","data":"InProgress"}]).to_string())).await.unwrap();
+            received_tx.send(()).unwrap();
+            // HTTP reste suspendu jusqu'à la réception de la phase par le consommateur.
+            release_rx.await.unwrap();
+            let account = json!({"gameName":"Recovered","tagLine":"TEST"});
+            let body = account.to_string();
+            http.write_all(format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len()).as_bytes()).await.unwrap();
+            serve_json(&listener, REGION_ENDPOINT, json!({"region":"EUW"})).await;
+            serve_json(&listener, ACCOUNT_ENDPOINT, account).await;
+            // Le consommateur ferme le canal après avoir reçu l'identité récupérée.
+            let _ = ws.next().await;
+        });
+        let (tx, mut rx) = mpsc::channel(32);
+        let watcher = tokio::spawn(async move { run_session(&creds, &tx).await });
+        ready_rx.await.unwrap();
+        // Avancer uniquement la période de rattrapage, sans attendre 30 secondes réelles.
+        tokio::time::pause();
+        tokio::time::advance(Duration::from_secs(30)).await;
+        tokio::time::resume();
+        tokio::time::timeout(Duration::from_secs(2), received_rx)
+            .await
+            .unwrap()
+            .unwrap();
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while let Some(event) = rx.recv().await {
+                if event
+                    == (LcuEvent::PhaseChanged {
+                        phase: GameflowPhase::InProgress,
+                    })
+                {
+                    return;
+                }
+            }
+            panic!("phase absente");
+        })
+        .await
+        .expect("une lecture HTTP du compte ne doit pas bloquer la phase");
+        release_tx.send(()).unwrap();
+        let recovered = tokio::time::timeout(Duration::from_secs(2), async {
+            while let Some(event) = rx.recv().await {
+                if let LcuEvent::AccountChanged {
+                    account: Some(account),
+                } = event
+                {
+                    return account;
+                }
+            }
+            panic!("compte non récupéré");
+        })
+        .await
+        .unwrap();
+        assert_eq!(recovered.game_name, "Recovered");
+        assert_eq!(recovered.platform, "EUW1");
+        drop(rx);
+        tokio::time::timeout(Duration::from_secs(1), watcher)
+            .await
+            .unwrap()
+            .unwrap();
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn suppression_et_deconnexion_annulent_une_lecture_de_compte_en_vol() {
+        use serde_json::json;
+        for ending in ["delete", "disconnect", "consumer"] {
+            let disconnect = ending == "disconnect";
+            let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port = listener.local_addr().unwrap().port();
+            let creds =
+                Credentials::from_lockfile(&format!("LeagueClient:1:{port}:fixture:http")).unwrap();
+            let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+            let (release_tx, release_rx) = tokio::sync::oneshot::channel();
+            let (started_tx, started_rx) = tokio::sync::oneshot::channel();
+            let server = tokio::spawn(async move {
+                let (stream, _) = listener.accept().await.unwrap();
+                let mut ws = tokio_tungstenite::accept_async(stream).await.unwrap();
+                ws.next().await.unwrap().unwrap();
+                serve_json(&listener, "/lol-gameflow/v1/gameflow-phase", json!("Lobby")).await;
+                let account = json!({"gameName":"Old","tagLine":"TEST"});
+                serve_json(&listener, ACCOUNT_ENDPOINT, account.clone()).await;
+                serve_json(&listener, REGION_ENDPOINT, json!({"region":"EUW"})).await;
+                serve_json(&listener, ACCOUNT_ENDPOINT, account.clone()).await;
+                serve_json(&listener, RUNES_ENDPOINT, json!({})).await;
+                ready_tx.send(()).unwrap();
+                let (mut http, _) = listener.accept().await.unwrap();
+                let mut buf = [0; 4096];
+                let n = http.read(&mut buf).await.unwrap();
+                assert!(String::from_utf8_lossy(&buf[..n])
+                    .starts_with(&format!("GET {ACCOUNT_ENDPOINT} ")));
+                started_tx.send(()).unwrap();
+                if disconnect {
+                    ws.close(None).await.unwrap();
+                } else if ending == "delete" {
+                    ws.send(Message::text(json!([8,"OnJsonApiEvent",{"uri":ACCOUNT_ENDPOINT,"eventType":"Delete","data":null}]).to_string())).await.unwrap();
+                }
+                release_rx.await.unwrap();
+                // La requête annulée doit fermer sa connexion avant toute réponse,
+                // sans dépendre de la fermeture WebSocket qui vient ensuite.
+                let ended = tokio::time::timeout(Duration::from_secs(1), http.read(&mut buf))
+                    .await
+                    .expect("la lecture annulée doit libérer la connexion HTTP")
+                    .unwrap();
+                assert_eq!(ended, 0);
+                let body = account.to_string();
+                // Une réponse peut arriver après l'annulation ; elle ne doit plus être publiée.
+                let _ = http.write_all(format!("HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{body}", body.len()).as_bytes()).await;
+                if !disconnect {
+                    let _ = ws.close(None).await;
+                }
+            });
+            let (tx, mut rx) = mpsc::channel(32);
+            let watcher = tokio::spawn(async move { run_session(&creds, &tx).await });
+            ready_rx.await.unwrap();
+            tokio::time::pause();
+            tokio::time::advance(Duration::from_secs(30)).await;
+            tokio::time::resume();
+            tokio::time::timeout(Duration::from_secs(1), started_rx)
+                .await
+                .unwrap()
+                .unwrap();
+            if ending == "consumer" {
+                drop(rx);
+                release_tx.send(()).unwrap();
+                tokio::time::timeout(Duration::from_secs(2), watcher)
+                    .await
+                    .unwrap()
+                    .unwrap();
+                server.await.unwrap();
+                continue;
+            }
+            let expected = if disconnect {
+                LcuEvent::Disconnected
+            } else {
+                LcuEvent::AccountChanged { account: None }
+            };
+            tokio::time::timeout(Duration::from_secs(1), async {
+                while let Some(event) = rx.recv().await {
+                    if event == expected {
+                        return;
+                    }
+                }
+                panic!("invalidation absente");
+            })
+            .await
+            .expect("l'invalidation doit passer avant la réponse HTTP");
+            release_tx.send(()).unwrap();
+            tokio::time::timeout(Duration::from_secs(2), watcher)
+                .await
+                .unwrap()
+                .unwrap();
+            while let Some(event) = rx.recv().await {
+                assert!(!matches!(
+                    event,
+                    LcuEvent::AccountChanged { account: Some(_) }
+                ));
+            }
+            server.await.unwrap();
+        }
     }
 
     #[tokio::test]
