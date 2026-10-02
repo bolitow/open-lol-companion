@@ -16,6 +16,8 @@ describe("erreurs des imports", () => {
       "runePageUnavailable",
       "notInChampSelect",
       "invalidSpells",
+      "invalidItems",
+      "itemSetPriorityUnavailable",
     ];
     for (const error of errors) {
       const french = importErrorMessage(error, "fr");
