@@ -1,3 +1,6 @@
+import {SelectField} from '../ui/SelectField';
+import {ChampionAbilities} from './ChampionAbilities';
+import {ChampionVideoScope} from './ChampionVideoScope';
 import {nextProfileTab,profileTabs} from './championKeyboard';
 import {useEffect,useState} from 'react';
 import type {CatalogRecord,Role} from '@olc/shared';
@@ -7,33 +10,28 @@ import type {ChampionSummary} from './championDirectory';
 import {championsCopy} from './championsCopy';
 import {buildCopy} from './buildCopy';
 import {connectProfile,loadProfile,type ProfileLoad} from './championProfileConnection';
-import {CatalogButton,GameDetails} from './GameDetails';
-import {catalogDescription,itemStats} from './preparation';
-import {formatStat} from './catalogFormat';
-import {statLabels} from './preparationCopy';
+import {GameDetails} from './GameDetails';
 import {CommunityBuildPanels} from './BuildPreparation';
 import {RunePanel,ItemPanel} from './PreparationPanels';
 import {useBuilds} from './useBuilds';
 import type {ProfileData} from './championProfileConnection';
 import './preparation.css';
 
-export function ChampionProfile({champion,locale,state,update,onClose}:{champion:ChampionSummary;locale:Locale;state:ChampionsState;update:(patch:Partial<ChampionsState>)=>void;onClose:()=>void}){
+export function ChampionProfile({champion,locale,state,update,onClose,closing=false}:{closing?:boolean;champion:ChampionSummary;locale:Locale;state:ChampionsState;update:(patch:Partial<ChampionsState>)=>void;onClose:()=>void}){
  const t=championsCopy[locale],[attempt,setAttempt]=useState(0),[load,setLoad]=useState<ProfileLoad>({status:'loading'});
  useEffect(()=>connectProfile(()=>loadProfile(locale,champion.id),setLoad),[locale,champion.id,attempt]);
- return <aside className="surface champion-profile" aria-label={`${t.open} · ${champion.names[locale]}`}>
+ return <ChampionVideoScope championId={champion.id} closing={closing}><aside className={`surface champion-profile motion-panel ${state.tab==='abilities'?'is-abilities':''}`} data-state={closing?'closed':'open'} inert={closing} aria-hidden={closing} aria-label={`${t.open} · ${champion.names[locale]}`}>
   <header className="champion-profile-hero"><img src={`/game-data/champions/${champion.id}.jpg`} alt=""/><div><span className="eyebrow">{champion.categories.map(c=>t.classes[c as keyof typeof t.classes]).join(' · ')}</span><h2>{champion.names[locale]}</h2><p>{champion.titles[locale]}</p></div><button className="icon-button" aria-label={t.close} onClick={onClose}><Icon name="close"/></button></header>
   <div className="champion-tabs" role="tablist" aria-label={champion.names[locale]}>{profileTabs.map(tab=><button key={tab} id={`champion-tab-${tab}`} role="tab" tabIndex={state.tab===tab?0:-1} onKeyDown={event=>{const next=nextProfileTab(tab,event.key);if(next){event.preventDefault();update({tab:next});document.getElementById(`champion-tab-${next}`)?.focus()}}} aria-selected={state.tab===tab} aria-controls="champion-tab-content" onClick={()=>update({tab})}>{t[tab]}</button>)}</div>
   <div id="champion-tab-content" role="tabpanel" aria-labelledby={`champion-tab-${state.tab}`} className="champion-profile-body">
    {load.status==='ready'?<ProfileContent key={`${champion.id}:${locale}`} data={load.data} champion={champion} locale={locale} state={state} update={update}/>:<div className="champion-status" role="status"><Icon name="info"/><p>{load.status==='error'?t.error:t.loading}</p>{load.status==='error'&&<button className="button" onClick={()=>setAttempt(n=>n+1)}>{t.retry}</button>}</div>}
   </div>
- </aside>;
+ </aside></ChampionVideoScope>;
 }
 function ProfileContent({data,champion,locale,state,update}:{data:ProfileData;champion:ChampionSummary;locale:Locale;state:ChampionsState;update:(patch:Partial<ChampionsState>)=>void}){
  const t=championsCopy[locale],b=buildCopy[locale],[detail,setDetail]=useState<CatalogRecord|null>(null);
- const records=[...data.catalog.records,...data.abilities],self=data.abilities.find(r=>r.kind==='champion');
- const stats=self?itemStats(self).filter(s=>statLabels[s.key]&&formatStat(s.value,s.unit,locale)!==null).slice(0,6):[];
- const slots=['passive','Q','W','E','R'];
- return <>{state.tab==='abilities'?<><div className="champion-stat-strip" aria-label={t.baseStats}>{stats.map(s=><span key={s.key}><b>{formatStat(s.value,s.unit,locale)}</b><small>{statLabels[s.key]?.[locale]}</small></span>)}</div><div className="champion-abilities">{slots.map((slot,index)=>{const ability=data.abilities.find(r=>r.id===`${champion.id}:${slot}`);return ability?<article key={slot}><CatalogButton record={ability} locale={locale} onOpen={setDetail}/><div><small>{index===0?t.passive:locale==='fr'?['','A','Z','E','R'][index]:slot}</small><h3>{ability.name}</h3><p>{catalogDescription(ability)}</p></div></article>:null})}</div>{self&&<button className="champion-detail-link" onClick={()=>setDetail(self)}>{t.details}<Icon name="arrow" size={14}/></button>}</>:state.tab==='builds'?<ChampionBuilds championId={champion.id} data={data} locale={locale} state={state} update={update} onOpen={setDetail}/>:<div className="champion-catalog"><p className="champion-caption">{t.catalogHint}</p><RunePanel page={null} records={data.catalog.records} locale={locale} onOpen={setDetail}/><ItemPanel records={data.catalog.records} locale={locale} onOpen={setDetail}/></div>}
+ const records=[...data.catalog.records,...data.abilities];
+ return <>{state.tab==='abilities'?<ChampionAbilities championId={champion.id} records={data.abilities} locale={locale} version={data.catalog.version} onOpen={setDetail}/>:state.tab==='builds'?<ChampionBuilds championId={champion.id} data={data} locale={locale} state={state} update={update} onOpen={setDetail}/>:<div className="champion-catalog"><p className="champion-caption">{t.catalogHint}</p><RunePanel page={null} records={data.catalog.records} locale={locale} onOpen={setDetail}/><ItemPanel records={data.catalog.records} locale={locale} onOpen={setDetail}/></div>}
  <small className="champion-data-version">{b.patch} {data.catalog.version}</small>
  {detail&&<GameDetails record={detail} records={records} locale={locale} version={data.catalog.version} onClose={()=>setDetail(null)} onOpen={setDetail}/>}
  </>;
@@ -44,9 +42,9 @@ function ChampionBuilds({championId,data,locale,state,update,onOpen}:{championId
  const {state:load,retry}=useBuilds(request);
  const report=load?.status==='ready'?load.report:null;
  return <><div className="champion-build-filters" aria-label={t.filters}>
- <label>{b.role}<select value={state.role} onChange={e=>update({role:e.target.value as Role})}>{Object.entries(b.roles).filter(([role])=>role!=='UNKNOWN').map(([role,label])=><option key={role} value={role}>{label}</option>)}</select></label>
- <label>{b.region}<select value={state.platform} onChange={e=>update({platform:e.target.value})}>{['EUW1','EUN1','NA1','KR','JP1','BR1','LA1','LA2','OC1','TR1','RU','ME1','SG2','TW2','VN2'].map(r=><option key={r}>{r}</option>)}</select></label>
- <label>{b.queue}<select value={state.queue} onChange={e=>update({queue:Number(e.target.value)})}>{([420,440,400] as const).map(q=><option key={q} value={q}>{b.queues[q]}</option>)}</select></label>
- <label>{b.rank}<select value={state.rank} onChange={e=>update({rank:e.target.value})}>{['ALL','IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER'].map((rank,i)=><option key={rank} value={rank}>{(locale==='fr'?[t.allRanks,'Fer','Bronze','Argent','Or','Platine','Émeraude','Diamant','Maître','Grand maître','Challenger']:[t.allRanks,'Iron','Bronze','Silver','Gold','Platinum','Emerald','Diamond','Master','Grandmaster','Challenger'])[i]}</option>)}</select></label>
+ <label>{b.role}<SelectField label={b.role} value={state.role} onChange={value=>update({role:value as Role})} options={Object.entries(b.roles).filter(([role])=>role!=='UNKNOWN').map(([value,label])=>({value,label}))}/></label>
+ <label>{b.region}<SelectField label={b.region} value={state.platform} onChange={value=>update({platform:value})} options={['EUW1','EUN1','NA1','KR','JP1','BR1','LA1','LA2','OC1','TR1','RU','ME1','SG2','TW2','VN2'].map(value=>({value,label:value}))}/></label>
+ <label>{b.queue}<SelectField label={b.queue} value={String(state.queue)} onChange={value=>update({queue:Number(value)})} options={([420,440,400] as const).map(q=>({value:String(q),label:b.queues[q]}))}/></label>
+ <label>{b.rank}<SelectField label={b.rank} value={state.rank} onChange={value=>update({rank:value})} options={['ALL','IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER'].map((value,i)=>({value,label:(locale==='fr'?[t.allRanks,'Fer','Bronze','Argent','Or','Platine','Émeraude','Diamant','Maître','Grand maître','Challenger']:[t.allRanks,'Iron','Bronze','Silver','Gold','Platinum','Emerald','Diamond','Master','Grandmaster','Challenger'])[i]??value}))}/></label>
  </div>{report?.builds.length?<><p className="champion-caption">{t.buildHint}</p><CommunityBuildPanels key={JSON.stringify([request,report.meta.published_at])} readOnly report={report} records={[...data.catalog.records,...data.abilities]} locale={locale} onOpen={onOpen}/><details className="champion-source"><summary>{b.source}</summary><p>{b.sourceHint}</p><p>{b.scope} : {request.patch} · {request.platform} · {b.roles[request.role]} · {b.queues[request.queue as 420]} · {request.rank}</p><p>{b.threshold} : {report.meta.min_games} {b.games}</p><p>{b.published} : {Number.isNaN(Date.parse(report.meta.published_at))?'—':new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short'}).format(new Date(report.meta.published_at))}</p></details></>:<div className="champion-status" role="status"><Icon name="chart"/><p>{load?.status==='error'?b.errors[load.error]:load?.status==='ready'?b.empty:b.loading}</p>{load?.status!=='loading'&&<button className="button" onClick={retry}>{t.retry}</button>}</div>}</>;
 }

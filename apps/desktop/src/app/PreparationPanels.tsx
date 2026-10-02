@@ -1,3 +1,5 @@
+import {useDialogMotion} from '../ui/useDialogMotion';
+import {SelectField} from '../ui/SelectField';
 import {useEffect,useMemo,useState,useRef} from 'react';
 import {createPortal} from 'react-dom';
 import type {CatalogRecord,RunePage} from '@olc/shared';
@@ -28,16 +30,17 @@ export function RunePanel({records,page,locale,onOpen,onExpand,sourceLabel,retur
   {page&&(!page.isValid||unknown)&&<p className="catalog-note">{!page.isValid?(incompleteLabel??editor?.incompleteLabel??t.incomplete):t.unknownPage}</p>}
   {page&&(page.isTemporary||page.autoModifiedSelections.length>0)&&<p className="catalog-note">{page.isTemporary?t.temporary:t.modified}</p>}
   <div className="live-rune-trees">{trees.map((styleId,index)=><section className="live-rune-tree" key={index}>
-   <label className="rune-style-picker">{styles.find(s=>s.id===styleId)&&<CatalogIcon record={styles.find(s=>s.id===styleId)!}/>}<span><small>{index===0?t.primary:t.secondary}</small><select disabled={editor?editor.disabled:!!sourceLabel&&!!page} aria-label={index===0?t.primary:t.secondary} value={styleId} onChange={event=>{if(editor){editor.onStyle(index===0?'primary':'secondary',Number(event.target.value));return}const next:[string,string]=[trees[0],trees[1]];next[index]=event.target.value;setExploring(next)}}>{!styleId&&<option value="">{t.unavailableTree}</option>}{styles.map(style=><option key={style.id} value={style.id} disabled={!!editor&&index===1&&Number(style.id)===page?.primaryStyleId}>{style.name}</option>)}</select></span></label>
+   <label className="rune-style-picker">{styles.find(s=>s.id===styleId)&&<CatalogIcon record={styles.find(s=>s.id===styleId)!}/>}<span><small>{index===0?t.primary:t.secondary}</small><SelectField disabled={editor?editor.disabled:!!sourceLabel&&!!page} label={index===0?t.primary:t.secondary} value={styleId} onChange={value=>{if(editor){editor.onStyle(index===0?'primary':'secondary',Number(value));return}const next:[string,string]=[trees[0],trees[1]];next[index]=value;setExploring(next)}} options={[...(!styleId?[{value:'',label:t.unavailableTree}]:[]),...styles.map(style=>({value:style.id,label:style.name,disabled:!!editor&&index===1&&Number(style.id)===page?.primaryStyleId}))]}/></span></label>
    <div className="live-rune-rows">{runeRows(records,styleId,index===1).map((row,slot)=><div className={`live-rune-row ${index===0&&slot===0?'keystones':''}`} key={slot}>{row.map(rune=><CatalogButton key={rune.id} record={rune} locale={locale} selectedLabel={sourceLabel} selected={equipped[index]===styleId&&!!page?.selectedPerkIds.slice(index===0?0:4,index===0?4:6).includes(Number(rune.id))} disabled={editor?.disabled} actionLabel={editor?.chooseLabel} onOpen={editor?record=>editor.onChoose(index===0?'primary':'secondary',index===0?slot:slot+1,Number(record.id)):onOpen}/>)}</div>)}</div>
    {index===1&&<div className="live-shards" aria-label={t.shards}>{shardRows(records,trees[0]).map((row,slot)=><div className="live-rune-row" key={slot}>{row.map(shard=><CatalogButton key={shard.id} record={shard} locale={locale} selectedLabel={sourceLabel} selected={page?.selectedPerkIds[6+slot]===Number(shard.id)} disabled={editor?.disabled} actionLabel={editor?.chooseLabel} onOpen={editor?record=>editor.onChoose('shard',slot,Number(record.id)):onOpen}/>)}</div>)}</div>}
   </section>)}</div>
  </div></section>;
 }
 export function ExpandedRunes({records,page,locale,onOpen,onClose,sourceLabel,returnLabel}:{sourceLabel?:string;returnLabel?:string;records:CatalogRecord[];page:RunePage|null;locale:Locale;onOpen:(record:CatalogRecord)=>void;onClose:()=>void}){
+ const motion=useDialogMotion(onClose);
  const dialog=useRef<HTMLDialogElement>(null),[trigger]=useState(()=>document.activeElement instanceof HTMLElement?document.activeElement:null);
  useEffect(()=>{dialog.current?.showModal();return()=>{dialog.current?.close();if(trigger?.isConnected)trigger.focus({preventScroll:true})}},[trigger]);
- return createPortal(<dialog ref={dialog} className="expanded-runes" aria-label={preparationCopy[locale].runes} onCancel={event=>{event.preventDefault();onClose()}}><button className="icon-button expanded-close" onClick={onClose} aria-label={preparationCopy[locale].close}><Icon name="close"/></button><RunePanel records={records} page={page} locale={locale} onOpen={onOpen} sourceLabel={sourceLabel} returnLabel={returnLabel}/></dialog>,document.body);
+ return createPortal(<dialog ref={dialog} className="expanded-runes motion-surface" data-state={motion.state} inert={motion.closing} aria-label={preparationCopy[locale].runes} onCancel={event=>{event.preventDefault();motion.close()}}><button className="icon-button expanded-close" onClick={motion.close} aria-label={preparationCopy[locale].close}><Icon name="close"/></button><RunePanel records={records} page={page} locale={locale} onOpen={onOpen} sourceLabel={sourceLabel} returnLabel={returnLabel}/></dialog>,document.body);
 }
 export function ItemPanel({records,locale,onOpen}:{records:CatalogRecord[];locale:Locale;onOpen:(record:CatalogRecord)=>void}){
  const t=preparationCopy[locale],[query,setQuery]=useState(''),[limit,setLimit]=useState(40);

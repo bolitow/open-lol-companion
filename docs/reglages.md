@@ -4,9 +4,9 @@
 
 La recherche locale retrouve les options par nom, préfixe, synonymes et formulations courantes FR/EN. Accents, casse et petits mots courants sont normalisés. Exemples : « moins d’animations », « réduire les effets », « fewer animations », « Flash sur F », « dark mode ». Tous les mots significatifs doivent correspondre au même réglage. Ce n’est ni une IA ni une commande : taper une recherche ne change aucune valeur et n’envoie aucune requête réseau.
 
-Les catégories Tous, Application et League of Legends filtrent les six options implémentées : thème sombre/clair, langue FR/EN, animations, position de Flash D/F, fermeture dans la barre système et lancement au démarrage. Les contrôles restent utilisables directement dans les résultats. En l’absence de résultat, la page propose des exemples et un retour vers tous les réglages. La recherche et sa catégorie sont gardées en mémoire en quittant la page puis en revenant ; elles ne sont pas stockées sur disque.
+Les catégories Tous, Application et League of Legends filtrent les dix options implémentées : thème sombre/clair, langue FR/EN, animations, position de Flash D/F, fermeture dans la barre système, lancement au démarrage, imports de runes et d’objets, seuil de parties et poste en personnalisée. Les contrôles restent utilisables directement dans les résultats. En l’absence de résultat, la page propose des exemples et un retour vers tous les réglages. La recherche et sa catégorie sont gardées en mémoire en quittant la page puis en revenant ; elles ne sont pas stockées sur disque.
 
-La page, l’en-tête et le panneau de sorts utilisent le même état partagé : un choix Flash dans la draft se retrouve dans les réglages, et inversement. Flash reste sans préférence si aucun choix n’existait ; « À choisir » permet d’effacer ce choix. Sans préférence, le panneau demande un choix explicite avant un import contenant Flash. Modifier la préférence ne change ni les sorts dans League ni leur importation : un clic d’import reste nécessaire. Aucun travail sur les imports automatiques #63 dans ce lot.
+La page, l’en-tête et le panneau de sorts utilisent le même état partagé : un choix Flash dans la draft se retrouve dans les réglages, et inversement. Flash reste sans préférence si aucun choix n’existait ; « À choisir » permet d’effacer ce choix. Sans préférence, le panneau demande un choix explicite avant un import contenant Flash. Modifier la préférence ne change ni les sorts dans League ni leur importation : un clic d’import reste nécessaire. Les options des imports au prépick de #63 sont intégrées à la même recherche ; leur moteur et leurs gardes restent inchangés.
 
 ## Persistance, annulation et accessibilité
 
@@ -14,6 +14,7 @@ Les anciennes clés restent lisibles sans migration destructive :
 
 - `olc.app.preferences` : thème, langue et animations.
 - `olc.flash-slot` : `"D"`, `"F"` ou `null`.
+- `olc.auto-import.preferences.v1` : activations runes/objets, seuil et poste en personnalisée ; format existant conservé.
 
 Une valeur illisible revient au défaut de son champ. Une erreur d’accès au stockage laisse l’application utilisable en mémoire et affiche un message avec un bouton pour réessayer. Une sauvegarde réussie d’un autre groupe ne masque pas une modification encore non sauvegardée. Aucun secret ou identifiant de compte dans ces préférences.
 
@@ -68,6 +69,12 @@ Ce premier export sûr ne contient **pas les logs bruts app/League**, ni l’his
 
 Recette native complémentaire sur Windows/macOS : ouvrir et annuler les deux dialogues, exporter sans logs, puis avec un fichier synthétique ; inspecter les trois entrées ZIP, vérifier le message d’erreur sur fichier binaire/trop gros et destination non inscriptible. Ne pas utiliser de logs personnels pour les tests de CI.
 
-## Intégration de la branche principale
+## Imports dans les réglages et retour à la draft
 
-Le panneau « Imports au prépick » de #63 reste disponible en haut à droite des réglages, dépliable avec défilement interne. Son moteur reste monté entre les pages ; la synchronisation conserve les options et gardes livrées dans #69. La recherche locale des six réglages ne filtre pas encore les contrôles internes de ce panneau.
+Les quatre options d’import sont des résultats directement modifiables dans la grille commune : runes, objets, minimum de parties et poste en personnalisée. Rechercher « imports » les affiche ensemble ; « runes », « objets », « minimum parties » ou « custom role » cible une option. Le filtre Application les exclut. Les détails de source restent dépliables dans les cartes, mais les commandes sont toujours visibles.
+
+« Régler les imports » dans la draft ouvre ces quatre résultats. Retour retrouve le champion consulté et les filtres de préparation ; la recherche est conservée lors d’une navigation habituelle. Le moteur reste monté au-dessus des pages : la recherche, le dépliage des explications et le retour ne modifient pas les préférences et ne relancent pas un import déjà traité. Une nouvelle draft continue de réinitialiser la consultation vers le champion local selon les règles existantes.
+
+Les imports partagent désormais l’annulation avec les réglages App et système. Annuler restaure la dernière **préférence** modifiée ; cela ne retire pas une page de runes ou un set déjà importé dans League. Une panne de sauvegarde d’un groupe reste visible jusqu’à sa reprise, même si un autre groupe a été enregistré. Le seuil accepte seulement un entier de 1 à 1 000 ; la saisie n’est appliquée qu’à sa validation (Entrée ou sortie du champ), pour éviter des imports intermédiaires pendant la frappe. Échap restaure la valeur enregistrée. Les commandes d’import restent désactivées dans l’aperçu navigateur.
+
+Recette complémentaire : consulter un champion, ouvrir les imports, filtrer runes/objets en FR/EN, modifier puis annuler, revenir à la draft et vérifier la consultation ; redémarrer et vérifier la persistance. Vérifier aussi une saisie invalide du seuil, la catégorie Application sans résultat, et l’absence de défilement global aux tailles 960 × 600 et 1280 × 800. Les longues listes défilent uniquement dans les résultats.
