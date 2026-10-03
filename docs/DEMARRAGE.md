@@ -76,6 +76,11 @@ versionnées avec provenance et couverture, sans clé Riot. Reconstruction depui
 les archives : `catalog --rebuild <publication_id> --json` (sans réseau).
 Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
 
+Pour les vidéos de skins (#47), `scripts/catalog-skin-spotlights.py` prépare
+un catalogue candidat et un rapport de couverture depuis les métadonnées
+publiques, sans télécharger les vidéos. Paramètres, cache, arrêt sur refus
+fournisseur et revue avant copie : [maintenance SkinSpotlights](collection-skins.md#relancer-une-maintenance).
+
 Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
 `campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`

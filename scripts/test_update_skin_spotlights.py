@@ -33,6 +33,27 @@ def page(data):
     return ('prefix var ytInitialPlayerResponse = ' + json.dumps(data) + '; suffix').encode()
 
 
+class InvalidChapterFallback(unittest.TestCase):
+    def test_video_complete_validee_sans_chapitres_invalides_sur_option_explicite(self):
+        import hashlib
+        data = metadata()
+        description = '00:30 Q Ability\n00:10 W Ability'
+        data['videoDetails']['shortDescription'] = description
+        with self.assertRaises(ValueError):
+            mod.verify_video(data, 'Ahri', RIOT, VIDEO, '2023-02-05', '2026-10-03', '16.19.1')
+        entry, notes = mod.verify_video(data, 'Ahri', RIOT, VIDEO, '2023-02-05', '2026-10-03', '16.19.1', omit_invalid_chapters=True)
+        self.assertEqual(entry['segments'], [])
+        self.assertEqual(entry['descriptionSha256'], hashlib.sha256(description.encode()).hexdigest())
+        self.assertEqual(notes[0]['reason'], 'invalid-published-chapters')
+
+    def test_option_chapitres_ne_relache_pas_la_validation_du_media(self):
+        data = metadata()
+        data['videoDetails']['channelId'] = 'other'
+        data['videoDetails']['shortDescription'] = '00:30 Q Ability\n00:10 W Ability'
+        with self.assertRaises(ValueError):
+            mod.verify_video(data, 'Ahri', RIOT, VIDEO, '2023-02-05', '2026-10-03', '16.19.1', omit_invalid_chapters=True)
+
+
 class Chapters(unittest.TestCase):
     def test_borne_sur_chapitre_suivant_meme_exclu(self):
         segments, notes = mod.parse_chapters(metadata()['videoDetails']['shortDescription'], 100)

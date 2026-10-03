@@ -94,7 +94,7 @@ def parse_chapters(description, duration):
     return segments, notes
 
 
-def verify_video(data, champion, riot, video_id, minimum, checked, patch):
+def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omit_invalid_chapters=False):
     """Association exacte, chaîne officielle et garde explicite contre les versions anciennes."""
     valid_date(minimum)
     valid_date(checked)
@@ -128,7 +128,15 @@ def verify_video(data, champion, riot, video_id, minimum, checked, patch):
     description = details.get('shortDescription', '')
     if not isinstance(description, str):
         raise ValueError('Description invalide')
-    segments, notes = parse_chapters(description, duration)
+    try:
+        segments, notes = parse_chapters(description, duration)
+    except ValueError as error:
+        if not omit_invalid_chapters:
+            raise
+        # La vidéo est déjà validée ; on retire tous les raccourcis plutôt que
+        # de réparer des timestamps inconnus. Le hash garde la vraie source.
+        segments = []
+        notes = [{'reason': 'invalid-published-chapters', 'detail': str(error)}]
     if canonical_name != name:
         notes.append({'reason': 'title-case-difference', 'titleName': name, 'riotName': canonical_name})
     source = f'https://www.youtube.com/watch?v={video_id}'

@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Collection : inventaire des 1 952 skins principaux de 173 champions, chromas séparés par identifiant Riot ; catalogue porté à 895 vidéos et 6 176 passages, avec 838 ajouts, exclusion d’une référence hors fenêtre de sept ans et rapports des cas à revoir. Collecte maintenable avec cache de métadonnées seulement, arrêt sur refus fournisseur et vidéo complète conservée sans raccourcis lorsque les chapitres publiés sont invalides (#47).
 - Collection : 35 vidéos SkinSpotlights supplémentaires, catalogue porté à 58 références pour 30 champions et 441 passages ; arrêt du générateur sur limitation de débit pour préserver les sources et éviter les requêtes refusées en cascade (#47).
 - Collection : 127 accès directs SkinSpotlights supplémentaires (21 vidéos, 178 passages) ; outil de maintenance par lot avec identifiants Riot, contrôle des doublons, chapitres explicites et rapport des cas à revoir, sans télécharger les vidéos (#47).
 - Collection allégée : compteurs et actualisation réunis sous les filtres, fiche visuelle compacte avec aperçu SkinSpotlights ; ouverture et fermeture coordonnées des panneaux Collection et Champions, mouvements réduits respectés (#47, #4).

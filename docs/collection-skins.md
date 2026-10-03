@@ -219,3 +219,49 @@ L’ouverture externe conserve la session si la commande OS échoue ; après suc
 Diagnostic macOS : l’ancien lecteur a affiché un écran noir à 0:00 pour Emotes d’Ahri de minuit, malgré rechargement ; la recréation du média directement sur ce passage a permis une lecture avec images de jeu à 0:30. C’est une récupération observée, pas une preuve d’absence de toute panne intermittente YouTube. Les tests automatiques couvrent les générations, les transitions et la présentation des messages FR/EN. La recette finale et la réserve Windows sont consignées dans [le rapport de livraison](recettes/2026-10-03-collection-videos.md).
 
 La livraison rapproche les prérequis UI déjà développés localement des imports de sorts et recettes intégrés entre-temps sur `main`. La préférence Flash et l’activation existante des imports de sorts sont conservées. Les retouches Accueil/Profil/Amis encore locales ne font pas partie de ce lot. Les générateurs Python sont exécutés en CI Linux.
+
+## Inventaire de tous les skins — 3 octobre 2026
+
+Le passage complet utilise les 173 champions Data Dragon du patch 16.19.1, contrôlés contre la liste officielle `champion.json`. Chaque entrée hors apparence de base reçoit une ligne de couverture. Les chromas sont identifiés par le champ Riot `parentSkin`, séparés des skins principaux et signalés comme variantes ; ils ne gonflent pas le nombre de skins en attente de vidéo. Aucune association au parent n’est inventée. La fenêtre de sept ans porte sur la **publication vidéo**, pas sur la sortie du skin : minimum 2019-10-03 pour cette recette. Le skin reste consultable et souhaitable même sans référence vidéo. Une ancienne vidéo ne doit pas être importée uniquement pour remplir une fiche.
+
+`scripts/catalog-skin-spotlights.py` réutilise les métadonnées publiques en cache, examine une première page de recherche de la chaîne par champion puis vérifie l’association dans l’ensemble des noms Riot anglais. L’option `--search-uncovered-skins` complète ce passage par une recherche ciblée des noms Riot sans résultat exact ou à revoir, sans rouvrir les candidats déjà classés trop anciens. Ces recherches restent partielles ; leurs statuts et sources sont exportés en CSV, y compris les blocages fournisseur. Un résultat trouvé par la recherche d’un autre champion ou skin peut être associé seulement si le nom exact est unique. Aucun rapprochement flou des éditions Prestige, chromas ou variantes. Une vidéo vérifiée par métadonnées ne garantit pas sa lecture dans toutes les Webviews.
+
+La collecte est séquentielle, au plus une nouvelle requête par seconde, et cesse les requêtes dès un HTTP 403/429. Le cache reste exploitable ; une panne réseau ne transforme pas un refus de validation en vidéo « en attente ». Rapport/CSV et catalogue candidat sont séparés. Si l’inventaire Riot est incomplet ou vide, le rapport est écrit mais le candidat est refusé avec un code non nul. Aucun média n’est téléchargé et aucun cache de collecte n’est livré avec l’application.
+
+Le catalogue atteint 895 vidéos, dont 812 avec 6 176 passages : 838 ajouts et retrait de God-King Garen (2018), sans modifier les 57 références conservées. Quatre descriptions contiennent des chapitres désordonnés : la vidéo complète validée reste disponible, mais tous les raccourcis sont retirés, sans réparation au jugé. Ce repli est une option explicite du vérificateur ; sa validation stricte par défaut reste inchangée. [Couverture complète et groupes à revoir](recettes/2026-10-03-skins-video-coverage.md).
+
+### Bornes après mises à jour visuelles ou de compétences
+
+La fenêtre générale est resserrée pour les versions dont une évolution importante a été repérée dans les notes Riot. Ces bornes sont conservatrices : elles peuvent exclure une présentation finale publiée juste avant la sortie. Le rapport conserve les cas pour une revue manuelle. Ce n’est pas un audit de toutes les modifications VFX mineures de sept ans.
+
+| Champion | Publication minimum retenue | Source Riot |
+| --- | --- | --- |
+| Fiddlesticks | 2020-04-01 | [10.7](https://www.leagueoflegends.com/en-us/news/game-updates/patch-10-7-notes/) |
+| Volibear | 2020-05-29 | [Mise à jour de Volibear](https://www.leagueoflegends.com/en-au/news/community/celebrate-volibear-s-update-with-a-free-skin/) |
+| Dr Mundo | 2021-06-09 | [11.12](https://www.leagueoflegends.com/en-gb/news/game-updates/patch-11-12-notes/) |
+| Udyr | 2022-08-24 | [12.16](https://www.leagueoflegends.com/en-au/news/game-updates/patch-12-16-notes/) |
+| Aurelion Sol | 2023-02-10 | [13.3, report au 10 en SEA](https://www.leagueoflegends.com/en-au/news/game-updates/patch-13-3-notes/) |
+| Jax | 2023-10-11 | [13.20](https://www.leagueoflegends.com/en-us/news/game-updates/patch-13-20-notes/) |
+| Skarner | 2024-04-03 | [14.7](https://www.leagueoflegends.com/en-gb/news/game-updates/patch-14-7-notes/) |
+| Lee Sin | 2024-05-01 | [14.9](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-9-notes/) |
+| Teemo | 2024-10-09 | [14.20](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-20-notes/) |
+| Viktor | 2024-12-11 | [14.24](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-24-notes/) |
+
+Pour Fiddlesticks, Mundo, Udyr, Jax, Skarner et Viktor, le lendemain des notes sert de borne prudente lorsqu’elles n’explicitent pas le jour de sortie. Cette inférence peut exclure une vidéo à revoir. Les bornes précédentes Ahri/Caitlyn/MissFortune/Talon/Mordekaiser/Kai’Sa/Pyke/Aurora restent documentées dans les lots antérieurs et conservées dans l’outil.
+
+### Relancer une maintenance
+
+```sh
+python3 scripts/catalog-skin-spotlights.py \
+  --sources apps/desktop/public/game-data/catalog/sources.json \
+  --cache work/spotlight-full-47/cache \
+  --minimum-date 2019-10-03 --checked-at 2026-10-03 \
+  --search-uncovered-skins \
+  --output work/spotlight-full-47/candidate.json \
+  --report work/spotlight-full-47/report.json \
+  --coverage-csv work/spotlight-full-47/coverage.csv
+```
+
+Actualiser les dates pour chaque nouvelle recette. `--previous-cache` peut être répété pour reprendre les anciens JSON ; `--offline` limite la passe aux caches. Valider le code de sortie et relire le candidat avant copie dans `public/game-data/skin-spotlights.json`. Les recherches HTML ne sont pas contractuelles ni exhaustives, et une erreur fournisseur ne doit pas être relancée en boucle. Sur ce Mac, le Python de maintenance a été lancé avec `SSL_CERT_FILE=/etc/ssl/cert.pem` pour utiliser le magasin de certificats système ; aucune vérification TLS n’a été désactivée.
+
+Utiliser un dossier de cache Riot distinct lors d’un changement de patch : un JSON Riot d’une autre version est refusé, pas remplacé silencieusement. Le cache de métadonnées YouTube ne remplace pas une recette de lecture récente.

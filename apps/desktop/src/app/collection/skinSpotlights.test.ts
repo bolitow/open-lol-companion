@@ -59,3 +59,15 @@ it('ajoute les références du lot multi-champions sans inventer les chapitres a
  expect(findSkinSpotlight(index,875066,875)?.segments).toEqual([]);
  expect(findSkinSpotlight(index,157088,887)).toBeNull();
 });
+
+it('étend le catalogue global avec des correspondances Riot récentes et leurs passages',()=>{
+ const index=parseSkinSpotlights(JSON.parse(Object.values(bundled)[0]!));
+ for(const [skinId,championId] of [[51039,51],[51048,51],[202023,202],[222038,222]] as const){
+  const video=findSkinSpotlight(index,skinId,championId);
+  expect(video,`Référence Riot ${skinId}`).not.toBeNull();
+  expect((video?.publishedAt ?? '') >= '2019-10-03').toBe(true);
+  expect(video?.segments?.some(segment=>segment.kind==='q')).toBe(true);
+ }
+ expect([...index.values()].every(video=>video.publishedAt>='2019-10-03')).toBe(true);
+ expect(index.has(103008)).toBe(false); // Popstar Ahri (Amethyst), parentSkin Riot = 4.
+});
