@@ -10,7 +10,7 @@
     "dev:ui": "pnpm --filter @olc/desktop dev",
     "build:desktop": "pnpm --filter @olc/desktop tauri build",
     "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test && cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client -p olc-collector -p olc-api",
+    "test": "pnpm -r test && cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client -p olc-collector -p olc-api && cargo test -p olc-desktop --lib",
     "lint": "pnpm typecheck && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
     "format": "cargo fmt --all"
   },

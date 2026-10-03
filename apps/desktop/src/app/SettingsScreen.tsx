@@ -1,3 +1,4 @@
+import {OverlaySettings} from './overlay/OverlaySettings';
 import {SelectField} from '../ui/SelectField';
 import {AutoImportSetting} from './AutoImportPanel';
 import {buildCopy} from './buildCopy';
@@ -29,7 +30,7 @@ export function SettingsScreen({reduced,view,update}:{reduced:boolean;view:Setti
   <div className="settings-search surface" role="search"><Icon name="search"/><label htmlFor="settings-search">{t.search}</label><input ref={search} id="settings-search" type="search" value={view.query} placeholder={t.placeholder} onChange={e=>update({query:e.target.value})} autoComplete="off" spellCheck={false}/>{view.query&&<button className="icon-button" aria-label={t.clear} onClick={()=>{update({query:''});search.current?.focus()}}><Icon name="close" size={16}/></button>}</div>
   <div className="settings-filters"><div role="group" aria-label={t.categories}>{(['all','app','league'] as const).map(category=><button key={category} aria-pressed={view.category===category} onClick={()=>update({category})}>{t[category]}</button>)}</div><span role="status">{results.length} {results.length===1?t.result:t.results}</span></div>
   <div className="settings-results" data-count={results.length} role="region" aria-label={t.search} tabIndex={0}>
-   {results.map(key=><section className="surface setting-card" key={key} aria-labelledby={`setting-${key}`}>
+   {results.filter(key=>key!=='overlay').map(key=><section className="surface setting-card" key={key} aria-labelledby={`setting-${key}`}>
     <header><span className="setting-symbol"><Icon name={icons[key]} size={21}/></span><div><span className="setting-path">{t.paths[key]}</span><h2 id={`setting-${key}`}>{t.names[key]}</h2></div>{state.recent.slice(0,2).some(recent=>recent===key)&&<span className="setting-recent" title={t.recent}><Icon name="check" size={13}/><span>{t.recent}</span></span>}</header>
     <p>{t.descriptions[key]}</p>
     {isAutoImportSetting(key)?<AutoImportSetting setting={key} locale={v.locale}/>:<div className="setting-control">
@@ -43,6 +44,7 @@ export function SettingsScreen({reduced,view,update}:{reduced:boolean;view:Setti
     {key==='closeToTray'&&desktopState.native&&native&&!native.trayAvailable&&<small className="setting-system-note">{t.trayUnavailable}</small>}
     {key==='motion'&&reduced&&<small className="setting-system-note"><Icon name="info" size={14}/>{t.reduced}</small>}
    </section>)}
+   <div className="settings-overlay" hidden={!results.includes('overlay')}><OverlaySettings locale={v.locale}/></div>
    {!results.length&&<div className="settings-empty surface"><Icon name="search" size={28}/><h2>{t.empty}</h2><p>{t.emptyHint}</p><button className="button" onClick={()=>{update({query:'',category:'all'});search.current?.focus()}}>{t.showAll}</button></div>}
   </div>
   <footer className="settings-save surface"><div><p role="status">{desktopState.pending?t.nativePending:nativeIssue??(state.storageFailed?t.storage:localeError?t.localeFailed:t.saved)}</p>{(latest||state.lastChange)&&<small>{t.changed} : {latest?`${t.names[latest.key]} · ${latest.applied?t.nativeEnabled:t.nativeDisabled}`:state.lastChange?`${t.names[state.lastChange.key]} · ${valueLabel(state.lastChange.key)}`:''}</small>}</div>{state.storageFailed&&<button className="button" onClick={store.retrySave}>{t.retry}</button>}{(nativeIssue||(desktopState.native&&native?.autostartEnabled===null))&&<button className="button" disabled={desktopState.pending} onClick={()=>{void desktopStore.load()}}>{t.nativeRetry}</button>}{localeError&&<button className="button" disabled={desktopState.pending} onClick={retryLocale}>{t.localeRetry}</button>}<DiagnosticsExport locale={v.locale}/><button className="button" aria-label={t.undoLabel} disabled={desktopState.pending||(!state.lastChange&&!latest)} onClick={undo}><Icon name="replay" size={15}/>{t.undo}</button></footer>

@@ -139,6 +139,9 @@ L'app doit s'installer en une minute, se connecter seule au client LoL et rester
 
 **4.5 Dashboard**
 
+- Compte actif : profil et historique fournis par la LCU, provenance et limites visibles ; les profils distants gardent le service public.
+- Amis du client : liste locale, présence et profil si identité complète ; [contrat #71](amis-client.md). Aucun suivi manuel ou action sociale dans ce lot.
+
 - Profil résumé (rang, LP, winrate récent), historique de matchs.
 - Dernière partie enregistrée, accès direct au profil.
 - Liste des parties live (jusqu'à 100 sans ralentissement), filtre épinglé.

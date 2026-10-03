@@ -1,3 +1,4 @@
+mod guard;
 use lcu_connector::imports::{ImportError, ImportRunesRequest};
 use lcu_connector::LcuClient;
 use tauri::async_runtime::{spawn_blocking, Mutex};
@@ -9,13 +10,21 @@ pub(crate) struct ImportLocks {
     runes: Mutex<()>,
     spells: Mutex<()>,
     items: Mutex<()>,
-    auto_history: std::sync::Mutex<
-        std::collections::VecDeque<(
-            lcu_connector::imports::AutoImportContext,
-            bool,
-            lcu_connector::imports::AutoImportReceipt,
-        )>,
-    >,
+    auto_history: std::sync::Mutex<guard::History>,
+}
+
+impl ImportLocks {
+    pub(crate) fn set_custom_role(&self, role: Option<String>) -> Result<(), &'static str> {
+        self.auto_history
+            .lock()
+            .map(|mut h| h.set_custom_role(role))
+            .map_err(|_| "unavailable")
+    }
+    pub(crate) fn observe(&self, session: &lcu_connector::LcuSession) {
+        if let Ok(mut history) = self.auto_history.lock() {
+            history.observe(session);
+        }
+    }
 }
 
 /// L'historique de cette exécution survit aux remontages du webview.
@@ -27,47 +36,60 @@ pub(crate) async fn import_selected_build(
 ) -> Result<lcu_connector::imports::AutoImportReceipt, lcu_connector::imports::DraftRuneImportError>
 {
     use lcu_connector::imports::{AutoImportSelection, DraftRuneGuardError, DraftRuneImportError};
-    let current_draft = || {
-        session.lock().is_ok_and(|state| {
-            state.connected
-                && state.phase == Some(lcu_connector::GameflowPhase::ChampSelect)
-                && state.draft.is_some()
-                && state.draft_id.as_deref() == Some(request.context.draft_id.as_str())
-        })
-    };
-    if !current_draft() {
-        return Err(DraftRuneImportError::Guard(
-            DraftRuneGuardError::DraftContextChanged,
-        ));
-    }
     let runes = matches!(&request.selection, AutoImportSelection::Runes(_));
     let lock = if runes { &locks.runes } else { &locks.items };
     let _guard = lock
         .try_lock()
         .map_err(|_| DraftRuneImportError::Guard(DraftRuneGuardError::ImportBusy))?;
-    {
-        let history = locks
-            .auto_history
-            .lock()
-            .map_err(|_| ImportError::ClientUnavailable)?;
-        if let Some((_, _, receipt)) = history
-            .iter()
-            .find(|(context, kind, _)| context.same_selection(&request.context) && *kind == runes)
+    let epoch =
         {
-            return Ok(*receipt);
-        }
-    }
+            // Même ordre que le producteur LCU : session, puis historique.
+            let state = session.lock().map_err(|_| ImportError::ClientUnavailable)?;
+            let mut history = locks
+                .auto_history
+                .lock()
+                .map_err(|_| ImportError::ClientUnavailable)?;
+            history.observe(&state);
+            if !guard::matches_selection(&state, &request.context, history.custom_role.as_deref()) {
+                return Err(DraftRuneImportError::Guard(
+                    DraftRuneGuardError::DraftContextChanged,
+                ));
+            }
+            if let Some((_, _, receipt)) = history.receipts.iter().find(|(context, kind, _)| {
+                context.same_selection(&request.context) && *kind == runes
+            }) {
+                return Ok(*receipt);
+            }
+            history.epoch
+        };
+    let current_draft = || {
+        session.lock().is_ok_and(|state| {
+            locks.auto_history.lock().is_ok_and(|history| {
+                history.epoch == epoch
+                    && guard::matches_selection(
+                        &state,
+                        &request.context,
+                        history.custom_role.as_deref(),
+                    )
+            })
+        })
+    };
     let receipt = import_client()
         .await?
         .import_selected_build(&request, current_draft)
         .await?;
+    let state = session.lock().map_err(|_| ImportError::ClientUnavailable)?;
     let mut history = locks
         .auto_history
         .lock()
         .map_err(|_| ImportError::ClientUnavailable)?;
-    // Un retour au champion précédent après échange doit réappliquer son build.
-    history.retain(|(_, kind, _)| *kind != runes);
-    history.push_back((request.context, runes, receipt));
+    // Ne jamais réinsérer un accusé tardif, y compris après A → B → A pendant la requête.
+    if history.epoch == epoch
+        && guard::matches_selection(&state, &request.context, history.custom_role.as_deref())
+    {
+        history.receipts.retain(|(_, kind, _)| *kind != runes);
+        history.receipts.push((request.context, runes, receipt));
+    }
     Ok(receipt)
 }
 

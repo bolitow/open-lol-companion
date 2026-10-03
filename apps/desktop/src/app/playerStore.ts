@@ -1,4 +1,4 @@
-import type {PlayerError,PlayerRequest,PlayerMatchesRequest,Profile,ProfileMatches,PlayerMatch} from '@olc/shared';
+import type {PlayerError,PlayerRequest,PlayerHistoryRequest,PlayerProfile,PlayerHistory,PlayerMatchView} from '@olc/shared';
 
 export const playerPlatforms=['EUW1','EUN1','NA1','KR','BR1','JP1','LA1','LA2','ME1','OC1','RU','SG2','TR1','TW2','VN2'] as const;
 const validText=(value:string,max:number)=>!!value&&value.trim()===value&&!['.','..'].includes(value)&&!/[\u0000-\u001f\u007f-\u009f#]/u.test(value)&&new TextEncoder().encode(value).length<=max;
@@ -22,14 +22,15 @@ export const playerKey=(player:PlayerRequest)=>JSON.stringify([player.platform,p
 export const playerIdentity=(player:PlayerRequest):PlayerRequest=>({platform:player.platform,game_name:player.game_name,tag_line:player.tag_line});
 const knownErrors:PlayerError[]=['not_configured','invalid_configuration','invalid_request','unauthorized','not_found','unavailable','rate_limited','invalid_response','desktop_required'];
 const cleanError=(error:unknown):PlayerError=>knownErrors.includes(error as PlayerError)?error as PlayerError:'unavailable';
-export interface PlayerTransport {profile:(request:PlayerRequest)=>Promise<Profile>;matches:(request:PlayerMatchesRequest)=>Promise<ProfileMatches>}
-export interface PlayerEntry {identity:PlayerRequest;profile:Profile|null;loading:boolean;error:PlayerError|null;matches:PlayerMatch[];historyLoading:boolean;historyRefresh:boolean;historyError:PlayerError|null;next:number|null;omitted:number;historyFetchedAt:number|null;scrollTop:number}
+export interface PlayerTransport {profile:(request:PlayerRequest)=>Promise<PlayerProfile>;matches:(request:PlayerHistoryRequest)=>Promise<PlayerHistory>}
+export interface PlayerEntry {identity:PlayerRequest;profile:PlayerProfile|null;loading:boolean;error:PlayerError|null;matches:PlayerMatchView[];historyLoading:boolean;historyRefresh:boolean;historyError:PlayerError|null;next:number|null;omitted:number;historyFetchedAt:number|null;historySource:'lcu'|'api'|null;scrollTop:number}
 export interface PlayersState {connected:boolean;active:RememberedPlayer|null;home:RememberedPlayer|null;viewed:PlayerRequest|null;entries:Record<string,PlayerEntry>;storageFailed:boolean;query:string;platform:string}
-const emptyEntry=(identity:PlayerRequest):PlayerEntry=>({identity,profile:null,loading:true,error:null,matches:[],historyLoading:false,historyRefresh:false,historyError:null,next:0,omitted:0,historyFetchedAt:null,scrollTop:0});
+const emptyEntry=(identity:PlayerRequest):PlayerEntry=>({identity,profile:null,loading:true,error:null,matches:[],historyLoading:false,historyRefresh:false,historyError:null,next:0,omitted:0,historyFetchedAt:null,historySource:null,scrollTop:0});
 
 /** Deux profils maximum en mémoire : compte d'accueil et joueur consulté. Aucun polling. */
 export function createPlayerStore(transport:PlayerTransport,home:RememberedPlayer|null,persist:(value:RememberedPlayer|null)=>void){
     let state:PlayersState={connected:false,active:null,home,viewed:null,entries:{},storageFailed:false,query:'',platform:home?.platform??'EUW1'};
+    let lastPhase:string|null=null;
     const listeners=new Set<()=>void>(),versions=new Map<string,number>();
     const publish=(patch:Partial<PlayersState>)=>{state={...state,...patch};listeners.forEach(listener=>listener())};
     const update=(key:string,patch:Partial<PlayerEntry>)=>{if(state.entries[key])publish({entries:{...state.entries,[key]:{...state.entries[key],...patch}}})};
@@ -38,15 +39,15 @@ export function createPlayerStore(transport:PlayerTransport,home:RememberedPlaye
     const writeHome=(value:RememberedPlayer|null)=>{let storageFailed=false;try{persist(value)}catch{storageFailed=true}publish({home:value,storageFailed});retain()};
     const loadPage=async(key:string,version:number,replace=false)=>{
         const entry=state.entries[key];if(!entry?.profile||entry.loading||entry.historyLoading||entry.next===null&&!replace)return;
-        const request={player:playerIdentity(entry.profile),start:replace?0:entry.next!,count:10};
+        const request={player:playerIdentity(entry.profile),start:replace?0:entry.next!,count:10,source:entry.profile.source};
         update(key,{historyLoading:true,historyRefresh:replace,historyError:null});
         try{
             const page=await transport.matches(request);if(!current(key,version))return;
-            if(playerKey(page)!==key||page.start!==request.start||page.count!==request.count||page.matches.length+page.omitted_matches>request.count||page.next_start!==null&&(page.next_start!==request.start+request.count||page.next_start>10000))throw 'invalid_response';
+            if(page.source!==request.source||playerKey(page)!==key||page.start!==request.start||page.count!==request.count||page.matches.length+page.omitted_matches>request.count||page.next_start!==null&&(page.next_start!==request.start+request.count||page.next_start>10000))throw 'invalid_response';
             // L'arrivée d'une partie entre deux pages peut décaler les résultats de l'API.
             const latest=state.entries[key];if(!latest)return;const previous=replace?[]:latest.matches;const ids=new Set(previous.map(match=>match.match_id));
             const added=page.matches.filter(match=>{if(ids.has(match.match_id))return false;ids.add(match.match_id);return true});
-            update(key,{matches:[...previous,...added],historyLoading:false,historyRefresh:false,next:page.next_start,omitted:(replace?0:latest.omitted)+page.omitted_matches,historyFetchedAt:page.fetched_at});
+            update(key,{matches:[...previous,...added],historyLoading:false,historyRefresh:false,next:page.next_start,omitted:(replace?0:latest.omitted)+page.omitted_matches,historyFetchedAt:page.fetched_at,historySource:page.source});
         }catch(error){if(current(key,version))update(key,{historyLoading:false,historyError:cleanError(error)})}
     };
     const load=async(identity:PlayerRequest,force=false,preserve=false)=>{
@@ -75,6 +76,10 @@ export function createPlayerStore(transport:PlayerTransport,home:RememberedPlaye
             if(changed)writeHome(active);
             // Une reconnexion actualise aussi le même compte ; les ticks de draft ne rechargent rien.
             void load(active,!previous||playerKey(previous)!==playerKey(active),true);
+        },
+        syncPhase:(phase:string|null)=>{
+            const completed=phase==='EndOfGame'&&lastPhase!=='EndOfGame';lastPhase=phase;
+            if(completed&&state.active&&!state.entries[playerKey(state.active)]?.loading)void load(state.active,true,true);
         },
         start:()=>{if(state.home)void load(state.home)},
         select:(identity:PlayerRequest)=>{publish({viewed:identity,query:`${identity.game_name}#${identity.tag_line}`,platform:identity.platform});retain();void load(identity)},

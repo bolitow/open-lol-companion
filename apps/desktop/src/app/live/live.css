@@ -1,0 +1,18 @@
+.live-game-screen {display: flex; flex-direction: column; gap: 16px; height: 100%; min-height: 0; overflow: auto; padding-right: 4px;}
+.live-game-screen .screen-heading {margin: 0; flex-shrink: 0;}
+.live-game-screen .screen-heading h1 {margin: 0; font-size: 24px;}
+.live-game-summary {padding: 16px; flex-shrink: 0;}
+.live-builds {display: flex; flex-direction: column; gap: 12px; min-height: 0; flex: 1;}
+.live-build-scope {display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; font-size: 12px;}
+.live-build-scope span, .live-build-scope p {color: var(--muted);}
+.live-build-scope p {flex-basis: 100%; margin: 0; line-height: 1.5;}
+.live-builds .community-build-grid {flex: 1; min-height: 320px;}
+.live-build-status {padding: 24px; font-size: 13px; line-height: 1.5; color: var(--muted); text-align: center;}
+.live-build-status p {margin: 0 0 12px;}
+.live-build-source {display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 10px; line-height: 1.5; color: var(--muted);}
+.live-build-source p {margin: 0; flex-basis: 100%;}
+@media (max-width: 800px) {
+  .live-builds {flex: none;}
+  .live-builds .community-build-grid {grid-template-columns: 1fr; height: auto;}
+  .live-builds .community-build-grid > * {min-height: 220px;}
+}

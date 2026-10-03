@@ -52,8 +52,8 @@ describe('recherche des réglages sans effet de bord',()=>{
   expect(searchSettings('flash couleur','fr','all')).toEqual([]);
   expect(searchSettings('micro','fr','all')).toEqual([]);
   expect(searchSettings('flash','fr','app')).toEqual([]);
-  expect(searchSettings('','en','league')).toEqual(['flashSlot','autoRunes','autoItems','autoMinGames','autoCustomRole']);
-  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','autoRunes','autoItems','autoMinGames','autoCustomRole']);
+  expect(searchSettings('','en','league')).toEqual(['flashSlot','autoRunes','autoItems','autoMinGames','overlay','autoCustomRole']);
+  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','autoRunes','autoItems','autoMinGames','overlay','autoCustomRole']);
  });
 });
 it('distingue une panne de sauvegarde Flash d’une panne des préférences de l’application',()=>{
@@ -106,4 +106,11 @@ it('refuse un seuil invalide sans remplacer la dernière modification annulable'
  const store=createSettingsStore(memory());store.change('autoMinGames',120);const state=store.getSnapshot();
  for(const value of [0,1001,NaN,2.5]){store.change('autoMinGames',value);expect(store.getSnapshot()).toBe(state);}
  store.undo();expect(store.getSnapshot().values.autoMinGames).toBe(1);
+});
+
+it('retrouve les réglages overlay sans les confondre avec les préférences de fenêtre',()=>{
+ expect(searchSettings('overlay','fr','all')).toEqual(['overlay']);
+ expect(searchSettings('opacité en jeu','fr','league')).toEqual(['overlay']);
+ expect(searchSettings('monitor position','en','all')).toEqual(['overlay']);
+ expect(searchSettings('overlay','fr','app')).toEqual([]);
 });

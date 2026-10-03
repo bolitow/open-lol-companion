@@ -33,7 +33,7 @@ Autres commandes :
 | Commande | Effet |
 | --- | --- |
 | `pnpm dev:ui` | Interface seule dans le navigateur (http://localhost:1420), sans Rust |
-| `pnpm test` | Tests TypeScript + tests Rust du connecteur LCU, du collecteur et de l'API |
+| `pnpm test` | Tests TypeScript + tests Rust du connecteur LCU, du client de builds, du collecteur, de l'API et du desktop Tauri |
 | `pnpm typecheck` | Vérification des types |
 | `pnpm lint` | Typage + `cargo fmt --check` + `cargo clippy` (doit être à 0 avant une PR) |
 | `pnpm format` | Formate le code Rust |

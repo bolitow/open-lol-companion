@@ -15,8 +15,11 @@ mod credentials;
 mod discovery;
 mod draft;
 pub use draft::{DraftSession, DRAFT_ENDPOINT};
+pub mod friends;
 mod gameflow;
 pub mod imports;
+pub mod live;
+pub mod players;
 mod runes;
 mod session;
 #[cfg(test)]

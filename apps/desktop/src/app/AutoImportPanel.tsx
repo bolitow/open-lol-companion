@@ -1,5 +1,6 @@
 import {SelectField} from '../ui/SelectField';
 import {createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode} from 'react';
+import {syncCustomRole} from './customRoleSync';
 import {invoke} from '@tauri-apps/api/core';
 import {importErrorMessage, type AutoImportReceipt, type BuildReport, type Role, type LcuSession} from '@olc/shared';
 import {autoImportTarget, chooseAutoImports, createAutoImportController, type AutoImportProgress, type AutoImportSnapshot, type AutoImportTarget} from './autoImport';
@@ -38,6 +39,7 @@ const Context=createContext<AutoImportView|null>(null);
 export function AutoImportProvider({session,locale,native,children}:{session:LcuSession;locale:Locale;native:boolean;children:ReactNode}) {
     const {state}=useSettings(),preferences=autoImportPreferences(state.values);
     const [catalog,setCatalog] = useState<PreparationCatalog|null>(null), [catalogError,setCatalogError] = useState(false), [attempt,setAttempt] = useState(0);
+    const [syncedRole,setSyncedRole]=useState<Role|null|undefined>(undefined);
     const catalogRef = useRef(catalog); catalogRef.current = catalog;
     const controller = useMemo(()=>createAutoImportController({
         prepare:async(target,minGames)=>{
@@ -49,13 +51,14 @@ export function AutoImportProvider({session,locale,native,children}:{session:Lcu
         send:request=>invoke<AutoImportReceipt>('import_selected_build',{request}),
     }),[]);
     const snapshot = useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);
-    const target = catalog && native ? autoImportTarget(session,catalog,locale,preferences.customRole) : null;
+    const target = catalog && native && syncedRole === (preferences.customRole??null) ? autoImportTarget(session,catalog,locale,preferences.customRole) : null;
     useEffect(()=>{
         let active = true; setCatalogError(false);setCatalog(null);
         void loadCatalog(locale).then(value=>{if(active)setCatalog(value);},()=>{if(active)setCatalogError(true);});
         return ()=>{active=false;};
     },[locale,attempt]);
     useEffect(()=>{controller.update(target,preferences);});
+    useEffect(()=>{if(!native)return;return syncCustomRole(role=>invoke<void>('live_custom_role',{role}),preferences.customRole??null,setSyncedRole);},[native,preferences.customRole]);
     useEffect(()=>()=>controller.suspend(),[controller]);
     return <Context.Provider value={{native,snapshot,target,retry:controller.retry,catalogError,reload:()=>setAttempt(n=>n+1)}}>{children}</Context.Provider>;
 }

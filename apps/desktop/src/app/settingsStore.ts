@@ -12,7 +12,7 @@ export function isAutoImportSetting(key:SettingsSearchKey):key is AutoImportSett
  return key==='autoRunes'||key==='autoItems'||key==='autoMinGames'||key==='autoCustomRole';
 }
 export type SettingKey=keyof SettingValues;
-export type SettingsSearchKey=SettingKey|DesktopSettingKey;
+export type SettingsSearchKey=SettingKey|DesktopSettingKey|'overlay';
 export type SettingCategory='all'|'app'|'league';
 export interface SettingsStorage {getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void}
 export interface SettingsSnapshot {values:SettingValues;recent:SettingKey[];lastChange:{key:SettingKey;previous:SettingValues[SettingKey]}|null;storageFailed:boolean;flashStorageFailed:boolean}
@@ -59,6 +59,7 @@ export const settingDefinitions:readonly {key:SettingsSearchKey;category:Exclude
  {key:'autoRunes',category:'league',terms:'imports importer import runes rune page pages automatique automatiques automatic auto prepick preselection activation activer desactiver disable enable'},
  {key:'autoItems',category:'league',terms:'imports importer import objets objet items item equipement equipment build builds automatique automatiques automatic auto prepick preselection activation activer desactiver disable enable'},
  {key:'autoMinGames',category:'league',terms:'imports importer import minimum min seuil threshold parties games echantillon sample statistiques statistics variantes variants'},
+ {key:'overlay',category:'league',terms:'overlay en jeu game affichage display panneau panel ecran screen monitor position emplacement taille size largeur width opacite opacity transparence transparency raccourci shortcut apercu preview'},
  {key:'autoCustomRole',category:'league',terms:'imports importer import poste role lane personnalisee personnalise custom game games partie top jungle mid support bot'},
 ];
 const normalize=(value:string)=>value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();

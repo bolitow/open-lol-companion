@@ -15,3 +15,6 @@ export * from "./desktopSettings";
 
 export * from './diagnostics';
 export * from "./autoImport";
+export * from "./live";
+
+export * from "./friends";
