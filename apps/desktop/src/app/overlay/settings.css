@@ -1,14 +1,16 @@
-.overlay-settings { margin-top: 24px; padding: 22px; border: 1px solid #303945; border-radius: 12px; background: #131b25; color: #edf2f7; }
+.overlay-settings { margin-top: 0; padding: 22px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--text); }
 .overlay-settings h2 { margin: 0 0 12px; font-size: 1.15rem; }
-.overlay-settings p, .overlay-settings small { color: #b7c5d3; line-height: 1.5; }
+.overlay-settings p, .overlay-settings small { color: var(--muted); line-height: 1.5; }
 .overlay-settings fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 .overlay-settings fieldset:disabled { opacity: .65; }
 .overlay-setting-toggle { display: flex; align-items: center; gap: 10px; margin: 14px 0; }
 .overlay-settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 14px; margin: 18px 0; }
 .overlay-settings-grid label { display: flex; flex-direction: column; gap: 8px; font-size: .9rem; }
-.overlay-settings-grid input { min-width: 0; width: 100%; box-sizing: border-box; color: #edf2f7; background: #0c131c; border: 1px solid #536172; border-radius: 6px; padding: 9px 12px; }
+.overlay-settings-grid input { min-width: 0; width: 100%; box-sizing: border-box; color: var(--text); background: var(--panel-raised); border: 1px solid var(--line-strong); border-radius: 6px; padding: 9px 12px; }
 .overlay-settings-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 18px 0 10px; }
-.overlay-settings-actions button { color: #edf2f7; background: #263c50; border: 1px solid #627b92; border-radius: 6px; padding: 10px 16px; cursor: pointer; }
+.overlay-settings-actions button { color: var(--text); background: var(--accent-soft); border: 1px solid var(--line-strong); border-radius: 6px; padding: 10px 16px; cursor: pointer; }
 .overlay-settings-actions button:disabled { opacity: .5; cursor: default; }
-.overlay-settings input:focus-visible, .overlay-settings button:focus-visible { outline: 2px solid #70c8ee; outline-offset: 3px; }
-.overlay-settings [role="alert"] { color: #ffc6b5; }
+.overlay-settings input:focus-visible, .overlay-settings button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.overlay-settings [role="alert"] { color: var(--text); }
+
+.settings-overlay{grid-column:1/-1;min-width:0}.settings-overlay[hidden]{display:none}

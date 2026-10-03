@@ -1,0 +1,26 @@
+.game-detail.ability-detail{width:min(1140px,calc(100vw - 48px));max-height:calc(100dvh - 48px)}
+.ability-detail .game-detail-shell{max-height:calc(100dvh - 52px)}
+.game-detail.ability-detail header{padding:18px 22px;gap:13px}.game-detail.ability-detail header>img{width:44px;height:44px;border-radius:10px}.game-detail.ability-detail h2{font-size:21px;margin:4px 0 0}
+.ability-detail .ability-detail-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(320px,1fr);gap:20px;align-items:start;padding:20px}
+.ability-detail-media{min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:11px;background:var(--panel-inset,var(--panel))}
+.ability-detail-media .ability-video-stage{max-height:55dvh}
+.ability-detail-parameters{min-width:0;display:grid;gap:18px}
+.ability-detail-parameters h3{font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:0 0 10px}
+.ability-detail-basics .ability-metrics{display:flex;flex-direction:column;gap:0;margin:0;border:1px solid var(--line);border-radius:10px;padding:2px 12px;background:var(--panel-inset,var(--panel))}
+.ability-detail-basics .ability-metric{display:grid;grid-template-columns:minmax(100px,1fr) minmax(0,1.6fr);align-items:center;column-gap:10px;width:100%;padding:10px 0}
+.ability-detail-basics .ability-metric+.ability-metric{border-top:1px solid var(--line)}
+.ability-detail-basics .ability-metrics dt{margin:0;font-size:11px;gap:8px}
+.ability-detail-basics .ability-metrics dd{padding:0;text-align:right;font-size:13px;line-height:1.6}
+.ability-detail-basics .ability-metrics small{grid-column:2;padding:0;text-align:right;margin:2px 0 0}
+.ability-detail-effects{min-width:0}
+.ability-detail-effects .ability-effects{margin:0}
+.ability-detail-effects .ability-effects-text,.ability-detail-effects .ability-description.is-expanded{font-size:14px;line-height:1.85;margin:0;white-space:pre-line;overflow-wrap:anywhere}
+.ability-detail-effects .ability-effect-note{padding-top:10px;border-top:1px solid var(--line)}
+.ability-detail-effects .ability-formula{font-size:14px}
+.ability-detail-navigation{display:flex;align-items:center;justify-content:center;gap:22px;padding:13px 20px;border-top:1px solid var(--line);flex-shrink:0}
+.ability-detail-navigation>div{display:flex;gap:8px}
+.ability-detail-navigation>div>button{position:relative;display:grid;place-items:center;padding:4px;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--muted);cursor:pointer;width:48px;min-height:61px;font-size:9px;gap:3px}
+.ability-detail-navigation>div>button[aria-pressed=true]{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,var(--panel));box-shadow:0 0 16px color-mix(in srgb,var(--accent) 12%,transparent)}
+.ability-detail-navigation img{width:34px;height:34px;object-fit:contain;border-radius:5px}.ability-detail-navigation button:disabled{opacity:.35;cursor:default}
+@media(max-width:820px){.ability-detail .ability-detail-grid{grid-template-columns:1fr;gap:20px}.ability-detail-media{width:100%}.ability-detail-media .ability-video-stage{max-height:40dvh}.ability-detail-navigation{gap:12px}}
+@media(max-height:660px) and (min-width:821px){.game-detail.ability-detail header{padding:12px 18px}.ability-detail-navigation{padding:9px 18px}.ability-detail .ability-detail-grid{padding:15px;gap:18px}.ability-detail-media .ability-video-stage{max-height:calc(100dvh - 310px)}}

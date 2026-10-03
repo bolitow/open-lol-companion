@@ -30,6 +30,14 @@ Recette visuelle isolée : états actif, compte indisponible, déconnecté et se
 
 Hors périmètre : authentification du profil app, vérification de propriété, comptes liés publiquement, suivi d’amis, import automatique #63, modification de la draft.
 
+
+### Avatar et connexion dans la navigation (#4, #65)
+
+Le bandeau de connexion et le footer permanent sont remplacés par l’avatar du compte, en haut à droite. Un clic ouvre son Riot ID, la région, l’état du client et les actions profil/session ou réessayer. La pastille verte indique uniquement la connexion au client League ; jaune indique attente/recherche et rouge une erreur de suivi. L’aperçu navigateur est gris. Le statut est aussi lisible par les lecteurs d’écran et dans le panneau. Échap, un clic extérieur ou la sortie du focus ferment le panneau.
+
+`LcuAccount.profile_icon_id` projette uniquement `profileIconId` du `current-summoner` déjà lu par Rust (entier public positif ou nul). Aucun appel local supplémentaire et aucun secret ne transitent dans React. Le dernier identifiant d’icône est mémorisé avec l’identité locale existante, remplacé au changement de compte et effacé avec « oublier ». Il reste distinct des paramètres `PlayerRequest` envoyés au service de profils.
+
+L’image vient du CDN HTTPS public [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon_other), version 16.19.1 du catalogue actuel. Pas de téléchargement ni de cache fichier spécifique : le cache HTTP du WebView s’applique. Une icône récente absente de cette version, une erreur réseau ou un identifiant manquant donnent une silhouette neutre, jamais l’avatar d’un autre compte. Le service de profils peut fournir l’icône en repli pour le même compte. Les mentions Riot restent visibles dans le menu principal.
 ## Profil, historique local et amis — complément du 2 octobre 2026
 
 Le profil actif utilise désormais `GET /lol-ranked/v1/current-ranked-stats` pour les rangs et `GET /lol-match-history/v1/products/lol/current-summoner/matches?begIndex=…&endIndex=…` pour les parties. Le PUUID est utilisé seulement dans Rust pour retrouver la participation locale, par jointure `participantId`, et vérifier le compte avant/après. Les réponses tardives d'une ancienne connexion sont rejetées même après A→B→A. La lecture complète est bornée à dix secondes. Le DTO desktop ne transmet plus de PUUID, quelle que soit la source.

@@ -1,5 +1,6 @@
 //! Préférences natives sans dépendance à Tauri ni au client League.
 
+pub mod collection_wishes;
 pub mod diagnostics;
 
 use serde::{Deserialize, Serialize};

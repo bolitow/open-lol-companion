@@ -6,7 +6,51 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Collection : 35 vidéos SkinSpotlights supplémentaires, catalogue porté à 58 références pour 30 champions et 441 passages ; arrêt du générateur sur limitation de débit pour préserver les sources et éviter les requêtes refusées en cascade (#47).
+- Collection : 127 accès directs SkinSpotlights supplémentaires (21 vidéos, 178 passages) ; outil de maintenance par lot avec identifiants Riot, contrôle des doublons, chapitres explicites et rapport des cas à revoir, sans télécharger les vidéos (#47).
+- Collection allégée : compteurs et actualisation réunis sous les filtres, fiche visuelle compacte avec aperçu SkinSpotlights ; ouverture et fermeture coordonnées des panneaux Collection et Champions, mouvements réduits respectés (#47, #4).
+- Collection : recherche par champion, série et rareté FR/EN sans autocorrection ; grande visionneuse SkinSpotlights intégrée avec chapitres, flèches, détachement/rattachement conservant la lecture et fermeture dédiée ; permissions isolées par Webview (#47).
+- Collection : filtres rareté et séries issus des identifiants Riot, catalogue FR/EN de 228 séries ; 23 références SkinSpotlights dont six avec 51 passages accessibles directement dans le lecteur natif, bornes validées et repli YouTube conservant le passage (#47).
+- Collection : images progressives et préchargement borné au survol ; aperçu SkinSpotlights à la demande dans une fenêtre native isolée et repli YouTube, catalogue initial de 20 correspondances exactes par identifiant Riot, états FR/EN (#47).
+- Collection réelle des skins du compte League : galerie, recherche et filtres de possession/champion, souhaits locaux persistants par compte, états temporaires/inconnus distincts et protection des changements de compte ; première intégration native FR/EN (#47).
+
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
+- Intégration des amis, profils/historiques locaux et écran Live dans le shell desktop compact ; réglages overlay recherchables FR/EN, accordés au thème, avec conservation du brouillon pendant les filtres (#4, #11, #22, #65, #71).
+
+- Préparation de draft rattachée à son champion : prépick, pick verrouillé et consultation distincts, retour au pick réel ; cartes conservées au verrouillage, arbres de runes adaptatifs, objets mieux séparés et transitions brèves respectant les mouvements réduits (#4, #13).
+
+- Types de dégâts distingués dans les fiches de sorts : physiques orange, magiques violets, bruts neutres (blanc en thème sombre), y compris leurs montants ; couleurs propres des ratios AD/AP conservées (#4).
+
+- Vidéos de compétences préchargées dès l’ouverture du champion, réutilisées entre aperçu et fiche agrandie, puis libérées au changement ou à la fermeture de sa fiche. Paramètres du sort alignés et fonctionnement entièrement visible sans dépliant dans la vue agrandie (#4).
+
+- Fiche de sort agrandie : vidéo, effets et ratios colorés, flèches/vignettes pour parcourir les compétences du champion, fermeture extérieure/Échap et retour au contexte. Complément statique versionné : 644 compétences avec des valeurs issues des BIN du jeu ; effets non interprétés signalés, sans chiffres inventés (#4, #61).
+
+- Démonstrations officielles des sorts au survol ou au focus des icônes de la fiche champion : lecteur muet à la demande, arrêt à la fermeture, commandes clavier, mouvements réduits respectés et état indisponible explicite ; catalogue de références Riot régénérable, sans embarquer les vidéos (#4).
+
+- Fiche champion allégée : retrait du lien redondant « Détails du champion » en bas du panneau, avec conservation des accès détaillés aux sorts (#4).
+
+- Paramètres des sorts en colonnes alignées (récupération, coût, portée), pictogrammes à l’échelle et fonctionnement dépliable ; coûts colorés selon la ressource sourcée, avec conservation des indications par seconde/par roquette et des variations non chiffrées (#4, #61).
+
+- Menus déroulants unifiés dans toute l’application via un composant partagé accessible au clavier ; options désactivées respectées, ouverture/fermeture animées et menus correctement ancrés dans les fenêtres modales (#4).
+- Panneau champion clarifié : compétences séparées, descriptions et statistiques dépliées progressivement ; transitions d’entrée/sortie du panneau, du compte, de la recherche, du menu et des dialogues, avec respect du mouvement réduit (#4).
+
+- Statistiques identifiables par leurs véritables pictogrammes League et un code couleur AD/AP/armure/RM/PV/mana, partagé entre fiche, détails et infobulles ; coefficients explicitement présents dans le texte source associés à leur stat, sans calcul inventé (#4, #61).
+
+- Fiche Compétences plus compacte : en-tête raccourci, statistiques de base repliables, touche et nom du sort regroupés, métriques sur une ligne quand la place le permet ; descriptions toujours dépliables (#4).
+
+- Finition Champions : portraits au ratio original, cadre arrondi et compteur dégagé ; menus de tri et filtres personnalisés accessibles au clavier ; délais/coûts/portées fiables par rang dans les fiches et infobulles, description repliable et couleurs dégâts/boucliers/soins (#4, #61).
+
+- Navigation compacte : Retour intégré à la barre du haut ; bibliothèque Champions centrée sur les cartes et filtres, sans introduction encombrante. Rebond au bord des zones de défilement désactivé, en conservant les listes et la fiche latérale (#4).
+
+- Icône native du compagnon flamme sur Windows et macOS, avec fond quasi noir jusqu’aux bords pour éviter l’effet de double cadre et renforcer le contraste dans le Dock, sans changement du nom de l’application (#4).
+
+- Barre desktop compacte : avatar public du compte League et pastille de connexion, détails/profil/session au clic ; dernier avatar mémorisé hors connexion. Footer et bandeau de connexion retirés, mentions Riot accessibles dans le menu (#4, #65).
+
+- Identité du prototype intégrée au shell desktop : ouverture en combustion et traces sur la carte d’accueil, transitions de pages et de phase, braises arrière/avant et reflets locaux, compagnon permanent dans la navigation ; thèmes sombre/clair et réduction des mouvements conservés, sans données fictives (#4).
+
+- Imports runes/objets, seuil et poste en personnalisée intégrés à la recherche des réglages et à l’annulation partagée ; accès depuis la draft avec retour au champion consulté, sans relancer les imports lors de la navigation (#11).
+
+- Export local de diagnostics : aperçu FR/EN, journal technique de session borné et résumé facultatif de logs League choisis par le joueur ; ZIP sans identités, secrets ni lignes brutes, annulation et erreurs explicites (#11).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).
 - Recette fonctionnelle macOS du panneau acceptée par Matthieu sur sa configuration : affichage, interactions et raccourci confirmés, capture et versions consignées ; mesures chiffrées et autres configurations restent à compléter (#22).
@@ -17,13 +61,13 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 - Recette macOS des imports : runes confirmées par le joueur, set d’Ahri relu
   dans le client et suivi de la conservation des pages personnelles (#63).
 
+- Réglages desktop : recherche locale FR/EN par synonymes, modification depuis les résultats, annulation et sauvegarde des préférences ; Flash D/F partagé avec la draft et les imports activés par le joueur (#11).
 - Amis du compte LoL connecté dans l’accueil, présence, accès au profil si identité complète, états FR/EN et rafraîchissement local indépendant du quota Riot (#71).
 - Profil, rangs et historique du compte actif lus dans le client LoL, source affichée, personnalisées incluses, pagination sans mélange avec le service public et actualisation en fin de partie (#64, #65).
 
 - Données locales en partie (champion, niveau, K/D/A, CS et temps), contexte de draft conservé et builds consultatifs avec effectifs ; lecture bornée et annulation des réponses périmées (#23, #63).
 - Panneau natif transparent sans prise de focus, masqué hors jeu actif, réglages/aperçu/raccourci, placement relatif ; NSPanel et Liquid Glass Apple sur macOS 26+, vibrance native en repli, moteur Windows conditionnel (#22). Recettes LoL réelles macOS et Windows à compléter avant clôture.
 
-- Export local de diagnostics : aperçu FR/EN, journal technique de session borné et résumé facultatif de logs League choisis par le joueur ; ZIP sans identités, secrets ni lignes brutes, annulation et erreurs explicites (#11).
 
 - Réglages système natifs : fermeture dans la barre système, menu FR/EN et lancement à l’ouverture de session sur choix explicite ; état relu depuis l’OS, annulation et repli visible sans tray (#11).
 
@@ -103,15 +147,19 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Lecteur de skins : nouvelle session native lors d’un changement de passage ou d’une relance, chargement prolongé signalé après 15 secondes, événements périmés ignorés et lecture intégrée arrêtée lors du repli YouTube ; aucun démarrage automatique (#47).
+
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
 
+- Permissions natives de diagnostics et réglages conservées après intégration du manifeste Tauri de l’overlay ; ces commandes restent réservées à la fenêtre principale (#11, #22).
+
+- Test de sauvegardes concurrentes adapté aux refus de remplacement observés sous Windows, tout en exigeant des lectures intègres et le nettoyage des temporaires (#11).
 - Compteur CS en partie : précision de la source LoL indiquée en FR/EN ; tests garantissant que chaque valeur reçue est transmise sans arrondi ni seuil de dix (#23).
 
 - Imports : garde de sélection courante, invalidation des reçus lors des échanges et changements de poste manuel, rejet des réponses tardives ; synchronisation du poste avant import (#63).
 - Alerte de raccourci d’overlay conservée après sauvegarde ou changement de langue (#22).
 
 - Overlay macOS : reconnaissance de la fenêtre LoL sans bordure au niveau natif 1000 et panneau placé au-dessus ; le cache suit aussi les changements de niveau. Affichage/masquage Windows explicitement non activants ; tests du moteur ajoutés à la commande globale et aux jobs desktop (#22).
-- Test de sauvegardes concurrentes adapté aux refus de remplacement observés sous Windows, tout en exigeant des lectures intègres et le nettoyage des temporaires (#11).
 
 - API builds/tierlist : sélection indexée des morceaux par population avant lecture du JSON, avec migration des instantanés déjà publiés et réponses inchangées (#19).
 - Listes natives Windows : fond et texte des options accordés au thème pour éviter les libellés clairs sur fond blanc (#13).

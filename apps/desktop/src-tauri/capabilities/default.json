@@ -1,14 +1,15 @@
 {
   "identifier": "default",
   "description": "Permissions de la fen\u00eatre principale",
-  "windows": [
-    "main"
-  ],
   "permissions": [
     "core:default",
     "allow-lcu-status",
     "allow-lcu-session",
     "allow-friends-state",
+    "allow-open-skin-spotlight",
+    "allow-collection-state",
+    "allow-collection-refresh",
+    "allow-collection-set-wish",
     "allow-community-builds",
     "allow-player-profile",
     "allow-player-matches",
@@ -24,9 +25,16 @@
     "allow-overlay-configure",
     "allow-overlay-preview",
     "allow-overlay-locale",
+    "allow-export-diagnostics",
     "allow-desktop-settings",
     "allow-set-desktop-setting",
     "allow-set-desktop-locale",
-    "allow-export-diagnostics"
+    "allow-skin-spotlight-state",
+    "allow-skin-spotlight-media",
+    "allow-skin-spotlight-control",
+    "allow-skin-spotlight-layout"
+  ],
+  "webviews": [
+    "main"
   ]
 }

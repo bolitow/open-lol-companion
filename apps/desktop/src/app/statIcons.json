@@ -1,0 +1,87 @@
+{
+  "version": "16.19",
+  "atlas": "/game-data/stats/tooltip-stats-atlas.png",
+  "width": 2048,
+  "height": 256,
+  "iconSize": 20,
+  "sha256": "e20754b4a37906b6c0080d6025e5866fb5af5521babbc411add630a635b79475",
+  "atlasSource": "https://raw.communitydragon.org/16.19/game/uiautoatlas/ux/fonts/css/stylesheet/atlas_0.png",
+  "mappingSource": "https://raw.communitydragon.org/16.19/game/ux/fonts/css/stylesheet.cdtb.json",
+  "icons": {
+    "attack_damage": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalead.png",
+      "x": 1218,
+      "y": 2
+    },
+    "ability_power": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scaleap.png",
+      "x": 1290,
+      "y": 2
+    },
+    "armor": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalearmor.png",
+      "x": 1338,
+      "y": 2
+    },
+    "magic_resistance": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalemr.png",
+      "x": 1698,
+      "y": 2
+    },
+    "health": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalehealth.png",
+      "x": 1530,
+      "y": 2
+    },
+    "mana": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalemana.png",
+      "x": 1626,
+      "y": 2
+    },
+    "attack_speed": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scaleas.png",
+      "x": 1362,
+      "y": 2
+    },
+    "critical_strike_chance": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalecrit.png",
+      "x": 1458,
+      "y": 2
+    },
+    "movement_speed": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalems.png",
+      "x": 1722,
+      "y": 2
+    },
+    "health_regeneration": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalehpregen.png",
+      "x": 1554,
+      "y": 2
+    },
+    "mana_regeneration": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalemanaregen.png",
+      "x": 1650,
+      "y": 2
+    },
+    "ability_haste": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scaleah.png",
+      "x": 1266,
+      "y": 2
+    },
+    "cooldown": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalecooldown.png",
+      "x": 1434,
+      "y": 2
+    },
+    "attack_range": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalerange.png",
+      "x": 1746,
+      "y": 2
+    },
+    "heal_and_shield_power": {
+      "source": "assets/ux/fonts/texticons/lol/statsicon/scalehealshield.png",
+      "x": 1506,
+      "y": 2
+    }
+  }
+}

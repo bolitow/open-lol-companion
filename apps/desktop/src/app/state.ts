@@ -1,5 +1,5 @@
 import { screenForPhase, type AppScreen, type LcuSession, type Role } from '@olc/shared';
-export type Screen = AppScreen | 'settings' | 'champions' | 'players';
+export type Screen = AppScreen | 'settings' | 'champions' | 'players' | 'collection';
 export type Locale = 'fr' | 'en';
 export interface Preferences {
     theme: 'dark' | 'light';

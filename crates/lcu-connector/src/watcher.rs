@@ -501,12 +501,14 @@ mod tests {
                 Some(crate::LcuAccount {
                     platform: "EUW1".into(),
                     game_name: "Alpha".into(),
-                    tag_line: "TAG".into()
+                    tag_line: "TAG".into(),
+                    profile_icon_id: None
                 }),
                 Some(crate::LcuAccount {
                     platform: "EUW1".into(),
                     game_name: "Beta".into(),
-                    tag_line: "TAG".into()
+                    tag_line: "TAG".into(),
+                    profile_icon_id: None
                 }),
                 None
             ]

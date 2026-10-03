@@ -1,0 +1,12 @@
+.ability-effects{margin-top:14px}
+.ability-effects-text{margin:0;font-size:13px;line-height:1.85;color:var(--muted);white-space:pre-line;overflow-wrap:anywhere}
+.ability-formula{font-variant-numeric:tabular-nums;font-weight:700;color:var(--text)}
+.ability-damage>.ability-formula,.ability-magic-damage>.ability-formula,.ability-true-damage>.ability-formula,.ability-shield>.ability-formula,.ability-heal>.ability-formula{color:inherit}
+.ability-formula .stat-tone{display:inline;white-space:normal;font-size:inherit}
+.ability-formula .stat-glyph{vertical-align:-2px;margin:0 2px 0 0}
+.ability-formula-plus{color:var(--muted);font-weight:400}
+.ability-effect-unknown{color:var(--muted);border-bottom:1px dotted var(--muted);text-decoration:none}
+.ability-effect-note{display:block;margin:10px 0 0;font-size:10px;line-height:1.6;color:var(--muted)}
+.ability-effects.is-compact{margin-top:9px}
+.is-compact .ability-effects-text{font-size:11px;line-height:1.75;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.ability-effects-more{font:inherit;font-size:10px;display:block;border:0;background:transparent;color:var(--accent);padding:6px 0 0;cursor:pointer}

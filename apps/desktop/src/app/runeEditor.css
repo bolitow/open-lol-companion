@@ -14,7 +14,7 @@
 .rune-editor-actions button:disabled{opacity:.5;cursor:default}
 .rune-import-status{flex-shrink:0;min-height:13px;margin:5px 0 0;color:var(--muted);font-size:9px;line-height:1.4;max-height:42px;overflow:auto;scrollbar-width:thin}
 .rune-import-status.has-error{color:var(--accent)}
-.rune-workbench.is-editing .rune-style-picker select:enabled{appearance:auto;cursor:pointer;background:var(--accent-soft)}
+.rune-workbench.is-editing .rune-style-picker .select-field:enabled{cursor:pointer;background:var(--accent-soft)}
 .rune-workbench.is-editing .catalog-button:enabled{cursor:pointer}
 .rune-editor-dialog .rune-workbench{max-height:calc(100dvh - 88px)}
 .rune-editor-dialog .rune-panel{flex:1 1 auto;max-height:none}

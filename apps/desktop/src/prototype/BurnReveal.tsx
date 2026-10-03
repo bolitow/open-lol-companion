@@ -4,7 +4,7 @@ import { gutterPoints, openingState, renderSize, surfaceState, IGNITION_TIME_SCA
 import { createFireRenderer } from "./fireShader";
 
 /** Combustion au premier plan, puis braises colorées dans les interstices. */
-export function BurnReveal({theme,root,onDone}:{theme:Theme;root:RefObject<HTMLDivElement|null>;onDone:()=>void}) {
+export function BurnReveal({theme,root,onDone,panelSelector=".dashboard-grid .panel"}:{panelSelector?:string;theme:Theme;root:RefObject<HTMLDivElement|null>;onDone:()=>void}) {
   useLayoutEffect(()=>{
     const host=root.current;
     if(!host){onDone();return;}
@@ -23,7 +23,7 @@ export function BurnReveal({theme,root,onDone}:{theme:Theme;root:RefObject<HTMLD
     back.width=width;back.height=height;
     const renderer=createFireRenderer(front,light),ctx=back.getContext("2d");
     host.dataset.fireRenderer=renderer?"webgl":"static";
-    const surfaces=[...host.querySelectorAll<HTMLElement>(".dashboard-grid .panel")].map(panel=>({
+    const surfaces=[...host.querySelectorAll<HTMLElement>(panelSelector)].map(panel=>({
       panel,points:gutterPoints(panel.getBoundingClientRect()),previousHeat:panel.style.getPropertyValue("--heat"),
     }));
     const surface=host.querySelector<HTMLElement>(".session-material");
@@ -43,6 +43,7 @@ export function BurnReveal({theme,root,onDone}:{theme:Theme;root:RefObject<HTMLD
       delete host.dataset.igniting;
     };
     const finish=()=>{if(ended)return;ended=true;clear();onDone();};
+    const hide=()=>{if(document.hidden)finish();};
     if(!renderer||!ctx){finish();return clear;}
     const start=performance.now(),radius=Math.hypot(width,height)*.62;
     const draw=(now:number)=>{
@@ -86,6 +87,7 @@ export function BurnReveal({theme,root,onDone}:{theme:Theme;root:RefObject<HTMLD
       raf=requestAnimationFrame(draw);
     };
     host.dataset.igniting="true";
+    document.addEventListener("visibilitychange",hide);
     front.addEventListener("webglcontextlost",finish,{once:true});
     window.addEventListener("resize",finish,{once:true});
     window.addEventListener("scroll",finish,{once:true,passive:true});
@@ -93,10 +95,11 @@ export function BurnReveal({theme,root,onDone}:{theme:Theme;root:RefObject<HTMLD
     host.addEventListener("keydown",finish,{once:true});
     draw(start);
     return()=>{
+      document.removeEventListener("visibilitychange",hide);
       ended=true;front.removeEventListener("webglcontextlost",finish);clear();
       window.removeEventListener("resize",finish);window.removeEventListener("scroll",finish);
       host.removeEventListener("pointerdown",finish);host.removeEventListener("keydown",finish);
     };
-  },[theme,root,onDone]);
+  },[theme,root,onDone,panelSelector]);
   return null;
 }

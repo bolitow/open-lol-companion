@@ -1,0 +1,12 @@
+/* Deux colonnes permanentes : fermeture du panneau et restitution de la place ensemble. */
+.detail-layout{container-type:inline-size;grid-template-columns:minmax(0,1fr) minmax(0,0fr);column-gap:0;transition:grid-template-columns 240ms cubic-bezier(.22,.8,.25,1),column-gap 240ms cubic-bezier(.22,.8,.25,1)}
+.detail-layout[data-expanded=true]{grid-template-columns:minmax(0,1fr) minmax(0,var(--detail-ratio,1fr));column-gap:var(--detail-gap,18px)}
+.detail-slot{min-width:0;min-height:0;overflow:hidden;border-radius:16px}
+.detail-slot>aside{height:100%;box-sizing:border-box;width:var(--detail-width);max-width:none}
+.detail-slot>.motion-panel[data-state=open]{animation:detail-arrive 240ms cubic-bezier(.22,.8,.25,1) both}
+.detail-slot>.motion-panel[data-state=closed]{animation:detail-depart 240ms cubic-bezier(.22,.8,.25,1) both}
+@keyframes detail-arrive{from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:none}}
+@keyframes detail-depart{from{opacity:1;transform:none}to{opacity:0;transform:translateX(10px)}}
+@media(prefers-reduced-motion:reduce){.detail-layout{transition:none}.detail-slot>.motion-panel{animation:none!important}}
+[data-motion=reduced] .detail-layout{transition:none}
+[data-motion=reduced] .detail-slot>.motion-panel{animation:none!important}

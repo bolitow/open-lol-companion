@@ -1,3 +1,4 @@
+import {useDialogMotion} from '../ui/useDialogMotion';
 import {useEffect,useRef,useState,useSyncExternalStore,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {invoke,isTauri} from '@tauri-apps/api/core';
@@ -17,9 +18,10 @@ export interface RuneImportContext {draft:DraftSession|null;equipped:RunePage|nu
 interface Props extends RuneImportContext {page:RunePage|null;sourceLabel:string;records:CatalogRecord[];locale:Locale;onOpen:(record:CatalogRecord)=>void;statistics?:ReactNode}
 
 function RuneEditorDialog({children,locale,onClose}:{children:ReactNode;locale:Locale;onClose:()=>void}){
+ const motion=useDialogMotion(onClose);
  const dialog=useRef<HTMLDialogElement>(null),[trigger]=useState(()=>document.activeElement instanceof HTMLElement?document.activeElement:null);
  useEffect(()=>{const node=dialog.current;node?.showModal();return()=>{node?.close();if(trigger?.isConnected)trigger.focus({preventScroll:true})}},[trigger]);
- return createPortal(<dialog ref={dialog} className="expanded-runes rune-editor-dialog" aria-label={preparationCopy[locale].runes} onCancel={event=>{event.preventDefault();onClose()}}><button className="icon-button expanded-close" onClick={onClose} aria-label={preparationCopy[locale].close}><Icon name="close"/></button>{children}</dialog>,document.body);
+ return createPortal(<dialog ref={dialog} className="expanded-runes rune-editor-dialog motion-surface" data-state={motion.state} inert={motion.closing} aria-label={preparationCopy[locale].runes} onCancel={event=>{event.preventDefault();motion.close()}}><button className="icon-button expanded-close" onClick={motion.close} aria-label={preparationCopy[locale].close}><Icon name="close"/></button>{children}</dialog>,document.body);
 }
 
 export function RuneWorkbench({page,sourceLabel,records,locale,onOpen,statistics,draft,equipped,championId,championName,sourceKey}:Props){

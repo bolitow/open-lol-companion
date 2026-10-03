@@ -58,7 +58,8 @@ export interface RunePage {
 }
 
 /** Identité publique locale ; aucun PUUID, identifiant de session ou secret. */
-export interface LcuAccount { platform:string; game_name:string; tag_line:string }
+// Champ optionnel pour lire également les sessions produites avant l’ajout de l’avatar.
+export interface LcuAccount { platform:string; game_name:string; tag_line:string; profile_icon_id?:number|null }
 
 /** État courant versionné, miroir de `lcu_connector::LcuSession`. */
 export interface LcuSession {

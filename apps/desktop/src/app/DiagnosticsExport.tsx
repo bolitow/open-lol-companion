@@ -1,3 +1,4 @@
+import {useDialogMotion} from '../ui/useDialogMotion';
 import {useEffect,useId,useRef,useState,useSyncExternalStore} from 'react';
 import {createPortal} from 'react-dom';
 import {invoke,isTauri} from '@tauri-apps/api/core';
@@ -22,13 +23,14 @@ function DiagnosticsDialog({locale,controller,trigger,close}:{locale:DiagnosticL
  const [includeLeagueSummary,setInclude]=useState(false),dialog=useRef<HTMLDialogElement>(null),heading=useRef<HTMLHeadingElement>(null),title=useId(),description=useId(),choice=useId();
  const state=useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot),pending=state.status==='pending',t=copy[locale];
  useEffect(()=>{const node=dialog.current;node?.showModal();heading.current?.focus({preventScroll:true});return()=>{node?.close();if(trigger?.isConnected)trigger.focus({preventScroll:true})}},[trigger]);
+ const motion=useDialogMotion(close,pending);
  const status=state.status==='error'?t.errors[state.error??'unavailable']:state.status==='idle'?'':t[state.status];
- return createPortal(<dialog ref={dialog} className="diagnostics-dialog" aria-labelledby={title} aria-describedby={description} onCancel={event=>{event.preventDefault();if(!pending)close()}}>
-  <header><h2 ref={heading} tabIndex={-1} id={title}>{t.title}</h2><button type="button" className="icon-button" aria-label={t.close} disabled={pending} onClick={close}><Icon name="close" size={18}/></button></header>
+ return createPortal(<dialog ref={dialog} className="diagnostics-dialog motion-surface" data-state={motion.state} inert={motion.closing} aria-labelledby={title} aria-describedby={description} onCancel={event=>{event.preventDefault();motion.close()}}>
+  <header><h2 ref={heading} tabIndex={-1} id={title}>{t.title}</h2><button type="button" className="icon-button" aria-label={t.close} disabled={pending} onClick={motion.close}><Icon name="close" size={18}/></button></header>
   <div className="diagnostics-content"><p id={description}>{t.intro}</p><ul><li><strong>{t.session}</strong><span>{t.sessionDetail}</span></li><li>{t.system}</li></ul><p className="diagnostics-privacy"><Icon name="shield" size={17}/>{t.privacy}</p>
    <div className="diagnostics-option"><label><input type="checkbox" checked={includeLeagueSummary} disabled={pending} aria-describedby={choice} onChange={event=>setInclude(event.target.checked)}/><strong>{t.include}</strong></label><p id={choice}>{t.includeDetail}</p>{includeLeagueSummary&&<p>{t.summary}</p>}</div>
    <p className="diagnostics-status" role={state.status==='error'?'alert':'status'} aria-live="polite">{status}</p>
   </div>
-  <footer><button type="button" className="button" disabled={pending} onClick={close}>{t.close}</button><button type="button" className="button primary" disabled={pending} aria-busy={pending} onClick={()=>{void controller.run({includeLeagueSummary,locale})}}>{state.status==='error'?t.retry:t.save}</button></footer>
+  <footer><button type="button" className="button" disabled={pending} onClick={motion.close}>{t.close}</button><button type="button" className="button primary" disabled={pending} aria-busy={pending} onClick={()=>{void controller.run({includeLeagueSummary,locale})}}>{state.status==='error'?t.retry:t.save}</button></footer>
  </dialog>,document.body);
 }

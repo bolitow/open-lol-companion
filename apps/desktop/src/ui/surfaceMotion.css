@@ -1,0 +1,22 @@
+/* Transitions brèves, sans boucle et sans effet WebGL. */
+@keyframes surface-enter{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:none}}
+@keyframes surface-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateY(5px) scale(.985)}}
+@keyframes panel-enter{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes panel-exit{from{opacity:1;transform:none}to{opacity:0;transform:translateX(18px)}}
+.motion-surface[data-state=open]{animation:surface-enter 220ms cubic-bezier(.2,.8,.2,1) both}
+.motion-surface[data-state=closed]{animation:surface-exit 180ms ease-in both;pointer-events:none}
+.motion-panel[data-state=open]{animation:panel-enter 260ms cubic-bezier(.2,.8,.2,1) both}
+.motion-panel[data-state=closed]{animation:panel-exit 180ms ease-in both;pointer-events:none}
+.motion-disclosure>button{display:flex;align-items:center;gap:6px;width:100%;text-align:left;color:var(--muted);font:inherit;cursor:pointer}
+.motion-disclosure>button svg{flex-shrink:0;transition:transform 180ms ease}
+.motion-disclosure>button[aria-expanded=true] svg{transform:rotate(90deg)}
+.motion-disclosure-content{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows 220ms ease,opacity 180ms ease}
+.motion-disclosure-content[data-open=true]{grid-template-rows:1fr;opacity:1}
+.motion-disclosure-content>div{min-height:0;overflow:hidden}
+@media(prefers-reduced-motion:reduce){.motion-surface,.motion-panel,.motion-disclosure-content,.motion-disclosure>button svg{animation:none!important;transition:none!important}}
+[data-motion=reduced] :is(.motion-surface,.motion-panel,.motion-disclosure-content,.motion-disclosure>button svg){animation:none!important;transition:none!important}
+/* Un transform sur le dialog déplacerait le repère des menus fixed portalisés dedans. */
+@keyframes dialog-enter{from{opacity:0}to{opacity:1}}
+@keyframes dialog-exit{from{opacity:1}to{opacity:0}}
+dialog.motion-surface[data-state=open]{animation:dialog-enter 220ms ease-out both}
+dialog.motion-surface[data-state=closed]{animation:dialog-exit 180ms ease-in both}
