@@ -17,18 +17,72 @@ import tempfile
 from threading import Event
 import urllib.error
 import urllib.request
+import unicodedata
 
 MAX_BYTES = 5 * 1024 * 1024
 CHANNEL = 'UC0NwzCHb8Fg89eTB5eYX17Q'
 SUFFIX = ' Skin Spotlight - League of Legends'
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG = ROOT / 'apps/desktop/public/game-data/skin-spotlights.json'
+# Renommages prouvés par le même identifiant dans deux catalogues Riot versionnés.
+TITLE_ALIASES = json.loads(Path(__file__).with_name('skin-spotlight-title-aliases.json').read_text())
 KINDS = {
     'passive': 'passive', 'q ability': 'q', 'w ability': 'w', 'e ability': 'e',
     'r ability': 'r', 'q': 'q', 'w': 'w', 'e': 'e', 'r': 'r',
     'recall': 'recall', 'emotes': 'emotes', 'basics': 'attack',
     'basic attacks': 'attack', 'movement': 'movement', 'rip': 'death', 'death': 'death',
 }
+
+
+def excluded_title(title):
+    """OLD est un marqueur de version, sauf dans le nom réel Old God."""
+    return bool(re.search(r'\b(PBE|Wild Rift|Pre-Release|OLD(?!\s+God\b)|Comparison)\b', title, re.I))
+
+
+def normalized_name(name):
+    """Typographie seulement : accents, casse, espaces et ponctuation."""
+    return ''.join(c for c in unicodedata.normalize('NFKD', name.casefold())
+                   if c.isalnum() and not unicodedata.combining(c))
+
+
+def title_skin_matches(title, skins, *, allow_title_variants=False, aliases=None):
+    """Grammaire et alias Riot sourcés ; aucun rapprochement flou."""
+    if not isinstance(title, str) or excluded_title(title):
+        return []
+    suffixes = [SUFFIX]
+    if allow_title_variants:
+        suffixes += [' League of Legends Skin Spotlight', ' Skin Spotlight League of Legends']
+    suffix = next((ending for ending in suffixes if title.endswith(ending)), None)
+    if allow_title_variants:
+        variant = re.search(r'( Skin Spotlight\s+-\s+League of Legends| League of Legends Skin Spotlight| Skin Spotlight League of Legends)$', title)
+        suffix = variant[0] if variant else None
+    if suffix is None:
+        return []
+    name = title[:-len(suffix)]
+    if allow_title_variants and name.startswith('Full - '):
+        name = name[len('Full - '):]
+    eligible = [skin for skin in skins if int(skin['id']) % 1000 != 0 and skin.get('parentSkin') is None]
+    key = normalized_name if allow_title_variants else str.casefold
+    skin_ids = {int(skin['id']) for skin in eligible}
+    known_aliases = [alias for alias in (TITLE_ALIASES if aliases is None else aliases) if alias['skinId'] in skin_ids]
+    def matching(label):
+        return [skin for skin in eligible if key(skin['name']) == key(label)
+                or (allow_title_variants and any(
+                    alias['skinId'] == int(skin['id']) and alias['canonicalName'] == skin['name']
+                    and key(alias['alias']) == key(label) for alias in known_aliases))]
+    matches = matching(name)
+    if matches or not allow_title_variants:
+        return matches
+    annotation = re.fullmatch(r'(.+?)\s+(?:\((20\d{2})(?: (?:ASU|VGU|Update))?\)|(20\d{2}))', name)
+    if annotation is None:
+        return []
+    base, year = annotation[1], annotation[2] or annotation[3]
+    # Une édition Riot datée interdit de rabattre son annotation sur l'édition originale.
+    if any(key(skin['name']) == key(base + ' ' + year) for skin in eligible):
+        return []
+    # Ne jamais retirer une année d'un alias historique : une réédition peut
+    # avoir elle-même été renommée (Championship Riven 2016, par exemple).
+    return [skin for skin in eligible if key(skin['name']) == key(base)]
 
 
 def valid_date(value):
@@ -94,7 +148,7 @@ def parse_chapters(description, duration):
     return segments, notes
 
 
-def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omit_invalid_chapters=False):
+def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omit_invalid_chapters=False, allow_title_variants=False):
     """Association exacte, chaîne officielle et garde explicite contre les versions anciennes."""
     valid_date(minimum)
     valid_date(checked)
@@ -108,14 +162,13 @@ def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omi
     title = details.get('title', '')
     published = valid_date(micro.get('publishDate', '')[:10])
     if (details.get('videoId') != video_id or details.get('channelId') != CHANNEL
-            or not title.endswith(SUFFIX)
-            or re.search(r'\b(PBE|Wild Rift|Pre-Release|OLD|Comparison)\b', title, re.I)
+            or excluded_title(title)
             or not minimum <= published <= checked
             or data.get('playabilityStatus', {}).get('playableInEmbed') is not True):
         raise ValueError('Vidéo, chaîne, date, édition PC finale ou intégration non vérifiée')
-    name = title[:-len(SUFFIX)]
+    name = title[:-len(SUFFIX)] if title.endswith(SUFFIX) else title
     champion_data = riot['data'][champion]
-    matches = [skin for skin in champion_data['skins'] if skin['name'].casefold() == name.casefold()]
+    matches = title_skin_matches(title, champion_data['skins'], allow_title_variants=allow_title_variants)
     if len(matches) != 1:
         raise ValueError('Correspondance du nom Riot absente ou ambiguë')
     canonical_name = matches[0]['name']
@@ -145,7 +198,7 @@ def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omi
         'videoId': video_id, 'title': title, 'channelUrl': 'https://www.youtube.com/@SkinSpotlights',
         'publishedAt': published, 'checkedAt': checked, 'source': source,
         'catalogSource': f'https://ddragon.leagueoflegends.com/cdn/{patch}/data/en_US/champion/{champion}.json',
-        'channelId': CHANNEL, 'verification': 'Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.',
+        'channelId': CHANNEL, 'verification': ('Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest' if allow_title_variants else 'Unique Riot EN name match (case-insensitive)') + ' and official channel; public metadata checked. Playback not verified by the generator.',
         'durationSeconds': duration,
         'descriptionSha256': hashlib.sha256(description.encode()).hexdigest(),
         'chaptersSource': source,
@@ -154,7 +207,7 @@ def verify_video(data, champion, riot, video_id, minimum, checked, patch, *, omi
     }, notes
 
 
-def build_catalog(catalog, candidates, patch, checked, fetch=fetch_bytes):
+def build_catalog(catalog, candidates, patch, checked, fetch=fetch_bytes, *, allow_title_variants=False):
     """Partage les catalogues Riot par champion et limite le travail réseau à quatre tâches."""
     valid_date(checked)
     if not re.fullmatch(r'[1-9]\d*\.\d+\.\d+', patch):
@@ -209,7 +262,7 @@ def build_catalog(catalog, candidates, patch, checked, fetch=fetch_bytes):
             if isinstance(riot, Exception):
                 raise ValueError('Catalogue Riot indisponible')
             entry, notes = verify_video(parse_page(fetch(f'https://www.youtube.com/watch?v={video}')),
-                                       champion, riot, video, minimum, checked, patch)
+                                       champion, riot, video, minimum, checked, patch, allow_title_variants=allow_title_variants)
             if old and (entry['skinId'] != old['skinId'] or entry['championId'] != old['championId']):
                 raise ValueError('Identité existante modifiée : revue nécessaire')
             if old and old.get('segments') and old['segments'] != entry['segments']:
@@ -275,6 +328,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--catalog', type=Path, default=DEFAULT_CATALOG)
     parser.add_argument('--candidates', type=Path, help='Liste JSON champion/videoId/minPublishedAt ; optionnelle')
+    parser.add_argument('--allow-title-variants', action='store_true', help='Grammaire explicite, typographie et alias Riot historiques sourcés')
     parser.add_argument('--patch', required=True)
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--report', type=Path, required=True)
@@ -285,7 +339,7 @@ def main():
             raise ValueError('Les chemins entrée/sortie/rapport doivent être distincts')
         catalog = json.loads(args.catalog.read_text(encoding='utf-8'))
         candidates = json.loads(args.candidates.read_text(encoding='utf-8')) if args.candidates else []
-        result, report = build_catalog(catalog, candidates, args.patch, date.today().isoformat())
+        result, report = build_catalog(catalog, candidates, args.patch, date.today().isoformat(), allow_title_variants=args.allow_title_variants)
         write_candidate(args.catalog, args.report, report)
         if report['errors']:
             parser.exit(1, f"Catalogue candidat non écrit : {len(report['errors'])} cas à revoir dans {args.report}\n")

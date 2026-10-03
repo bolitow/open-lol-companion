@@ -21,23 +21,33 @@ SPEC = importlib.util.spec_from_file_location('spotlight_batch', Path(__file__).
 batch = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(batch)
 # Bornes conservatrices documentées dans docs/collection-skins.md et les notes Riot.
-VERSION_FLOORS = {'Talon':'2025-05-15', 'Mordekaiser':'2025-05-15', 'Kaisa':'2025-11-05',
-                  'Pyke':'2025-05-29', 'Aurora':'2025-01-23', 'MissFortune':'2024-08-28',
+VERSION_FLOORS = {'Kaisa':'2025-11-05',
+                  'Pyke':'2025-05-29', 'Aurora':'2025-01-23',
                   'Caitlyn':'2021-11-17', 'Ahri':'2023-02-05',
                   'Fiddlesticks':'2020-04-01', 'DrMundo':'2021-06-09', 'Udyr':'2022-08-24',
                   'Jax':'2023-10-11', 'LeeSin':'2024-05-01', 'Teemo':'2024-10-09',
                   'Viktor':'2024-12-11', 'AurelionSol':'2023-02-10',
                   'Skarner':'2024-04-03', 'Volibear':'2020-05-29'}
 
+# Riot 25.08 limite ces retouches à Grand Reckoning Talon et Sahn-Uzal Mordekaiser.
+# Riot 14.17 liste seulement Cowgirl, Secret Agent, Candy Cane, Crime City et Pool Party.
+SKIN_VERSION_FLOORS = {91059:'2025-05-15', 82054:'2025-05-15',
+                       **{skin:'2024-08-28' for skin in (21001,21003,21004,21006,21009)}}
+VERSION_SCOPE_SOURCES = [
+    'https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-08-notes/',
+    'https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-17-notes/']
 
-def resolve_title(title, riot):
-    """Résout le titre dans l’ensemble Riot, jamais selon le champion de recherche."""
-    if not isinstance(title, str) or not title.endswith(batch.SUFFIX):
-        return None
-    name=title[:-len(batch.SUFFIX)].casefold()
+
+def version_floor(champion, skin, minimum):
+    """Le plancher d'une retouche ciblée ne s'étend pas à tout le champion."""
+    return max(minimum, SKIN_VERSION_FLOORS.get(skin, VERSION_FLOORS.get(champion, minimum)))
+
+
+def resolve_title(title, riot, *, allow_title_variants=False):
+    """Résout dans tout Riot, jamais selon l'origine d'une recherche."""
     matches=[(champion,int(skin['id'])) for champion, data in riot.items()
-             for skin in data['data'][champion]['skins']
-             if int(skin['id']) % 1000 != 0 and skin.get('parentSkin') is None and skin['name'].casefold()==name]
+             for skin in batch.title_skin_matches(title, data['data'][champion]['skins'],
+                                                  allow_title_variants=allow_title_variants)]
     return matches[0] if len(matches)==1 else None
 
 
@@ -96,7 +106,7 @@ def coverage_rows(riot, entries, searches, issues):
     return rows
 
 
-def search_page(raw):
+def search_page(raw, *, official_only=False):
     """Lit les résultats HTML publics sans exécuter les scripts ni suivre la pagination."""
     text=raw.decode('utf-8')
     marker=re.search(r'var ytInitialData\s*=\s*',text)
@@ -111,7 +121,9 @@ def search_page(raw):
                 title=renderer.get('title',{})
                 label=title.get('simpleText') or ''.join(r.get('text','') for r in title.get('runs',[]))
                 video=renderer.get('videoId','')
-                if re.fullmatch(r'[-_a-zA-Z0-9]{11}',video):
+                owners = {run.get('navigationEndpoint', {}).get('browseEndpoint', {}).get('browseId')
+                          for run in renderer.get('ownerText', {}).get('runs', [])}
+                if re.fullmatch(r'[-_a-zA-Z0-9]{11}',video) and (not official_only or owners == {batch.CHANNEL}):
                     videos[video]={'videoId':video,'title':label}
             for value in node.values(): walk(value)
         elif isinstance(node,list):
@@ -165,7 +177,7 @@ class MetadataStore:
                   'microformat':{'playerMicroformatRenderer':{'publishDate':micro.get('publishDate')}},
                   'playabilityStatus':{'playableInEmbed':full.get('playabilityStatus',{}).get('playableInEmbed')}}
         elif kind=='search':
-            data=search_page(raw)
+            data=search_page(raw, official_only=url.startswith('https://www.youtube.com/results?'))
             data['source']=url
         else:
             data=json.loads(raw)
@@ -173,21 +185,22 @@ class MetadataStore:
         return data
 
 
-def skin_search_targets(rows):
-    """Complète la découverte des skins non résolus, sans rouvrir les cas anciens."""
-    selected={r['skinId']:r for r in rows if r['kind']=='skin' and r['status'] in ('search_incomplete','needs_review')}
+def skin_search_targets(rows, *, include_old=False):
+    """Cible les skins non résolus ; les anciens sont inclus sur option explicite."""
+    selected={r['skinId']:r for r in rows if r['kind']=='skin' and (r['status'] != 'referenced' if include_old else r['status'] in ('search_incomplete','needs_review'))}
     return [selected[key] for key in sorted(selected)]
 
 
-def supplement_skin_searches(rows, store):
+def supplement_skin_searches(rows, store, *, global_search=False):
     """Une première page par skin ciblé ; jamais une preuve d’absence de vidéo."""
     results={}
-    targets=skin_search_targets(rows)
+    targets=skin_search_targets(rows, include_old=global_search)
     for index,row in enumerate(targets,1):
         skin=str(row['skinId'])
-        source='https://www.youtube.com/@SkinSpotlights/search?query='+urllib.parse.quote(row['name'])
+        source=('https://www.youtube.com/results?search_query='+urllib.parse.quote(row['name']+' SkinSpotlights')
+                if global_search else 'https://www.youtube.com/@SkinSpotlights/search?query='+urllib.parse.quote(row['name']))
         try:
-            result=store.get('search','skin'+skin,source)
+            result=store.get('search',('skinwide' if global_search else 'skin')+skin,source)
             results[skin]={'status':'partial','source':source,'count':len(result['videos'])}
         except (OSError,ValueError,KeyError) as error:
             results[skin]={'status':('rate_limited' if store.stop_reason in ('http_429','http_403') else 'network_blocked') if store.stop_reason else 'not_searched','source':source,'error':str(error)}
@@ -203,7 +216,9 @@ def apply_skin_searches(report, results):
         targeted=results.get(str(row['skinId']),{})
         row['skinSearchStatus']=targeted.get('status','not_targeted')
         row['skinSearchSource']=targeted.get('source','')
-        if row['status']=='search_incomplete' and row['skinSearchStatus'] in ('rate_limited','network_blocked','not_searched'):
+        if row['status']=='not_searched' and row['skinSearchStatus']=='partial':
+            row['status']='search_incomplete'
+        if row['status'] in ('search_incomplete','not_searched') and row['skinSearchStatus'] in ('rate_limited','network_blocked','not_searched'):
             row['status']='supplier_blocked'
     report['summary']['statuses']=dict(Counter(row['status'] for row in report['coverage']))
 
@@ -242,23 +257,26 @@ def collect(riot, catalog, store, minimum, checked, patch):
     old={e['videoId']:e for e in catalog['entries']}
     for index,(video,candidate) in enumerate(sorted(candidates.items()),1):
         title=candidate['title']
-        if 'Skin Spotlight' not in title or re.search(r'\b(PBE|Wild Rift|Pre-Release|OLD|Comparison)\b',title,re.I):
+        if 'Skin Spotlight' not in title or batch.excluded_title(title):
             discarded_titles+=1
             continue
-        match=resolve_title(title,riot)
+        match=resolve_title(title,riot,allow_title_variants=True)
         if match is None:
             # Les titres composites/PBE/Classic/voix ne sont pas des références de skin uniques.
             issues.append({'videoId':video,'title':candidate['title'],'reason':'unmapped_title'})
             continue
         champion,skin=match
-        floor=max(minimum,VERSION_FLOORS.get(champion,minimum))
+        floor=version_floor(champion,skin,minimum)
         try:
             data=store.get('video',video,f'https://www.youtube.com/watch?v={video}')
+            actual_title=data.get('videoDetails',{}).get('title')
+            if resolve_title(actual_title,riot,allow_title_variants=True) != (champion,skin):
+                raise ValueError('Identité différente entre recherche et métadonnées : revue requise')
             published=(data.get('microformat',{}).get('playerMicroformatRenderer',{}).get('publishDate') or '')[:10]
             if published and published<floor:
                 issues.append({'skinId':skin,'videoId':video,'reason':'too_old' if published<minimum else 'before_visual_update','minimum':floor,'publishedAt':published})
                 continue
-            entry,notes=batch.verify_video(data,champion,riot[champion],video,floor,checked,patch,omit_invalid_chapters=True)
+            entry,notes=batch.verify_video(data,champion,riot[champion],video,floor,checked,patch,omit_invalid_chapters=True,allow_title_variants=resolve_title(title,riot) is None)
             previous=old.get(video)
             if previous and previous.get('segments') and previous.get('descriptionSha256')==entry.get('descriptionSha256') and previous.get('durationSeconds')==entry.get('durationSeconds'):
                 entry['segments']=previous['segments']
@@ -279,6 +297,7 @@ def collect(riot, catalog, store, minimum, checked, patch):
     issues.extend(selection_issues)
     rows=coverage_rows(riot,entries,searches,issues)
     report={'checkedAt':checked,'patch':patch,'minimumPublishedAt':minimum,'versionFloors':VERSION_FLOORS,
+            'skinVersionFloors':SKIN_VERSION_FLOORS,'versionScopeSources':VERSION_SCOPE_SOURCES,
             'networkRequests':store.requests,'stopReason':store.stop_reason,'searches':searches,
             'issues':issues,'coverage':rows,
             'summary':{'champions':len(riot),'inventoryRows':len(rows),'skins':sum(r['kind']=='skin' for r in rows),'chromas':sum(r['kind']=='chroma' for r in rows),'videos':len(entries),
@@ -301,6 +320,7 @@ def main():
     parser.add_argument('--report',type=Path,required=True)
     parser.add_argument('--coverage-csv',type=Path,required=True)
     parser.add_argument('--offline',action='store_true')
+    parser.add_argument('--global-search-uncovered-skins',action='store_true',help='Recherche publique filtrée sur la chaîne officielle, pour tous les skins sans référence, anciens inclus')
     parser.add_argument('--search-uncovered-skins',action='store_true',help='Recherche ciblée supplémentaire des skins sans résultat exact ou à revoir')
     args=parser.parse_args()
     for value in (args.minimum_date,args.checked_at): batch.valid_date(value)
@@ -328,8 +348,8 @@ def main():
         except (OSError,ValueError,KeyError) as error:
             inventory_errors.append({'champion':champion,'error':str(error)})
     result,report=collect(riot,catalog,store,args.minimum_date,args.checked_at,patch)
-    if args.search_uncovered_skins and not inventory_errors:
-        extra=supplement_skin_searches(report['coverage'],store)
+    if (args.search_uncovered_skins or args.global_search_uncovered_skins) and not inventory_errors:
+        extra=supplement_skin_searches(report['coverage'],store,global_search=args.global_search_uncovered_skins)
         result,report=collect(riot,catalog,store,args.minimum_date,args.checked_at,patch)
         apply_skin_searches(report,extra)
     report['inventoryErrors']=inventory_errors

@@ -2,21 +2,211 @@
   "schemaVersion": 1,
   "entries": [
     {
+      "skinId": 1001,
+      "championId": 1,
+      "name": "Goth Annie",
+      "videoId": "4qgPAUQc_HI",
+      "title": "Goth Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=4qgPAUQc_HI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 193,
+      "descriptionSha256": "af7f23d4d96d38d543982ae1fed9d4f87e64262c4b29b595b5d93c003fa19900",
+      "chaptersSource": "https://www.youtube.com/watch?v=4qgPAUQc_HI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1002,
+      "championId": 1,
+      "name": "Red Riding Annie",
+      "videoId": "BbyWyjq4dGc",
+      "title": "Red Riding Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=BbyWyjq4dGc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 194,
+      "descriptionSha256": "c88a7678fe70a07b66268f9ee3fca576c820e8eeb504b7b6ca66dc81d478ad02",
+      "chaptersSource": "https://www.youtube.com/watch?v=BbyWyjq4dGc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1004,
+      "championId": 1,
+      "name": "Prom Queen Annie",
+      "videoId": "Xo8Xx48UPCg",
+      "title": "Prom Queen Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=Xo8Xx48UPCg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 195,
+      "descriptionSha256": "b06db854e65c4369f62242bd1a0acc8d583ad653f09f672c7b1f9dac44e5db1f",
+      "chaptersSource": "https://www.youtube.com/watch?v=Xo8Xx48UPCg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1005,
+      "championId": 1,
+      "name": "Frostfire Annie",
+      "videoId": "6BXiJS48PTY",
+      "title": "Frostfire Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=6BXiJS48PTY",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 194,
+      "descriptionSha256": "48645cb5a5dffc5abb7672c1760af8667089632345541c8d7052bcf8dcc4b5ca",
+      "chaptersSource": "https://www.youtube.com/watch?v=6BXiJS48PTY",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1006,
+      "championId": 1,
+      "name": "Reverse Annie",
+      "videoId": "D5_22bebbUI",
+      "title": "Reverse Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=D5_22bebbUI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
+      "descriptionSha256": "c2df4b2541c44ad42af0112a21a622cc63c57409e3d79b12a970a22b208b63dc",
+      "chaptersSource": "https://www.youtube.com/watch?v=D5_22bebbUI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1007,
+      "championId": 1,
+      "name": "FrankenTibbers Annie",
+      "videoId": "AehunkFMcS4",
+      "title": "FrankenTibbers Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=AehunkFMcS4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 197,
+      "descriptionSha256": "8aca9e2a579ce7be92590a7983f48bc25fc5413be56362f5515813bcf70395c9",
+      "chaptersSource": "https://www.youtube.com/watch?v=AehunkFMcS4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1008,
+      "championId": 1,
+      "name": "Panda Annie",
+      "videoId": "iT0Ck7Qza7c",
+      "title": "Panda Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=iT0Ck7Qza7c",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
+      "descriptionSha256": "90c54ec7b6bc9b0b0da7881d2b0c5dab04864a192a639dc43bd0f39ccc5108ef",
+      "chaptersSource": "https://www.youtube.com/watch?v=iT0Ck7Qza7c",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1009,
+      "championId": 1,
+      "name": "Sweetheart Annie",
+      "videoId": "EtNdKoXsdgw",
+      "title": "Sweetheart Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=EtNdKoXsdgw",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
+      "descriptionSha256": "0fc0a4b118aa310fdb75954ded64081c390afe093cb19096a6c98cba5eac5846",
+      "chaptersSource": "https://www.youtube.com/watch?v=EtNdKoXsdgw",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1010,
+      "championId": 1,
+      "name": "Hextech Annie",
+      "videoId": "OgfskQd_7KA",
+      "title": "Hextech Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=OgfskQd_7KA",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 195,
+      "descriptionSha256": "662f57098cc8d98d6f4693f4c320535b2fe7362de3fdc499c1bf81693a39a84e",
+      "chaptersSource": "https://www.youtube.com/watch?v=OgfskQd_7KA",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 1011,
+      "championId": 1,
+      "name": "Super Galaxy Annie",
+      "videoId": "TsD27M4RyOI",
+      "title": "Super Galaxy Annie (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=TsD27M4RyOI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 195,
+      "descriptionSha256": "518ac7514d3c6c72d7834d482849e297b3a719a3696bdd784750f1f85ab49a77",
+      "chaptersSource": "https://www.youtube.com/watch?v=TsD27M4RyOI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
       "skinId": 1012,
       "championId": 1,
       "name": "Annie-Versary",
-      "videoId": "a1mmKOpf_8E",
-      "title": "Annie-Versary Skin Spotlight - League of Legends",
+      "videoId": "BA6lVghCr8E",
+      "title": "Annie-Versary (2020) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2019-10-17",
+      "publishedAt": "2020-02-02",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=a1mmKOpf_8E",
+      "source": "https://www.youtube.com/watch?v=BA6lVghCr8E",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Annie.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 249,
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
       "descriptionSha256": "14dd2ab1a0f325b7bca429a480e2d98974b65c4ce0cc9441f87c5bb1a0c9d2de",
-      "chaptersSource": "https://www.youtube.com/watch?v=a1mmKOpf_8E",
+      "chaptersSource": "https://www.youtube.com/watch?v=BA6lVghCr8E",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": []
     },
@@ -2000,6 +2190,66 @@
           "kind": "death",
           "start": 175,
           "end": 183
+        }
+      ]
+    },
+    {
+      "skinId": 6041,
+      "championId": 6,
+      "name": "Old God Urgot",
+      "videoId": "AjM1Hhs87lM",
+      "title": "Old God Urgot Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2026-09-20",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=AjM1Hhs87lM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Urgot.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 298,
+      "descriptionSha256": "cbc2351c07e22ac886d29aaf9a7654babb581c8ad3fb9b9f6d7d8f343ae50058",
+      "chaptersSource": "https://www.youtube.com/watch?v=AjM1Hhs87lM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "attack",
+          "start": 0,
+          "end": 10
+        },
+        {
+          "kind": "q",
+          "start": 10,
+          "end": 17
+        },
+        {
+          "kind": "w",
+          "start": 17,
+          "end": 31
+        },
+        {
+          "kind": "e",
+          "start": 31,
+          "end": 44
+        },
+        {
+          "kind": "r",
+          "start": 44,
+          "end": 77
+        },
+        {
+          "kind": "emotes",
+          "start": 85,
+          "end": 127
+        },
+        {
+          "kind": "recall",
+          "start": 127,
+          "end": 139
+        },
+        {
+          "kind": "death",
+          "start": 149,
+          "end": 157
         }
       ]
     },
@@ -6380,6 +6630,66 @@
       ]
     },
     {
+      "skinId": 19035,
+      "championId": 19,
+      "name": "Old God Warwick",
+      "videoId": "8oM32GD2bU0",
+      "title": "Old God Warwick Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-08-09",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=8oM32GD2bU0",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Warwick.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 384,
+      "descriptionSha256": "fd76278e9f49b9081c19f311daa913985a0bf8648d7c40199cfae7d52f5f5a51",
+      "chaptersSource": "https://www.youtube.com/watch?v=8oM32GD2bU0",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "attack",
+          "start": 74,
+          "end": 85
+        },
+        {
+          "kind": "q",
+          "start": 85,
+          "end": 105
+        },
+        {
+          "kind": "w",
+          "start": 105,
+          "end": 150
+        },
+        {
+          "kind": "e",
+          "start": 150,
+          "end": 164
+        },
+        {
+          "kind": "r",
+          "start": 164,
+          "end": 196
+        },
+        {
+          "kind": "death",
+          "start": 201,
+          "end": 208
+        }
+      ]
+    },
+    {
       "skinId": 19045,
       "championId": 19,
       "name": "Winterblessed Warwick",
@@ -6671,6 +6981,634 @@
           "kind": "death",
           "start": 255,
           "end": 266
+        }
+      ]
+    },
+    {
+      "skinId": 21002,
+      "championId": 21,
+      "name": "Waterloo Miss Fortune",
+      "videoId": "Jpl5tCd7cDE",
+      "title": "Waterloo Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-08-25",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=Jpl5tCd7cDE",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 156,
+      "descriptionSha256": "06c5829dc3ad020d2a360a2f621ed5c979b6ee9f579c6d9a7e17d5aef02a0d7a",
+      "chaptersSource": "https://www.youtube.com/watch?v=Jpl5tCd7cDE",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 55
+        },
+        {
+          "kind": "recall",
+          "start": 55,
+          "end": 67
+        },
+        {
+          "kind": "attack",
+          "start": 67,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 72,
+          "end": 80
+        },
+        {
+          "kind": "w",
+          "start": 80,
+          "end": 101
+        },
+        {
+          "kind": "e",
+          "start": 101,
+          "end": 110
+        },
+        {
+          "kind": "r",
+          "start": 110,
+          "end": 131
+        },
+        {
+          "kind": "death",
+          "start": 138,
+          "end": 156
+        }
+      ]
+    },
+    {
+      "skinId": 21005,
+      "championId": 21,
+      "name": "Road Warrior Miss Fortune",
+      "videoId": "xo5rKRwtHlA",
+      "title": "Road Warrior Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-08-25",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=xo5rKRwtHlA",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 156,
+      "descriptionSha256": "55ab30108b0b508ad8836f8653539b9e2f02c6e0c3b4e23228f00383fceaaf85",
+      "chaptersSource": "https://www.youtube.com/watch?v=xo5rKRwtHlA",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 55
+        },
+        {
+          "kind": "recall",
+          "start": 55,
+          "end": 67
+        },
+        {
+          "kind": "attack",
+          "start": 67,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 72,
+          "end": 80
+        },
+        {
+          "kind": "w",
+          "start": 80,
+          "end": 101
+        },
+        {
+          "kind": "e",
+          "start": 101,
+          "end": 110
+        },
+        {
+          "kind": "r",
+          "start": 110,
+          "end": 131
+        },
+        {
+          "kind": "death",
+          "start": 138,
+          "end": 156
+        }
+      ]
+    },
+    {
+      "skinId": 21008,
+      "championId": 21,
+      "name": "Captain Fortune",
+      "videoId": "KAQZaGEdCKo",
+      "title": "Captain Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-08-25",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=KAQZaGEdCKo",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 156,
+      "descriptionSha256": "dbdae21dd6e0775e5d7319e6dd3d27ea5eba040b44218fdfbaec126e376fce68",
+      "chaptersSource": "https://www.youtube.com/watch?v=KAQZaGEdCKo",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 55
+        },
+        {
+          "kind": "recall",
+          "start": 55,
+          "end": 67
+        },
+        {
+          "kind": "attack",
+          "start": 67,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 72,
+          "end": 80
+        },
+        {
+          "kind": "w",
+          "start": 80,
+          "end": 101
+        },
+        {
+          "kind": "e",
+          "start": 101,
+          "end": 110
+        },
+        {
+          "kind": "r",
+          "start": 110,
+          "end": 131
+        },
+        {
+          "kind": "death",
+          "start": 138,
+          "end": 156
+        }
+      ]
+    },
+    {
+      "skinId": 21018,
+      "championId": 21,
+      "name": "Bewitching Miss Fortune",
+      "videoId": "7KxR-I0SM30",
+      "title": "Bewitching Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-10-21",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=7KxR-I0SM30",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 203,
+      "descriptionSha256": "85c5d797bab392cf7534c006b1d883dd18c15002d8fcde50b89b994c8d9380bf",
+      "chaptersSource": "https://www.youtube.com/watch?v=7KxR-I0SM30",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 21020,
+      "championId": 21,
+      "name": "Prestige Bewitching Miss Fortune",
+      "videoId": "N4z1zJZ-TwA",
+      "title": "Prestige Bewitching Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-10-21",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=N4z1zJZ-TwA",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 220,
+      "descriptionSha256": "4d61c2f9c094bd38deda1431011d60b21402955f274418c2d1262cf15e2584e7",
+      "chaptersSource": "https://www.youtube.com/watch?v=N4z1zJZ-TwA",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 21021,
+      "championId": 21,
+      "name": "Ruined Miss Fortune",
+      "videoId": "TN-EdiIg4G4",
+      "title": "Ruined Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-07-19",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=TN-EdiIg4G4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 342,
+      "descriptionSha256": "0985d0bf6f6f79825bf6ca7887a6854b3e84a2f448951831c94eb6b77aca41ac",
+      "chaptersSource": "https://www.youtube.com/watch?v=TN-EdiIg4G4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 56
+        },
+        {
+          "kind": "recall",
+          "start": 56,
+          "end": 68
+        },
+        {
+          "kind": "attack",
+          "start": 68,
+          "end": 77
+        },
+        {
+          "kind": "q",
+          "start": 77,
+          "end": 91
+        },
+        {
+          "kind": "w",
+          "start": 91,
+          "end": 116
+        },
+        {
+          "kind": "e",
+          "start": 116,
+          "end": 130
+        },
+        {
+          "kind": "r",
+          "start": 130,
+          "end": 160
+        },
+        {
+          "kind": "death",
+          "start": 167,
+          "end": 176
+        }
+      ]
+    },
+    {
+      "skinId": 21031,
+      "championId": 21,
+      "name": "Battle Bunny Miss Fortune",
+      "videoId": "pAs1f-o25WA",
+      "title": "Battle Bunny Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-03-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=pAs1f-o25WA",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 339,
+      "descriptionSha256": "8459ebc751ad113ccd540678413cc892d397936a523df5edae2ea0714630e868",
+      "chaptersSource": "https://www.youtube.com/watch?v=pAs1f-o25WA",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 64
+        },
+        {
+          "kind": "recall",
+          "start": 64,
+          "end": 76
+        },
+        {
+          "kind": "q",
+          "start": 82,
+          "end": 92
+        },
+        {
+          "kind": "w",
+          "start": 92,
+          "end": 120
+        },
+        {
+          "kind": "e",
+          "start": 120,
+          "end": 133
+        },
+        {
+          "kind": "r",
+          "start": 133,
+          "end": 162
+        },
+        {
+          "kind": "death",
+          "start": 206,
+          "end": 213
+        }
+      ]
+    },
+    {
+      "skinId": 21032,
+      "championId": 21,
+      "name": "Admiral Battle Bunny Miss Fortune",
+      "videoId": "dr4SympuojM",
+      "title": "Admiral Battle Bunny Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-07-14",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=dr4SympuojM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 206,
+      "descriptionSha256": "0ad6a3c509b08aceb5df9e0710302d6ba8a4fb0b9b0471dc5773fd9ec52f8aae",
+      "chaptersSource": "https://www.youtube.com/watch?v=dr4SympuojM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 58
+        },
+        {
+          "kind": "recall",
+          "start": 58,
+          "end": 70
+        },
+        {
+          "kind": "attack",
+          "start": 70,
+          "end": 77
+        },
+        {
+          "kind": "q",
+          "start": 77,
+          "end": 88
+        },
+        {
+          "kind": "w",
+          "start": 88,
+          "end": 110
+        },
+        {
+          "kind": "e",
+          "start": 110,
+          "end": 124
+        },
+        {
+          "kind": "r",
+          "start": 124,
+          "end": 138
+        },
+        {
+          "kind": "death",
+          "start": 178,
+          "end": 184
+        }
+      ]
+    },
+    {
+      "skinId": 21040,
+      "championId": 21,
+      "name": "Broken Covenant Miss Fortune",
+      "videoId": "3Bp9oIwfjRc",
+      "title": "Broken Covenant Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-03-05",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=3Bp9oIwfjRc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 333,
+      "descriptionSha256": "7e3a94a2bbf2e28c7129cb77c9ec15e4b55d5afae4493aea15a32e31222afec3",
+      "chaptersSource": "https://www.youtube.com/watch?v=3Bp9oIwfjRc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 56
+        },
+        {
+          "kind": "recall",
+          "start": 56,
+          "end": 69
+        },
+        {
+          "kind": "attack",
+          "start": 69,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 74,
+          "end": 83
+        },
+        {
+          "kind": "w",
+          "start": 83,
+          "end": 102
+        },
+        {
+          "kind": "e",
+          "start": 102,
+          "end": 114
+        },
+        {
+          "kind": "r",
+          "start": 114,
+          "end": 135
+        },
+        {
+          "kind": "death",
+          "start": 147,
+          "end": 153
+        }
+      ]
+    },
+    {
+      "skinId": 21041,
+      "championId": 21,
+      "name": "Prestige Broken Covenant Miss Fortune",
+      "videoId": "M4VwF2MIfiU",
+      "title": "Prestige Broken Covenant Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-03-05",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=M4VwF2MIfiU",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 167,
+      "descriptionSha256": "9de58fafbbc7a0bb90162ff0b718f031c4d64b3ca7e0917c96f06d3a24122a7b",
+      "chaptersSource": "https://www.youtube.com/watch?v=M4VwF2MIfiU",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 56
+        },
+        {
+          "kind": "recall",
+          "start": 56,
+          "end": 68
+        },
+        {
+          "kind": "attack",
+          "start": 68,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 74,
+          "end": 86
+        },
+        {
+          "kind": "w",
+          "start": 86,
+          "end": 106
+        },
+        {
+          "kind": "e",
+          "start": 106,
+          "end": 118
+        },
+        {
+          "kind": "r",
+          "start": 118,
+          "end": 138
+        },
+        {
+          "kind": "death",
+          "start": 149,
+          "end": 167
+        }
+      ]
+    },
+    {
+      "skinId": 21050,
+      "championId": 21,
+      "name": "Porcelain Miss Fortune",
+      "videoId": "kJFYJmFwExI",
+      "title": "Porcelain Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-02-27",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=kJFYJmFwExI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 336,
+      "descriptionSha256": "7a9198d500c8e6de70a2f98b83cd786f6976ecd62bb76c90320bf28bc5c4e440",
+      "chaptersSource": "https://www.youtube.com/watch?v=kJFYJmFwExI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 56
+        },
+        {
+          "kind": "recall",
+          "start": 56,
+          "end": 68
+        },
+        {
+          "kind": "q",
+          "start": 73,
+          "end": 81
+        },
+        {
+          "kind": "w",
+          "start": 81,
+          "end": 108
+        },
+        {
+          "kind": "e",
+          "start": 108,
+          "end": 120
+        },
+        {
+          "kind": "r",
+          "start": 120,
+          "end": 137
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 159
+        }
+      ]
+    },
+    {
+      "skinId": 21060,
+      "championId": 21,
+      "name": "Battle Queen Miss Fortune",
+      "videoId": "hVRRjmFgpYg",
+      "title": "Battle Queen Miss Fortune Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-08-25",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=hVRRjmFgpYg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MissFortune.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 302,
+      "descriptionSha256": "602dcc807d4ad59a46aad21d6361ab7bd0000dde1582526113b0e6a5f3bfe7d8",
+      "chaptersSource": "https://www.youtube.com/watch?v=hVRRjmFgpYg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 57
+        },
+        {
+          "kind": "recall",
+          "start": 57,
+          "end": 69
+        },
+        {
+          "kind": "attack",
+          "start": 69,
+          "end": 75
+        },
+        {
+          "kind": "q",
+          "start": 75,
+          "end": 84
+        },
+        {
+          "kind": "w",
+          "start": 84,
+          "end": 106
+        },
+        {
+          "kind": "e",
+          "start": 106,
+          "end": 118
+        },
+        {
+          "kind": "r",
+          "start": 118,
+          "end": 140
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 160
         }
       ]
     },
@@ -9073,6 +10011,61 @@
       ]
     },
     {
+      "skinId": 31005,
+      "championId": 31,
+      "name": "Battlecast Prime Cho'Gath",
+      "videoId": "oC3AxVEEJlM",
+      "title": "Battlecast Prime Cho'gath (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-05-10",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=oC3AxVEEJlM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Chogath.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 279,
+      "descriptionSha256": "476978c74bedafa8f18105f4ec1add1a72e16bf126ba2483362b8bad8c6016e5",
+      "chaptersSource": "https://www.youtube.com/watch?v=oC3AxVEEJlM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 50
+        },
+        {
+          "kind": "recall",
+          "start": 50,
+          "end": 60
+        },
+        {
+          "kind": "passive",
+          "start": 60,
+          "end": 77
+        },
+        {
+          "kind": "q",
+          "start": 83,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 105
+        },
+        {
+          "kind": "e",
+          "start": 105,
+          "end": 129
+        },
+        {
+          "kind": "r",
+          "start": 129,
+          "end": 143
+        }
+      ]
+    },
+    {
       "skinId": 31014,
       "championId": 31,
       "name": "Shan Hai Scrolls Cho'Gath",
@@ -9930,6 +10923,71 @@
       "chaptersSource": "https://www.youtube.com/watch?v=9qkfevSr4EA",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": []
+    },
+    {
+      "skinId": 34056,
+      "championId": 34,
+      "name": "Old God Anivia",
+      "videoId": "1HJcg_1acv8",
+      "title": "Old God Anivia Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2026-09-20",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=1HJcg_1acv8",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Anivia.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 267,
+      "descriptionSha256": "d43b18dee8f5565d48265a5aea99dc027374b63dd837ba9931cd7afc74ef0822",
+      "chaptersSource": "https://www.youtube.com/watch?v=1HJcg_1acv8",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "attack",
+          "start": 0,
+          "end": 11
+        },
+        {
+          "kind": "q",
+          "start": 11,
+          "end": 21
+        },
+        {
+          "kind": "w",
+          "start": 21,
+          "end": 37
+        },
+        {
+          "kind": "e",
+          "start": 37,
+          "end": 46
+        },
+        {
+          "kind": "r",
+          "start": 46,
+          "end": 65
+        },
+        {
+          "kind": "emotes",
+          "start": 65,
+          "end": 93
+        },
+        {
+          "kind": "recall",
+          "start": 93,
+          "end": 105
+        },
+        {
+          "kind": "passive",
+          "start": 105,
+          "end": 116
+        },
+        {
+          "kind": "death",
+          "start": 125,
+          "end": 131
+        }
+      ]
     },
     {
       "skinId": 35015,
@@ -13389,6 +14447,501 @@
       ]
     },
     {
+      "skinId": 51001,
+      "championId": 51,
+      "name": "Resistance Caitlyn",
+      "videoId": "lisdge0Kpho",
+      "title": "Resistance Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=lisdge0Kpho",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 168,
+      "descriptionSha256": "6d9883d0862cf818e6a465a56aa205e1e49d64e63d8c28c345799c928cc27dd4",
+      "chaptersSource": "https://www.youtube.com/watch?v=lisdge0Kpho",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 168
+        }
+      ]
+    },
+    {
+      "skinId": 51002,
+      "championId": 51,
+      "name": "Sheriff Caitlyn",
+      "videoId": "68UTIQpvN0I",
+      "title": "Sheriff Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=68UTIQpvN0I",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 169,
+      "descriptionSha256": "7855d453c35e41ff7aaf64ed238fc823e3ac12b5cc257d18ee1460b2fab9a60e",
+      "chaptersSource": "https://www.youtube.com/watch?v=68UTIQpvN0I",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 169
+        }
+      ]
+    },
+    {
+      "skinId": 51003,
+      "championId": 51,
+      "name": "Safari Caitlyn",
+      "videoId": "2rNsb764uYg",
+      "title": "Safari Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=2rNsb764uYg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 169,
+      "descriptionSha256": "188d3d4f6eca00e193a8b06aedba1a40e42b65449988bee51232679d073602b8",
+      "chaptersSource": "https://www.youtube.com/watch?v=2rNsb764uYg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 169
+        }
+      ]
+    },
+    {
+      "skinId": 51004,
+      "championId": 51,
+      "name": "Arctic Warfare Caitlyn",
+      "videoId": "GqTv6kJiTow",
+      "title": "Arctic Warfare Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=GqTv6kJiTow",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 168,
+      "descriptionSha256": "fd06e4bf12bcd50725413bab87f4969b47f52d94c80e67a0f078cf1d44a7cf9f",
+      "chaptersSource": "https://www.youtube.com/watch?v=GqTv6kJiTow",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 168
+        }
+      ]
+    },
+    {
+      "skinId": 51005,
+      "championId": 51,
+      "name": "Officer Caitlyn",
+      "videoId": "6p6cK69lh6o",
+      "title": "Officer Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=6p6cK69lh6o",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 168,
+      "descriptionSha256": "9249905074d630d71fa98f51e00b583353fd596a2845083a3586d1b8a3d91434",
+      "chaptersSource": "https://www.youtube.com/watch?v=6p6cK69lh6o",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 168
+        }
+      ]
+    },
+    {
+      "skinId": 51006,
+      "championId": 51,
+      "name": "Headhunter Caitlyn",
+      "videoId": "5DdWAcy65KM",
+      "title": "Headhunter Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=5DdWAcy65KM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 169,
+      "descriptionSha256": "92d8d3752b658d372e1d04201ca5fcfa3164dc69930112701d8766dbc3fd12df",
+      "chaptersSource": "https://www.youtube.com/watch?v=5DdWAcy65KM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 169
+        }
+      ]
+    },
+    {
+      "skinId": 51010,
+      "championId": 51,
+      "name": "Lunar Wraith Caitlyn",
+      "videoId": "QxPYrPsikMM",
+      "title": "Lunar Wraith Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=QxPYrPsikMM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 204,
+      "descriptionSha256": "1488846629cf81ad6746f54d9bd34419eae5cf19e02d94d608e20c7a2fc77286",
+      "chaptersSource": "https://www.youtube.com/watch?v=QxPYrPsikMM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 157
+        }
+      ]
+    },
+    {
+      "skinId": 51019,
+      "championId": 51,
+      "name": "Arcade Caitlyn",
+      "videoId": "6E1MbN8OEuw",
+      "title": "Arcade Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=6E1MbN8OEuw",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 168,
+      "descriptionSha256": "70b21018458436e5c878c9fcaf88a00bd211ab4aef79f261a0c6b54bf9ea05cd",
+      "chaptersSource": "https://www.youtube.com/watch?v=6E1MbN8OEuw",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 168
+        }
+      ]
+    },
+    {
+      "skinId": 51020,
+      "championId": 51,
+      "name": "Prestige Arcade Caitlyn",
+      "videoId": "097HkBMETzs",
+      "title": "Prestige Arcade Caitlyn (2021 ASU) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=097HkBMETzs",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Caitlyn.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 169,
+      "descriptionSha256": "52c2ac8041a00c4b42ca14542aca11c3f54a11a495d92166ef1bc32f8c05fcc9",
+      "chaptersSource": "https://www.youtube.com/watch?v=097HkBMETzs",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 107
+        },
+        {
+          "kind": "e",
+          "start": 107,
+          "end": 121
+        },
+        {
+          "kind": "r",
+          "start": 121,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 169
+        }
+      ]
+    },
+    {
       "skinId": 51030,
       "championId": 51,
       "name": "Snow Moon Caitlyn",
@@ -13724,6 +15277,90 @@
       ]
     },
     {
+      "skinId": 53022,
+      "championId": 53,
+      "name": "Witch's Brew Blitzcrank",
+      "videoId": "asEPJDiiXyI",
+      "title": "Witchs Brew Blitzcrank Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-10-21",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=asEPJDiiXyI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Blitzcrank.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 291,
+      "descriptionSha256": "5854ca15690d5a60779917e6cc9df4b59b01d1029aa0a061e2602db023988a53",
+      "chaptersSource": "https://www.youtube.com/watch?v=asEPJDiiXyI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 53029,
+      "championId": 53,
+      "name": "Space Groove Blitz & Crank",
+      "videoId": "z_c2jPUFFus",
+      "title": "Space Groove Blitzcrank Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-03-28",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=z_c2jPUFFus",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Blitzcrank.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 369,
+      "descriptionSha256": "c179a5601458ebd6ce92b78ac51ac35a9b23f24d5f43a0de8ab467429f26edaf",
+      "chaptersSource": "https://www.youtube.com/watch?v=z_c2jPUFFus",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 86
+        },
+        {
+          "kind": "recall",
+          "start": 86,
+          "end": 101
+        },
+        {
+          "kind": "passive",
+          "start": 101,
+          "end": 115
+        },
+        {
+          "kind": "attack",
+          "start": 115,
+          "end": 124
+        },
+        {
+          "kind": "q",
+          "start": 124,
+          "end": 138
+        },
+        {
+          "kind": "w",
+          "start": 138,
+          "end": 162
+        },
+        {
+          "kind": "e",
+          "start": 162,
+          "end": 178
+        },
+        {
+          "kind": "r",
+          "start": 178,
+          "end": 204
+        },
+        {
+          "kind": "death",
+          "start": 234,
+          "end": 243
+        }
+      ]
+    },
+    {
       "skinId": 53036,
       "championId": 53,
       "name": "Victorious Blitzcrank",
@@ -14027,6 +15664,71 @@
           "kind": "r",
           "start": 130,
           "end": 138
+        }
+      ]
+    },
+    {
+      "skinId": 54027,
+      "championId": 54,
+      "name": "Old God Malphite",
+      "videoId": "FSJsCstSITI",
+      "title": "Old God Malphite Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-08-09",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=FSJsCstSITI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Malphite.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 351,
+      "descriptionSha256": "d11b640b9c8b4090a2d0f1427a842a6e5d1235bf77047e3e9fa6ad4e694d9fcd",
+      "chaptersSource": "https://www.youtube.com/watch?v=FSJsCstSITI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 46
+        },
+        {
+          "kind": "recall",
+          "start": 46,
+          "end": 59
+        },
+        {
+          "kind": "passive",
+          "start": 59,
+          "end": 69
+        },
+        {
+          "kind": "attack",
+          "start": 69,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 74,
+          "end": 84
+        },
+        {
+          "kind": "w",
+          "start": 84,
+          "end": 112
+        },
+        {
+          "kind": "e",
+          "start": 112,
+          "end": 124
+        },
+        {
+          "kind": "r",
+          "start": 124,
+          "end": 144
+        },
+        {
+          "kind": "death",
+          "start": 162,
+          "end": 168
         }
       ]
     },
@@ -15676,6 +17378,120 @@
           "end": 98
         }
       ]
+    },
+    {
+      "skinId": 62001,
+      "championId": 62,
+      "name": "Volcanic Wukong",
+      "videoId": "fK5bj2fziPI",
+      "title": "Volcanic Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=fK5bj2fziPI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 177,
+      "descriptionSha256": "1c083498ac79f78ee1b1b1be6ccea65a583a290b908e3dff7eef43fcca6e085d",
+      "chaptersSource": "https://www.youtube.com/watch?v=fK5bj2fziPI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 62002,
+      "championId": 62,
+      "name": "General Wukong",
+      "videoId": "ej_Af-rWIN4",
+      "title": "General Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=ej_Af-rWIN4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 177,
+      "descriptionSha256": "80227ddcdacea586b5a99248b39742c1ae3da9808ebb658ae0cc42ec679d6194",
+      "chaptersSource": "https://www.youtube.com/watch?v=ej_Af-rWIN4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 62003,
+      "championId": 62,
+      "name": "Jade Dragon Wukong",
+      "videoId": "1vqGprK_SGM",
+      "title": "Jade Dragon Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=1vqGprK_SGM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 178,
+      "descriptionSha256": "cfa82e7f91037696fa987de09861462aa644ab8010acab15d118cb68f387d91c",
+      "chaptersSource": "https://www.youtube.com/watch?v=1vqGprK_SGM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 62004,
+      "championId": 62,
+      "name": "Underworld Wukong",
+      "videoId": "UVw2D8lH4tI",
+      "title": "Underworld Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=UVw2D8lH4tI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 178,
+      "descriptionSha256": "2535a012b3def1270c3a026808563366b12b4e7ba715eabf3e3fc4b55d47bd0a",
+      "chaptersSource": "https://www.youtube.com/watch?v=UVw2D8lH4tI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 62005,
+      "championId": 62,
+      "name": "Radiant Wukong",
+      "videoId": "I_IqqdPP2jY",
+      "title": "Radiant Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=I_IqqdPP2jY",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 179,
+      "descriptionSha256": "1cd2f2b27b5b42ca2e7dba233d42bf0d0c6d2b44b9944f4f5bc329326c623d15",
+      "chaptersSource": "https://www.youtube.com/watch?v=I_IqqdPP2jY",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 62006,
+      "championId": 62,
+      "name": "Lancer Stratus Wukong",
+      "videoId": "Ie-gdb3H0Eg",
+      "title": "Lancer Stratus Wukong (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=Ie-gdb3H0Eg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/MonkeyKing.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 178,
+      "descriptionSha256": "57d6176a4bd7ab76a6bca3c45cd834192b761bcac2162c45a96fe2017cd82c29",
+      "chaptersSource": "https://www.youtube.com/watch?v=Ie-gdb3H0Eg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
     },
     {
       "skinId": 62007,
@@ -18527,6 +20343,46 @@
       ]
     },
     {
+      "skinId": 76048,
+      "championId": 76,
+      "name": "La Ilusión Nidalee",
+      "videoId": "OnaaD9G-Ue0",
+      "title": "La Ilusion Nidalee Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-09-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=OnaaD9G-Ue0",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nidalee.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 371,
+      "descriptionSha256": "dce92a343a28e25a583a50a44c99a935673d09624935e6e799f26a959e14fb62",
+      "chaptersSource": "https://www.youtube.com/watch?v=OnaaD9G-Ue0",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 28,
+          "end": 50
+        },
+        {
+          "kind": "attack",
+          "start": 97,
+          "end": 102
+        },
+        {
+          "kind": "r",
+          "start": 139,
+          "end": 145
+        },
+        {
+          "kind": "death",
+          "start": 184,
+          "end": 195
+        }
+      ]
+    },
+    {
       "skinId": 76058,
       "championId": 76,
       "name": "Spirit Blossom Nidalee",
@@ -19149,6 +21005,66 @@
       "segments": []
     },
     {
+      "skinId": 80036,
+      "championId": 80,
+      "name": "Ashen Conqueror Pantheon",
+      "videoId": "DAG81Mq0e0s",
+      "title": "Ashen Knight Pantheon Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-06-20",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=DAG81Mq0e0s",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Pantheon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 242,
+      "descriptionSha256": "13004627ca77014b86a1f2b167751274946fe3be2325a83bf033a21c6ec45ea2",
+      "chaptersSource": "https://www.youtube.com/watch?v=DAG81Mq0e0s",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 62
+        },
+        {
+          "kind": "recall",
+          "start": 62,
+          "end": 77
+        },
+        {
+          "kind": "attack",
+          "start": 77,
+          "end": 82
+        },
+        {
+          "kind": "q",
+          "start": 82,
+          "end": 118
+        },
+        {
+          "kind": "w",
+          "start": 118,
+          "end": 132
+        },
+        {
+          "kind": "e",
+          "start": 132,
+          "end": 151
+        },
+        {
+          "kind": "r",
+          "start": 151,
+          "end": 179
+        },
+        {
+          "kind": "death",
+          "start": 184,
+          "end": 200
+        }
+      ]
+    },
+    {
       "skinId": 80038,
       "championId": 80,
       "name": "Chosen of the Wolf Pantheon",
@@ -19675,6 +21591,295 @@
           "kind": "death",
           "start": 140,
           "end": 145
+        }
+      ]
+    },
+    {
+      "skinId": 82006,
+      "championId": 82,
+      "name": "Dark Star Mordekaiser",
+      "videoId": "68gUyt7mZ1M",
+      "title": "Dark Star Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=68gUyt7mZ1M",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 337,
+      "descriptionSha256": "5b562ca5dc1ce8b3239b5c6c30caeb4415dc035481c7700c63b1e105bbcac14c",
+      "chaptersSource": "https://www.youtube.com/watch?v=68gUyt7mZ1M",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 82013,
+      "championId": 82,
+      "name": "PROJECT: Mordekaiser",
+      "videoId": "jv8t4nM6qsc",
+      "title": "PROJECT: Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-05-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=jv8t4nM6qsc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 483,
+      "descriptionSha256": "5e8d9ef428668b12c9d8bdbe85cb867dbcf44182538c76ad3db60fa549dd4f24",
+      "chaptersSource": "https://www.youtube.com/watch?v=jv8t4nM6qsc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 71
+        },
+        {
+          "kind": "recall",
+          "start": 71,
+          "end": 85
+        },
+        {
+          "kind": "q",
+          "start": 98,
+          "end": 123
+        },
+        {
+          "kind": "w",
+          "start": 123,
+          "end": 148
+        },
+        {
+          "kind": "e",
+          "start": 148,
+          "end": 164
+        },
+        {
+          "kind": "r",
+          "start": 164,
+          "end": 222
+        },
+        {
+          "kind": "death",
+          "start": 289,
+          "end": 298
+        }
+      ]
+    },
+    {
+      "skinId": 82023,
+      "championId": 82,
+      "name": "Pentakill III: Lost Chapter Mordekaiser",
+      "videoId": "sK_UV7vEE9c",
+      "title": "Pentakill III: Lost Chapter Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-09-05",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=sK_UV7vEE9c",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 396,
+      "descriptionSha256": "c0f89f97fb3accf20b83e18a635214e09d8f43b7c6f7951d658781ed93d1ad49",
+      "chaptersSource": "https://www.youtube.com/watch?v=sK_UV7vEE9c",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 59
+        },
+        {
+          "kind": "recall",
+          "start": 59,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 91,
+          "end": 109
+        },
+        {
+          "kind": "w",
+          "start": 109,
+          "end": 129
+        },
+        {
+          "kind": "e",
+          "start": 129,
+          "end": 145
+        },
+        {
+          "kind": "r",
+          "start": 145,
+          "end": 158
+        },
+        {
+          "kind": "death",
+          "start": 246,
+          "end": 255
+        }
+      ]
+    },
+    {
+      "skinId": 82032,
+      "championId": 82,
+      "name": "High Noon Mordekaiser",
+      "videoId": "xNzMpMplfHI",
+      "title": "High Noon Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-05-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=xNzMpMplfHI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 381,
+      "descriptionSha256": "f4cc54e87f85092e8fce51c443398efa8c201fffc34c03ba9567646484d4064a",
+      "chaptersSource": "https://www.youtube.com/watch?v=xNzMpMplfHI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 62
+        },
+        {
+          "kind": "recall",
+          "start": 62,
+          "end": 76
+        },
+        {
+          "kind": "w",
+          "start": 112,
+          "end": 130
+        },
+        {
+          "kind": "e",
+          "start": 130,
+          "end": 139
+        },
+        {
+          "kind": "r",
+          "start": 139,
+          "end": 164
+        },
+        {
+          "kind": "death",
+          "start": 199,
+          "end": 205
+        }
+      ]
+    },
+    {
+      "skinId": 82042,
+      "championId": 82,
+      "name": "Ashen Graveknight Mordekaiser",
+      "videoId": "4_6spzmi128",
+      "title": "Ashen Graveknight Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-12-04",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=4_6spzmi128",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 271,
+      "descriptionSha256": "2be54513c2838388309a23b984c7141d3fba81799db8d35ed70476e155437724",
+      "chaptersSource": "https://www.youtube.com/watch?v=4_6spzmi128",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 59
+        },
+        {
+          "kind": "recall",
+          "start": 59,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 88,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 116
+        },
+        {
+          "kind": "e",
+          "start": 116,
+          "end": 130
+        },
+        {
+          "kind": "r",
+          "start": 130,
+          "end": 153
+        },
+        {
+          "kind": "death",
+          "start": 218,
+          "end": 225
+        }
+      ]
+    },
+    {
+      "skinId": 82044,
+      "championId": 82,
+      "name": "Old God Mordekaiser",
+      "videoId": "2HiyPhZ6scs",
+      "title": "Old God Mordekaiser Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-10-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=2HiyPhZ6scs",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Mordekaiser.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 369,
+      "descriptionSha256": "5bee86db973224110639e550673c26f3e78fc9b4eaec293e4823c6f060b96bb5",
+      "chaptersSource": "https://www.youtube.com/watch?v=2HiyPhZ6scs",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 57
+        },
+        {
+          "kind": "recall",
+          "start": 57,
+          "end": 71
+        },
+        {
+          "kind": "q",
+          "start": 81,
+          "end": 98
+        },
+        {
+          "kind": "w",
+          "start": 98,
+          "end": 115
+        },
+        {
+          "kind": "e",
+          "start": 115,
+          "end": 125
+        },
+        {
+          "kind": "r",
+          "start": 125,
+          "end": 167
+        },
+        {
+          "kind": "death",
+          "start": 185,
+          "end": 194
         }
       ]
     },
@@ -21889,6 +24094,260 @@
       ]
     },
     {
+      "skinId": 91020,
+      "championId": 91,
+      "name": "Talon Blackwood",
+      "videoId": "oAbV5Otso2Q",
+      "title": "Talon Blackwood Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=oAbV5Otso2Q",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Talon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 289,
+      "descriptionSha256": "af3d6b24817b06c0515f25dfed8b4a98c2d09d7d86a8164ed81dbb3c9b7acd85",
+      "chaptersSource": "https://www.youtube.com/watch?v=oAbV5Otso2Q",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 91029,
+      "championId": 91,
+      "name": "Withered Rose Talon",
+      "videoId": "BEpaY3ddzqo",
+      "title": "Withered Rose Talon Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-02-11",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=BEpaY3ddzqo",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Talon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 355,
+      "descriptionSha256": "a6c02e28bcb7344332e4ce29b9a4cdf2af81e8098361aa6955150cf44bb2ecfc",
+      "chaptersSource": "https://www.youtube.com/watch?v=BEpaY3ddzqo",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 28,
+          "end": 67
+        },
+        {
+          "kind": "recall",
+          "start": 67,
+          "end": 80
+        },
+        {
+          "kind": "attack",
+          "start": 80,
+          "end": 86
+        },
+        {
+          "kind": "q",
+          "start": 86,
+          "end": 108
+        },
+        {
+          "kind": "w",
+          "start": 108,
+          "end": 128
+        },
+        {
+          "kind": "e",
+          "start": 128,
+          "end": 150
+        },
+        {
+          "kind": "r",
+          "start": 150,
+          "end": 190
+        },
+        {
+          "kind": "death",
+          "start": 198,
+          "end": 204
+        }
+      ]
+    },
+    {
+      "skinId": 91038,
+      "championId": 91,
+      "name": "High Noon Talon",
+      "videoId": "xtJ1qLeVh9w",
+      "title": "High Noon Talon Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-05-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=xtJ1qLeVh9w",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Talon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 352,
+      "descriptionSha256": "fc26a5ff88f29ea07400de909af0ce3c9197f76c42f7a2669225cffef1d618ef",
+      "chaptersSource": "https://www.youtube.com/watch?v=xtJ1qLeVh9w",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 57
+        },
+        {
+          "kind": "recall",
+          "start": 57,
+          "end": 69
+        },
+        {
+          "kind": "attack",
+          "start": 69,
+          "end": 74
+        },
+        {
+          "kind": "q",
+          "start": 74,
+          "end": 97
+        },
+        {
+          "kind": "e",
+          "start": 115,
+          "end": 129
+        },
+        {
+          "kind": "r",
+          "start": 129,
+          "end": 157
+        },
+        {
+          "kind": "death",
+          "start": 162,
+          "end": 168
+        }
+      ]
+    },
+    {
+      "skinId": 91039,
+      "championId": 91,
+      "name": "Prestige High Noon Talon",
+      "videoId": "sr0TcxboYiM",
+      "title": "Prestige High Noon Talon Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-05-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=sr0TcxboYiM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Talon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 185,
+      "descriptionSha256": "e63a334be3794a210f56d18d425ea17e035e509814e0c77cac3dbc8c6a31fd2e",
+      "chaptersSource": "https://www.youtube.com/watch?v=sr0TcxboYiM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 54
+        },
+        {
+          "kind": "recall",
+          "start": 54,
+          "end": 67
+        },
+        {
+          "kind": "attack",
+          "start": 67,
+          "end": 72
+        },
+        {
+          "kind": "q",
+          "start": 72,
+          "end": 98
+        },
+        {
+          "kind": "w",
+          "start": 98,
+          "end": 115
+        },
+        {
+          "kind": "e",
+          "start": 115,
+          "end": 130
+        },
+        {
+          "kind": "r",
+          "start": 130,
+          "end": 164
+        },
+        {
+          "kind": "death",
+          "start": 169,
+          "end": 185
+        }
+      ]
+    },
+    {
+      "skinId": 91049,
+      "championId": 91,
+      "name": "Primal Ambush Talon",
+      "videoId": "T5CHMT5Ayts",
+      "title": "Primal Ambush Talon Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-01-23",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=T5CHMT5Ayts",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Talon.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 300,
+      "descriptionSha256": "ef808a81e9703572583e129d551ff1f4ce2fb720672762a26f40ecd61307a322",
+      "chaptersSource": "https://www.youtube.com/watch?v=T5CHMT5Ayts",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 63
+        },
+        {
+          "kind": "recall",
+          "start": 63,
+          "end": 75
+        },
+        {
+          "kind": "attack",
+          "start": 75,
+          "end": 81
+        },
+        {
+          "kind": "q",
+          "start": 81,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 106
+        },
+        {
+          "kind": "e",
+          "start": 106,
+          "end": 122
+        },
+        {
+          "kind": "r",
+          "start": 122,
+          "end": 146
+        },
+        {
+          "kind": "death",
+          "start": 153,
+          "end": 160
+        }
+      ]
+    },
+    {
       "skinId": 92023,
       "championId": 92,
       "name": "Spirit Blossom Riven",
@@ -23611,6 +26070,51 @@
       ]
     },
     {
+      "skinId": 102001,
+      "championId": 102,
+      "name": "Shyvana Ironscale",
+      "videoId": "QBozi8N3EWk",
+      "title": "Ironscale Shyvana Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2026-03-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=QBozi8N3EWk",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Shyvana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 243,
+      "descriptionSha256": "40441f51bda692dd1d10bd2f35ecf27407e22bc75773e880d66881c27cba891c",
+      "chaptersSource": "https://www.youtube.com/watch?v=QBozi8N3EWk",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "attack",
+          "start": 117,
+          "end": 123
+        },
+        {
+          "kind": "q",
+          "start": 123,
+          "end": 140
+        },
+        {
+          "kind": "w",
+          "start": 140,
+          "end": 153
+        },
+        {
+          "kind": "e",
+          "start": 153,
+          "end": 160
+        },
+        {
+          "kind": "r",
+          "start": 160,
+          "end": 178
+        }
+      ]
+    },
+    {
       "skinId": 102002,
       "championId": 102,
       "name": "Boneclaw Shyvana",
@@ -25031,6 +27535,25 @@
       ]
     },
     {
+      "skinId": 103086,
+      "championId": 103,
+      "name": "Immortalized Legend Ahri",
+      "videoId": "rAhBBJ7lRuU",
+      "title": "Immortalized Legend Ahri Skin Spotlight -  League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2024-05-29",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=rAhBBJ7lRuU",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ahri.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 572,
+      "descriptionSha256": "5cb4566efca2baa4ae6c1a0d8becf437f3f107cf5f10dd3c410502f980c6d86b",
+      "chaptersSource": "https://www.youtube.com/watch?v=rAhBBJ7lRuU",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
       "skinId": 103088,
       "championId": 103,
       "name": "Spirit Blossom Springs Ahri",
@@ -26370,6 +28893,101 @@
       ]
     },
     {
+      "skinId": 111001,
+      "championId": 111,
+      "name": "Abyssal Nautilus",
+      "videoId": "JVtYS6YCcHI",
+      "title": "Abyssal Nautilus (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=JVtYS6YCcHI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nautilus.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 182,
+      "descriptionSha256": "9dbe172f7ebd33ed80c98d933444fdfb0b443336a4e2de77abb7da76ad638cf4",
+      "chaptersSource": "https://www.youtube.com/watch?v=JVtYS6YCcHI",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 111002,
+      "championId": 111,
+      "name": "Subterranean Nautilus",
+      "videoId": "WT_3x30rUEM",
+      "title": "Subterranean Nautilus (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=WT_3x30rUEM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nautilus.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 183,
+      "descriptionSha256": "81f84416c2d05949b6aeebd1b90176e46345b37a83872dedb1e6167c0fbe4ebf",
+      "chaptersSource": "https://www.youtube.com/watch?v=WT_3x30rUEM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 111003,
+      "championId": 111,
+      "name": "AstroNautilus",
+      "videoId": "wBA5RPzir5c",
+      "title": "AstroNautilus (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=wBA5RPzir5c",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nautilus.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 182,
+      "descriptionSha256": "4e535d384e0fed71e5c41e424cd5af6c1e68a9aef37c24b032397daa06b7eed8",
+      "chaptersSource": "https://www.youtube.com/watch?v=wBA5RPzir5c",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 111004,
+      "championId": 111,
+      "name": "Warden Nautilus",
+      "videoId": "MNZSUiyI6cM",
+      "title": "Warden Nautilus (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=MNZSUiyI6cM",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nautilus.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 183,
+      "descriptionSha256": "1db7095ceaa91917258ab1f5a67b7432da60391082546600b66d60384db7316f",
+      "chaptersSource": "https://www.youtube.com/watch?v=MNZSUiyI6cM",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 111005,
+      "championId": 111,
+      "name": "Worldbreaker Nautilus",
+      "videoId": "f6Wm6oJe_6M",
+      "title": "Worldbreaker Nautilus (2020) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2020-02-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=f6Wm6oJe_6M",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Nautilus.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 183,
+      "descriptionSha256": "f561d4b5c0aa7c34bed94ef7734cf767a6df47b2ceb3e0c6a48bcc0a5fb48273",
+      "chaptersSource": "https://www.youtube.com/watch?v=f6Wm6oJe_6M",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
       "skinId": 111006,
       "championId": 111,
       "name": "Conqueror Nautilus",
@@ -27532,6 +30150,66 @@
       ]
     },
     {
+      "skinId": 115033,
+      "championId": 115,
+      "name": "La Ilusión Ziggs",
+      "videoId": "AIjmlu635gY",
+      "title": "La Ilusion Ziggs Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-09-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=AIjmlu635gY",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ziggs.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 355,
+      "descriptionSha256": "c000dedc1722595da3efddfe21b300212b88939f19358e34cffd52bae0c61be3",
+      "chaptersSource": "https://www.youtube.com/watch?v=AIjmlu635gY",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 28,
+          "end": 54
+        },
+        {
+          "kind": "recall",
+          "start": 54,
+          "end": 66
+        },
+        {
+          "kind": "attack",
+          "start": 66,
+          "end": 73
+        },
+        {
+          "kind": "q",
+          "start": 73,
+          "end": 84
+        },
+        {
+          "kind": "w",
+          "start": 84,
+          "end": 101
+        },
+        {
+          "kind": "e",
+          "start": 101,
+          "end": 128
+        },
+        {
+          "kind": "r",
+          "start": 128,
+          "end": 144
+        },
+        {
+          "kind": "death",
+          "start": 166,
+          "end": 174
+        }
+      ]
+    },
+    {
       "skinId": 115043,
       "championId": 115,
       "name": "Firecracker Ziggs",
@@ -28162,6 +30840,71 @@
           "kind": "death",
           "start": 173,
           "end": 178
+        }
+      ]
+    },
+    {
+      "skinId": 119048,
+      "championId": 119,
+      "name": "La Ilusión Draven",
+      "videoId": "5Bq5cmI2JOs",
+      "title": "La Ilusion Draven Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-09-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=5Bq5cmI2JOs",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Draven.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 350,
+      "descriptionSha256": "2cce08c008ec4675c3151de2ae306b72f4f5a7b2fbdc399a10ebd06992836594",
+      "chaptersSource": "https://www.youtube.com/watch?v=5Bq5cmI2JOs",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 28,
+          "end": 55
+        },
+        {
+          "kind": "recall",
+          "start": 55,
+          "end": 68
+        },
+        {
+          "kind": "passive",
+          "start": 68,
+          "end": 73
+        },
+        {
+          "kind": "attack",
+          "start": 73,
+          "end": 79
+        },
+        {
+          "kind": "q",
+          "start": 79,
+          "end": 99
+        },
+        {
+          "kind": "w",
+          "start": 99,
+          "end": 122
+        },
+        {
+          "kind": "e",
+          "start": 122,
+          "end": 132
+        },
+        {
+          "kind": "r",
+          "start": 132,
+          "end": 152
+        },
+        {
+          "kind": "death",
+          "start": 165,
+          "end": 172
         }
       ]
     },
@@ -29129,6 +31872,25 @@
       ]
     },
     {
+      "skinId": 126024,
+      "championId": 126,
+      "name": "Arcane Inventor Jayce",
+      "videoId": "HMH1O-ZLomg",
+      "title": "Arcane Jayce Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-11-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=HMH1O-ZLomg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Jayce.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 227,
+      "descriptionSha256": "d0dab9f45f79795e0d464dc49591ee6aa7c049ea07e861eeef6ae597f09221db",
+      "chaptersSource": "https://www.youtube.com/watch?v=HMH1O-ZLomg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
       "skinId": 126025,
       "championId": 126,
       "name": "Zenith Games Jayce",
@@ -29667,6 +32429,101 @@
           "end": 149
         }
       ]
+    },
+    {
+      "skinId": 131001,
+      "championId": 131,
+      "name": "Dark Valkyrie Diana",
+      "videoId": "dDijnB4DH_g",
+      "title": "Dark Valkyrie Diana (2019) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-12-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=dDijnB4DH_g",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Diana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
+      "descriptionSha256": "4b42eae7350e157b8b9ca6f25e1a8c79bd9173f6269bc88866bcf17f5cb196ff",
+      "chaptersSource": "https://www.youtube.com/watch?v=dDijnB4DH_g",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 131002,
+      "championId": 131,
+      "name": "Lunar Goddess Diana",
+      "videoId": "-H0G0gh1sv4",
+      "title": "Lunar Goddess Diana (2019) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-12-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=-H0G0gh1sv4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Diana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 315,
+      "descriptionSha256": "3d98168788a29497edda9b4726b6eb65117cd0ad177aa50b87b7257d610b3f68",
+      "chaptersSource": "https://www.youtube.com/watch?v=-H0G0gh1sv4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 131003,
+      "championId": 131,
+      "name": "Infernal Diana",
+      "videoId": "BVLoPu8VAlw",
+      "title": "Infernal Diana (2019) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-12-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=BVLoPu8VAlw",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Diana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 197,
+      "descriptionSha256": "ce7a4dff7f263f36a8524bee82daaa4c276249a42118340bc769c41dff66d292",
+      "chaptersSource": "https://www.youtube.com/watch?v=BVLoPu8VAlw",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 131011,
+      "championId": 131,
+      "name": "Blood Moon Diana",
+      "videoId": "8bzegy_1pTw",
+      "title": "Blood Moon Diana (2019) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-12-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=8bzegy_1pTw",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Diana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 196,
+      "descriptionSha256": "92b3d744d2d22f6b9311d45484c5aac17cc201e6c17b3e28e3d2fd5fdfeae892",
+      "chaptersSource": "https://www.youtube.com/watch?v=8bzegy_1pTw",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
+    },
+    {
+      "skinId": 131012,
+      "championId": 131,
+      "name": "Dark Waters Diana",
+      "videoId": "Q-xp57dCBzs",
+      "title": "Dark Waters Diana (2019) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2019-12-08",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=Q-xp57dCBzs",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Diana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 287,
+      "descriptionSha256": "a5891d316bfafd354a4b6bd2cfee7db9df16f4321c9da5962881a47e14791d1c",
+      "chaptersSource": "https://www.youtube.com/watch?v=Q-xp57dCBzs",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
     },
     {
       "skinId": 131018,
@@ -32666,6 +35523,66 @@
       ]
     },
     {
+      "skinId": 150031,
+      "championId": 150,
+      "name": "La Ilusión Gnar",
+      "videoId": "UnDHbAfRMhc",
+      "title": "La Ilusion Gnar Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-09-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=UnDHbAfRMhc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Gnar.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 409,
+      "descriptionSha256": "2aca0bb8f826ba691f0b66deab6cb5e372fefa482abf03cba0b51c088502f353",
+      "chaptersSource": "https://www.youtube.com/watch?v=UnDHbAfRMhc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 44,
+          "end": 79
+        },
+        {
+          "kind": "recall",
+          "start": 79,
+          "end": 91
+        },
+        {
+          "kind": "attack",
+          "start": 124,
+          "end": 129
+        },
+        {
+          "kind": "q",
+          "start": 129,
+          "end": 140
+        },
+        {
+          "kind": "w",
+          "start": 140,
+          "end": 148
+        },
+        {
+          "kind": "e",
+          "start": 148,
+          "end": 158
+        },
+        {
+          "kind": "r",
+          "start": 158,
+          "end": 178
+        },
+        {
+          "kind": "death",
+          "start": 236,
+          "end": 242
+        }
+      ]
+    },
+    {
       "skinId": 150041,
       "championId": 150,
       "name": "T1 Gnar",
@@ -33995,6 +36912,66 @@
       ]
     },
     {
+      "skinId": 163024,
+      "championId": 163,
+      "name": "Durand's Legacy Taliyah",
+      "videoId": "mjlDOA9NED0",
+      "title": "Durands Legacy Taliyah Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2026-01-05",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=mjlDOA9NED0",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Taliyah.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 173,
+      "descriptionSha256": "7b6b93fb5edbeb58bb4845cb40ea906fb9d81bb62a75524296a47d6c3fd81cb7",
+      "chaptersSource": "https://www.youtube.com/watch?v=mjlDOA9NED0",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 62
+        },
+        {
+          "kind": "recall",
+          "start": 62,
+          "end": 75
+        },
+        {
+          "kind": "attack",
+          "start": 75,
+          "end": 81
+        },
+        {
+          "kind": "q",
+          "start": 81,
+          "end": 92
+        },
+        {
+          "kind": "w",
+          "start": 92,
+          "end": 98
+        },
+        {
+          "kind": "e",
+          "start": 98,
+          "end": 116
+        },
+        {
+          "kind": "r",
+          "start": 116,
+          "end": 135
+        },
+        {
+          "kind": "death",
+          "start": 156,
+          "end": 173
+        }
+      ]
+    },
+    {
       "skinId": 164011,
       "championId": 164,
       "name": "Arcana Camille",
@@ -34266,6 +37243,61 @@
           "kind": "death",
           "start": 139,
           "end": 146
+        }
+      ]
+    },
+    {
+      "skinId": 166001,
+      "championId": 166,
+      "name": "Cyber Pop Akshan",
+      "videoId": "YeSEUiyG7IU",
+      "title": "Cyberpop Akshan Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-07-19",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=YeSEUiyG7IU",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Akshan.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 389,
+      "descriptionSha256": "276a2c244d702f41bee6603dd10401d29b7c9994700c2e81bfb72eb6bfc7f3ae",
+      "chaptersSource": "https://www.youtube.com/watch?v=YeSEUiyG7IU",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 57
+        },
+        {
+          "kind": "recall",
+          "start": 57,
+          "end": 71
+        },
+        {
+          "kind": "q",
+          "start": 85,
+          "end": 98
+        },
+        {
+          "kind": "w",
+          "start": 98,
+          "end": 121
+        },
+        {
+          "kind": "e",
+          "start": 159,
+          "end": 183
+        },
+        {
+          "kind": "r",
+          "start": 183,
+          "end": 224
+        },
+        {
+          "kind": "death",
+          "start": 231,
+          "end": 239
         }
       ]
     },
@@ -36103,6 +39135,66 @@
       "segments": []
     },
     {
+      "skinId": 222037,
+      "championId": 222,
+      "name": "Arcane Enemy Jinx",
+      "videoId": "r0S59lUqbk4",
+      "title": "Arcane Jinx Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-11-15",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=r0S59lUqbk4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Jinx.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 203,
+      "descriptionSha256": "0c232109b34c0009019f33d4ae3d9e487b63c8305207e69ef68efa0956a341ba",
+      "chaptersSource": "https://www.youtube.com/watch?v=r0S59lUqbk4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 70
+        },
+        {
+          "kind": "recall",
+          "start": 70,
+          "end": 85
+        },
+        {
+          "kind": "passive",
+          "start": 85,
+          "end": 95
+        },
+        {
+          "kind": "q",
+          "start": 95,
+          "end": 111
+        },
+        {
+          "kind": "w",
+          "start": 111,
+          "end": 126
+        },
+        {
+          "kind": "e",
+          "start": 126,
+          "end": 148
+        },
+        {
+          "kind": "r",
+          "start": 148,
+          "end": 176
+        },
+        {
+          "kind": "death",
+          "start": 185,
+          "end": 203
+        }
+      ]
+    },
+    {
       "skinId": 222038,
       "championId": 222,
       "name": "Battle Cat Jinx",
@@ -36291,18 +39383,18 @@
       "skinId": 222060,
       "championId": 222,
       "name": "Arcane Fractured Jinx",
-      "videoId": "B-Ep-SyztuI",
-      "title": "Arcane Fractured Jinx Skin Spotlight - League of Legends",
+      "videoId": "E1F8rFth6C0",
+      "title": "Arcane Fractured Jinx 2025 Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2024-12-08",
+      "publishedAt": "2025-11-15",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=B-Ep-SyztuI",
+      "source": "https://www.youtube.com/watch?v=E1F8rFth6C0",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Jinx.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 615,
-      "descriptionSha256": "fc6a8e6c5c8cc99d566496cbf5960e5cc196ce8212d2d0f08a9faee81ef8473b",
-      "chaptersSource": "https://www.youtube.com/watch?v=B-Ep-SyztuI",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 614,
+      "descriptionSha256": "8278f3a1e9da9e91d9c1cbb006ae250b2fb6fdd9d5ad03bbc302f54bb6831b18",
+      "chaptersSource": "https://www.youtube.com/watch?v=E1F8rFth6C0",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": []
     },
@@ -38843,6 +41935,61 @@
       ]
     },
     {
+      "skinId": 245036,
+      "championId": 245,
+      "name": "Arcane Firelight Ekko",
+      "videoId": "f9svS3KiAFc",
+      "title": "Firelight Ekko Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-02-13",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=f9svS3KiAFc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ekko.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 363,
+      "descriptionSha256": "1dac20679998db991db7d7ca2d1887ac1b6eaa1f784286f326e320dd36277f52",
+      "chaptersSource": "https://www.youtube.com/watch?v=f9svS3KiAFc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 62
+        },
+        {
+          "kind": "recall",
+          "start": 62,
+          "end": 76
+        },
+        {
+          "kind": "q",
+          "start": 90,
+          "end": 107
+        },
+        {
+          "kind": "w",
+          "start": 107,
+          "end": 130
+        },
+        {
+          "kind": "e",
+          "start": 130,
+          "end": 145
+        },
+        {
+          "kind": "r",
+          "start": 145,
+          "end": 179
+        },
+        {
+          "kind": "death",
+          "start": 192,
+          "end": 201
+        }
+      ]
+    },
+    {
       "skinId": 245045,
       "championId": 245,
       "name": "Star Guardian Ekko",
@@ -39216,6 +42363,61 @@
       ]
     },
     {
+      "skinId": 246040,
+      "championId": 246,
+      "name": "La Ilusión Qiyana",
+      "videoId": "KS0lNVCJz9g",
+      "title": "La Ilusion Qiyana Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-09-24",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=KS0lNVCJz9g",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Qiyana.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 354,
+      "descriptionSha256": "6bb3c7b0827ec276af7cf296173c387beb08f1d6096ecad021c4b2f8246bb20f",
+      "chaptersSource": "https://www.youtube.com/watch?v=KS0lNVCJz9g",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 28,
+          "end": 63
+        },
+        {
+          "kind": "recall",
+          "start": 63,
+          "end": 77
+        },
+        {
+          "kind": "attack",
+          "start": 77,
+          "end": 82
+        },
+        {
+          "kind": "q",
+          "start": 82,
+          "end": 87
+        },
+        {
+          "kind": "e",
+          "start": 118,
+          "end": 130
+        },
+        {
+          "kind": "r",
+          "start": 130,
+          "end": 159
+        },
+        {
+          "kind": "death",
+          "start": 171,
+          "end": 179
+        }
+      ]
+    },
+    {
       "skinId": 246050,
       "championId": 246,
       "name": "Prestige Battle Academia Qiyana",
@@ -39319,6 +42521,25 @@
           "end": 182
         }
       ]
+    },
+    {
+      "skinId": 254029,
+      "championId": 254,
+      "name": "Arcane Undercity Vi",
+      "videoId": "Qd3s9WVJsGc",
+      "title": "Arcane Vi Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2021-11-01",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=Qd3s9WVJsGc",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Vi.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 204,
+      "descriptionSha256": "5e39ab124abec27b1fd750397d548c37c3bd966458fe9037f2560d9dd739622b",
+      "chaptersSource": "https://www.youtube.com/watch?v=Qd3s9WVJsGc",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": []
     },
     {
       "skinId": 254030,
@@ -41884,6 +45105,71 @@
       "segments": []
     },
     {
+      "skinId": 421017,
+      "championId": 421,
+      "name": "Elderwood Rek'Sai",
+      "videoId": "1OPurSq9asY",
+      "title": "Elderwood RekSai Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2022-01-02",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=1OPurSq9asY",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/RekSai.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 374,
+      "descriptionSha256": "47ccbe61dae9353a882e70ad3e7d585c456d53061713af50cfc73f211b45f5ec",
+      "chaptersSource": "https://www.youtube.com/watch?v=1OPurSq9asY",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 58
+        },
+        {
+          "kind": "recall",
+          "start": 58,
+          "end": 72
+        },
+        {
+          "kind": "passive",
+          "start": 72,
+          "end": 96
+        },
+        {
+          "kind": "attack",
+          "start": 108,
+          "end": 113
+        },
+        {
+          "kind": "q",
+          "start": 113,
+          "end": 132
+        },
+        {
+          "kind": "w",
+          "start": 132,
+          "end": 151
+        },
+        {
+          "kind": "e",
+          "start": 186,
+          "end": 198
+        },
+        {
+          "kind": "r",
+          "start": 198,
+          "end": 214
+        },
+        {
+          "kind": "death",
+          "start": 221,
+          "end": 229
+        }
+      ]
+    },
+    {
       "skinId": 421026,
       "championId": 421,
       "name": "Primordian Rek'Sai",
@@ -41949,62 +45235,242 @@
       ]
     },
     {
-      "skinId": 427020,
+      "skinId": 427001,
       "championId": 427,
-      "name": "Astronaut Ivern",
-      "videoId": "N7E0XBS2SV4",
-      "title": "Astronaut Ivern Skin Spotlight - League of Legends",
+      "name": "Candy King Ivern",
+      "videoId": "YAziWA_DakQ",
+      "title": "Candy King Ivern (2023) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2023-02-20",
+      "publishedAt": "2023-05-29",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=N7E0XBS2SV4",
+      "source": "https://www.youtube.com/watch?v=YAziWA_DakQ",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ivern.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 376,
-      "descriptionSha256": "94595e2d5b72f281f0c0476180cca697fda1fea58bfd7b82edbc4b2cbfc37243",
-      "chaptersSource": "https://www.youtube.com/watch?v=N7E0XBS2SV4",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 225,
+      "descriptionSha256": "4ebda99e3cdb4d18afdec2e926e22bb1361d4f8bc25d99149c7d1784a0c56c1a",
+      "chaptersSource": "https://www.youtube.com/watch?v=YAziWA_DakQ",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": [
         {
           "kind": "emotes",
           "start": 27,
-          "end": 68
+          "end": 67
         },
         {
           "kind": "recall",
-          "start": 68,
-          "end": 82
+          "start": 67,
+          "end": 80
         },
         {
           "kind": "passive",
-          "start": 82,
-          "end": 109
-        },
-        {
-          "kind": "attack",
-          "start": 109,
-          "end": 117
+          "start": 80,
+          "end": 105
         },
         {
           "kind": "q",
-          "start": 117,
-          "end": 131
+          "start": 115,
+          "end": 127
         },
         {
           "kind": "w",
-          "start": 131,
-          "end": 143
+          "start": 127,
+          "end": 139
         },
         {
           "kind": "e",
-          "start": 143,
+          "start": 139,
           "end": 156
         },
         {
           "kind": "r",
           "start": 156,
-          "end": 178
+          "end": 201
+        },
+        {
+          "kind": "death",
+          "start": 207,
+          "end": 225
+        }
+      ]
+    },
+    {
+      "skinId": 427002,
+      "championId": 427,
+      "name": "Dunkmaster Ivern",
+      "videoId": "W_YN9gAQvfU",
+      "title": "Dunkmaster Ivern (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-05-29",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=W_YN9gAQvfU",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ivern.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 341,
+      "descriptionSha256": "c322caf40ae3fb7601e733cd866e7e2c4a837ad24aafb391f39fde58ca4b9f3d",
+      "chaptersSource": "https://www.youtube.com/watch?v=W_YN9gAQvfU",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 61
+        },
+        {
+          "kind": "recall",
+          "start": 61,
+          "end": 74
+        },
+        {
+          "kind": "passive",
+          "start": 74,
+          "end": 99
+        },
+        {
+          "kind": "q",
+          "start": 108,
+          "end": 123
+        },
+        {
+          "kind": "w",
+          "start": 123,
+          "end": 134
+        },
+        {
+          "kind": "e",
+          "start": 134,
+          "end": 149
+        },
+        {
+          "kind": "r",
+          "start": 149,
+          "end": 190
+        },
+        {
+          "kind": "death",
+          "start": 197,
+          "end": 205
+        }
+      ]
+    },
+    {
+      "skinId": 427011,
+      "championId": 427,
+      "name": "Old God Ivern",
+      "videoId": "EetQesZm2bY",
+      "title": "Old God Ivern (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-05-29",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=EetQesZm2bY",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ivern.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 341,
+      "descriptionSha256": "6a8200177f260c72d9b2ac68815382b879b352f40b0a60031454bb48a8e74a71",
+      "chaptersSource": "https://www.youtube.com/watch?v=EetQesZm2bY",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 60
+        },
+        {
+          "kind": "recall",
+          "start": 60,
+          "end": 74
+        },
+        {
+          "kind": "passive",
+          "start": 74,
+          "end": 100
+        },
+        {
+          "kind": "q",
+          "start": 109,
+          "end": 122
+        },
+        {
+          "kind": "w",
+          "start": 122,
+          "end": 133
+        },
+        {
+          "kind": "e",
+          "start": 133,
+          "end": 151
+        },
+        {
+          "kind": "r",
+          "start": 151,
+          "end": 191
+        },
+        {
+          "kind": "death",
+          "start": 198,
+          "end": 205
+        }
+      ]
+    },
+    {
+      "skinId": 427020,
+      "championId": 427,
+      "name": "Astronaut Ivern",
+      "videoId": "fAj8oh2H0Q0",
+      "title": "Astronaut Ivern (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-05-29",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=fAj8oh2H0Q0",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Ivern.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 341,
+      "descriptionSha256": "863c2d5d3de2cd9ce9c631bb75ec9d36d7de17c2ec1f7f5d01e3be76774ba3a2",
+      "chaptersSource": "https://www.youtube.com/watch?v=fAj8oh2H0Q0",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 61
+        },
+        {
+          "kind": "recall",
+          "start": 61,
+          "end": 74
+        },
+        {
+          "kind": "passive",
+          "start": 74,
+          "end": 97
+        },
+        {
+          "kind": "q",
+          "start": 107,
+          "end": 120
+        },
+        {
+          "kind": "w",
+          "start": 120,
+          "end": 131
+        },
+        {
+          "kind": "e",
+          "start": 131,
+          "end": 149
+        },
+        {
+          "kind": "r",
+          "start": 149,
+          "end": 191
+        },
+        {
+          "kind": "death",
+          "start": 197,
+          "end": 204
         }
       ]
     },
@@ -44162,21 +47628,151 @@
       ]
     },
     {
-      "skinId": 518012,
+      "skinId": 518001,
       "championId": 518,
-      "name": "Shan Hai Scrolls Neeko",
-      "videoId": "2CSvo-p24cY",
-      "title": "Shan Hai Scrolls Neeko Skin Spotlight - League of Legends",
+      "name": "Winter Wonder Neeko",
+      "videoId": "pOgMzKgnl50",
+      "title": "Winter Wonder Neeko (2023) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2021-01-18",
+      "publishedAt": "2023-04-30",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=2CSvo-p24cY",
+      "source": "https://www.youtube.com/watch?v=pOgMzKgnl50",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Neeko.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 344,
-      "descriptionSha256": "625e173cb6341900124a2879efd2175283a4903180ff9c17a732e844aca1f7da",
-      "chaptersSource": "https://www.youtube.com/watch?v=2CSvo-p24cY",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 295,
+      "descriptionSha256": "f797dcfd42b2303938ff45769f5c5cf93245a5338ae48d34044d8b6701d3c6fe",
+      "chaptersSource": "https://www.youtube.com/watch?v=pOgMzKgnl50",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 53
+        },
+        {
+          "kind": "recall",
+          "start": 53,
+          "end": 64
+        },
+        {
+          "kind": "passive",
+          "start": 64,
+          "end": 74
+        },
+        {
+          "kind": "attack",
+          "start": 74,
+          "end": 83
+        },
+        {
+          "kind": "q",
+          "start": 83,
+          "end": 95
+        },
+        {
+          "kind": "w",
+          "start": 95,
+          "end": 114
+        },
+        {
+          "kind": "e",
+          "start": 114,
+          "end": 125
+        },
+        {
+          "kind": "r",
+          "start": 125,
+          "end": 141
+        },
+        {
+          "kind": "death",
+          "start": 149,
+          "end": 155
+        }
+      ]
+    },
+    {
+      "skinId": 518010,
+      "championId": 518,
+      "name": "Star Guardian Neeko",
+      "videoId": "I9k7yrzytsg",
+      "title": "Star Guardian Neeko (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-04-30",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=I9k7yrzytsg",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Neeko.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 178,
+      "descriptionSha256": "2bdb501c0680b0892d18e40ad5a1f5dbb0c4009766044a9e430c4b83d5ed77a4",
+      "chaptersSource": "https://www.youtube.com/watch?v=I9k7yrzytsg",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 55
+        },
+        {
+          "kind": "recall",
+          "start": 55,
+          "end": 68
+        },
+        {
+          "kind": "passive",
+          "start": 68,
+          "end": 77
+        },
+        {
+          "kind": "attack",
+          "start": 77,
+          "end": 87
+        },
+        {
+          "kind": "q",
+          "start": 87,
+          "end": 99
+        },
+        {
+          "kind": "w",
+          "start": 99,
+          "end": 116
+        },
+        {
+          "kind": "e",
+          "start": 116,
+          "end": 126
+        },
+        {
+          "kind": "r",
+          "start": 126,
+          "end": 143
+        },
+        {
+          "kind": "death",
+          "start": 152,
+          "end": 157
+        }
+      ]
+    },
+    {
+      "skinId": 518011,
+      "championId": 518,
+      "name": "Prestige Star Guardian Neeko",
+      "videoId": "d0VaZ74wfBI",
+      "title": "Prestige Star Guardian Neeko (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-04-30",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=d0VaZ74wfBI",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Neeko.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 210,
+      "descriptionSha256": "204ca762eda0ee5a807d8047a39f325cacc1dcc4a5bca1c2539fce6b6acba221",
+      "chaptersSource": "https://www.youtube.com/watch?v=d0VaZ74wfBI",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": [
         {
@@ -44187,37 +47783,107 @@
         {
           "kind": "recall",
           "start": 52,
-          "end": 66
+          "end": 65
+        },
+        {
+          "kind": "passive",
+          "start": 65,
+          "end": 74
         },
         {
           "kind": "attack",
-          "start": 66,
-          "end": 75
+          "start": 74,
+          "end": 81
         },
         {
           "kind": "q",
-          "start": 75,
+          "start": 81,
           "end": 94
         },
         {
           "kind": "w",
           "start": 94,
-          "end": 111
+          "end": 115
         },
         {
           "kind": "e",
-          "start": 111,
-          "end": 137
+          "start": 115,
+          "end": 125
         },
         {
           "kind": "r",
-          "start": 137,
-          "end": 147
+          "start": 125,
+          "end": 141
         },
         {
           "kind": "death",
-          "start": 187,
-          "end": 194
+          "start": 149,
+          "end": 155
+        }
+      ]
+    },
+    {
+      "skinId": 518012,
+      "championId": 518,
+      "name": "Shan Hai Scrolls Neeko",
+      "videoId": "UPMotHVTkJ4",
+      "title": "Shan Hai Scrolls Neeko (2023) Skin Spotlight - League of Legends",
+      "channelUrl": "https://www.youtube.com/@SkinSpotlights",
+      "publishedAt": "2023-04-30",
+      "checkedAt": "2026-10-03",
+      "source": "https://www.youtube.com/watch?v=UPMotHVTkJ4",
+      "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Neeko.json",
+      "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 298,
+      "descriptionSha256": "b93852d3ea8592872c72eb0226a910d67aaef5fa0037d01e5e1f03fc47c6906e",
+      "chaptersSource": "https://www.youtube.com/watch?v=UPMotHVTkJ4",
+      "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
+      "segments": [
+        {
+          "kind": "emotes",
+          "start": 27,
+          "end": 52
+        },
+        {
+          "kind": "recall",
+          "start": 52,
+          "end": 65
+        },
+        {
+          "kind": "passive",
+          "start": 65,
+          "end": 75
+        },
+        {
+          "kind": "attack",
+          "start": 75,
+          "end": 84
+        },
+        {
+          "kind": "q",
+          "start": 84,
+          "end": 98
+        },
+        {
+          "kind": "w",
+          "start": 98,
+          "end": 116
+        },
+        {
+          "kind": "e",
+          "start": 116,
+          "end": 126
+        },
+        {
+          "kind": "r",
+          "start": 126,
+          "end": 142
+        },
+        {
+          "kind": "death",
+          "start": 151,
+          "end": 157
         }
       ]
     },
@@ -44225,59 +47891,64 @@
       "skinId": 518022,
       "championId": 518,
       "name": "Bewitching Neeko",
-      "videoId": "DSa4VVJmMyk",
-      "title": "Bewitching Neeko Skin Spotlight - League of Legends",
+      "videoId": "T2P2Eh8uXf0",
+      "title": "Bewitching Neeko (2023) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2022-10-15",
+      "publishedAt": "2023-04-30",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=DSa4VVJmMyk",
+      "source": "https://www.youtube.com/watch?v=T2P2Eh8uXf0",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Neeko.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 333,
-      "descriptionSha256": "97bcbd6c342bd44a9a1e3936aada218df0cf9a2150007910be53df664d2f57a9",
-      "chaptersSource": "https://www.youtube.com/watch?v=DSa4VVJmMyk",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 301,
+      "descriptionSha256": "b17663a83b25e6791a4112b674da21ddb7341c3237b3ab9ca8de5a5d05b956d8",
+      "chaptersSource": "https://www.youtube.com/watch?v=T2P2Eh8uXf0",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": [
         {
           "kind": "emotes",
           "start": 27,
-          "end": 50
+          "end": 51
         },
         {
           "kind": "recall",
-          "start": 50,
-          "end": 64
+          "start": 51,
+          "end": 63
+        },
+        {
+          "kind": "passive",
+          "start": 63,
+          "end": 73
         },
         {
           "kind": "attack",
-          "start": 76,
-          "end": 82
+          "start": 73,
+          "end": 81
         },
         {
           "kind": "q",
-          "start": 82,
+          "start": 81,
           "end": 94
         },
         {
           "kind": "w",
           "start": 94,
-          "end": 104
+          "end": 116
         },
         {
           "kind": "e",
-          "start": 129,
-          "end": 146
+          "start": 116,
+          "end": 129
         },
         {
           "kind": "r",
-          "start": 146,
-          "end": 158
+          "start": 129,
+          "end": 148
         },
         {
           "kind": "death",
-          "start": 180,
-          "end": 186
+          "start": 155,
+          "end": 161
         }
       ]
     },
@@ -44664,49 +48335,49 @@
       "skinId": 526001,
       "championId": 526,
       "name": "Battle Queen Rell",
-      "videoId": "2R6w4_icxSk",
-      "title": "Battle Queen Rell Skin Spotlight - League of Legends",
+      "videoId": "g7BEpkB6ns0",
+      "title": "Battle Queen Rell (2023) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2020-12-07",
+      "publishedAt": "2023-05-29",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=2R6w4_icxSk",
+      "source": "https://www.youtube.com/watch?v=g7BEpkB6ns0",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Rell.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 444,
-      "descriptionSha256": "d94613044055b9a6ce9968efead7183601d3499d1db14589669782c0143bb6f0",
-      "chaptersSource": "https://www.youtube.com/watch?v=2R6w4_icxSk",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 321,
+      "descriptionSha256": "a6b206910c004938e4278a631cd94a9118cf5675a6b56619255f38e685ea85ce",
+      "chaptersSource": "https://www.youtube.com/watch?v=g7BEpkB6ns0",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": [
         {
+          "kind": "emotes",
+          "start": 27,
+          "end": 50
+        },
+        {
+          "kind": "recall",
+          "start": 50,
+          "end": 63
+        },
+        {
           "kind": "attack",
-          "start": 128,
-          "end": 135
-        },
-        {
-          "kind": "q",
-          "start": 135,
-          "end": 144
-        },
-        {
-          "kind": "w",
-          "start": 144,
-          "end": 174
+          "start": 63,
+          "end": 69
         },
         {
           "kind": "e",
-          "start": 174,
-          "end": 198
+          "start": 108,
+          "end": 137
         },
         {
           "kind": "r",
-          "start": 198,
-          "end": 221
+          "start": 137,
+          "end": 156
         },
         {
           "kind": "death",
-          "start": 279,
-          "end": 293
+          "start": 168,
+          "end": 180
         }
       ]
     },
@@ -44714,59 +48385,49 @@
       "skinId": 526010,
       "championId": 526,
       "name": "Star Guardian Rell",
-      "videoId": "sUGUqkmsTR0",
-      "title": "Star Guardian Rell Skin Spotlight - League of Legends",
+      "videoId": "Y7Bx-YuOKzo",
+      "title": "Star Guardian Rell (2023) Skin Spotlight - League of Legends",
       "channelUrl": "https://www.youtube.com/@SkinSpotlights",
-      "publishedAt": "2022-07-24",
+      "publishedAt": "2023-05-29",
       "checkedAt": "2026-10-03",
-      "source": "https://www.youtube.com/watch?v=sUGUqkmsTR0",
+      "source": "https://www.youtube.com/watch?v=Y7Bx-YuOKzo",
       "catalogSource": "https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/champion/Rell.json",
       "channelId": "UC0NwzCHb8Fg89eTB5eYX17Q",
-      "verification": "Unique Riot EN name match (case-insensitive) and official channel; public metadata checked. Playback not verified by the generator.",
-      "durationSeconds": 401,
-      "descriptionSha256": "f5d3de76906b8a36a1b22de07b77ff76e4edcb12b393a6d4a0e1fa8d3450d8c0",
-      "chaptersSource": "https://www.youtube.com/watch?v=sUGUqkmsTR0",
+      "verification": "Unique Riot EN name match with explicit title grammar, typography normalization and versioned Riot alias manifest and official channel; public metadata checked. Playback not verified by the generator.",
+      "durationSeconds": 379,
+      "descriptionSha256": "4a98aef6f6c137ac06d286efa0a9582c2b61dbe1315f7fdf52f8c8c3b374246a",
+      "chaptersSource": "https://www.youtube.com/watch?v=Y7Bx-YuOKzo",
       "segmentVerification": "Published chapter boundaries only; unknown or duplicate labels omitted. Not frame-accurate; playback not verified by the generator.",
       "segments": [
         {
           "kind": "emotes",
           "start": 27,
-          "end": 62
+          "end": 59
         },
         {
           "kind": "recall",
-          "start": 62,
-          "end": 74
+          "start": 59,
+          "end": 72
         },
         {
           "kind": "attack",
-          "start": 74,
-          "end": 80
-        },
-        {
-          "kind": "q",
-          "start": 80,
-          "end": 90
-        },
-        {
-          "kind": "w",
-          "start": 90,
-          "end": 120
+          "start": 72,
+          "end": 77
         },
         {
           "kind": "e",
-          "start": 120,
-          "end": 128
+          "start": 113,
+          "end": 138
         },
         {
           "kind": "r",
-          "start": 150,
-          "end": 166
+          "start": 138,
+          "end": 160
         },
         {
           "kind": "death",
-          "start": 194,
-          "end": 200
+          "start": 172,
+          "end": 187
         }
       ]
     },

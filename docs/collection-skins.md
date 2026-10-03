@@ -247,7 +247,7 @@ La fenêtre générale est resserrée pour les versions dont une évolution impo
 | Teemo | 2024-10-09 | [14.20](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-20-notes/) |
 | Viktor | 2024-12-11 | [14.24](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-24-notes/) |
 
-Pour Fiddlesticks, Mundo, Udyr, Jax, Skarner et Viktor, le lendemain des notes sert de borne prudente lorsqu’elles n’explicitent pas le jour de sortie. Cette inférence peut exclure une vidéo à revoir. Les bornes précédentes Ahri/Caitlyn/MissFortune/Talon/Mordekaiser/Kai’Sa/Pyke/Aurora restent documentées dans les lots antérieurs et conservées dans l’outil.
+Pour Fiddlesticks, Mundo, Udyr, Jax, Skarner et Viktor, le lendemain des notes sert de borne prudente lorsqu’elles n’explicitent pas le jour de sortie. Cette inférence peut exclure une vidéo à revoir. Les bornes Ahri/Caitlyn/Kai’Sa/Pyke/Aurora restent conservées. La passe de récupération ci-dessous corrige la portée des retouches de Miss Fortune, Talon et Mordekaiser : elles s’appliquent aux identifiants des skins nommés par Riot, plutôt qu’à tout le champion.
 
 ### Relancer une maintenance
 
@@ -265,3 +265,35 @@ python3 scripts/catalog-skin-spotlights.py \
 Actualiser les dates pour chaque nouvelle recette. `--previous-cache` peut être répété pour reprendre les anciens JSON ; `--offline` limite la passe aux caches. Valider le code de sortie et relire le candidat avant copie dans `public/game-data/skin-spotlights.json`. Les recherches HTML ne sont pas contractuelles ni exhaustives, et une erreur fournisseur ne doit pas être relancée en boucle. Sur ce Mac, le Python de maintenance a été lancé avec `SSL_CERT_FILE=/etc/ssl/cert.pem` pour utiliser le magasin de certificats système ; aucune vérification TLS n’a été désactivée.
 
 Utiliser un dossier de cache Riot distinct lors d’un changement de patch : un JSON Riot d’une autre version est refusé, pas remplacé silencieusement. Le cache de métadonnées YouTube ne remplace pas une recette de lecture récente.
+
+
+## Récupération des références manquantes — 3 octobre 2026
+
+La recherche complémentaire porte sur les 1 057 skins principaux sans référence dans le catalogue de 895 vidéos, y compris les 368 dont seul un candidat hors fenêtre avait été trouvé. Une recherche partielle ne prouve jamais l’absence d’une vidéo. Les résultats globaux YouTube sont filtrés par l’identifiant de chaîne officielle, puis chaque vidéo est vérifiée une seconde fois dans ses métadonnées.
+
+Le mode de couverture accepte une grammaire explicite des titres finaux PC : suffixes historiques, préfixe `Full -`, annotations d’année/ASU/VGU/Update et différences typographiques (accents, espaces, ponctuation). Il n’effectue ni recherche floue, ni inversion de mots, ni rapprochement de chromas. Les noms Riot datés sont résolus avant le retrait d’une annotation ; une édition Prestige 2022 ne devient pas l’édition originale. Une année n’est jamais retirée pour rabattre un alias historique, notamment Championship Riven 2016.
+
+`scripts/skin-spotlight-title-aliases.json` conserve 38 anciens noms prouvés dans des JSON Data Dragon officiels, avec identifiants, noms actuels, versions, URLs et empreintes SHA-256. Ces preuves établissent l’identité, pas l’absence de modifications visuelles. Les bornes après refonte restent applicables. Le titre réel de la vidéo doit confirmer le même identifiant que la recherche : il ne peut pas emprunter le seuil d’un autre skin. `Old God` est reconnu comme un nom de série ; le marqueur `OLD` reste exclu ailleurs.
+
+Les notes [25.08](https://www.leagueoflegends.com/en-us/news/game-updates/patch-25-08-notes/) nomment Grand Reckoning Talon (91059) et Sahn-Uzal Mordekaiser (82054). La borne prudente reste pour ces deux skins, sans exclure les autres. [14.17](https://www.leagueoflegends.com/en-us/news/game-updates/patch-14-17-notes/) limite les nouveaux VFX de Miss Fortune à Cowgirl, Secret Agent, Candy Cane, Crime City et Pool Party (21001/3/4/6/9, hors apparence de base). Aucune tolérance globale de quelques jours n’est ajoutée pour les vidéos précédant une refonte.
+
+```sh
+# Recherche complémentaire, anciens skins inclus ; candidat toujours séparé.
+python3 -B scripts/catalog-skin-spotlights.py \
+  --sources apps/desktop/public/game-data/catalog/sources.json \
+  --cache work/spotlight-recovery-47/cache \
+  --minimum-date 2019-10-03 --checked-at 2026-10-03 \
+  --global-search-uncovered-skins \
+  --output work/spotlight-recovery-47/candidate.json \
+  --report work/spotlight-recovery-47/report.json \
+  --coverage-csv work/spotlight-recovery-47/coverage.csv
+# Le batch classique reste strict par défaut. Option explicite pour revalider les variantes.
+python3 -B scripts/update-skin-spotlights.py --patch 16.19.1 \
+  --allow-title-variants \
+  --output work/spotlight-recovery-47/revalidated.json \
+  --report work/spotlight-recovery-47/revalidation-report.json
+```
+
+Les règles de TLS, de cache de métadonnées et d’arrêt sur refus fournisseur restent identiques. Aucun média n’est téléchargé, aucun lecteur supplémentaire n’est créé et aucune recherche de maintenance n’est exécutée dans l’application.
+
+Résultat de cette passe : **981 références**, dont **864 avec 6 571 passages** ; 86 ajouts, 7 substitutions et 888 entrées inchangées. Les 1 057 recherches ont toutes été effectuées, sans prouver l’exhaustivité de YouTube. Il reste 659 candidats hors fenêtre, 112 versions à revoir et 200 recherches sans référence confirmée. [Rapport final et validation](recettes/2026-10-03-skins-video-coverage.md). Le lecteur existant charge toujours le média à la demande ; seules les références et preuves de maintenance sont ajoutées.

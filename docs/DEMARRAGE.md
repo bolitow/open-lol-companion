@@ -247,3 +247,13 @@ Une seule page **Open LoL Companion** est réutilisée entre tous les champions 
 les pages personnelles et les sorts d'invocateur sont conservés.
 Démarrage, méthode, limites et recette :
 [imports automatiques dans le client](imports-automatiques.md).
+
+
+### Rechercher les vidéos encore manquantes
+
+Pour rechercher aussi une présentation récente des anciens skins sans référence, utiliser
+`--global-search-uncovered-skins` avec `scripts/catalog-skin-spotlights.py`.
+Les résultats sont filtrés sur la chaîne officielle et restent partiels. Le batch
+`scripts/update-skin-spotlights.py` accepte `--allow-title-variants` pour revalider
+les titres annotés et anciens noms Riot sourcés ; sans cette option, il reste strict.
+Voir [les règles et commandes de récupération](collection-skins.md#récupération-des-références-manquantes--3-octobre-2026).

@@ -71,3 +71,12 @@ it('étend le catalogue global avec des correspondances Riot récentes et leurs 
  expect([...index.values()].every(video=>video.publishedAt>='2019-10-03')).toBe(true);
  expect(index.has(103008)).toBe(false); // Popstar Ahri (Amethyst), parentSkin Riot = 4.
 });
+
+it('raccorde les noms historiques et accentués par leur identifiant Riot',()=>{
+ const index=parseSkinSpotlights(JSON.parse(Object.values(bundled)[0]!));
+ expect(findSkinSpotlight(index,245036,245)?.name).toBe('Arcane Firelight Ekko');
+ expect(findSkinSpotlight(index,245036,103)).toBeNull();
+ const video=findSkinSpotlight(index,119048,119);
+ expect(video?.name).toBe('La Ilusión Draven');
+ expect((video?.publishedAt ?? '') >= '2019-10-03').toBe(true);
+});
