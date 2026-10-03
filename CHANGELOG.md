@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Collection : filtres regroupés selon la largeur réelle de la galerie, compteurs et actions sur une ligne, illustration de fiche agrandie et souhaits compacts avec libellés accessibles FR/EN ; cadre conservé entre deux skins et fondu limité à l’illustration, avec mouvements réduits respectés ; zone vidéo réductible pour conserver les commandes du lecteur à petite hauteur (#47).
+
 - Collection : recherche complémentaire des 1 057 skins sans vidéo, 86 références ajoutées et 7 présentations actualisées ; catalogue porté à 981 vidéos et 6 571 passages. Titres historiques vérifiés par identifiant Riot, accents et variantes finales PC reconnus sans rapprochement flou ni fusion des éditions ; bornes visuelles de Miss Fortune, Talon et Mordekaiser limitées aux skins concernés. Les 971 cas restants sont documentés (#47).
 
 - Collection : inventaire des 1 952 skins principaux de 173 champions, chromas séparés par identifiant Riot ; catalogue porté à 895 vidéos et 6 176 passages, avec 838 ajouts, exclusion d’une référence hors fenêtre de sept ans et rapports des cas à revoir. Collecte maintenable avec cache de métadonnées seulement, arrêt sur refus fournisseur et vidéo complète conservée sans raccourcis lorsque les chapitres publiés sont invalides (#47).

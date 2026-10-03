@@ -47,19 +47,18 @@ export function CollectionScreen({locale, collection, view, update}: CollectionS
         {(state.stale || state.storage_error || error) && <div className="collection-notice" role={error || state.storage_error ? 'alert' : 'status'}>{error ? t.errors[error] : state.storage_error ? t.storageError : state.status === 'disconnected' ? t.cached : t.stale}</div>}
         <div className="collection-workspace detail-layout" data-expanded={Boolean(selected)}>
             <section className="collection-library" aria-label={t.title} aria-busy={state.status === 'loading'}>
-                <div className="collection-filters"><label className="collection-search"><Icon name="search" size={16}/><input autoCorrect="off" autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label={t.search} placeholder={t.search} value={view.query} onChange={event => update({query: event.target.value, scrollTop: 0})}/></label>
-                    <SelectField label={t.champion} value={view.championId === null ? 'all' : String(view.championId)} onChange={value => update({championId: value === 'all' ? null : Number(value), scrollTop: 0})} options={[{value: 'all', label: t.allChampions}, ...champions.map(champion => ({value: String(champion.id), label: champion.names[locale]}))]}/></div>
-                <div className="collection-metadata-filters">
+                <div className="collection-controls"><div className="collection-filters"><label className="collection-search"><Icon name="search" size={16}/><input autoCorrect="off" autoComplete="off" autoCapitalize="off" spellCheck={false} aria-label={t.search} placeholder={t.search} value={view.query} onChange={event => update({query: event.target.value, scrollTop: 0})}/></label>
+                    <SelectField label={t.champion} value={view.championId === null ? 'all' : String(view.championId)} onChange={value => update({championId: value === 'all' ? null : Number(value), scrollTop: 0})} options={[{value: 'all', label: t.allChampions}, ...champions.map(champion => ({value: String(champion.id), label: champion.names[locale]}))]}/>
                     <SelectField label={t.rarity} value={view.rarity??'all'} onChange={value=>update({rarity:value==='all'?null:value as SkinRarity})} options={[{value:'all',label:t.allRarities},...Object.entries(t.rarities).filter(([key])=>rarities.has(key as SkinRarity)).map(([value,label])=>({value,label}))]}/>
                     <SelectField label={t.series} value={view.seriesId===null?'all':String(view.seriesId)} onChange={value=>update({seriesId:value==='all'?null:Number(value)})} options={[{value:'all',label:t.allSeries},...series.map(line=>({value:String(line.id),label:line.names[locale]}))]}/>
                 </div>
-                <div className="collection-filter-tabs" role="group" aria-label={t.title}>{(Object.keys(t.filters) as CollectionFilter[]).map(filter => <button key={filter} aria-pressed={view.filter === filter} onClick={() => update({filter, scrollTop: 0})}>{t.filters[filter]}</button>)}</div>
+                <div className="collection-summary-row"><div className="collection-filter-tabs" role="group" aria-label={t.title}>{(Object.keys(t.filters) as CollectionFilter[]).map(filter => <button key={filter} aria-pressed={view.filter === filter} onClick={() => update({filter, scrollTop: 0})}>{t.filters[filter]}</button>)}</div>
                 <div className="collection-toolbar"><div className="collection-counts" role="status" aria-label={t.count}>
                     {cards.length !== summary.total && <strong>{number.format(cards.length)} {t.results}</strong>}
                     <span>{number.format(summary.owned)} {t.owned} / {number.format(summary.total)} {t.skins}</span>
                     {summary.temporary > 0 && <small>{number.format(summary.temporary)} {t.temporary}</small>}
                     {summary.unknown > 0 && <small>{number.format(summary.unknown)} {t.unknown}</small>}
-                </div><button className="icon-button" aria-label={t.refresh} title={t.refresh} disabled={pending || state.status === 'loading'} onClick={() => void refresh()}><Icon name="replay" size={15}/></button></div>
+                </div><button className="icon-button" aria-label={t.refresh} title={t.refresh} disabled={pending || state.status === 'loading'} onClick={() => void refresh()}><Icon name="replay" size={15}/></button></div></div></div>
                 <div className="collection-scroll" ref={scroll} onScroll={event => {const element = event.currentTarget; update({scrollTop: element.scrollTop, ...(element.scrollHeight - element.scrollTop - element.clientHeight < 320 && visibleCount < cards.length ? {visibleCount: nextCollectionCount(visibleCount, cards.length)} : {})});}}>
                     <div className="collection-grid">{cards.slice(0, visibleCount).map((skin,index) => <button key={skin.id} data-skin={skin.id} onPointerEnter={()=>previews.warm(skin.splash_url)} onPointerLeave={previews.cancelIntent} onFocus={()=>previews.warm(skin.splash_url)} onBlur={previews.cancelIntent} className={`collection-card ${selected?.id === skin.id ? 'selected' : ''}`} aria-pressed={selected?.id === skin.id} onClick={() => update({selectedId: skin.id})}>
                         <span className="collection-card-art"><SkinImage key={skin.tile_url} url={skin.tile_url} label={t.imageUnavailable} priority={index<8}/>{wished.has(skin.id) && <span className="collection-wished" aria-label={t.wish}><Icon name="pin" size={14}/></span>}</span>
@@ -78,15 +77,15 @@ function CollectionDetail({skin,locale,collection,wished,close}:{skin:Collection
     const presence=usePresence(skin,240), selected=presence.value;
     const {state,pending,setWish}=collection,t=collectionCopy[locale];
     if(!selected)return null;
-    return <aside key={selected.id} className="collection-detail motion-panel" data-state={presence.closing?'closed':'open'} inert={presence.closing} aria-hidden={presence.closing} aria-label={selected.name} onKeyDown={event=>{if(event.key==='Escape'){event.stopPropagation();close()}}}>
-                <div className="collection-detail-art"><SkinImage key={selected.splash_url} url={selected.splash_url ?? selected.tile_url} placeholderUrl={selected.tile_url} priority label={t.imageUnavailable}/>
+    return <aside className="collection-detail motion-panel" data-state={presence.closing?'closed':'open'} inert={presence.closing} aria-hidden={presence.closing} aria-label={selected.name} onKeyDown={event=>{if(event.key==='Escape'){event.stopPropagation();close()}}}>
+                <div key={selected.id} className="collection-detail-content"><div className="collection-detail-art"><SkinImage key={selected.splash_url} url={selected.splash_url ?? selected.tile_url} placeholderUrl={selected.tile_url} priority label={t.imageUnavailable}/>
                     <button className="icon-button" aria-label={t.close} title={t.close} onClick={close}><Icon name="close" size={18}/></button>
                     <div className="collection-detail-heading"><h2>{selected.name}</h2><Ownership skin={selected} locale={locale}/></div>
                 </div>
                 <div className="collection-detail-body">
                     <div className="collection-detail-actions"><div className="collection-skin-tags">{selected.rarity&&<span>{t.rarities[selected.rarity]}</span>}{skinLines.entries.filter(line=>selected.series_ids.includes(line.id)).map(line=><span key={line.id}>{line.names[locale]}</span>)}</div>
-                    <button className={`button collection-wish-action ${wished.has(selected.id) ? 'primary' : ''}`} disabled={!canEditWishes(state) || pending} aria-pressed={wished.has(selected.id)} onClick={() => void setWish(selected.id, !wished.has(selected.id))}><Icon name="pin" size={16}/>{pending ? t.saving : wished.has(selected.id) ? t.removeWish : t.addWish}</button></div>
-                    <SkinSpotlight skinId={selected.id} championId={selected.champion_id} locale={locale}/>
+                    <button className={`button collection-wish-action ${wished.has(selected.id) ? 'primary' : ''}`} disabled={!canEditWishes(state) || pending} aria-label={wished.has(selected.id) ? t.removeWish : t.addWish} title={wished.has(selected.id) ? t.removeWish : t.addWish} aria-pressed={wished.has(selected.id)} onClick={() => void setWish(selected.id, !wished.has(selected.id))}><Icon name="pin" size={16}/>{pending ? t.saving : t.filters.wishes}</button></div>
+                    <SkinSpotlight key={selected.id} skinId={selected.id} championId={selected.champion_id} locale={locale}/>
                 </div>
-    </aside>;
+    </div></aside>;
 }

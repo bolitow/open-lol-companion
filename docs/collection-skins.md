@@ -297,3 +297,13 @@ python3 -B scripts/update-skin-spotlights.py --patch 16.19.1 \
 Les règles de TLS, de cache de métadonnées et d’arrêt sur refus fournisseur restent identiques. Aucun média n’est téléchargé, aucun lecteur supplémentaire n’est créé et aucune recherche de maintenance n’est exécutée dans l’application.
 
 Résultat de cette passe : **981 références**, dont **864 avec 6 571 passages** ; 86 ajouts, 7 substitutions et 888 entrées inchangées. Les 1 057 recherches ont toutes été effectuées, sans prouver l’exhaustivité de YouTube. Il reste 659 candidats hors fenêtre, 112 versions à revoir et 200 recherches sans référence confirmée. [Rapport final et validation](recettes/2026-10-03-skins-video-coverage.md). Le lecteur existant charge toujours le média à la demande ; seules les références et preuves de maintenance sont ajoutées.
+
+## Finition de la galerie — 3 octobre 2026
+
+Les filtres utilisent la largeur de la galerie, pas seulement celle de la fenêtre : recherche et trois sélecteurs partagent une ligne lorsque la place suffit ; la recherche retrouve une ligne entière quand la fiche est ouverte. Les onglets, compteurs et actualisation partagent une barre avec retour à la ligne si nécessaire. La galerie et la fiche conservent leur défilement interne.
+
+Le splash occupe davantage de hauteur ; les métadonnées et le bouton « Souhaits » restent compacts. Le nom accessible du bouton indique explicitement ajouter ou retirer, dans les deux langues. Le cadre de fiche n’est plus remonté à chaque changement de skin : seule l’illustration entre en fondu. Le bloc vidéo est réinitialisé par identifiant pour ne jamais réutiliser la référence du skin précédent. Les préférences de mouvement réduit sont conservées.
+
+Le contrôle natif macOS ouvrir → fermer, puis ouvrir → détacher → rattacher → fermer a conservé le même processus et la fiche sélectionnée. L’arrêt observé lors de la recette précédente n’a pas été reproduit ; aucune correction Rust spéculative n’a été appliquée. Cela ne prouve pas l’absence de panne intermittente. La recette Windows reste distincte et le ticket #47 reste ouvert.
+
+Recette visuelle native : galerie et fiche contrôlées à 1 280 × 800 et environ 960 × 600 ; recherche Ahri conservée au changement de skin et après lecture du passage Emotes d’Ahri challenger. À petite hauteur, la zone vidéo du grand lecteur peut maintenant se réduire jusqu’à son minimum natif de 200 px pour garder les commandes de pied visibles. Les états absents/erreur restent couverts par les tests de présentation existants.

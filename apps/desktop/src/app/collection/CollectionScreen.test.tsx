@@ -53,3 +53,9 @@ it('distingue le résultat filtré du total de la collection',()=>{
  expect(html).toContain('0 results');
  expect(html).toContain('0 owned / 1 skins');
 });
+
+it('garde un libellé accessible explicite pour le bouton de souhait compact en FR/EN',()=>{
+ const fr=render();expect(fr).toContain('aria-label="Ajouter aux souhaits"');expect(fr).toContain('title="Ajouter aux souhaits"');
+ const en=render({},'en');expect(en).toContain('aria-label="Add to wishlist"');expect(en).toContain('title="Add to wishlist"');
+ const saved=render({state:{...collection.state,wishes:[103001]}});expect(saved).toContain('aria-label="Retirer des souhaits"');
+});
