@@ -7,7 +7,7 @@
 .spell-import{margin-top:8px;width:100%;justify-content:space-between}.spell-workbench .rune-import-status{padding-left:0;padding-right:0}
 
 .build-abilities>.build-spells{margin:0;border:0;padding:0}.build-spells>.spell-workbench{border:0;margin:0;padding-top:7px}.spell-import{min-height:27px;padding:4px 7px;border-radius:5px;font-size:10px}.spell-import:disabled{opacity:.5;cursor:default}
-.spell-skills-details{border-top:1px solid var(--line);padding-top:7px;margin-top:10px}.spell-skills-details>summary{font-size:11px;color:var(--muted);cursor:pointer;margin-bottom:8px}
+.spell-skills-details{border-top:1px solid var(--line);padding-top:7px;margin-top:10px}.spell-skills-details>button{font-size:11px;color:var(--muted);cursor:pointer;margin-bottom:8px}
 
 .spell-controls{display:flex;align-items:center;justify-content:space-between;gap:7px}.spell-controls .spell-import{width:auto;margin:0;font-size:9px}.spell-controls .spell-preference{flex-shrink:0;font-size:9px;margin:3px 0;gap:3px}.spell-controls .spell-preference>button:not(.icon-button){min-width:22px;height:23px}.spell-controls .spell-reset{height:22px;width:22px}
 .spell-workbench .build-panel-heading{flex-wrap:nowrap}.spell-workbench .build-panel-heading .build-variant-select{width:100px;font-size:9px}.spell-workbench .build-panel-heading h2{font-size:12px;white-space:nowrap}.spell-custom-label{color:var(--accent);font-size:9px}.spell-slot-pair{margin:6px 0}.spell-skills-details{margin-top:7px}

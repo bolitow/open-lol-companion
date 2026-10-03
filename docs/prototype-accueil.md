@@ -270,3 +270,14 @@ La fiche champion distingue identité, onglets, statistiques générales repliab
 `usePresence` conserve les panneaux pendant leur sortie (180 ms), annulable à la réouverture. `useDialogMotion` garde les dialogues modaux jusqu’à la fin du fondu, neutralise les interactions durant la sortie et conserve la restitution du focus. Les fenêtres modales utilisent un fondu sans transform pour ne pas déplacer le repère des dropdowns portalisés. Fiche champion et menu latéral glissent légèrement ; compte et recherche apparaissent avec un mouvement bref. Aucun nouvel effet WebGL ni animation en boucle. Préférence de l’app et `prefers-reduced-motion` neutralisent ces mouvements.
 
 Le lien « Détails du champion » en bas de l’onglet Compétences est retiré : il doublonnait la fiche déjà ouverte. Les statistiques de base restent disponibles en haut du panneau et chaque icône de sort ouvre toujours ses détails.
+
+
+### Finition de la préparation réelle — 3 octobre 2026 (#4, #13)
+
+Le bloc de préparation réunit portrait, statut et sélecteur du champion. Le suivi affiche « Votre prépick » puis « Votre pick verrouillé » à partir du client. Une consultation reste indépendante des nouveaux picks ; son bouton retour affiche le champion actuellement annoncé et disparaît s’il n’y en a plus. Choisir son propre champion dans le sélecteur reprend le suivi. Aucun de ces contrôles ne sélectionne ou verrouille un champion dans League.
+
+Les cartes sont identifiées par joueur ; les emplacements vides utilisent des clés distinctes, y compris pour une équipe partielle. Le verrouillage conserve la carte et anime seulement contraste/opacité ; un nouvel artwork reçoit une arrivée brève. Les deux arbres de runes ont leur propre surface, les alternatives restent visibles et les rangées se réduisent selon l’espace réel. À petite hauteur, le panneau de runes équipé défile entièrement pour ne pas laisser les commandes comprimer l’arbre. Les objets observés gardent leur ordre et leurs numéros ; catalogue, composants et consommables restent disponibles sans être présentés comme des recommandations situationnelles.
+
+Le dépliant Compétences partage `Disclosure`, les panneaux et infobulles utilisent des fondus courts. Pas de nouvelle boucle ni de WebGL ajouté ; mouvements réduits système et application respectés. La recette isolée utilise les composants de production et des états de draft/statistiques fictifs explicitement signalés : suivi, retour, verrouillage sans remontage, FR/EN, thèmes, panneaux étroits et tailles 960×600, 1280×720, 1440×900. Elle ne valide pas une draft LCU réelle ni Windows ; ces essais restent différés.
+
+L’application Tauri macOS a été reconstruite et relancée : navigation Draft, sélection manuelle d’Ahri, accès au catalogue/runes et désactivation des imports hors draft vérifiés dans la fenêtre native. Les équipes restent vides avec le client déconnecté ; aucune simulation n’est embarquée dans le produit.

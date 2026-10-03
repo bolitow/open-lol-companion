@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Préparation de draft rattachée à son champion : prépick, pick verrouillé et consultation distincts, retour au pick réel ; cartes conservées au verrouillage, arbres de runes adaptatifs, objets mieux séparés et transitions brèves respectant les mouvements réduits (#4, #13).
+
 - Types de dégâts distingués dans les fiches de sorts : physiques orange, magiques violets, bruts neutres (blanc en thème sombre), y compris leurs montants ; couleurs propres des ratios AD/AP conservées (#4).
 
 - Vidéos de compétences préchargées dès l’ouverture du champion, réutilisées entre aperçu et fiche agrandie, puis libérées au changement ou à la fermeture de sa fiche. Paramètres du sort alignés et fonctionnement entièrement visible sans dépliant dans la vue agrandie (#4).
