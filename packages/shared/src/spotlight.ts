@@ -57,3 +57,7 @@ export interface SpotlightMediaState {
   attempt: number;
   status: 'idle' | 'loading' | 'loaded' | 'slow' | 'failed';
 }
+
+/** Rectangle DOM du média natif ; null masque la Webview sans interrompre sa session. */
+export interface SpotlightVideoBounds {x:number;y:number;width:number;height:number}
+export interface SpotlightLayoutRequest {revision:number;bounds:SpotlightVideoBounds|null}

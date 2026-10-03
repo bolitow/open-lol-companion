@@ -43,3 +43,9 @@ it('conserve le passage après échec pour le repli et le réinitialise à la vi
  await createSpotlightPlayback(other,transport)(true);
  expect(transport).toHaveBeenLastCalledWith(other,true,undefined);
 });
+
+it('retire les lignes de crédit tout en conservant un accès externe nommé et la source au survol',()=>{
+ const html=render();expect(html).not.toContain('collection-spotlight-credit');expect(html).not.toContain('<h3>');
+ expect(html).toContain('aria-label="Ouvrir sur YouTube"');expect(html).toContain('SkinSpotlights');
+ expect(render({locale:'en'})).toContain('aria-label="Open on YouTube"');
+});

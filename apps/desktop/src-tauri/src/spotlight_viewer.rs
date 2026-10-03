@@ -1,4 +1,4 @@
-//! Une Webview distante isolée, déplacée entre la modale et le shell détaché.
+//! Une Webview distante isolée, déplacée entre fiche, modale et shell détaché.
 use crate::spotlight::{navigate_with_referer, navigation_allowed, open_external, video_urls};
 use crate::spotlight_media::{MediaLifecycle, MediaState, MediaStatus};
 use crate::spotlight_model::{selected_segment, transition, SpotlightAction, SpotlightState};
@@ -191,7 +191,7 @@ pub async fn skin_spotlight_layout(
     window: tauri::Webview,
     runtime: tauri::State<'_, ViewerRuntime>,
     revision: u64,
-    bounds: VideoBounds,
+    bounds: Option<VideoBounds>,
 ) -> Result<(), String> {
     if !local(window.label()) {
         return Err("spotlight_forbidden".into());
@@ -206,6 +206,13 @@ pub async fn skin_spotlight_layout(
     {
         return Err("spotlight_stale".into());
     }
+    // Masquer sans détruire : conserver lecture et passage pendant les menus.
+    let Some(bounds) = bounds else {
+        if let Some(player) = app.get_webview(PLAYER) {
+            player.hide().map_err(|_| "spotlight_unavailable")?;
+        }
+        return Ok(());
+    };
     let target = app.get_window(host).ok_or("spotlight_unavailable")?;
     let size = window
         .size()
@@ -396,6 +403,16 @@ mod tests {
         ] {
             assert!(!valid_bounds(&b, 800.0, 600.0));
         }
+    }
+    #[test]
+    fn accepte_un_rectangle_null_pour_masquer_sans_changer_la_session() {
+        let hidden: Option<VideoBounds> = serde_json::from_value(serde_json::Value::Null).unwrap();
+        assert!(hidden.is_none());
+        let visible: Option<VideoBounds> = serde_json::from_value(serde_json::json!({
+            "x": 12, "y": 40, "width": 320, "height": 200
+        }))
+        .unwrap();
+        assert!(valid_bounds(&visible.unwrap(), 960.0, 600.0));
     }
     #[test]
     fn refuse_au_media_distant_les_commandes_du_shell() {

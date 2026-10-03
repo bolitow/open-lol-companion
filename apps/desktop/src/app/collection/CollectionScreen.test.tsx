@@ -59,3 +59,8 @@ it('garde un libellé accessible explicite pour le bouton de souhait compact en 
  const en=render({},'en');expect(en).toContain('aria-label="Add to wishlist"');expect(en).toContain('title="Add to wishlist"');
  const saved=render({state:{...collection.state,wishes:[103001]}});expect(saved).toContain('aria-label="Retirer des souhaits"');
 });
+
+it('conserve le nom intégral et la possession des cartes compactes pour les aides techniques',()=>{
+ const html=render();expect(html).toContain('title="Ahri du client"');
+ expect(html).toContain('title="Possession inconnue"');expect(html).toContain('collection-ownership-label');
+});

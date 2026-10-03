@@ -17,8 +17,8 @@ it('présente un lecteur intégré, flèches, choix actif, détachement et ferme
 it('propose le rattachement dans la fenêtre détachée et traduit les erreurs', () => {
     const html = renderToStaticMarkup(<SpotlightViewerContent state={{ ...state, detached: true, locale: 'en' }} busy error onAction={vi.fn()}/>);
     expect(html).toContain('Attach to app');
-    expect(html).toContain('Try again');
-    expect(html).toContain('YouTube');
+    expect(html).toContain('Reload');
+    expect(html).not.toContain('Open on YouTube');
     expect(html).toContain('disabled');
 });
 it('ignore un ancien résultat reçu après fermeture ou changement de skin', () => {
@@ -34,11 +34,18 @@ it('conserve thème clair, langue et mouvement réduit dans le shell détaché',
 it('signale un chargement long sans prétendre que la vidéo est indisponible', () => {
     const html = renderToStaticMarkup(<SpotlightViewerContent state={state} busy={false} error={false} mediaStatus="slow" onAction={vi.fn()}/>);
     expect(html).toContain('Le chargement du lecteur prend plus de temps que prévu');
-    expect(html).toContain('Réessayer');
-    expect(html).toContain('Ouvrir sur YouTube');
+    expect(html).toContain('Recharger');
+    expect(html).not.toContain('Ouvrir sur YouTube');
 });
-it('propose une aide explicite même si la page YouTube chargée ne lit pas le média', () => {
+it('garde uniquement Recharger sans aide permanente quand la page est chargée', () => {
     const html = renderToStaticMarkup(<SpotlightViewerContent state={state} busy={false} error={false} mediaStatus="loaded" onAction={vi.fn()}/>);
-    expect(html).toContain('Vidéo bloquée');
+    expect(html).not.toContain('Vidéo bloquée');expect(html).toContain('Recharger');expect(html).not.toContain('<small>SkinSpotlights</small>');
     expect(html).not.toContain('Ouverture du lecteur…');
+});
+
+it('propose agrandir dans la fiche et réduire dans la grande vue, avec passages visuels accessibles',()=>{
+ const props={state,busy:false,error:false,onAction:vi.fn(),onToggleSize:vi.fn()};
+ const small=renderToStaticMarkup(<SpotlightViewerContent {...props} inline/>);
+ expect(small).toContain('aria-label="Agrandir"');expect(small).toContain('spotlight-chapter-symbol');expect(small).toContain('aria-label="Emotes"');
+ expect(renderToStaticMarkup(<SpotlightViewerContent {...props}/>)).toContain('aria-label="Réduire"');
 });

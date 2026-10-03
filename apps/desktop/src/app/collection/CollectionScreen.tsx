@@ -17,7 +17,7 @@ import {useSkinImagePreloader} from './skinImagePreload';
 
 export interface CollectionScreenProps {locale: Locale; collection: CollectionHookResult; view: CollectionView; update: (patch: Partial<CollectionView>) => void}
 function Ownership({skin, locale}: {skin: CollectionSkin; locale: Locale}) {
-    return <span className={`collection-ownership is-${skin.ownership}`}><Icon name={skin.ownership === 'owned' ? 'check' : skin.ownership === 'unknown' ? 'info' : 'pin'} size={12}/>{collectionCopy[locale].ownership[skin.ownership]}</span>;
+    return <span title={collectionCopy[locale].ownership[skin.ownership]} className={`collection-ownership is-${skin.ownership}`}><Icon name={skin.ownership === 'owned' ? 'check' : skin.ownership === 'unknown' ? 'info' : skin.ownership === 'temporary' ? 'clock' : 'circle'} size={14}/><span className="collection-ownership-label">{collectionCopy[locale].ownership[skin.ownership]}</span></span>;
 }
 export function CollectionScreen({locale, collection, view, update}: CollectionScreenProps) {
     const {state, pending, error, refresh} = collection, t = collectionCopy[locale], number = new Intl.NumberFormat(locale);
@@ -62,7 +62,7 @@ export function CollectionScreen({locale, collection, view, update}: CollectionS
                 <div className="collection-scroll" ref={scroll} onScroll={event => {const element = event.currentTarget; update({scrollTop: element.scrollTop, ...(element.scrollHeight - element.scrollTop - element.clientHeight < 320 && visibleCount < cards.length ? {visibleCount: nextCollectionCount(visibleCount, cards.length)} : {})});}}>
                     <div className="collection-grid">{cards.slice(0, visibleCount).map((skin,index) => <button key={skin.id} data-skin={skin.id} onPointerEnter={()=>previews.warm(skin.splash_url)} onPointerLeave={previews.cancelIntent} onFocus={()=>previews.warm(skin.splash_url)} onBlur={previews.cancelIntent} className={`collection-card ${selected?.id === skin.id ? 'selected' : ''}`} aria-pressed={selected?.id === skin.id} onClick={() => update({selectedId: skin.id})}>
                         <span className="collection-card-art"><SkinImage key={skin.tile_url} url={skin.tile_url} label={t.imageUnavailable} priority={index<8}/>{wished.has(skin.id) && <span className="collection-wished" aria-label={t.wish}><Icon name="pin" size={14}/></span>}</span>
-                        <span className="collection-card-caption"><strong>{skin.name}</strong><Ownership skin={skin} locale={locale}/></span></button>)}</div>
+                        <span className="collection-card-caption"><strong title={skin.name}>{skin.name}</strong><Ownership skin={skin} locale={locale}/></span></button>)}</div>
                     {visibleCount < cards.length && <div className="collection-more"><span>{number.format(visibleCount)} / {number.format(cards.length)}</span><button className="button" onClick={showMore}>{t.showMore}</button></div>}
                     {!cards.length && <div className="collection-empty" role="status"><Icon name="sparkles" size={28}/><p>{state.skins.length ? t.empty : t.status[state.status]}</p>{state.skins.length > 0 && <button className="button" onClick={reset}>{t.reset}</button>}</div>}
                 </div>
@@ -80,12 +80,13 @@ function CollectionDetail({skin,locale,collection,wished,close}:{skin:Collection
     return <aside className="collection-detail motion-panel" data-state={presence.closing?'closed':'open'} inert={presence.closing} aria-hidden={presence.closing} aria-label={selected.name} onKeyDown={event=>{if(event.key==='Escape'){event.stopPropagation();close()}}}>
                 <div key={selected.id} className="collection-detail-content"><div className="collection-detail-art"><SkinImage key={selected.splash_url} url={selected.splash_url ?? selected.tile_url} placeholderUrl={selected.tile_url} priority label={t.imageUnavailable}/>
                     <button className="icon-button" aria-label={t.close} title={t.close} onClick={close}><Icon name="close" size={18}/></button>
-                    <div className="collection-detail-heading"><h2>{selected.name}</h2><Ownership skin={selected} locale={locale}/></div>
+                    <div className="collection-detail-heading"><h2>{selected.name}</h2>
+                        <div className="collection-detail-meta"><Ownership skin={selected} locale={locale}/><div className="collection-skin-tags">{selected.rarity&&<span>{t.rarities[selected.rarity]}</span>}{skinLines.entries.filter(line=>selected.series_ids.includes(line.id)).map(line=><span key={line.id}>{line.names[locale]}</span>)}</div></div>
+                    </div>
+                    <button className={`collection-wish-action ${wished.has(selected.id) ? 'primary' : ''}`} disabled={!canEditWishes(state) || pending} aria-label={wished.has(selected.id) ? t.removeWish : t.addWish} title={wished.has(selected.id) ? t.removeWish : t.addWish} aria-pressed={wished.has(selected.id)} onClick={() => void setWish(selected.id, !wished.has(selected.id))}><Icon name="pin" size={16}/></button>
                 </div>
                 <div className="collection-detail-body">
-                    <div className="collection-detail-actions"><div className="collection-skin-tags">{selected.rarity&&<span>{t.rarities[selected.rarity]}</span>}{skinLines.entries.filter(line=>selected.series_ids.includes(line.id)).map(line=><span key={line.id}>{line.names[locale]}</span>)}</div>
-                    <button className={`button collection-wish-action ${wished.has(selected.id) ? 'primary' : ''}`} disabled={!canEditWishes(state) || pending} aria-label={wished.has(selected.id) ? t.removeWish : t.addWish} title={wished.has(selected.id) ? t.removeWish : t.addWish} aria-pressed={wished.has(selected.id)} onClick={() => void setWish(selected.id, !wished.has(selected.id))}><Icon name="pin" size={16}/>{pending ? t.saving : t.filters.wishes}</button></div>
-                    <SkinSpotlight key={selected.id} skinId={selected.id} championId={selected.champion_id} locale={locale}/>
+                    <SkinSpotlight enabled={!presence.closing} key={selected.id} skinId={selected.id} championId={selected.champion_id} locale={locale}/>
                 </div>
     </div></aside>;
 }
