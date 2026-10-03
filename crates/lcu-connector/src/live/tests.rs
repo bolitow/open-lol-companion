@@ -244,7 +244,11 @@ async fn le_canal_regroupe_la_draft_et_game_start_sans_perdre_le_champion() {
     });
     tx.send_modify(|i| i.set_session(&lcu));
     let (out, mut receive) = mpsc::channel(4);
-    let task = tokio::spawn(super::watch(rx, out));
+    let task = tokio::spawn(super::watch_with_reader(
+        rx,
+        out,
+        std::future::pending::<Result<LiveGame, LiveError>>,
+    ));
     let live = receive.recv().await.unwrap();
     task.abort();
     assert_eq!(live.status, LiveStatus::Waiting);
@@ -267,5 +271,204 @@ fn publie_chaque_cs_recu_sans_arrondir_ni_attendre_un_palier() {
             cs
         );
         assert_eq!(tracker.snapshot.revision, index as u32 + 1);
+    }
+}
+
+type PendingRead = tokio::sync::oneshot::Sender<Result<LiveGame, LiveError>>;
+
+fn start_controlled_watch() -> (
+    watch::Sender<LiveInput>,
+    mpsc::Receiver<LiveSession>,
+    mpsc::UnboundedReceiver<PendingRead>,
+    tokio::task::JoinHandle<()>,
+) {
+    let mut lcu = draft_session();
+    let mut input = LiveInput::default();
+    input.set_session(&lcu);
+    lcu.apply(crate::LcuEvent::PhaseChanged {
+        phase: crate::GameflowPhase::InProgress,
+    });
+    input.set_session(&lcu);
+    let (send, receive) = watch::channel(input);
+    let (output, snapshots) = mpsc::channel(16);
+    let (reads, pending) = mpsc::unbounded_channel();
+    // Seule la lecture externe est remplacée ; cadence et transitions restent réelles.
+    let task = tokio::spawn(watch_with_reader(receive, output, move || {
+        let (reply, result) = tokio::sync::oneshot::channel();
+        reads.send(reply).unwrap();
+        async move { result.await.unwrap() }
+    }));
+    (send, snapshots, pending, task)
+}
+
+#[tokio::test(start_paused = true)]
+async fn annule_la_lecture_en_vol_a_la_sortie_et_rejette_sa_reponse_tardive() {
+    let (input, mut snapshots, mut reads, task) = start_controlled_watch();
+    let initial = snapshots.recv().await.unwrap();
+    assert_eq!(initial.status, LiveStatus::Waiting);
+    let pending = reads.recv().await.unwrap();
+    input.send_modify(|i| i.set_session(&LcuSession::default()));
+    let idle = tokio::time::timeout(Duration::from_secs(1), snapshots.recv())
+        .await
+        .expect("la sortie ne doit pas attendre la réponse réseau")
+        .unwrap();
+    assert_eq!(idle.status, LiveStatus::Idle);
+    assert!(idle.game.is_none());
+    assert!(idle.context.is_none());
+    assert!(idle.generation > initial.generation);
+    assert!(pending.send(project(payload())).is_err());
+    tokio::time::advance(Duration::from_secs(5)).await;
+    tokio::task::yield_now().await;
+    assert!(snapshots.try_recv().is_err());
+    assert!(reads.try_recv().is_err());
+    drop(input);
+    task.await.unwrap();
+}
+
+#[tokio::test(start_paused = true)]
+async fn efface_les_donnees_sur_coupure_et_reprend_sans_requete_concurrente() {
+    let (input, mut snapshots, mut reads, task) = start_controlled_watch();
+    let initial = snapshots.recv().await.unwrap();
+    let pending = reads.recv().await.unwrap();
+    tokio::time::advance(Duration::from_secs(5)).await;
+    tokio::task::yield_now().await;
+    assert!(reads.try_recv().is_err());
+    pending.send(project(payload())).unwrap();
+    let ready = snapshots.recv().await.unwrap();
+    assert_eq!(ready.game.as_ref().unwrap().player.creep_score, 24);
+    assert_eq!(ready.generation, initial.generation);
+    tokio::time::advance(Duration::from_millis(999)).await;
+    tokio::task::yield_now().await;
+    assert!(reads.try_recv().is_err());
+    tokio::time::advance(Duration::from_millis(1)).await;
+    reads
+        .recv()
+        .await
+        .unwrap()
+        .send(Err(LiveError::Unavailable))
+        .unwrap();
+    let unavailable = snapshots.recv().await.unwrap();
+    assert_eq!(unavailable.status, LiveStatus::Unavailable);
+    assert!(unavailable.game.is_none());
+    assert_eq!(unavailable.generation, ready.generation);
+    let mut recovered = payload();
+    recovered["gameData"]["gameTime"] = json!(602.0);
+    recovered["allPlayers"][1]["scores"]["creepScore"] = json!(25);
+    reads
+        .recv()
+        .await
+        .unwrap()
+        .send(project(recovered))
+        .unwrap();
+    let resumed = snapshots.recv().await.unwrap();
+    assert_eq!(resumed.status, LiveStatus::Ready);
+    assert_eq!(resumed.game.as_ref().unwrap().player.creep_score, 25);
+    assert!(resumed.revision > unavailable.revision);
+    assert_eq!(resumed.generation, ready.generation);
+    drop(input);
+    task.await.unwrap();
+}
+
+#[tokio::test(start_paused = true)]
+async fn deux_parties_coalescees_effacent_le_contexte_et_annulent_l_ancienne_lecture() {
+    let (input, mut snapshots, mut reads, task) = start_controlled_watch();
+    snapshots.recv().await.unwrap();
+    reads
+        .recv()
+        .await
+        .unwrap()
+        .send(project(payload()))
+        .unwrap();
+    let first = snapshots.recv().await.unwrap();
+    assert!(first.context.is_some());
+    let pending = reads.recv().await.unwrap();
+    let mut next = LcuSession::default();
+    next.apply(crate::LcuEvent::Connected { port: 123 });
+    next.apply(crate::LcuEvent::PhaseChanged {
+        phase: crate::GameflowPhase::InProgress,
+    });
+    input.send_modify(|i| {
+        i.set_session(&LcuSession::default());
+        i.set_session(&next);
+    });
+    let waiting = tokio::time::timeout(Duration::from_secs(1), snapshots.recv())
+        .await
+        .expect("les transitions regroupées doivent annuler la lecture")
+        .unwrap();
+    assert_eq!(waiting.status, LiveStatus::Waiting);
+    assert!(waiting.game.is_none());
+    assert!(waiting.context.is_none());
+    assert!(waiting.generation > first.generation);
+    assert!(pending.send(project(payload())).is_err());
+    let mut second = payload();
+    second["gameData"]["gameTime"] = json!(2.0);
+    second["allPlayers"][1]["rawChampionName"] = json!("game_character_displayname_Mel");
+    second["allPlayers"][1]["scores"]["creepScore"] = json!(0);
+    reads.recv().await.unwrap().send(project(second)).unwrap();
+    let ready = snapshots.recv().await.unwrap();
+    let game = ready.game.unwrap();
+    assert_eq!(game.player.champion_key, "Mel");
+    assert_eq!(game.game_time, 2.0);
+    assert_eq!(game.player.creep_score, 0);
+    assert_eq!(ready.generation, waiting.generation);
+    assert!(ready.context.is_none());
+    assert!(ready.revision > first.revision);
+    drop(input);
+    task.await.unwrap();
+}
+
+#[test]
+fn un_recul_d_horloge_efface_le_contexte_de_la_partie_precedente() {
+    let mut tracker = LiveTracker::default();
+    let mut lcu = draft_session();
+    tracker.observe(&lcu);
+    lcu.apply(crate::LcuEvent::PhaseChanged {
+        phase: crate::GameflowPhase::InProgress,
+    });
+    tracker.observe(&lcu);
+    tracker.accept(project(payload()));
+    assert!(tracker.snapshot.context.is_some());
+    let generation = tracker.snapshot.generation;
+    let mut second = payload();
+    second["gameData"]["gameTime"] = json!(0.5);
+    second["allPlayers"][1]["scores"]["creepScore"] = json!(0);
+    tracker.accept(project(second));
+    assert!(tracker.snapshot.context.is_none());
+    assert!(tracker.snapshot.generation > generation);
+    assert_eq!(tracker.snapshot.game.as_ref().unwrap().game_time, 0.5);
+    assert_eq!(
+        tracker.snapshot.game.as_ref().unwrap().player.creep_score,
+        0
+    );
+}
+
+#[test]
+fn projette_la_capture_reelle_macos_sans_identite_et_sans_alterer_les_valeurs() {
+    let source: Value = serde_json::from_str(include_str!(
+        "../../tests/fixtures/live-client-allgamedata-macos-2026-10-03.json"
+    ))
+    .unwrap();
+    let game = project(source).unwrap();
+    assert_eq!(game.player.champion_key, "Mel");
+    assert_eq!(game.player.level, 4);
+    assert_eq!(
+        (game.player.kills, game.player.deaths, game.player.assists),
+        (0, 0, 0)
+    );
+    assert_eq!(game.player.creep_score, 20);
+    assert_eq!(game.player.items, [1056, 2003, 2010, 3340]);
+    assert_eq!(game.game_time, 192.2555694580078);
+    assert_eq!(game.map_number, 11);
+    assert_eq!(game.game_mode, "CLASSIC");
+    assert_eq!(
+        game.events
+            .iter()
+            .map(|event| event.name.as_str())
+            .collect::<Vec<_>>(),
+        ["GameStart", "MinionsSpawning"]
+    );
+    let projected = serde_json::to_string(&game).unwrap();
+    for identity in ["fixture-local", "riotId", "summonerName", "puuid"] {
+        assert!(!projected.contains(identity));
     }
 }

@@ -332,8 +332,25 @@ impl LiveInput {
 
 /// Une seule requête à la fois. Tout changement LCU annule la lecture en attente ;
 /// aucune réponse ancienne ne traverse un changement de partie. Pas de rattrapage de ticks.
-pub async fn watch(mut input: watch::Receiver<LiveInput>, output: mpsc::Sender<LiveSession>) {
+pub async fn watch(input: watch::Receiver<LiveInput>, output: mpsc::Sender<LiveSession>) {
     let client = LiveClient::new();
+    watch_with_reader(input, output, || async {
+        match &client {
+            Ok(client) => client.read().await,
+            Err(error) => Err(*error),
+        }
+    })
+    .await;
+}
+
+async fn watch_with_reader<R, F>(
+    mut input: watch::Receiver<LiveInput>,
+    output: mpsc::Sender<LiveSession>,
+    read: R,
+) where
+    R: Fn() -> F,
+    F: std::future::Future<Output = Result<LiveGame, LiveError>>,
+{
     let mut tracker = LiveTracker::default();
     let mut deadline = tokio::time::Instant::now();
     let mut game_epoch = 0;
@@ -358,10 +375,9 @@ pub async fn watch(mut input: watch::Receiver<LiveInput>, output: mpsc::Sender<L
             tokio::select! { biased;
                 changed = input.changed() => {if changed.is_err() {return;} break;}
                 _ = tokio::time::sleep_until(deadline), if tracker.active => {
-                    let read = async {match &client {Ok(c)=>c.read().await,Err(e)=>Err(*e)}};
                     let result = tokio::select! { biased;
                         changed = input.changed() => {if changed.is_err() {return;} break;}
-                        result = read => result
+                        result = read() => result
                     };
                     tracker.accept(result);
                     if output.send(tracker.snapshot.clone()).await.is_err() {return;}
