@@ -1,4 +1,4 @@
-import type {ImportItemsRequest, ImportRunesRequest} from './imports';
+import type {ImportItemsRequest, ImportRunesRequest, ImportSpellsRequest} from './imports';
 
 /** Garde Rust d'une partie, d'un champion sélectionné et de son poste. */
 export interface AutoImportContext {
@@ -10,7 +10,8 @@ export interface AutoImportContext {
 }
 export type AutoImportSelection =
     | {kind: 'runes'; request: ImportRunesRequest}
-    | {kind: 'items'; request: ImportItemsRequest};
+    | {kind: 'items'; request: ImportItemsRequest}
+    | {kind: 'spells'; request: ImportSpellsRequest};
 export interface AutoImportRequest {
     context: AutoImportContext;
     selection: AutoImportSelection;

@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Permissions de la fenêtre principale",
+  "description": "Permissions de la fen\u00eatre principale",
   "windows": [
     "main"
   ],
@@ -23,6 +23,10 @@
     "allow-overlay-state",
     "allow-overlay-configure",
     "allow-overlay-preview",
-    "allow-overlay-locale"
+    "allow-overlay-locale",
+    "allow-desktop-settings",
+    "allow-set-desktop-setting",
+    "allow-set-desktop-locale",
+    "allow-export-diagnostics"
   ]
 }

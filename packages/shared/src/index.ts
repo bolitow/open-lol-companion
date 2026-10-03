@@ -10,6 +10,10 @@ export * from "./builds";
 export * from "./imports";
 export * from "./draftRuneImport";
 export * from "./draftSpellImport";
+
+export * from "./desktopSettings";
+
+export * from './diagnostics';
 export * from "./autoImport";
 export * from "./live";
 

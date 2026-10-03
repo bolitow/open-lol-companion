@@ -742,14 +742,21 @@ kbd {
   .settings-panel>p { font-size: 12px; }
 }
 
-/* Les réglages d'import partagent le défilement de la page paramètres. */
+/* Le moteur reste monté ; son panneau ne provoque aucun défilement global des réglages. */
 .auto-import-panel {flex-shrink: 0; margin: 16px 0 0; padding: 14px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); font-size: 13px;}
 .auto-import-panel summary {cursor: pointer; font-weight: 600;}
 .auto-import-panel p {margin: 12px 0; line-height: 1.5;}
 .auto-import-controls {display: flex; flex-wrap: wrap; gap: 14px 24px; margin-bottom: 12px;}
+.auto-import-flash {display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; margin: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px;}
+.auto-import-flash legend {padding: 0 4px;}
+.auto-import-flash button {min-width: 36px; min-height: 32px; border: 1px solid var(--line); border-radius: 6px;}
+.auto-import-flash button[aria-pressed="true"] {background: var(--accent-soft); border-color: var(--accent); color: var(--accent);}
+.auto-import-flash small {flex-basis: 100%; color: var(--muted); line-height: 1.5;}
 .auto-import-controls label {display: flex; align-items: center; gap: 8px;}
 .auto-import-controls input[type="number"] {width: 76px; padding: 6px; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px;}
 .auto-import-progress {display: grid; gap: 4px; margin: 12px 0;}
 
-.app-main:has(.auto-import-panel) {overflow: auto;}
-.app-main:has(.auto-import-panel)>.screen-settings {flex: 0 0 auto;}
+.app-main:has(.auto-import-panel) {position: relative; overflow: hidden;}
+.app-main>.auto-import-panel {position: absolute; z-index: 15; top: 8px; right: 24px; margin: 0; padding: 8px 12px; max-width: min(540px,calc(100% - 48px)); max-height: calc(100% - 24px); overflow: auto; box-shadow: var(--shadow);}
+.app-main>.auto-import-panel[open] {width: min(540px,calc(100% - 48px)); background: var(--panel-raised);}
+@media(max-width:759px) {.app-main>.auto-import-panel {position:relative; top:auto; right:auto; max-width:100%; max-height:50vh;}}

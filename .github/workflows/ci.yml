@@ -84,11 +84,11 @@ jobs:
       - name: Formatage Rust
         run: cargo fmt --all --check
       - name: Clippy (connecteur LCU, collecteur et API)
-        run: cargo clippy -p lcu-connector -p olc-build-client -p olc-collector -p olc-api --all-targets -- -D warnings
+        run: cargo clippy -p olc-desktop-support -p lcu-connector -p olc-build-client -p olc-collector -p olc-api --all-targets -- -D warnings
       - name: Tests TypeScript (contrats et interface)
         run: pnpm -r test
       - run: pnpm --filter @olc/desktop build
-      - run: cargo test -p lcu-connector -p olc-build-client
+      - run: cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client
       - name: Tests de l’exporteur du catalogue desktop
         run: cargo test -p olc-collector --example export_desktop_catalog
       - name: Tests du backend (PostgreSQL)
@@ -148,7 +148,7 @@ jobs:
       - name: Tests TypeScript (contrats et interface)
         run: pnpm -r test
       - name: Tests du connecteur LCU et du client de builds
-        run: cargo test -p lcu-connector -p olc-build-client
+        run: cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client
       - name: Compilation de l'app (debug, sans installeur)
         run: pnpm --filter @olc/desktop tauri build --debug --no-bundle
       - name: Tests du moteur desktop

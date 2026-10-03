@@ -1,0 +1,1064 @@
+{
+  "schema": "olc-recipe-imports-v1",
+  "note": "Lectures GET successives non atomiques. Confirmation visuelle fournie séparément par le joueur. Aucun nom/identifiant de compte ou de page réel.",
+  "observations": [
+    {
+      "phase": "Lobby",
+      "championId": null,
+      "locked": null,
+      "spells": null,
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8143,
+            8137,
+            8106,
+            8226,
+            8236,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:01:48.929015+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": null,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8143,
+            8137,
+            8106,
+            8226,
+            8236,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:38.276758+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 202,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8143,
+            8137,
+            8106,
+            8226,
+            8236,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:40.301358+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 145,
+      "locked": false,
+      "spells": [
+        12,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8300,
+          "selectedPerkIds": [
+            8369,
+            8321,
+            8313,
+            8316,
+            8233,
+            8236,
+            5005,
+            5008,
+            5011
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:41.347720+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 121,
+      "locked": false,
+      "spells": [
+        12,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8300,
+          "selectedPerkIds": [
+            8369,
+            8321,
+            8313,
+            8316,
+            8233,
+            8236,
+            5005,
+            5008,
+            5011
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:42.358788+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 75,
+      "locked": false,
+      "spells": [
+        6,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8021,
+            9111,
+            9105,
+            8299,
+            8444,
+            8242,
+            5007,
+            5001,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:43.367070+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 777,
+      "locked": false,
+      "spells": [
+        3,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8008,
+            9101,
+            9104,
+            8299,
+            8451,
+            8444,
+            5005,
+            5008,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777
+      ],
+      "timeUtc": "2026-10-03T08:02:44.400384+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 799,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8143,
+            8137,
+            8106,
+            8233,
+            8237,
+            5008,
+            5008,
+            5011
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777,
+        799
+      ],
+      "timeUtc": "2026-10-03T08:02:45.413525+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 777,
+      "locked": false,
+      "spells": [
+        3,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8008,
+            9101,
+            9104,
+            8299,
+            8451,
+            8444,
+            5005,
+            5008,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:46.421898+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 32,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8010,
+            9111,
+            9105,
+            8299,
+            8126,
+            8106,
+            5005,
+            5008,
+            5001
+          ],
+          "subStyleId": 8100
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        32,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:48.445194+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 902,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8010,
+            9111,
+            9104,
+            8299,
+            8473,
+            8242,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        32,
+        58,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:49.470035+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 117,
+      "locked": false,
+      "spells": [
+        12,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8214,
+            8226,
+            8210,
+            8236,
+            8347,
+            8304,
+            5005,
+            5008,
+            5001
+          ],
+          "subStyleId": 8300
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        32,
+        58,
+        75,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:50.482396+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 86,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8230,
+            8224,
+            8234,
+            8236,
+            8451,
+            8444,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:51.490023+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 21,
+      "locked": false,
+      "spells": [
+        21,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8230,
+            8224,
+            8233,
+            8236,
+            9103,
+            8014,
+            5008,
+            5010,
+            5011
+          ],
+          "subStyleId": 8000
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:52.526658+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 13,
+      "locked": false,
+      "spells": [
+        6,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8992,
+            8226,
+            8234,
+            8237,
+            8473,
+            8451,
+            5005,
+            5010,
+            5011
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:02:53.541348+00:00"
+    },
+    {
+      "phase": "Lobby",
+      "championId": null,
+      "locked": null,
+      "spells": null,
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8992,
+            8226,
+            8234,
+            8237,
+            8473,
+            8451,
+            5005,
+            5010,
+            5011
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:03:15.721163+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": null,
+      "locked": false,
+      "spells": [
+        6,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8200,
+          "selectedPerkIds": [
+            8992,
+            8226,
+            8234,
+            8237,
+            8473,
+            8451,
+            5005,
+            5010,
+            5011
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:04:23.241915+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 777,
+      "locked": false,
+      "spells": [
+        3,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8000,
+          "selectedPerkIds": [
+            8008,
+            9101,
+            9104,
+            8299,
+            8451,
+            8444,
+            5005,
+            5008,
+            5001
+          ],
+          "subStyleId": 8400
+        }
+      ],
+      "itemSetChampions": [
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:04:27.273702+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 1,
+      "locked": false,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8126,
+            8140,
+            8105,
+            8233,
+            8224,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        1,
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:04:28.284192+00:00"
+    },
+    {
+      "phase": "ChampSelect",
+      "championId": 1,
+      "locked": true,
+      "spells": [
+        14,
+        4
+      ],
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8126,
+            8140,
+            8105,
+            8233,
+            8224,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        1,
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:04:29.295703+00:00"
+    },
+    {
+      "phase": "InProgress",
+      "championId": null,
+      "locked": null,
+      "spells": null,
+      "personalPageCount": 4,
+      "personalPagesUnchanged": true,
+      "personalSetCount": 0,
+      "personalSetsUnchanged": true,
+      "reservedPages": [
+        {
+          "current": true,
+          "pageAlias": 1,
+          "primaryStyleId": 8100,
+          "selectedPerkIds": [
+            8112,
+            8126,
+            8140,
+            8105,
+            8233,
+            8224,
+            5008,
+            5008,
+            5001
+          ],
+          "subStyleId": 8200
+        }
+      ],
+      "itemSetChampions": [
+        1,
+        12,
+        13,
+        22,
+        32,
+        58,
+        75,
+        86,
+        103,
+        111,
+        117,
+        145,
+        202,
+        222,
+        223,
+        266,
+        432,
+        777,
+        799,
+        804
+      ],
+      "timeUtc": "2026-10-03T08:04:40.397711+00:00"
+    }
+  ]
+}
