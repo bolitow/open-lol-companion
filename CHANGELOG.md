@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Recette fonctionnelle macOS du panneau acceptée par Matthieu sur sa configuration : affichage, interactions et raccourci confirmés, capture et versions consignées ; mesures chiffrées et autres configurations restent à compléter (#22).
+
 - Amis du compte LoL connecté dans l’accueil, présence, accès au profil si identité complète, états FR/EN et rafraîchissement local indépendant du quota Riot (#71).
 - Profil, rangs et historique du compte actif lus dans le client LoL, source affichée, personnalisées incluses, pagination sans mélange avec le service public et actualisation en fin de partie (#64, #65).
 
