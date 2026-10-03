@@ -4,18 +4,16 @@ import {importErrorMessage,type CatalogRecord,type DraftSession,type FlashSlot,t
 import {CatalogButton} from './GameDetails';
 import {Icon} from '../ui/Icon';
 import {createImportController,importEligibility} from './runeImport';
-import {editSpellSelection,parseFlashSlot,placeFlash,spellChoices,spellsMatch,validSpellPair,type SpellPair} from './spellEditing';
+import {editSpellSelection,placeFlash,spellChoices,spellsMatch,validSpellPair,type SpellPair} from './spellEditing';
+import {saveFlashPreference,useFlashPreference} from './flashPreference';
 import {spellCopy} from './spellCopy';
 import type {Locale} from './state';
 import './spells.css';
 
 const imports=createImportController<ImportDraftSpellsRequest>(request=>invoke<ImportResult>('import_draft_spells',{request}));
-// Clé indépendante : les réglages du thème et le travail parallèle sur l'accueil ne sont pas réécrits.
-const preferenceKey='olc.flash-slot';
-function readFlash(){try{return parseFlashSlot(localStorage.getItem(preferenceKey))}catch{return null}}
 interface Props {draft:DraftSession|null;championId:number;sourceKey:string;source?:readonly number[]|null;records:CatalogRecord[];locale:Locale;onOpen:(r:CatalogRecord)=>void;statistics?:ReactNode;variantPicker?:ReactNode}
 export function SpellWorkbench({draft,championId,sourceKey,source,records,locale,onOpen,statistics,variantPicker}:Props){
- const t=spellCopy[locale],[edited,setEdited]=useState<SpellPair|null>(null),[flashSlot,setFlashSlot]=useState<FlashSlot|null>(readFlash),[saveError,setSaveError]=useState(false);
+ const t=spellCopy[locale],[edited,setEdited]=useState<SpellPair|null>(null),flashSlot=useFlashPreference(),[saveError,setSaveError]=useState(false);
  const base=source??draft?.localSpells??[0,0],basePair:SpellPair=[base[0]??0,base[1]??0];
  const current=placeFlash(edited??basePair,flashSlot),choices=spellChoices(records);
  const modified=[...current].sort().join(':')!==[...basePair].sort().join(':');
@@ -30,7 +28,7 @@ export function SpellWorkbench({draft,championId,sourceKey,source,records,locale
  const failure=result?.status==='error'?result.error:null;
  const error=failure?failure in t?t[failure as keyof typeof t]:importErrorMessage(failure,locale):null;
  const status=snapshot.pending?t.pending:error??(confirmed?t.confirmed:result?.status==='accepted'?t.accepted:eligibility?t[eligibility]:needsFlash?t.chooseFlash:t.ready);
- const selectFlash=(slot:FlashSlot)=>{setFlashSlot(slot);try{localStorage.setItem(preferenceKey,JSON.stringify(slot));setSaveError(false)}catch{setSaveError(true)}};
+ const selectFlash=(slot:FlashSlot)=>{setSaveError(!saveFlashPreference(slot));};
  const selectSpell=(index:0|1,id:number)=>{
   const next=editSpellSelection(current,index,id,flashSlot);setEdited(next.pair);
   // Choisir explicitement Flash dans un emplacement modifie aussi sa préférence.

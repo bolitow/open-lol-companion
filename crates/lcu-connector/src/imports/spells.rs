@@ -20,13 +20,13 @@ pub struct ImportSpellsRequest {
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct SpellSelection {
+pub(super) struct SpellSelection {
     spell1_id: u32,
     spell2_id: u32,
 }
 
 impl ImportSpellsRequest {
-    fn selection(&self) -> Result<SpellSelection, ImportError> {
+    pub(super) fn selection(&self) -> Result<SpellSelection, ImportError> {
         let [first, second] = self.spell_ids;
         if first == 0 || second == 0 || first == second {
             return Err(ImportError::InvalidSpells);
@@ -53,20 +53,34 @@ impl ImportSpellsRequest {
 impl LcuClient {
     /// Importe les deux sorts explicitement choisis pendant la sélection des champions.
     pub async fn import_spells(&self, request: &ImportSpellsRequest) -> Result<(), ImportError> {
+        self.prepare_spells(request).await?.apply(self).await
+    }
+    pub(super) async fn prepare_spells(
+        &self,
+        request: &ImportSpellsRequest,
+    ) -> Result<SpellSelection, ImportError> {
         let selection = request.selection()?;
         if !self.gameflow_phase().await?.is_champ_select() {
             return Err(ImportError::NotInChampSelect);
         }
-
+        Ok(selection)
+    }
+}
+impl SpellSelection {
+    pub(super) fn matches(&self, pair: Option<[u32; 2]>) -> bool {
+        pair == Some([self.spell1_id, self.spell2_id])
+    }
+    pub(super) async fn apply(&self, client: &LcuClient) -> Result<(), ImportError> {
         // Contrat LCU : seuls spell1Id (D) et spell2Id (F) sont modifiés.
         // https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/main/lcu/swagger.json
         // https://amburgao.github.io/leaguewizard/reference/leaguewizard/core/models/#leaguewizard.core.models.PayloadSpells
-        self.write_json(
-            reqwest::Method::PATCH,
-            "/lol-champ-select/v1/session/my-selection",
-            &selection,
-        )
-        .await?;
+        client
+            .write_json(
+                reqwest::Method::PATCH,
+                "/lol-champ-select/v1/session/my-selection",
+                self,
+            )
+            .await?;
         Ok(())
     }
 }

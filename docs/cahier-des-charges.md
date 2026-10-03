@@ -192,7 +192,11 @@ Dès le début des bans, l'app propose le meilleur pick pour la composition et i
 | Set d'items | `/lol-item-sets/v1/item-sets/{summonerId}/sets` | Affiché en premier dans la boutique, items « larme » importés sous forme achetable |
 
 - Import automatique ou manuel, activable séparément pour runes, sorts et items.
-- Réimport à chaque modification si l'auto-import est actif.
+- Parcours minimal #63 : une tentative par draft/champion/poste/catégorie ; le
+  verrouillage et les modifications manuelles ultérieures dans LoL ne réimportent
+  pas. Décision du 3 octobre 2026 : sorts les plus joués inclus sur option séparée,
+  Flash D/F explicite ; les détails et limites figurent dans
+  [le contrat d'import automatique](imports-automatiques.md).
 
 **5.5 Modes de jeu**
 

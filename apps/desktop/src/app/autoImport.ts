@@ -1,18 +1,19 @@
-import type {AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection, BuildReport, BuildRequest, BuildStats, CatalogRecord, LcuSession, Role} from '@olc/shared';
+import type {AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection, BuildReport, BuildRequest, BuildStats, CatalogRecord, FlashSlot, LcuSession, Role} from '@olc/shared';
 import {buildRequestKey, runePageFromBuild, variantsFor} from './buildModel';
+import {validSpellPair} from './spellEditing';
 import {itemSetRequest} from './itemImport';
 import {championDetails} from './draft';
 import type {PreparationCatalog} from './catalog';
 import type {Locale} from './state';
 
-export interface AutoImportPreferences {runes: boolean; items: boolean; minGames: number; customRole?: Role}
+export interface AutoImportPreferences {runes: boolean; items: boolean; spells: boolean; minGames: number; customRole?: Role}
 export function parseAutoImportPreferences(raw: string | null, development: boolean): AutoImportPreferences {
-    const defaults = {runes: false, items: false, minGames: development ? 1 : 100};
+    const defaults = {runes: false, items: false, spells: false, minGames: development ? 1 : 100};
     try {
         const value: unknown = JSON.parse(raw ?? 'null');
         if (!value || typeof value !== 'object') return defaults;
         const v = value as Record<string, unknown>;
-        return {...(typeof v.customRole === 'string' && ['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'].includes(v.customRole) ? {customRole:v.customRole as Role} : {}),runes: v.runes === true, items: v.items === true,
+        return {...(typeof v.customRole === 'string' && ['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'].includes(v.customRole) ? {customRole:v.customRole as Role} : {}),runes: v.runes === true, items: v.items === true, spells: v.spells === true,
             minGames: typeof v.minGames === 'number' && Number.isInteger(v.minGames) && v.minGames >= 1 && v.minGames <= 1000 ? v.minGames : defaults.minGames};
     } catch {return defaults;}
 }
@@ -33,10 +34,10 @@ export function autoImportTarget(session: LcuSession, catalog: PreparationCatalo
 }
 export interface ObservedMetrics {games: number; wins: number | null; observedWinRate: number | null; lowSample: boolean}
 export interface AutoImportCandidate {selection: AutoImportSelection; metrics: ObservedMetrics}
-export type AutoImportCandidates = Record<'runes' | 'items', AutoImportCandidate | null>;
+export type AutoImportCandidates = Record<'runes' | 'items', AutoImportCandidate | null> & {spells: AutoImportCandidate | 'flashPreferenceRequired' | null};
 /** Les catégories restent indépendantes ; le tri porte sur l'effectif, jamais sur le taux. */
-export function chooseAutoImports(report: BuildReport, target: AutoImportTarget, minGames: number, records: readonly CatalogRecord[]): AutoImportCandidates {
-    const empty = {runes: null, items: null};
+export function chooseAutoImports(report: BuildReport, target: AutoImportTarget, minGames: number, records: readonly CatalogRecord[], flashSlot: FlashSlot | null = null): AutoImportCandidates {
+    const empty = {runes: null, items: null, spells: null};
     if (!Number.isInteger(minGames) || minGames < 1 || minGames > 1000 || buildRequestKey(report.request) !== buildRequestKey(target.request)) return empty;
     const eligible = (variant: BuildStats) => Number.isSafeInteger(variant.games) && variant.games >= minGames
         && variant.champion_id === target.request.champion_id && variant.role === target.request.role
@@ -55,44 +56,52 @@ export function chooseAutoImports(report: BuildReport, target: AutoImportTarget,
         const request = itemSetRequest(target.context.championId, target.championName, target.itemLabel, variant.selection, records);
         if (request) {items = {selection: {kind: 'items', request}, metrics: metrics(variant)}; break;}
     }
-    return {runes, items};
+    const variant = variantsFor(report, 'summoner_spells').find(v=>eligible(v) && validSpellPair(v.selection,records));
+    let spells: AutoImportCandidates['spells'] = null;
+    if (variant && validSpellPair(variant.selection,records)) {
+        spells = variant.selection.includes(4) && flashSlot === null ? 'flashPreferenceRequired'
+            : {selection:{kind:'spells',request:{spellIds:variant.selection,flashSlot:flashSlot??'D'}},metrics:metrics(variant)};
+    }
+    return {runes, items, spells};
 }
-export type AutoImportKind = 'runes' | 'items';
-export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error'; metrics?: ObservedMetrics; error?: unknown}
-export interface AutoImportSnapshot {runes: AutoImportProgress; items: AutoImportProgress}
+export type AutoImportKind = AutoImportSelection['kind'];
+export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error' | 'needsFlash'; metrics?: ObservedMetrics; error?: unknown}
+export interface AutoImportSnapshot {runes: AutoImportProgress; items: AutoImportProgress; spells: AutoImportProgress}
 interface Dependencies {
-    prepare: (target: AutoImportTarget, minGames: number) => Promise<AutoImportCandidates>;
+    prepare: (target: AutoImportTarget, minGames: number, flashSlot: FlashSlot | null) => Promise<AutoImportCandidates>;
     send: (request: AutoImportRequest) => Promise<AutoImportReceipt>;
 }
-const kinds: readonly AutoImportKind[] = ['runes', 'items'];
+const kinds: readonly AutoImportKind[] = ['runes', 'items', 'spells'];
 const targetKey = (target: AutoImportTarget) => JSON.stringify([target.context.draftId, target.request.platform, target.context.championId, target.context.role, target.context.queueId]);
 /** Un envoi par draft/champion/poste/catégorie, même après une lecture LCU manquante.
- * Une modification manuelle ultérieure des runes n'entraîne jamais de nouvel import. */
+ * Une modification manuelle ultérieure dans LoL n'entraîne jamais de nouvel import. */
 export function createAutoImportController(dependencies: Dependencies) {
-    let snapshot: AutoImportSnapshot = {runes: {status:'disabled'}, items:{status:'disabled'}};
-    let target: AutoImportTarget | null = null, preferences: AutoImportPreferences = {runes:false,items:false,minGames:100};
+    let snapshot: AutoImportSnapshot = {runes: {status:'disabled'}, items:{status:'disabled'}, spells:{status:'disabled'}};
+    let target: AutoImportTarget | null = null, preferences: AutoImportPreferences = {runes:false,items:false,spells:false,minGames:100};
+    let flashPreference: FlashSlot | null = null;
     let fingerprint = '', generation = 0, contextEpoch = 0, lastContext: string | null = null;
     const inFlight = new Set<AutoImportKind>();
     const ledger = new Map<string, AutoImportProgress>(), listeners = new Set<()=>void>();
     const publish = (next: AutoImportSnapshot) => {snapshot = next; listeners.forEach(fn=>fn());};
     const slotKey = (key: string, kind: AutoImportKind) => `${key}:${kind}`;
-    async function run(current: AutoImportTarget | null, settings: AutoImportPreferences) {
+    async function run(current: AutoImportTarget | null, settings: AutoImportPreferences, flashSlot: FlashSlot | null) {
         const started = ++generation;
         const key = current ? JSON.stringify([contextEpoch,targetKey(current)]) : null;
         const progress = (kind: AutoImportKind): AutoImportProgress => !settings[kind] ? {status:'disabled'} : !key ? {status:'waiting'} : ledger.get(slotKey(key,kind)) ?? {status:'loading'};
-        publish({runes:progress('runes'),items:progress('items')});
+        publish({runes:progress('runes'),items:progress('items'),spells:progress('spells')});
         if (!current || !key || kinds.every(kind=>!settings[kind] || ledger.has(slotKey(key,kind)))) return;
         let candidates: AutoImportCandidates;
-        try {candidates = await dependencies.prepare(current, settings.minGames);}
+        try {candidates = await dependencies.prepare(current, settings.minGames, flashSlot);}
         catch (error) {
             if (started === generation) publish(Object.fromEntries(kinds.map(kind=>[kind,settings[kind] && !ledger.has(slotKey(key,kind)) ? {status:'error',error} : snapshot[kind]])) as unknown as AutoImportSnapshot);
             return;
         }
         if (started !== generation) return;
-        // Les deux catégories aboutissent séparément : l'absence de runes n'empêche pas les objets.
+        // Chaque catégorie aboutit séparément : l'absence de runes ne bloque pas les autres imports.
         await Promise.all(kinds.map(async kind => {
             if (!settings[kind] || ledger.has(slotKey(key,kind)) || inFlight.has(kind) || started !== generation) return;
             const candidate = candidates[kind];
+            if (candidate === 'flashPreferenceRequired') {publish({...snapshot,[kind]:{status:'needsFlash'}}); return;}
             if (!candidate) {publish({...snapshot,[kind]:{status:'empty'}}); return;}
             const entryKey = slotKey(key,kind);
             const importing: AutoImportProgress = {status:'importing',metrics:candidate.metrics};
@@ -106,15 +115,15 @@ export function createAutoImportController(dependencies: Dependencies) {
             if (stillSameContext) ledger.set(entryKey,result);
             if (stillSameContext && target && preferences[kind]) publish({...snapshot,[kind]:result});
             // Un échange intervenu pendant l'envoi attend sa fin avant de traiter le nouveau pick.
-            if (started !== generation && target) void run(target,preferences);
+            if (started !== generation && target) void run(target,preferences,flashPreference);
         }));
     }
-    const update = (next: AutoImportTarget | null, settings: AutoImportPreferences) => {
+    const update = (next: AutoImportTarget | null, settings: AutoImportPreferences, flashSlot: FlashSlot | null = null) => {
         if (next && targetKey(next) !== lastContext) {lastContext=targetKey(next);contextEpoch++;ledger.clear();}
-        target = next; preferences = settings;
-        const nextFingerprint = JSON.stringify([next && targetKey(next), next?.request.patch, settings.runes, settings.items, settings.minGames]);
+        target = next; preferences = settings; flashPreference = flashSlot;
+        const nextFingerprint = JSON.stringify([next && targetKey(next), next?.request.patch, settings.runes, settings.items, settings.spells, settings.minGames, flashSlot]);
         if (nextFingerprint === fingerprint) return;
-        fingerprint = nextFingerprint; void run(next,settings);
+        fingerprint = nextFingerprint; void run(next,settings,flashSlot);
     };
     return {getSnapshot:()=>snapshot, subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn);};}, update,
         suspend:()=>{generation++;fingerprint='';target=null;},
@@ -122,6 +131,6 @@ export function createAutoImportController(dependencies: Dependencies) {
             if (!target) return;
             const key = JSON.stringify([contextEpoch,targetKey(target)]);
             for (const kind of kinds) if (ledger.get(slotKey(key,kind))?.status === 'error') ledger.delete(slotKey(key,kind));
-            fingerprint='';update(target,preferences);
+            fingerprint='';update(target,preferences,flashPreference);
         }};
 }
