@@ -36,16 +36,34 @@ pub(super) fn matches_selection(
             .map_or(true, |id| draft.game_id.as_ref() == Some(id))
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum Kind {
+    Runes,
+    Items,
+    Spells,
+}
+
 type Selection = (Option<u32>, bool, bool, Vec<(Option<u32>, Option<String>)>);
 #[derive(Default)]
 pub(super) struct History {
     pub epoch: u64,
-    pub receipts: Vec<(AutoImportContext, bool, AutoImportReceipt)>,
+    pub receipts: Vec<(AutoImportContext, Kind, AutoImportReceipt)>,
     pub custom_role: Option<String>,
     draft_id: Option<String>,
     selection: Option<Selection>,
 }
 impl History {
+    pub fn receipt(&self, context: &AutoImportContext, kind: Kind) -> Option<AutoImportReceipt> {
+        self.receipts
+            .iter()
+            .find(|(c, k, _)| c.same_selection(context) && *k == kind)
+            .map(|(_, _, r)| *r)
+    }
+    pub fn record(&mut self, context: AutoImportContext, kind: Kind, receipt: AutoImportReceipt) {
+        self.receipts.retain(|(_, k, _)| *k != kind);
+        self.receipts.push((context, kind, receipt));
+    }
+
     pub fn set_custom_role(&mut self, role: Option<String>) {
         if self.custom_role != role {
             self.custom_role = role;
@@ -136,6 +154,47 @@ mod tests {
         }
     }
     #[test]
+    fn le_cache_d_objets_ne_masque_pas_les_sorts_et_chaque_recu_reste_independant() {
+        let s = session();
+        let c = context(&s);
+        let mut h = History::default();
+        h.observe(&s);
+        h.record(
+            c.clone(),
+            Kind::Items,
+            AutoImportReceipt { confirmed: true },
+        );
+        assert_eq!(h.receipt(&c, Kind::Spells), None);
+        h.record(
+            c.clone(),
+            Kind::Spells,
+            AutoImportReceipt { confirmed: false },
+        );
+        h.record(
+            c.clone(),
+            Kind::Runes,
+            AutoImportReceipt { confirmed: true },
+        );
+        assert_eq!(
+            h.receipt(&c, Kind::Items),
+            Some(AutoImportReceipt { confirmed: true })
+        );
+        assert_eq!(
+            h.receipt(&c, Kind::Spells),
+            Some(AutoImportReceipt { confirmed: false })
+        );
+        h.record(
+            c.clone(),
+            Kind::Spells,
+            AutoImportReceipt { confirmed: true },
+        );
+        assert_eq!(h.receipts.len(), 3);
+        assert_eq!(
+            h.receipt(&c, Kind::Spells),
+            Some(AutoImportReceipt { confirmed: true })
+        );
+    }
+    #[test]
     fn le_poste_manuel_invalide_le_cache_et_les_imports_en_vol() {
         let mut s = session();
         s.draft.as_mut().unwrap().custom_game = true;
@@ -145,8 +204,11 @@ mod tests {
         h.observe(&s);
         h.set_custom_role(Some("UTILITY".into()));
         let before = h.epoch;
-        h.receipts
-            .push((c.clone(), true, AutoImportReceipt { confirmed: true }));
+        h.receipts.push((
+            c.clone(),
+            Kind::Runes,
+            AutoImportReceipt { confirmed: true },
+        ));
         h.set_custom_role(Some("MIDDLE".into()));
         assert!(h.receipts.is_empty());
         assert!(h.epoch > before);
@@ -185,7 +247,7 @@ mod tests {
         let before = history.epoch;
         history
             .receipts
-            .push((c, true, AutoImportReceipt { confirmed: true }));
+            .push((c, Kind::Runes, AutoImportReceipt { confirmed: true }));
         s.draft.as_mut().unwrap().allies[0].champion_id = Some(103);
         history.observe(&s);
         s.draft.as_mut().unwrap().allies[0].champion_id = Some(432);
@@ -202,7 +264,7 @@ mod tests {
         let before = history.epoch;
         history
             .receipts
-            .push((c, true, AutoImportReceipt { confirmed: true }));
+            .push((c, Kind::Runes, AutoImportReceipt { confirmed: true }));
         let draft = s.draft.take();
         history.observe(&s);
         s.draft = draft;

@@ -2,6 +2,10 @@ fn main() {
     // La fenêtre passive ne reçoit que les commandes de lecture explicitement autorisées.
     let attributes =
         tauri_build::Attributes::new().app_manifest(tauri_build::AppManifest::new().commands(&[
+            "desktop_settings",
+            "set_desktop_setting",
+            "set_desktop_locale",
+            "export_diagnostics",
             "lcu_status",
             "lcu_session",
             "friends_state",

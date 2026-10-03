@@ -14,6 +14,18 @@ pub(crate) struct ImportLocks {
 }
 
 impl ImportLocks {
+    fn category(
+        &self,
+        selection: &lcu_connector::imports::AutoImportSelection,
+    ) -> (guard::Kind, &Mutex<()>) {
+        use lcu_connector::imports::AutoImportSelection;
+        match selection {
+            AutoImportSelection::Runes(_) => (guard::Kind::Runes, &self.runes),
+            AutoImportSelection::Items(_) => (guard::Kind::Items, &self.items),
+            AutoImportSelection::Spells(_) => (guard::Kind::Spells, &self.spells),
+        }
+    }
+
     pub(crate) fn set_custom_role(&self, role: Option<String>) -> Result<(), &'static str> {
         self.auto_history
             .lock()
@@ -35,33 +47,29 @@ pub(crate) async fn import_selected_build(
     locks: State<'_, ImportLocks>,
 ) -> Result<lcu_connector::imports::AutoImportReceipt, lcu_connector::imports::DraftRuneImportError>
 {
-    use lcu_connector::imports::{AutoImportSelection, DraftRuneGuardError, DraftRuneImportError};
-    let runes = matches!(&request.selection, AutoImportSelection::Runes(_));
-    let lock = if runes { &locks.runes } else { &locks.items };
+    use lcu_connector::imports::{DraftRuneGuardError, DraftRuneImportError};
+    let (kind, lock) = locks.category(&request.selection);
     let _guard = lock
         .try_lock()
         .map_err(|_| DraftRuneImportError::Guard(DraftRuneGuardError::ImportBusy))?;
-    let epoch =
-        {
-            // Même ordre que le producteur LCU : session, puis historique.
-            let state = session.lock().map_err(|_| ImportError::ClientUnavailable)?;
-            let mut history = locks
-                .auto_history
-                .lock()
-                .map_err(|_| ImportError::ClientUnavailable)?;
-            history.observe(&state);
-            if !guard::matches_selection(&state, &request.context, history.custom_role.as_deref()) {
-                return Err(DraftRuneImportError::Guard(
-                    DraftRuneGuardError::DraftContextChanged,
-                ));
-            }
-            if let Some((_, _, receipt)) = history.receipts.iter().find(|(context, kind, _)| {
-                context.same_selection(&request.context) && *kind == runes
-            }) {
-                return Ok(*receipt);
-            }
-            history.epoch
-        };
+    let epoch = {
+        // Même ordre que le producteur LCU : session, puis historique.
+        let state = session.lock().map_err(|_| ImportError::ClientUnavailable)?;
+        let mut history = locks
+            .auto_history
+            .lock()
+            .map_err(|_| ImportError::ClientUnavailable)?;
+        history.observe(&state);
+        if !guard::matches_selection(&state, &request.context, history.custom_role.as_deref()) {
+            return Err(DraftRuneImportError::Guard(
+                DraftRuneGuardError::DraftContextChanged,
+            ));
+        }
+        if let Some(receipt) = history.receipt(&request.context, kind) {
+            return Ok(receipt);
+        }
+        history.epoch
+    };
     let current_draft = || {
         session.lock().is_ok_and(|state| {
             locks.auto_history.lock().is_ok_and(|history| {
@@ -87,8 +95,7 @@ pub(crate) async fn import_selected_build(
     if history.epoch == epoch
         && guard::matches_selection(&state, &request.context, history.custom_role.as_deref())
     {
-        history.receipts.retain(|(_, kind, _)| *kind != runes);
-        history.receipts.push((request.context, runes, receipt));
+        history.record(request.context, kind, receipt);
     }
     Ok(receipt)
 }
@@ -158,4 +165,31 @@ pub(crate) async fn import_draft_spells(
         .try_lock()
         .map_err(|_| DraftRuneImportError::Guard(DraftRuneGuardError::ImportBusy))?;
     import_client().await?.import_draft_spells(&request).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lcu_connector::imports::AutoImportSelection;
+    use serde_json::json;
+    #[test]
+    fn les_trois_categories_ont_des_verrous_distincts_et_les_sorts_partagent_le_verrou_manuel() {
+        let locks = ImportLocks::default();
+        let spell: AutoImportSelection = serde_json::from_value(
+            json!({"kind":"spells","request":{"spellIds":[4,14],"flashSlot":"F"}}),
+        )
+        .unwrap();
+        let items:AutoImportSelection=serde_json::from_value(json!({"kind":"items","request":{"championId":103,"championName":"Ahri","mapId":11,"blocks":[]}})).unwrap();
+        let runes:AutoImportSelection=serde_json::from_value(json!({"kind":"runes","request":{"championName":"Ahri","primaryStyleId":8100,"subStyleId":8200,"selectedPerkIds":[]}})).unwrap();
+        let (spell_kind, spell_lock) = locks.category(&spell);
+        let (item_kind, item_lock) = locks.category(&items);
+        let (rune_kind, rune_lock) = locks.category(&runes);
+        let _manual = locks.spells.try_lock().unwrap();
+        assert!(spell_lock.try_lock().is_err());
+        assert!(item_lock.try_lock().is_ok());
+        assert!(rune_lock.try_lock().is_ok());
+        assert_ne!(spell_kind, item_kind);
+        assert_ne!(spell_kind, rune_kind);
+        assert_ne!(item_kind, rune_kind);
+    }
 }

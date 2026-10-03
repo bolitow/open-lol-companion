@@ -115,5 +115,10 @@ Ce signalement développeur ne constitue pas une garantie contractuelle Riot.
 
 L'interface FR/EN indique cette limite. Aucun CS intermédiaire n'est déduit de l'or,
 du temps ou d'une lecture mémoire. Les tests garantissent la transmission de 9, 10,
-11, 19 et 20 si la source les fournit. Au dernier diagnostic le jeu était fermé :
-la nouvelle comparaison des réponses brutes en partie reste à effectuer.
+11, 19 et 20 si la source les fournit. Le relevé réel du 3 octobre 2026 reçoit
+0, 10 puis 20 CS sur 231 lectures valides de la partie de Mel, à environ une
+seconde d’intervalle. Matthieu confirme les paliers dans le panneau et
+l’actualisation des autres données. Les CS exacts du HUD aux mêmes instants
+n’ont pas été consignés : voir la [recette macOS #23](recettes/2026-10-03-live-macos.md)
+et sa série anonymisée. Ce constat ne garantit pas le comportement des autres
+patchs ou modes de jeu.

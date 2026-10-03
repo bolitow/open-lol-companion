@@ -1,0 +1,51 @@
+{
+  "activePlayer": {
+    "riotId": "fixture-local"
+  },
+  "allPlayers": [
+    {
+      "items": [
+        {
+          "itemID": 1056
+        },
+        {
+          "itemID": 2003
+        },
+        {
+          "itemID": 2010
+        },
+        {
+          "itemID": 3340
+        }
+      ],
+      "level": 4,
+      "rawChampionName": "game_character_displayname_Mel",
+      "riotId": "fixture-local",
+      "scores": {
+        "assists": 0,
+        "creepScore": 20,
+        "deaths": 0,
+        "kills": 0
+      }
+    }
+  ],
+  "events": {
+    "Events": [
+      {
+        "EventID": 0,
+        "EventName": "GameStart",
+        "EventTime": 0.011015916243195534
+      },
+      {
+        "EventID": 1,
+        "EventName": "MinionsSpawning",
+        "EventTime": 30.02691650390625
+      }
+    ]
+  },
+  "gameData": {
+    "gameMode": "CLASSIC",
+    "gameTime": 192.2555694580078,
+    "mapNumber": 11
+  }
+}

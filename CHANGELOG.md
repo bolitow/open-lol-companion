@@ -6,15 +6,31 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
+
+- Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).
+- Recette fonctionnelle macOS du panneau acceptée par Matthieu sur sa configuration : affichage, interactions et raccourci confirmés, capture et versions consignées ; mesures chiffrées et autres configurations restent à compléter (#22).
+- Recette Live macOS avec valeurs CS réellement reçues, passage Mel → Yone et fixture anonymisée ; tests des lectures interrompues, coupure/reprise et remise à zéro entre parties (#23).
+- Import des sorts d’invocateur les plus joués dès le prépick, sur option séparée,
+  avec préférence Flash D/F partagée avec l’import manuel et confirmation des
+  deux emplacements dans le client (#63).
+- Recette macOS des imports : runes confirmées par le joueur, set d’Ahri relu
+  dans le client et suivi de la conservation des pages personnelles (#63).
+
 - Amis du compte LoL connecté dans l’accueil, présence, accès au profil si identité complète, états FR/EN et rafraîchissement local indépendant du quota Riot (#71).
 - Profil, rangs et historique du compte actif lus dans le client LoL, source affichée, personnalisées incluses, pagination sans mélange avec le service public et actualisation en fin de partie (#64, #65).
 
 - Données locales en partie (champion, niveau, K/D/A, CS et temps), contexte de draft conservé et builds consultatifs avec effectifs ; lecture bornée et annulation des réponses périmées (#23, #63).
 - Panneau natif transparent sans prise de focus, masqué hors jeu actif, réglages/aperçu/raccourci, placement relatif ; NSPanel et Liquid Glass Apple sur macOS 26+, vibrance native en repli, moteur Windows conditionnel (#22). Recettes LoL réelles macOS et Windows à compléter avant clôture.
 
+- Export local de diagnostics : aperçu FR/EN, journal technique de session borné et résumé facultatif de logs League choisis par le joueur ; ZIP sans identités, secrets ni lignes brutes, annulation et erreurs explicites (#11).
+
+- Réglages système natifs : fermeture dans la barre système, menu FR/EN et lancement à l’ouverture de session sur choix explicite ; état relu depuis l’OS, annulation et repli visible sans tray (#11).
+
+- Réglages desktop : recherche locale FR/EN par synonymes, modification depuis les résultats, annulation et sauvegarde des préférences ; Flash D/F partagé avec la draft et les imports automatiques activés (#11, #63).
 - Couverture CI des tests desktop, client de builds et exporteur de catalogue ; rattrapage du compte actif sans bloquer les événements de phase et annulation à la déconnexion (#65, #8).
 
-- Imports runes/objets au prépick du champion, activables séparément : variante valide la plus jouée au poste réel, seuil réglable (1 en dev, 100 en production), effectifs et taux observés ; garde de draft/file/poste juste avant écriture, confirmation et anti-doublons. Personnalisées Faille prises en charge avec poste choisi et source Solo/Duo explicite. Une seule page de runes réutilisée pour tous les champions, sans attendre le verrouillage ni l'identifiant de partie Riot. Aucun changement des sorts ni overlay (#63, partie client).
+- Imports runes/objets au prépick du champion, activables séparément : variante valide la plus jouée au poste réel, seuil réglable (1 en dev, 100 en production), effectifs et taux observés ; garde de draft/file/poste juste avant écriture, confirmation et anti-doublons. Personnalisées Faille prises en charge avec poste choisi et source Solo/Duo explicite. Une seule page de runes réutilisée pour tous les champions, sans attendre le verrouillage ni l'identifiant de partie Riot. Sans overlay (#63, partie client) ; sorts ajoutés sur option séparée le 3 octobre.
 
 - Accueil desktop synchronisé au compte League actif : changement automatique, identité conservée hors connexion, consultation des autres joueurs indépendante et état explicite quand le compte ou les statistiques sont indisponibles (#65).
 
@@ -87,12 +103,15 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
+
 - Compteur CS en partie : précision de la source LoL indiquée en FR/EN ; tests garantissant que chaque valeur reçue est transmise sans arrondi ni seuil de dix (#23).
 
 - Imports : garde de sélection courante, invalidation des reçus lors des échanges et changements de poste manuel, rejet des réponses tardives ; synchronisation du poste avant import (#63).
 - Alerte de raccourci d’overlay conservée après sauvegarde ou changement de langue (#22).
 
 - Overlay macOS : reconnaissance de la fenêtre LoL sans bordure au niveau natif 1000 et panneau placé au-dessus ; le cache suit aussi les changements de niveau. Affichage/masquage Windows explicitement non activants ; tests du moteur ajoutés à la commande globale et aux jobs desktop (#22).
+- Test de sauvegardes concurrentes adapté aux refus de remplacement observés sous Windows, tout en exigeant des lectures intègres et le nettoyage des temporaires (#11).
 
 - API builds/tierlist : sélection indexée des morceaux par population avant lecture du JSON, avec migration des instantanés déjà publiés et réponses inchangées (#19).
 - Listes natives Windows : fond et texte des options accordés au thème pour éviter les libellés clairs sur fond blanc (#13).

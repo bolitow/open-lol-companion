@@ -3,6 +3,7 @@
 //! https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/main/lcu/swagger.json
 use super::{
     DraftRuneGuardError, DraftRuneImportError, ImportError, ImportItemsRequest, ImportRunesRequest,
+    ImportSpellsRequest,
 };
 use crate::draft::{DraftMode, FLOW_ENDPOINT};
 use crate::{DraftSession, LcuClient, DRAFT_ENDPOINT};
@@ -32,6 +33,7 @@ impl AutoImportContext {
 pub enum AutoImportSelection {
     Runes(ImportRunesRequest),
     Items(ImportItemsRequest),
+    Spells(ImportSpellsRequest),
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -74,6 +76,21 @@ impl LcuClient {
                             && page.selected_perk_ids == runes.selected_perk_ids
                     })
             }
+            AutoImportSelection::Spells(spells) => {
+                let prepared = self.prepare_spells(spells).await?;
+                self.selected_context(&request.context).await?;
+                if !current_draft() {
+                    return Err(DraftRuneImportError::Guard(
+                        DraftRuneGuardError::DraftContextChanged,
+                    ));
+                }
+                prepared.apply(self).await?;
+                // Une paire identique appartenant à un autre champion ne confirme pas cet import.
+                self.selected_context(&request.context)
+                    .await
+                    .ok()
+                    .is_some_and(|draft| current_draft() && prepared.matches(draft.local_spells))
+            }
             AutoImportSelection::Items(items) => {
                 if items.champion_id != request.context.champion_id || items.map_id != 11 {
                     return Err(ImportError::InvalidItems.into());
@@ -95,6 +112,12 @@ impl LcuClient {
         &self,
         context: &AutoImportContext,
     ) -> Result<(), DraftRuneImportError> {
+        self.selected_context(context).await.map(|_| ())
+    }
+    async fn selected_context(
+        &self,
+        context: &AutoImportContext,
+    ) -> Result<DraftSession, DraftRuneImportError> {
         let changed = DraftRuneImportError::Guard(DraftRuneGuardError::DraftContextChanged);
         if context.champion_id == 0
             || context.draft_id.is_empty()
@@ -135,7 +158,7 @@ impl LcuClient {
         {
             return Err(changed);
         }
-        Ok(())
+        Ok(draft)
     }
 }
 
@@ -255,6 +278,97 @@ mod tests {
             let (client, server) =
                 mock_client(vec![read(FLOW_ENDPOINT, f), read(DRAFT_ENDPOINT, d)]).await;
             assert_eq!(client.require_selected_context(&ctx).await, Ok(()));
+            server.await.unwrap();
+        }
+    }
+    fn spell_request(slot: &str, pair: [u32; 2]) -> AutoImportRequest {
+        serde_json::from_value(json!({"context":context(),"selection":{"kind":"spells","request":{"spellIds":pair,"flashSlot":slot}}})).unwrap()
+    }
+    #[tokio::test]
+    async fn sorts_automatiques_respectent_flash_et_confirment_la_paire_sans_toucher_au_skin() {
+        for (slot, pair, expected) in [
+            ("D", [14, 4], [4, 14]),
+            ("F", [4, 14], [14, 4]),
+            ("F", [6, 14], [6, 14]),
+        ] {
+            let request = spell_request(slot, pair);
+            let mut after = draft();
+            after["myTeam"][0]["spell1Id"] = json!(expected[0]);
+            after["myTeam"][0]["spell2Id"] = json!(expected[1]);
+            let (client, server) = mock_client(vec![
+                read("/lol-gameflow/v1/gameflow-phase", json!("ChampSelect")),
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, draft()),
+                ExpectedRequest {
+                    method: "PATCH",
+                    path: "/lol-champ-select/v1/session/my-selection".into(),
+                    body: Some(json!({"spell1Id":expected[0],"spell2Id":expected[1]})),
+                    status: 204,
+                    response: Value::Null,
+                },
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, after),
+            ])
+            .await;
+            assert_eq!(
+                client.import_selected_build(&request, || true).await,
+                Ok(AutoImportReceipt { confirmed: true })
+            );
+            server.await.unwrap();
+        }
+    }
+    #[tokio::test]
+    async fn sorts_automatiques_refusent_un_contexte_ou_une_generation_perimee_sans_patch() {
+        for stale_champion in [true, false] {
+            let request = spell_request("F", [4, 14]);
+            let mut d = draft();
+            if stale_champion {
+                d["myTeam"][0]["championId"] = json!(103);
+            }
+            let (client, server) = mock_client(vec![
+                read("/lol-gameflow/v1/gameflow-phase", json!("ChampSelect")),
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, d),
+            ])
+            .await;
+            assert_eq!(
+                client.import_selected_build(&request, || false).await,
+                Err(DraftRuneImportError::Guard(
+                    DraftRuneGuardError::DraftContextChanged
+                ))
+            );
+            server.await.unwrap();
+        }
+    }
+    #[tokio::test]
+    async fn sorts_acceptes_ne_sont_pas_confirmes_si_la_paire_ou_le_champion_a_change() {
+        for changed_champion in [true, false] {
+            let request = spell_request("F", [4, 14]);
+            let mut after = draft();
+            after["myTeam"][0]["spell1Id"] = json!(if changed_champion { 14 } else { 7 });
+            after["myTeam"][0]["spell2Id"] = json!(4);
+            if changed_champion {
+                after["myTeam"][0]["championId"] = json!(103);
+            }
+            let (client, server) = mock_client(vec![
+                read("/lol-gameflow/v1/gameflow-phase", json!("ChampSelect")),
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, draft()),
+                ExpectedRequest {
+                    method: "PATCH",
+                    path: "/lol-champ-select/v1/session/my-selection".into(),
+                    body: Some(json!({"spell1Id":14,"spell2Id":4})),
+                    status: 204,
+                    response: Value::Null,
+                },
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, after),
+            ])
+            .await;
+            assert_eq!(
+                client.import_selected_build(&request, || true).await,
+                Ok(AutoImportReceipt { confirmed: false })
+            );
             server.await.unwrap();
         }
     }

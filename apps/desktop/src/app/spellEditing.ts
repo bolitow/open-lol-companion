@@ -12,10 +12,10 @@ export function chooseSpell(pair:SpellPair,index:0|1,id:number):SpellPair{
  next[index]=id;return next;
 }
 /** Le lot #13 est borné aux drafts classiques de la Faille. Le client reste l'autorité des sorts débloqués. */
-export function spellChoices(records:CatalogRecord[]):CatalogRecord[]{
+export function spellChoices(records:readonly CatalogRecord[]):CatalogRecord[]{
  return records.filter(r=>r.kind==='summoner_spell'&&Array.isArray(r.fields.modes?.value)&&r.fields.modes.value.includes('CLASSIC'));
 }
-export function validSpellPair(pair:readonly number[],records:CatalogRecord[]):pair is SpellPair{
+export function validSpellPair(pair:readonly number[],records:readonly CatalogRecord[]):pair is SpellPair{
  return pair.length===2&&pair[0]!==pair[1]&&pair.every(id=>Number.isSafeInteger(id)&&id>0&&spellChoices(records).some(r=>r.id===String(id)));
 }
 export function spellsMatch(equipped:readonly number[]|null,pair:SpellPair):boolean{
