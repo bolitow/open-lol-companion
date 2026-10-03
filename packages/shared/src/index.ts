@@ -18,3 +18,7 @@ export * from "./autoImport";
 export * from "./live";
 
 export * from "./friends";
+
+export * from "./collection";
+
+export type {SpotlightState, SpotlightVideo, SpotlightAction, SpotlightSelection} from './spotlight';

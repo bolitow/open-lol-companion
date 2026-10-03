@@ -1,3 +1,4 @@
+import {SelectField} from '../ui/SelectField';
 import {useId,useLayoutEffect,useRef,useState,type ReactNode} from 'react';
 import type {PlayerRequest,PlayerProfile} from '@olc/shared';
 import {Icon} from '../ui/Icon';
@@ -15,7 +16,7 @@ export function PlayerSearchForm({locale,state,store}:{locale:Locale;state:Playe
  const t=playersCopy[locale],id=useId(),[invalid,setInvalid]=useState(false);
  return <form className="player-search-form surface" onSubmit={event=>{event.preventDefault();const request=parsePlayerQuery(state.query,state.platform);setInvalid(!request);if(request)store.select(request)}}>
   <label><span>{t.riotId}</span><input value={state.query} placeholder={t.placeholder} aria-invalid={invalid} aria-describedby={invalid?`${id}-error`:undefined} onChange={event=>{store.edit(event.target.value,state.platform);setInvalid(false)}} autoComplete="off" spellCheck={false}/></label>
-  <label><span>{t.region}</span><select value={state.platform} onChange={event=>store.edit(state.query,event.target.value)}>{playerPlatforms.map(platform=><option key={platform}>{platform}</option>)}</select></label>
+  <label><span>{t.region}</span><SelectField label={t.region} value={state.platform} onChange={value=>store.edit(state.query,value)} options={playerPlatforms.map(value=>({value,label:value}))}/></label>
   <button className="button primary" type="submit"><Icon name="search" size={17}/>{t.search}</button>
   {invalid&&<p id={`${id}-error`} role="alert">{t.invalid}</p>}
  </form>;

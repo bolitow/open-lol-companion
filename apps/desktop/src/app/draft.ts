@@ -1,4 +1,4 @@
-import type {DraftSession,DraftTimer} from '@olc/shared';
+import type {DraftPlayer,DraftSession,DraftTimer} from '@olc/shared';
 import champions from '../../public/game-data/champions.json';
 import type {Locale} from './state';
 export function championDetails(id:number|null,locale:Locale){
@@ -13,4 +13,9 @@ export function draftTeams(draft:DraftSession|null){
 }
 export function secondsRemaining(timer:DraftTimer|null,now:number){
  return timer?Math.floor(Math.max(0,timer.remainingMs-Math.max(0,now-timer.observedAtMs))/1000):null;
+}
+
+/** Les places vides ne partagent pas l'espace d'identifiants des joueurs. */
+export function draftPlayerKey(player:DraftPlayer|undefined,index:number){
+ return player?`player:${player.cellId}`:`empty:${index}`;
 }

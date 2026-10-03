@@ -89,6 +89,8 @@ jobs:
         run: pnpm -r test
       - run: pnpm --filter @olc/desktop build
       - run: cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client
+      - name: Tests des générateurs de collection
+        run: python3 -m unittest discover -s scripts -p 'test_*.py'
       - name: Tests de l’exporteur du catalogue desktop
         run: cargo test -p olc-collector --example export_desktop_catalog
       - name: Tests du backend (PostgreSQL)

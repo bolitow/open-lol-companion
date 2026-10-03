@@ -2803,6 +2803,8 @@ dependencies = [
  "lcu-connector",
  "objc2",
  "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "olc-build-client",
  "olc-desktop-support",
  "serde",
@@ -2814,6 +2816,8 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-global-shortcut",
  "tokio",
+ "webview2-com",
+ "windows-core",
  "windows-sys 0.61.2",
 ]
 

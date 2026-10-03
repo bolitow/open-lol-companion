@@ -1,0 +1,80 @@
+/* Identité commune de l’application ; mêmes moteurs que le prototype validé (#4). */
+.desktop-app {
+  --fire-rgb:255,96,48;
+  --surface-glass:#25272bba;
+  --surface-edge:#ffffff18;
+  position:relative;
+  isolation:isolate;
+  background:radial-gradient(ellipse at 48% 8%,rgba(var(--fire-rgb),.14),transparent 48%),radial-gradient(ellipse at 98% 75%,rgba(var(--fire-rgb),.08),transparent 38%),var(--bg);
+}
+:root[data-theme=light] .desktop-app { --fire-rgb:49,137,255;--surface-glass:#ffffffcd;--surface-edge:#ffffffed; }
+.desktop-app .app-header { background:linear-gradient(105deg,rgba(var(--fire-rgb),.08),transparent 42%),var(--panel);border-bottom-color:rgba(var(--fire-rgb),.2);box-shadow:0 6px 35px rgba(var(--fire-rgb),.04); }
+.desktop-app .app-main { position:relative;z-index:1; }
+.desktop-app .surface,.desktop-app .champions-library {
+  position:relative;
+  isolation:isolate;
+  background:radial-gradient(ellipse at 100% 0,rgba(var(--fire-rgb),.065),transparent 65%),linear-gradient(135deg,var(--surface-glass),var(--panel) 95%);
+  border-color:var(--line);
+  border-top-color:rgba(var(--fire-rgb),.2);
+  box-shadow:inset 0 1px 0 var(--surface-edge),0 10px 28px #00000016,0 0 30px rgba(var(--fire-rgb),calc(var(--heat,0)*.24));
+  transition:border-color .25s,box-shadow .25s;
+}
+.desktop-app .surface:hover { border-color:rgba(var(--fire-rgb),.3); }
+.desktop-app .surface.empty-panel { background:linear-gradient(135deg,var(--surface-glass),var(--panel));border-color:var(--line);box-shadow:inset 0 1px 0 var(--surface-edge); }
+.desktop-app .empty-panel>header>svg { color:var(--subtle); }
+.desktop-app .welcome { border-top-right-radius:34px;border-color:rgba(var(--fire-rgb),.28);background:radial-gradient(ellipse at 90% 75%,rgba(var(--fire-rgb),.15),transparent 66%),var(--panel); }
+.desktop-app .welcome-copy { width:100%;max-width:100%;z-index:2; }
+.desktop-app .welcome h1 { max-width:14ch;text-wrap:balance; }
+.desktop-app .welcome p { max-width:36ch; }
+.desktop-app .welcome:after { display:none; }
+.desktop-app .button.primary { background:linear-gradient(125deg,var(--accent-solid),color-mix(in srgb,var(--accent-solid),#000 16%));box-shadow:inset 0 1px 0 #ffffff20,0 5px 24px var(--accent-soft); }
+.desktop-app .brand-cluster { display:flex;align-items:center;gap:2px;flex-shrink:0; }
+.desktop-app .shell-companion { width:60px;height:58px;position:relative;flex-shrink:0; }
+.desktop-app .shell-companion:before { content:'';position:absolute;left:10px;right:10px;bottom:5px;height:10px;background:radial-gradient(ellipse,var(--accent-glow),transparent 70%);filter:blur(4px);pointer-events:none; }
+.desktop-app .shell-companion .flame-companion { width:60px;height:58px;position:relative;left:0;top:0;color:var(--accent); }
+.desktop-app .shell-companion .flame-companion canvas { position:absolute;width:86px;height:86px;left:-13px;top:-14px; }
+.desktop-app .shell-companion .flame-companion:focus-visible { outline-offset:-2px; }
+.desktop-app .brand { padding-left:0;font-size:12px;letter-spacing:1.6px; }
+.desktop-app .screen-enter { animation:identity-arrive .45s cubic-bezier(.2,.7,.3,1); }
+@keyframes identity-arrive { from{opacity:.55;transform:translateY(7px)}to{opacity:1;transform:none} }
+/* Arrière-plan, matière des panneaux et premier plan sont indépendants. */
+.desktop-app .opening-layer,.desktop-app .ambient-embers,.desktop-app .page-flame { position:fixed;inset:0;width:100%;height:100%;pointer-events:none; }
+.desktop-app .opening-paper { z-index:8; }
+.desktop-app .opening-gutters,.desktop-app .ambient-back { z-index:0; }
+.desktop-app .ambient-back { opacity:.8; }
+.desktop-app .ambient-front { z-index:2; }
+.desktop-app .page-flame { z-index:4; }
+.desktop-app .orb-reflection { position:absolute;left:0;top:0;width:130px;height:130px;z-index:-1;pointer-events:none;border-radius:50%;background:radial-gradient(circle at 48% 50%,#ffbd7752,#ff704526 22%,#f12e1612 42%,transparent 67%);will-change:transform,opacity; }
+:root[data-theme=light] .desktop-app .orb-reflection { background:radial-gradient(circle,#2779ec48,#6865ff20 28%,#00bde912 48%,transparent 67%); }
+.desktop-app .ambient-contact { position:absolute;z-index:0;pointer-events:none;opacity:0;width:170px;height:54px;right:0;overflow:hidden;border-radius:inherit;contain:paint; }
+.desktop-app .contact-upper { top:0; }
+.desktop-app .contact-lower { bottom:0;right:10%;width:190px; }
+.desktop-app .ambient-contact i { position:absolute;display:block;pointer-events:none; }
+.desktop-app .contact-bloom { inset:0;background:radial-gradient(ellipse at 82% 0,rgba(var(--fire-rgb),.58),rgba(var(--fire-rgb),.1) 38%,transparent 72%); }
+.desktop-app .contact-rim { top:1px;right:9px;width:65px;height:2px;background:linear-gradient(90deg,transparent,#ffdeb2,var(--accent),transparent);box-shadow:0 0 6px var(--accent),0 0 16px var(--accent);transform:rotate(2deg); }
+.desktop-app .contact-lower .contact-bloom { background:radial-gradient(ellipse at 44% 100%,rgba(var(--fire-rgb),.58),rgba(var(--fire-rgb),.1) 38%,transparent 72%); }
+.desktop-app .contact-lower .contact-rim { top:auto;bottom:3px;right:45%;transform:rotate(-3deg); }
+:root[data-theme=light] .desktop-app .contact-rim { background:linear-gradient(90deg,transparent,#c4faff,var(--accent),transparent); }
+
+.desktop-app .session-material{position:absolute;inset:0;z-index:1;border-radius:inherit;overflow:hidden;pointer-events:none;--surface-progress:0;--surface-opacity:0;--material-reveal:1;--ember-deep:#8f291a;--ember-hot:#f89553;--ember-core:#ffce89;--ash:#160f11}
+.desktop-app .surface-sweep{position:absolute;inset:-40% -20%;opacity:var(--surface-opacity);transform:translateX(calc(-85% + var(--surface-progress)*170%)) rotate(-22deg);background:linear-gradient(90deg,transparent 30%,rgba(var(--fire-rgb),.08) 40%,rgba(var(--fire-rgb),.37) 49%,#ffe5b155 51%,rgba(var(--fire-rgb),.12) 57%,transparent 70%);filter:blur(9px)}
+.desktop-app .material-warmth{position:absolute;inset:0;opacity:var(--material-reveal);background:radial-gradient(ellipse at 78% 112%,rgba(var(--fire-rgb),.18),transparent 36%),radial-gradient(ellipse at 94% -12%,rgba(var(--fire-rgb),.13),transparent 30%)}
+.desktop-app .material-scars{position:absolute;inset:0;width:100%;height:100%;opacity:var(--material-reveal);overflow:hidden}
+.desktop-app .material-scars path{vector-effect:non-scaling-stroke;stroke-linejoin:round;stroke-linecap:round}
+.desktop-app .material-ash{fill:var(--ash);opacity:.72}
+.desktop-app .material-bloom{fill:none;stroke:var(--ember-deep);stroke-width:7;opacity:.55}
+.desktop-app .material-rim{fill:none;stroke:var(--ember-hot);stroke-width:1.4;stroke-dasharray:29 11 7 4 16 22;opacity:.44}
+.desktop-app .material-ember{fill:none;stroke:var(--ember-core);stroke-width:.7;stroke-dasharray:2 9 8 17 3 28 6 11;opacity:.8;filter:drop-shadow(0 0 2px var(--ember-hot))}
+.desktop-app .material-fracture{fill:none;stroke:var(--ember-deep);stroke-width:.8;opacity:.65}
+:root[data-theme=light] .desktop-app .session-material{--ember-deep:#416699;--ember-hot:#387cbd;--ember-core:#7cdcff;--ash:#758caa}
+:root[data-theme=light] .desktop-app .surface-sweep{background:linear-gradient(90deg,transparent 30%,#416aff12 40%,#439bff38 49%,#c8ffff99 51%,#53cfff22 57%,transparent 70%)}
+:root[data-theme=light] .desktop-app .material-ash{opacity:.32}
+:root[data-theme=light] .desktop-app .material-bloom{opacity:.38}
+
+
+@media(min-width:760px) and (max-width:1100px){.desktop-app .dashboard-layout{grid-template-columns:minmax(0,2.5fr) minmax(210px,1fr)}.desktop-app .dashboard-summary{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr)}.desktop-app .app-header{gap:8px}.desktop-app .brand-cluster{gap:0}}
+/* Le voile sombre sert aux portraits, pas aux emplacements encore vides. */
+.desktop-app .live-champion-card:has(.champion-fallback):after { background:linear-gradient(0deg,var(--accent-soft),transparent); }
+.desktop-app .live-champion-card:has(.champion-fallback) .card-caption { color:var(--muted); }
+.desktop-app .live-champion-card:has(.champion-fallback) .card-caption>span { opacity:.65; }
+.desktop-app .champions-library { overflow:hidden; }

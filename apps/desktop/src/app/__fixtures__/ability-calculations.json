@@ -1,0 +1,318 @@
+{
+  "AhriQ": {
+    "source": "https://raw.communitydragon.org/16.19/game/data/characters/ahri/ahri.bin.json",
+    "pointer": "Characters/Ahri/Spells/AhriQAbility/AhriQ/mSpell",
+    "spell": {
+      "DataValues": [
+        {
+          "name": "BaseDamage",
+          "values": [
+            10.0,
+            35.0,
+            60.0,
+            85.0,
+            110.0,
+            135.0,
+            160.0
+          ],
+          "__type": "SpellDataValue"
+        }
+      ],
+      "mSpellCalculations": {
+        "TotalDamage": {
+          "mSimpleTooltipCalculationDisplay": 6,
+          "mFormulaParts": [
+            {
+              "mDataValue": "BaseDamage",
+              "__type": "NamedDataValueCalculationPart"
+            },
+            {
+              "mCoefficient": 0.5,
+              "__type": "StatByCoefficientCalculationPart"
+            }
+          ],
+          "__type": "GameCalculation"
+        }
+      }
+    }
+  },
+  "AhriE": {
+    "source": "https://raw.communitydragon.org/16.19/game/data/characters/ahri/ahri.bin.json",
+    "pointer": "Characters/Ahri/Spells/AhriEAbility/AhriE/mSpell",
+    "spell": {
+      "DataValues": [
+        {
+          "name": "BaseDamage",
+          "values": [
+            40.0,
+            80.0,
+            120.0,
+            160.0,
+            200.0,
+            240.0,
+            280.0
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "SlowPercent",
+          "values": [
+            -0.6499999761581421,
+            -0.6499999761581421,
+            -0.6499999761581421,
+            -0.6499999761581421,
+            -0.6499999761581421,
+            -0.6499999761581421,
+            -0.6499999761581421
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "CharmDuration",
+          "values": [
+            1.0499999523162842,
+            1.2000000476837158,
+            1.350000023841858,
+            1.5,
+            1.649999976158142,
+            1.7999999523162842,
+            1.9500000476837158
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "APRatio",
+          "values": [
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8500000238418579
+          ],
+          "__type": "SpellDataValue"
+        }
+      ],
+      "mSpellCalculations": {
+        "TotalDamage": {
+          "mSimpleTooltipCalculationDisplay": 6,
+          "mFormulaParts": [
+            {
+              "mDataValue": "BaseDamage",
+              "__type": "NamedDataValueCalculationPart"
+            },
+            {
+              "mDataValue": "APRatio",
+              "__type": "StatByNamedDataValueCalculationPart"
+            }
+          ],
+          "__type": "GameCalculation"
+        }
+      }
+    }
+  },
+  "LuxPrismaticWave": {
+    "source": "https://raw.communitydragon.org/16.19/game/data/characters/lux/lux.bin.json",
+    "pointer": "Characters/Lux/Spells/LuxPrismaticWaveAbility/LuxPrismaticWave/mSpell",
+    "spell": {
+      "DataValues": [
+        {
+          "name": "BaseShieldAmount",
+          "values": [
+            25.0,
+            40.0,
+            55.0,
+            70.0,
+            85.0,
+            100.0,
+            115.0
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "APRatio",
+          "values": [
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "ShieldDuration",
+          "values": [
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5
+          ],
+          "__type": "SpellDataValue"
+        }
+      ],
+      "mSpellCalculations": {
+        "TotalShieldTT": {
+          "mSimpleTooltipCalculationDisplay": 6,
+          "mFormulaParts": [
+            {
+              "mDataValue": "BaseShieldAmount",
+              "__type": "NamedDataValueCalculationPart"
+            },
+            {
+              "mDataValue": "APRatio",
+              "__type": "StatByNamedDataValueCalculationPart"
+            }
+          ],
+          "__type": "GameCalculation"
+        }
+      },
+      "mEffectAmount": [
+        {
+          "value": [
+            0.0,
+            2.0,
+            4.0,
+            6.0,
+            8.0,
+            10.0,
+            12.0
+          ],
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "value": [
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5,
+            2.5
+          ],
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "value": [
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0,
+            100.0
+          ],
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        },
+        {
+          "__type": "SpellEffectAmount"
+        }
+      ]
+    }
+  },
+  "EzrealQ": {
+    "source": "https://raw.communitydragon.org/16.19/game/data/characters/ezreal/ezreal.bin.json",
+    "pointer": "Characters/Ezreal/Spells/EzrealQAbility/EzrealQ/mSpell",
+    "spell": {
+      "DataValues": [
+        {
+          "name": "BaseDamage",
+          "values": [
+            -5.0,
+            20.0,
+            45.0,
+            70.0,
+            95.0,
+            120.0,
+            145.0
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "CDRefund",
+          "values": [
+            1.5,
+            1.5,
+            1.5,
+            1.5,
+            1.5,
+            1.5,
+            1.5
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "BaseDamageADRatio",
+          "values": [
+            1.2999999523162842,
+            1.2999999523162842,
+            1.2999999523162842,
+            1.2999999523162842,
+            1.2999999523162842,
+            1.2999999523162842,
+            1.2999999523162842
+          ],
+          "__type": "SpellDataValue"
+        },
+        {
+          "name": "BaseDamageAPRatio",
+          "values": [
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645,
+            0.4000000059604645
+          ],
+          "__type": "SpellDataValue"
+        }
+      ],
+      "mSpellCalculations": {
+        "Damage": {
+          "mSimpleTooltipCalculationDisplay": 6,
+          "mFormulaParts": [
+            {
+              "mDataValue": "BaseDamage",
+              "__type": "NamedDataValueCalculationPart"
+            },
+            {
+              "mStat": 2,
+              "mDataValue": "BaseDamageADRatio",
+              "__type": "StatByNamedDataValueCalculationPart"
+            },
+            {
+              "mDataValue": "BaseDamageAPRatio",
+              "__type": "StatByNamedDataValueCalculationPart"
+            }
+          ],
+          "__type": "GameCalculation"
+        }
+      }
+    }
+  }
+}

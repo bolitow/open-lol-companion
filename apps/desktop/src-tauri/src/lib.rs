@@ -1,3 +1,4 @@
+mod collection;
 mod desktop;
 mod diagnostics;
 mod friends;
@@ -5,6 +6,10 @@ mod imports;
 mod live;
 mod overlay;
 mod players;
+mod spotlight;
+mod spotlight_media;
+mod spotlight_model;
+mod spotlight_viewer;
 use lcu_connector::LcuSession;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -76,6 +81,7 @@ pub fn run() {
         .manage(olc_build_client::BuildClient::from_env())
         .manage(imports::ImportLocks::default())
         .manage(players::LocalState::default())
+        .manage(spotlight_viewer::ViewerRuntime::default())
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
@@ -104,6 +110,7 @@ pub fn run() {
             overlay::setup(app.handle());
             live::setup(app.handle());
             friends::setup(app.handle());
+            collection::setup(app.handle());
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -136,6 +143,7 @@ pub fn run() {
                     // L'état courant reste lisible si aucune fenêtre n'écoute encore.
                     live::lcu_changed(&handle, &snapshot);
                     friends::lcu_changed(&handle, &snapshot);
+                    collection::lcu_changed(&handle, &snapshot);
                     let _ = handle.emit("lcu-session", snapshot);
                 }
             });
@@ -143,6 +151,14 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             friends::friends_state,
+            spotlight::open_skin_spotlight,
+            spotlight_viewer::skin_spotlight_state,
+            spotlight_viewer::skin_spotlight_media,
+            spotlight_viewer::skin_spotlight_control,
+            spotlight_viewer::skin_spotlight_layout,
+            collection::collection_state,
+            collection::collection_refresh,
+            collection::collection_set_wish,
             live::live_session,
             live::live_custom_role,
             overlay::overlay_state,
@@ -187,7 +203,8 @@ mod integration_permissions_tests {
         let overlay: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/overlay.json")).unwrap();
         let manifest = include_str!("../build.rs");
-        assert_eq!(main["windows"], serde_json::json!(["main"]));
+        assert!(main.get("windows").is_none());
+        assert_eq!(main["webviews"], serde_json::json!(["main"]));
         assert_eq!(overlay["windows"], serde_json::json!(["game-overlay"]));
         for command in [
             "desktop_settings",

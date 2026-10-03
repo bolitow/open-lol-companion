@@ -103,6 +103,26 @@ it('empêche une ancienne pagination de prendre la place du rafraîchissement à
  resolveProfile(profile(a));await flush();expect(starts).toEqual([0,0]);
 });
 
+it('conserve l’avatar public hors connexion et le remplace sans mélanger les comptes',()=>{
+ const saved:unknown[]=[];
+ const store=createPlayerStore({profile:async()=>{throw 'not_configured'},matches:async()=>page()},null,value=>saved.push(value));
+ store.syncAccount(true,{...a,profile_icon_id:42});
+ store.syncAccount(false,null);
+ expect(store.getSnapshot().home).toEqual({...a,profile_icon_id:42});
+ expect(parseHomePlayer(JSON.stringify(saved[0]))).toEqual({...a,profile_icon_id:42});
+ store.syncAccount(true,{...b,profile_icon_id:0});
+ expect(store.getSnapshot().home).toEqual({...b,profile_icon_id:0});
+ store.syncAccount(false,null);store.forget();
+ expect(store.getSnapshot().home).toBeNull();
+ for(const id of [-1,1.5,4294967296,'42'])expect(parseHomePlayer(JSON.stringify({...a,profile_icon_id:id}))).toEqual(a);
+});
+it('ne transmet pas les métadonnées locales d’avatar au contrat strict PlayerRequest',async()=>{
+ const requests:unknown[]=[];
+ const store=createPlayerStore({profile:async who=>{requests.push(who);return profile(who)},matches:async req=>page(req.player)}, {...a,profile_icon_id:42},()=>{});
+ store.start();await flush();
+ store.syncAccount(true,{...b,profile_icon_id:43});await flush();
+ expect(requests).toEqual([a,b]);
+});
 it('garde la source locale en pagination et refuse une page publique mélangée',async()=>{
  const requests:string[]=[];
  const store=createPlayerStore({profile:async who=>({...profile(who),source:'lcu'}),matches:async req=>{

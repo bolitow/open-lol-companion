@@ -1,0 +1,1605 @@
+{
+  "patch": "16.19",
+  "sources": [
+    "https://raw.communitydragon.org/16.19/plugins/rcp-be-lol-game-data/global/default/v1/skinlines.json",
+    "https://raw.communitydragon.org/16.19/plugins/rcp-be-lol-game-data/global/fr_fr/v1/skinlines.json"
+  ],
+  "entries": [
+    {
+      "id": 1,
+      "names": {
+        "fr": "Champions du monde : 2011",
+        "en": "World Champions: 2011"
+      }
+    },
+    {
+      "id": 2,
+      "names": {
+        "fr": "Champions du monde : 2012",
+        "en": "World Champions: 2012"
+      }
+    },
+    {
+      "id": 3,
+      "names": {
+        "fr": "Champions du monde : 2013",
+        "en": "World Champions: 2013"
+      }
+    },
+    {
+      "id": 4,
+      "names": {
+        "fr": "Champions du monde : 2014",
+        "en": "World Champions: 2014"
+      }
+    },
+    {
+      "id": 5,
+      "names": {
+        "fr": "Champions du monde : 2015",
+        "en": "World Champions: 2015"
+      }
+    },
+    {
+      "id": 6,
+      "names": {
+        "fr": "Champions du monde : 2016",
+        "en": "World Champions: 2016"
+      }
+    },
+    {
+      "id": 7,
+      "names": {
+        "fr": "Héros de guerre",
+        "en": "Victorious"
+      }
+    },
+    {
+      "id": 8,
+      "names": {
+        "fr": "Championnat du monde",
+        "en": "World Championship"
+      }
+    },
+    {
+      "id": 9,
+      "names": {
+        "fr": "Challengers",
+        "en": "Challenger"
+      }
+    },
+    {
+      "id": 10,
+      "names": {
+        "fr": "Arcade : Héros",
+        "en": "Arcade: Heroes"
+      }
+    },
+    {
+      "id": 11,
+      "names": {
+        "fr": "Arcade : Boss de combat",
+        "en": "Arcade: Battle Bosses"
+      }
+    },
+    {
+      "id": 12,
+      "names": {
+        "fr": "Lune de sang",
+        "en": "Blood Moon"
+      }
+    },
+    {
+      "id": 13,
+      "names": {
+        "fr": "Monde des dragons",
+        "en": "Dragon World"
+      }
+    },
+    {
+      "id": 14,
+      "names": {
+        "fr": "Section Oméga",
+        "en": "Omega Squad"
+      }
+    },
+    {
+      "id": 15,
+      "names": {
+        "fr": "Fête à la piscine",
+        "en": "Pool Party"
+      }
+    },
+    {
+      "id": 16,
+      "names": {
+        "fr": "Pentakill",
+        "en": "Pentakill"
+      }
+    },
+    {
+      "id": 17,
+      "names": {
+        "fr": "Programme",
+        "en": "Program"
+      }
+    },
+    {
+      "id": 18,
+      "names": {
+        "fr": "PROJET",
+        "en": "PROJECT"
+      }
+    },
+    {
+      "id": 19,
+      "names": {
+        "fr": "Gardiens des étoiles (saison 1)",
+        "en": "Star Guardian Season 1"
+      }
+    },
+    {
+      "id": 20,
+      "names": {
+        "fr": "Gardiens des étoiles (saison 2)",
+        "en": "Star Guardian Season 2"
+      }
+    },
+    {
+      "id": 21,
+      "names": {
+        "fr": "Super héros intergalactiques",
+        "en": "Super Galaxy"
+      }
+    },
+    {
+      "id": 22,
+      "names": {
+        "fr": "Scolaires",
+        "en": "Academy"
+      }
+    },
+    {
+      "id": 23,
+      "names": {
+        "fr": "Séducteurs",
+        "en": "Debonair"
+      }
+    },
+    {
+      "id": 24,
+      "names": {
+        "fr": "Armes pures",
+        "en": "Arclight"
+      }
+    },
+    {
+      "id": 25,
+      "names": {
+        "fr": "Prototypes de Viktor",
+        "en": "Battlecast"
+      }
+    },
+    {
+      "id": 26,
+      "names": {
+        "fr": "Art culinaires",
+        "en": "Culinary Masters"
+      }
+    },
+    {
+      "id": 27,
+      "names": {
+        "fr": "Vandales",
+        "en": "Vandal"
+      }
+    },
+    {
+      "id": 28,
+      "names": {
+        "fr": "Jeux d'hiver",
+        "en": "Winter Sports"
+      }
+    },
+    {
+      "id": 29,
+      "names": {
+        "fr": "Brise-monde",
+        "en": "Worldbreaker"
+      }
+    },
+    {
+      "id": 30,
+      "names": {
+        "fr": "Chasseurs de têtes",
+        "en": "Headhunter"
+      }
+    },
+    {
+      "id": 31,
+      "names": {
+        "fr": "Football",
+        "en": "Soccer Cup"
+      }
+    },
+    {
+      "id": 32,
+      "names": {
+        "fr": "Chasseurs préhistoriques",
+        "en": "Prehistoric Hunters"
+      }
+    },
+    {
+      "id": 33,
+      "names": {
+        "fr": "Justiciers",
+        "en": "Justicar"
+      }
+    },
+    {
+      "id": 34,
+      "names": {
+        "fr": "Luchadores",
+        "en": "Luchador"
+      }
+    },
+    {
+      "id": 35,
+      "names": {
+        "fr": "Mecha",
+        "en": "Mecha"
+      }
+    },
+    {
+      "id": 36,
+      "names": {
+        "fr": "Pulsefire",
+        "en": "Pulsefire"
+      }
+    },
+    {
+      "id": 37,
+      "names": {
+        "fr": "Riot",
+        "en": "Riot"
+      }
+    },
+    {
+      "id": 38,
+      "names": {
+        "fr": "Donjons & Barons",
+        "en": "Rift Quest"
+      }
+    },
+    {
+      "id": 39,
+      "names": {
+        "fr": "Ouest",
+        "en": "High Noon"
+      }
+    },
+    {
+      "id": 40,
+      "names": {
+        "fr": "Hextech",
+        "en": "Hextech"
+      }
+    },
+    {
+      "id": 41,
+      "names": {
+        "fr": "Suite royale",
+        "en": "Highstakes"
+      }
+    },
+    {
+      "id": 42,
+      "names": {
+        "fr": "Jackys Piltover",
+        "en": "Piltover Customs"
+      }
+    },
+    {
+      "id": 43,
+      "names": {
+        "fr": "Cosmique",
+        "en": "Cosmic"
+      }
+    },
+    {
+      "id": 44,
+      "names": {
+        "fr": "Pulsar sombre",
+        "en": "Dark Star"
+      }
+    },
+    {
+      "id": 45,
+      "names": {
+        "fr": "Maraudeurs",
+        "en": "Marauder"
+      }
+    },
+    {
+      "id": 46,
+      "names": {
+        "fr": "Jour de neige",
+        "en": "Snow Day"
+      }
+    },
+    {
+      "id": 47,
+      "names": {
+        "fr": "Merveilles hivernales",
+        "en": "Winter Wonder"
+      }
+    },
+    {
+      "id": 48,
+      "names": {
+        "fr": "Épreuve du solstice",
+        "en": "Snowdown Showdown"
+      }
+    },
+    {
+      "id": 49,
+      "names": {
+        "fr": "Bilgewater : la Marée rougeoyante",
+        "en": "Bilgewater: Burning Tides"
+      }
+    },
+    {
+      "id": 50,
+      "names": {
+        "fr": "Purificateurs",
+        "en": "Warden"
+      }
+    },
+    {
+      "id": 51,
+      "names": {
+        "fr": "Ville du crime",
+        "en": "Crime City"
+      }
+    },
+    {
+      "id": 52,
+      "names": {
+        "fr": "Fulguro",
+        "en": "Thunder Lord"
+      }
+    },
+    {
+      "id": 53,
+      "names": {
+        "fr": "Festival lunaire : Royaume en guerre",
+        "en": "Lunar Revel: Warring Kingdoms"
+      }
+    },
+    {
+      "id": 54,
+      "names": {
+        "fr": "Festival lunaire : Pyrotechnie",
+        "en": "Lunar Revel: Firecracker"
+      }
+    },
+    {
+      "id": 55,
+      "names": {
+        "fr": "Festival lunaire",
+        "en": "Lunar Revel"
+      }
+    },
+    {
+      "id": 56,
+      "names": {
+        "fr": "Lapins de Pâques",
+        "en": "Cottontail"
+      }
+    },
+    {
+      "id": 57,
+      "names": {
+        "fr": "Folie sucrée",
+        "en": "Sugar Rush"
+      }
+    },
+    {
+      "id": 58,
+      "names": {
+        "fr": "Sylvestres",
+        "en": "Elderwood"
+      }
+    },
+    {
+      "id": 59,
+      "names": {
+        "fr": "Eternum",
+        "en": "Eternum"
+      }
+    },
+    {
+      "id": 60,
+      "names": {
+        "fr": "Ordre du lotus",
+        "en": "Order of the Lotus"
+      }
+    },
+    {
+      "id": 61,
+      "names": {
+        "fr": "Coffre à jouets",
+        "en": "Toy Box"
+      }
+    },
+    {
+      "id": 62,
+      "names": {
+        "fr": "Lotus mortel",
+        "en": "Death Blossom"
+      }
+    },
+    {
+      "id": 63,
+      "names": {
+        "fr": "opération arctique",
+        "en": "arcticops"
+      }
+    },
+    {
+      "id": 64,
+      "names": {
+        "fr": "Bourreaux des cœurs",
+        "en": "Heartbreakers"
+      }
+    },
+    {
+      "id": 65,
+      "names": {
+        "fr": "Valkyries d'acier",
+        "en": "Steel Valkyries"
+      }
+    },
+    {
+      "id": 66,
+      "names": {
+        "fr": "Gardiens des sables",
+        "en": "Guardian of the Sands"
+      }
+    },
+    {
+      "id": 67,
+      "names": {
+        "fr": "Pharaons",
+        "en": "Pharaoh"
+      }
+    },
+    {
+      "id": 68,
+      "names": {
+        "fr": "Pastel",
+        "en": "Woad"
+      }
+    },
+    {
+      "id": 69,
+      "names": {
+        "fr": "Lanciers",
+        "en": "Lancer"
+      }
+    },
+    {
+      "id": 70,
+      "names": {
+        "fr": "Guerriers de la route",
+        "en": "Road Warrior"
+      }
+    },
+    {
+      "id": 71,
+      "names": {
+        "fr": "Livre de contes",
+        "en": "Storybook"
+      }
+    },
+    {
+      "id": 72,
+      "names": {
+        "fr": "Fables",
+        "en": "Fables"
+      }
+    },
+    {
+      "id": 73,
+      "names": {
+        "fr": "Odyssée",
+        "en": "Odyssey"
+      }
+    },
+    {
+      "id": 74,
+      "names": {
+        "fr": "Bilgewater : la Malédiction des noyés",
+        "en": "Bilgewater: Curse of the Drowned"
+      }
+    },
+    {
+      "id": 75,
+      "names": {
+        "fr": "Champions du monde : 2017",
+        "en": "World Champions: 2017"
+      }
+    },
+    {
+      "id": 76,
+      "names": {
+        "fr": "Nova d'effroi",
+        "en": "Dreadnova"
+      }
+    },
+    {
+      "id": 78,
+      "names": {
+        "fr": "Bataille des Dieux-rois",
+        "en": "Battle of the God-Kings"
+      }
+    },
+    {
+      "id": 79,
+      "names": {
+        "fr": "Kaijus",
+        "en": "Kaiju"
+      }
+    },
+    {
+      "id": 80,
+      "names": {
+        "fr": "Augure des ténèbres",
+        "en": "Omen of the Dark"
+      }
+    },
+    {
+      "id": 81,
+      "names": {
+        "fr": "Voyage immortel",
+        "en": "Immortal Journey"
+      }
+    },
+    {
+      "id": 82,
+      "names": {
+        "fr": "Classique",
+        "en": "Traditional"
+      }
+    },
+    {
+      "id": 83,
+      "names": {
+        "fr": "Édition Collector",
+        "en": "Collector's Edition"
+      }
+    },
+    {
+      "id": 84,
+      "names": {
+        "fr": "PAX",
+        "en": "PAX"
+      }
+    },
+    {
+      "id": 85,
+      "names": {
+        "fr": "Légion d'acier",
+        "en": "Steel Legion"
+      }
+    },
+    {
+      "id": 86,
+      "names": {
+        "fr": "Infernaux",
+        "en": "Infernal"
+      }
+    },
+    {
+      "id": 87,
+      "names": {
+        "fr": "Thanatophores",
+        "en": "Death Sworn"
+      }
+    },
+    {
+      "id": 88,
+      "names": {
+        "fr": "Farces ou friandises",
+        "en": "Trick-or-Treat"
+      }
+    },
+    {
+      "id": 89,
+      "names": {
+        "fr": "Zombies contre tueurs",
+        "en": "Zombies VS Slayers"
+      }
+    },
+    {
+      "id": 90,
+      "names": {
+        "fr": "Prétoriens",
+        "en": "Praetorian"
+      }
+    },
+    {
+      "id": 91,
+      "names": {
+        "fr": "K/DA",
+        "en": "K/DA"
+      }
+    },
+    {
+      "id": 92,
+      "names": {
+        "fr": "Assemblée",
+        "en": "Coven"
+      }
+    },
+    {
+      "id": 93,
+      "names": {
+        "fr": "Éclipse",
+        "en": "Eclipse"
+      }
+    },
+    {
+      "id": 94,
+      "names": {
+        "fr": "Astronautes",
+        "en": "Astronauts"
+      }
+    },
+    {
+      "id": 95,
+      "names": {
+        "fr": "Arcanistes",
+        "en": "Arcanists"
+      }
+    },
+    {
+      "id": 96,
+      "names": {
+        "fr": "Origami",
+        "en": "Papercraft"
+      }
+    },
+    {
+      "id": 97,
+      "names": {
+        "fr": "Albion",
+        "en": "Albion"
+      }
+    },
+    {
+      "id": 98,
+      "names": {
+        "fr": "Chats vs Chiens",
+        "en": "Cats Versus Dogs"
+      }
+    },
+    {
+      "id": 99,
+      "names": {
+        "fr": "Merveilles du monde",
+        "en": "Wonders of the World"
+      }
+    },
+    {
+      "id": 100,
+      "names": {
+        "fr": "Gagne-pain",
+        "en": "Day Job"
+      }
+    },
+    {
+      "id": 101,
+      "names": {
+        "fr": "Incognito",
+        "en": "Definitely Not"
+      }
+    },
+    {
+      "id": 102,
+      "names": {
+        "fr": "Haute société",
+        "en": "High Society"
+      }
+    },
+    {
+      "id": 103,
+      "names": {
+        "fr": "Maîtres du dunk",
+        "en": "Dunkmaster"
+      }
+    },
+    {
+      "id": 104,
+      "names": {
+        "fr": "Commando",
+        "en": "Commando"
+      }
+    },
+    {
+      "id": 105,
+      "names": {
+        "fr": "Envahisseurs",
+        "en": "Invaders"
+      }
+    },
+    {
+      "id": 106,
+      "names": {
+        "fr": "Savants fous",
+        "en": "Mad Scientists"
+      }
+    },
+    {
+      "id": 107,
+      "names": {
+        "fr": "Champions du monde : 2018",
+        "en": "World Champions: 2018"
+      }
+    },
+    {
+      "id": 108,
+      "names": {
+        "fr": "Profondeurs oubliées",
+        "en": "Forgotten Depths"
+      }
+    },
+    {
+      "id": 109,
+      "names": {
+        "fr": "Conquérant",
+        "en": "Conqueror"
+      }
+    },
+    {
+      "id": 110,
+      "names": {
+        "fr": "Gothique",
+        "en": "Goth"
+      }
+    },
+    {
+      "id": 111,
+      "names": {
+        "fr": "Âge d'argent",
+        "en": "Silver Age"
+      }
+    },
+    {
+      "id": 112,
+      "names": {
+        "fr": "Glacial",
+        "en": "Glacial"
+      }
+    },
+    {
+      "id": 113,
+      "names": {
+        "fr": "Académie du combat",
+        "en": "Battle Academia"
+      }
+    },
+    {
+      "id": 114,
+      "names": {
+        "fr": "Médiéval",
+        "en": "Medieval"
+      }
+    },
+    {
+      "id": 115,
+      "names": {
+        "fr": "Hôpital de la Faille",
+        "en": "Rift Hospital"
+      }
+    },
+    {
+      "id": 116,
+      "names": {
+        "fr": "Démoniaque",
+        "en": "Demonic"
+      }
+    },
+    {
+      "id": 117,
+      "names": {
+        "fr": "Demacia Vice",
+        "en": "Demacia Vice"
+      }
+    },
+    {
+      "id": 118,
+      "names": {
+        "fr": "Heavy Metal",
+        "en": "Heavy Metal"
+      }
+    },
+    {
+      "id": 119,
+      "names": {
+        "fr": "Gardiens des étoiles (saison 3)",
+        "en": "Star Guardian Season 3"
+      }
+    },
+    {
+      "id": 120,
+      "names": {
+        "fr": "True Damage",
+        "en": "True Damage"
+      }
+    },
+    {
+      "id": 121,
+      "names": {
+        "fr": "Policiers et voleurs",
+        "en": "Cops and Robbers"
+      }
+    },
+    {
+      "id": 122,
+      "names": {
+        "fr": "Némésis",
+        "en": "Crimson Elite"
+      }
+    },
+    {
+      "id": 123,
+      "names": {
+        "fr": "Chevaliers d'effroi",
+        "en": "Dreadknights"
+      }
+    },
+    {
+      "id": 124,
+      "names": {
+        "fr": "Héraut de l'aube",
+        "en": "Dawnbringer"
+      }
+    },
+    {
+      "id": 125,
+      "names": {
+        "fr": "Héraut de la nuit",
+        "en": "Nightbringer"
+      }
+    },
+    {
+      "id": 126,
+      "names": {
+        "fr": "Hémolithe",
+        "en": "Bloodstone"
+      }
+    },
+    {
+      "id": 127,
+      "names": {
+        "fr": "Royaume des mechas",
+        "en": "Mecha Kingdoms"
+      }
+    },
+    {
+      "id": 128,
+      "names": {
+        "fr": "Freljord",
+        "en": "Freljord"
+      }
+    },
+    {
+      "id": 129,
+      "names": {
+        "fr": "Glaces noires",
+        "en": "Blackfrost"
+      }
+    },
+    {
+      "id": 130,
+      "names": {
+        "fr": "Champions du monde : 2019",
+        "en": "World Champions: 2019"
+      }
+    },
+    {
+      "id": 133,
+      "names": {
+        "fr": "Psychoguerriers",
+        "en": "PsyOps"
+      }
+    },
+    {
+      "id": 134,
+      "names": {
+        "fr": "Groupe de la Rose noire",
+        "en": "Black Rose Group"
+      }
+    },
+    {
+      "id": 135,
+      "names": {
+        "fr": "Dracomanciens",
+        "en": "Dragonmancers"
+      }
+    },
+    {
+      "id": 136,
+      "names": {
+        "fr": "Galactique",
+        "en": "Galactic"
+      }
+    },
+    {
+      "id": 137,
+      "names": {
+        "fr": "Reines du combat",
+        "en": "Battle Queens"
+      }
+    },
+    {
+      "id": 138,
+      "names": {
+        "fr": "Déchu",
+        "en": "Ruined"
+      }
+    },
+    {
+      "id": 139,
+      "names": {
+        "fr": "Rouleaux de Shan Hai",
+        "en": "Shan Hai Scrolls"
+      }
+    },
+    {
+      "id": 140,
+      "names": {
+        "fr": "Rose de cristal",
+        "en": "Crystal Rose"
+      }
+    },
+    {
+      "id": 141,
+      "names": {
+        "fr": "Rose fanée",
+        "en": "Withered Rose"
+      }
+    },
+    {
+      "id": 142,
+      "names": {
+        "fr": "Bête lunaire",
+        "en": "Lunar Beast"
+      }
+    },
+    {
+      "id": 143,
+      "names": {
+        "fr": "Abeilles !",
+        "en": "Bees!"
+      }
+    },
+    {
+      "id": 144,
+      "names": {
+        "fr": "Astro-groove",
+        "en": "Space Groove"
+      }
+    },
+    {
+      "id": 145,
+      "names": {
+        "fr": "Champions du monde : 2020",
+        "en": "World Champions: 2020"
+      }
+    },
+    {
+      "id": 146,
+      "names": {
+        "fr": "Arcanes",
+        "en": "Arcana"
+      }
+    },
+    {
+      "id": 147,
+      "names": {
+        "fr": "Sentinelles de la lumière",
+        "en": "Sentinels of Light"
+      }
+    },
+    {
+      "id": 148,
+      "names": {
+        "fr": "Cyberpop",
+        "en": "Cyber Pop"
+      }
+    },
+    {
+      "id": 149,
+      "names": {
+        "fr": "Cauchemar criminel",
+        "en": "Crime City Nightmare"
+      }
+    },
+    {
+      "id": 150,
+      "names": {
+        "fr": "Phénimanciens",
+        "en": "Phoenixmancers"
+      }
+    },
+    {
+      "id": 151,
+      "names": {
+        "fr": "Pentakill III : The Lost Chapter",
+        "en": "Pentakill III: The Lost Chapter"
+      }
+    },
+    {
+      "id": 152,
+      "names": {
+        "fr": "Arcane",
+        "en": "Arcane"
+      }
+    },
+    {
+      "id": 153,
+      "names": {
+        "fr": "Café Chouchous",
+        "en": "Cafe Cuties"
+      }
+    },
+    {
+      "id": 154,
+      "names": {
+        "fr": "Porcelaine",
+        "en": "Porcelain"
+      }
+    },
+    {
+      "id": 155,
+      "names": {
+        "fr": "Électrolames",
+        "en": "Shockblade"
+      }
+    },
+    {
+      "id": 156,
+      "names": {
+        "fr": "Section Anima",
+        "en": "Anima Squad"
+      }
+    },
+    {
+      "id": 157,
+      "names": {
+        "fr": "Chevaliers de cendres",
+        "en": "Ashen Knights"
+      }
+    },
+    {
+      "id": 158,
+      "names": {
+        "fr": "Champions du monde : 2021",
+        "en": "World Champions: 2021"
+      }
+    },
+    {
+      "id": 159,
+      "names": {
+        "fr": "Chant de l'océan",
+        "en": "Ocean Song"
+      }
+    },
+    {
+      "id": 160,
+      "names": {
+        "fr": "Lune de neige",
+        "en": "Snow Moon"
+      }
+    },
+    {
+      "id": 161,
+      "names": {
+        "fr": "Gardiens des étoiles (saison 4)",
+        "en": "Star Guardian Season 4"
+      }
+    },
+    {
+      "id": 162,
+      "names": {
+        "fr": "Dresseurs de monstres",
+        "en": "Monster Tamers"
+      }
+    },
+    {
+      "id": 163,
+      "names": {
+        "fr": "Gardien des esprits",
+        "en": "Spirit Guard"
+      }
+    },
+    {
+      "id": 164,
+      "names": {
+        "fr": "La Ruine",
+        "en": "Ruination"
+      }
+    },
+    {
+      "id": 165,
+      "names": {
+        "fr": "Jeux du zénith",
+        "en": "Zenith Games"
+      }
+    },
+    {
+      "id": 166,
+      "names": {
+        "fr": "Élémentaliste",
+        "en": "Elementalist"
+      }
+    },
+    {
+      "id": 167,
+      "names": {
+        "fr": "Mythique",
+        "en": "Legacy"
+      }
+    },
+    {
+      "id": 168,
+      "names": {
+        "fr": "Urf le lamantin",
+        "en": "Urf the Manatee"
+      }
+    },
+    {
+      "id": 169,
+      "names": {
+        "fr": "Fête surprise",
+        "en": "Surprise Party"
+      }
+    },
+    {
+      "id": 170,
+      "names": {
+        "fr": "Nuit d'effroi",
+        "en": "Fright Night"
+      }
+    },
+    {
+      "id": 171,
+      "names": {
+        "fr": "Fleur spirituelle",
+        "en": "Spirit Blossom"
+      }
+    },
+    {
+      "id": 172,
+      "names": {
+        "fr": "Sorcière",
+        "en": "Bewitching"
+      }
+    },
+    {
+      "id": 173,
+      "names": {
+        "fr": "DJ",
+        "en": "DJ"
+      }
+    },
+    {
+      "id": 174,
+      "names": {
+        "fr": "Popstar",
+        "en": "Popstar"
+      }
+    },
+    {
+      "id": 176,
+      "names": {
+        "fr": "Trois Honneurs",
+        "en": "Three Honors"
+      }
+    },
+    {
+      "id": 177,
+      "names": {
+        "fr": "Bilgewater : mercenaires",
+        "en": "Bilgewater: Mercs"
+      }
+    },
+    {
+      "id": 178,
+      "names": {
+        "fr": "Chronique",
+        "en": "Chronicle"
+      }
+    },
+    {
+      "id": 179,
+      "names": {
+        "fr": "Malédiction du Néant",
+        "en": "Curse of the Void"
+      }
+    },
+    {
+      "id": 180,
+      "names": {
+        "fr": "Outreroutes",
+        "en": "Otherroads"
+      }
+    },
+    {
+      "id": 182,
+      "names": {
+        "fr": "Bêta",
+        "en": "Beta"
+      }
+    },
+    {
+      "id": 183,
+      "names": {
+        "fr": "Voleur d'âmes",
+        "en": "Soulstealer"
+      }
+    },
+    {
+      "id": 184,
+      "names": {
+        "fr": "Triomphant",
+        "en": "Triumphant"
+      }
+    },
+    {
+      "id": 185,
+      "names": {
+        "fr": "Vrai guerrier",
+        "en": "True Warrior"
+      }
+    },
+    {
+      "id": 186,
+      "names": {
+        "fr": "Empyréens",
+        "en": "Empyrean"
+      }
+    },
+    {
+      "id": 187,
+      "names": {
+        "fr": "Élus de l'hiver",
+        "en": "Winterblessed"
+      }
+    },
+    {
+      "id": 188,
+      "names": {
+        "fr": "Mythificateur",
+        "en": "Mythmaker"
+      }
+    },
+    {
+      "id": 189,
+      "names": {
+        "fr": "Coups de cœur et Cœurs brisés",
+        "en": "Heartthrobs and Heartaches"
+      }
+    },
+    {
+      "id": 190,
+      "names": {
+        "fr": "Alliance brisée",
+        "en": "Broken Covenant"
+      }
+    },
+    {
+      "id": 191,
+      "names": {
+        "fr": "Cour féérique",
+        "en": "Faerie Court"
+      }
+    },
+    {
+      "id": 192,
+      "names": {
+        "fr": "Guerriers d'encre",
+        "en": "Inkshadow"
+      }
+    },
+    {
+      "id": 193,
+      "names": {
+        "fr": "Hérauts de la nuit et hérauts de l'aube",
+        "en": "Nightbringer and Dawnbringer"
+      }
+    },
+    {
+      "id": 194,
+      "names": {
+        "fr": "Champions du monde : 2022",
+        "en": "World Champions: 2022"
+      }
+    },
+    {
+      "id": 195,
+      "names": {
+        "fr": "Crystalis Motus",
+        "en": "Crystalis Motus"
+      }
+    },
+    {
+      "id": 196,
+      "names": {
+        "fr": "Combattants spirituels",
+        "en": "Soul Fighter"
+      }
+    },
+    {
+      "id": 197,
+      "names": {
+        "fr": "Ville démoniaque",
+        "en": "Street Demons"
+      }
+    },
+    {
+      "id": 198,
+      "names": {
+        "fr": "La Ilusión",
+        "en": "La Ilusión"
+      }
+    },
+    {
+      "id": 199,
+      "names": {
+        "fr": "HEARTSTEEL",
+        "en": "HEARTSTEEL"
+      }
+    },
+    {
+      "id": 200,
+      "names": {
+        "fr": "Embuscade férale",
+        "en": "Primal Ambush"
+      }
+    },
+    {
+      "id": 201,
+      "names": {
+        "fr": "Écailles célestes",
+        "en": "Heavenscale"
+      }
+    },
+    {
+      "id": 202,
+      "names": {
+        "fr": "Crystalis Indomitus",
+        "en": "Crystalis Indomitus"
+      }
+    },
+    {
+      "id": 203,
+      "names": {
+        "fr": "Bataille de nourriture",
+        "en": "Food Fight"
+      }
+    },
+    {
+      "id": 204,
+      "names": {
+        "fr": "Légendes transcendées",
+        "en": "Risen Legends"
+      }
+    },
+    {
+      "id": 205,
+      "names": {
+        "fr": "Berger de la pluie",
+        "en": "Rain Shepherd"
+      }
+    },
+    {
+      "id": 206,
+      "names": {
+        "fr": "Primordien",
+        "en": "Primordian"
+      }
+    },
+    {
+      "id": 207,
+      "names": {
+        "fr": "Champions du monde : 2023",
+        "en": "World Champions: 2023"
+      }
+    },
+    {
+      "id": 208,
+      "names": {
+        "fr": "Checks et festivités",
+        "en": "Fist Bumps and Festivities"
+      }
+    },
+    {
+      "id": 209,
+      "names": {
+        "fr": "Chasse éternelle",
+        "en": "Chosen of the Wolf"
+      }
+    },
+    {
+      "id": 210,
+      "names": {
+        "fr": "Superfans",
+        "en": "Superfans"
+      }
+    },
+    {
+      "id": 211,
+      "names": {
+        "fr": "Bal masqué de la Rose noire",
+        "en": "Masque of the Black Rose"
+      }
+    },
+    {
+      "id": 212,
+      "names": {
+        "fr": "Mythe moderne",
+        "en": "Modern Mythos"
+      }
+    },
+    {
+      "id": 213,
+      "names": {
+        "fr": "Ravioles adorées",
+        "en": "Dumpling Darlings"
+      }
+    },
+    {
+      "id": 214,
+      "names": {
+        "fr": "Justice masquée",
+        "en": "Masked Justice"
+      }
+    },
+    {
+      "id": 215,
+      "names": {
+        "fr": "Grande Ordalie",
+        "en": "Grand Reckoning"
+      }
+    },
+    {
+      "id": 216,
+      "names": {
+        "fr": "Forgeurs de destin et briseurs de destin",
+        "en": "Fatemakers and Fatebreakers"
+      }
+    },
+    {
+      "id": 217,
+      "names": {
+        "fr": "Visionnaire",
+        "en": "Stargazer"
+      }
+    },
+    {
+      "id": 218,
+      "names": {
+        "fr": "Fleur spirituelle onsen",
+        "en": "Spirit Blossom Springs"
+      }
+    },
+    {
+      "id": 219,
+      "names": {
+        "fr": "Darkin",
+        "en": "Visions of the Fallen"
+      }
+    },
+    {
+      "id": 220,
+      "names": {
+        "fr": "Champions du monde : 2024",
+        "en": "World Champions: 2024"
+      }
+    },
+    {
+      "id": 221,
+      "names": {
+        "fr": "Flora fatalis",
+        "en": "Flora Fatalis"
+      }
+    },
+    {
+      "id": 222,
+      "names": {
+        "fr": "Les Manifestations éternelles",
+        "en": "The Eternal Aspects"
+      }
+    },
+    {
+      "id": 223,
+      "names": {
+        "fr": "Ombres englouties",
+        "en": "Sunken Shadows"
+      }
+    },
+    {
+      "id": 224,
+      "names": {
+        "fr": "Les lois de la pierre",
+        "en": "The Laws of Stone"
+      }
+    },
+    {
+      "id": 225,
+      "names": {
+        "fr": "Pétales de printemps",
+        "en": "Petals of Spring"
+      }
+    },
+    {
+      "id": 226,
+      "names": {
+        "fr": "Aegis Frame",
+        "en": "Aegis Frame"
+      }
+    },
+    {
+      "id": 227,
+      "names": {
+        "fr": "Règne du roi revenant",
+        "en": "Revenant Reign"
+      }
+    },
+    {
+      "id": 228,
+      "names": {
+        "fr": "Chiens de guerre",
+        "en": "Warhounds"
+      }
+    },
+    {
+      "id": 229,
+      "names": {
+        "fr": "Pandémonium",
+        "en": "Pandemonium"
+      }
+    },
+    {
+      "id": 230,
+      "names": {
+        "fr": "Rivages impies",
+        "en": "Sinful Shores"
+      }
+    },
+    {
+      "id": 231,
+      "names": {
+        "fr": "Chambre magmatique",
+        "en": "Magma Chamber"
+      }
+    },
+    {
+      "id": 232,
+      "names": {
+        "fr": "Champions du monde : 2025",
+        "en": "World Champions: 2025"
+      }
+    },
+    {
+      "id": 233,
+      "names": {
+        "fr": "Mélodie du cœur",
+        "en": "Heartsong"
+      }
+    }
+  ]
+}
