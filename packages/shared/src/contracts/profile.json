@@ -1,0 +1,37 @@
+{
+  "platform": "EUW1",
+  "game_name": "Synthetic",
+  "tag_line": "TEST",
+  "puuid": "synthetic-puuid",
+  "profile_icon_id": 1,
+  "summoner_level": 42,
+  "ranks": [
+    {
+      "queue_id": 420,
+      "status": "ranked",
+      "tier": "GOLD",
+      "division": "II",
+      "league_points": 55,
+      "wins": 12,
+      "losses": 9,
+      "hot_streak": true,
+      "veteran": false,
+      "fresh_blood": true,
+      "inactive": false
+    },
+    {
+      "queue_id": 440,
+      "status": "unranked",
+      "tier": null,
+      "division": null,
+      "league_points": null,
+      "wins": null,
+      "losses": null,
+      "hot_streak": null,
+      "veteran": null,
+      "fresh_blood": null,
+      "inactive": null
+    }
+  ],
+  "fetched_at": 1
+}
