@@ -26,6 +26,12 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 sha2 = "0.10"
 
+# Les tests de l'exporteur du catalogue desktop (#116) tournent avec `cargo test -p olc-collector`,
+# donc avec `pnpm test` et sur chaque OS de la CI, sans étape dédiée.
+[[example]]
+name = "export_desktop_catalog"
+test = true
+
 [features]
 # Réponses Riot synthétiques pour les tests d'intégration (`tests/`).
 test-fixtures = []
