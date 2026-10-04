@@ -5,7 +5,7 @@ import {formatLiveTime, liveBuildRequest, liveChampion} from './liveModel';
 const ready: LiveSession = {
   revision: 2, generation: 1, status: 'ready',
   context: {championId: 432, role: 'UTILITY', platform: 'EUW1', queue: 420, customGame: false},
-  game: {gameTime: 125.8, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 3, kills: 0, deaths: 1, assists: 2, creepScore: 4, items: []}, events: []},
+  game: {gameTime: 125.8, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 3, kills: 0, deaths: 1, assists: 2, creepScore: 4, items: [], currentGold: null, wardScore: null, isDead: null, respawnTimer: null, abilityLevels: null, team: null, position: null}, teams: null, events: []}, postgame: null,
 };
 
 describe('contexte réel en partie', () => {

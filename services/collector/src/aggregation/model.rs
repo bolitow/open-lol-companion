@@ -7,6 +7,7 @@ use super::builds::{self, BuildObservation};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::AggregationError;
 use crate::model::patch_from_version;
+use crate::queues;
 
 /// Écart maximal par défaut entre le début de la partie et l'observation de rang retenue.
 pub const DEFAULT_RANK_MAX_AGE_HOURS: u32 = 168;
@@ -304,9 +305,7 @@ impl Accumulator {
         };
         // Politique Riot : aucun winrate d'item Arena dans le rapport publiable.
         // https://developer.riotgames.com/docs/lol#game-policy
-        if game.detail["info"]["gameMode"] == "CHERRY"
-            || [1700, 1710, 1740, 1750].contains(&game.queue_id)
-        {
+        if game.detail["info"]["gameMode"] == "CHERRY" || queues::ARENA.contains(&game.queue_id) {
             self.arena_scopes.insert(scope.clone());
         }
         let coverage = self.coverage.entry(scope.clone()).or_default();
@@ -723,16 +722,16 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
     {
         return Err("invalid_match");
     }
+    // Une file hors des formats connus n'est jamais agrégée : exclusion explicite.
+    if !queues::is_identified(game.queue_id) {
+        return Err("unknown_queue");
+    }
     let raw = info["participants"].as_array().ok_or("invalid_match")?;
     let ranked = [420, 440].contains(&game.queue_id);
-    let standard = [
-        400, 420, 430, 440, 450, 480, 490, 700, 720, 830, 840, 850, 870, 880, 890, 900, 1020, 1300,
-        1400, 1900, 2300, 2400,
-    ]
-    .contains(&game.queue_id);
-    let arena = info["gameMode"].as_str() == Some("CHERRY")
-        || [1700, 1710, 1740, 1750].contains(&game.queue_id);
-    let swarm = [1810, 1820, 1830, 1840].contains(&game.queue_id);
+    let standard = queues::STANDARD.contains(&game.queue_id);
+    let arena =
+        info["gameMode"].as_str() == Some("CHERRY") || queues::ARENA.contains(&game.queue_id);
+    let swarm = queues::SWARM.contains(&game.queue_id);
     if !(1..=64).contains(&raw.len()) || (standard && raw.len() != 10) {
         return Err("invalid_match");
     }

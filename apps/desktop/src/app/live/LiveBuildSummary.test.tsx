@@ -63,7 +63,7 @@ it('annonce une catégorie absente au lieu de montrer des objets d’une autre c
 });
 
 it('ne charge pas les builds pour un rôle inconnu même avec un champion live', () => {
-  const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: {championId: 432, role: null, platform: 'EUW1', queue: 420, customGame: false}, game: {gameTime: 1, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 1, kills: 0, deaths: 0, assists: 0, creepScore: 0, items: []}, events: []}};
+  const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: {championId: 432, role: null, platform: 'EUW1', queue: 420, customGame: false}, game: {gameTime: 1, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 1, kills: 0, deaths: 0, assists: 0, creepScore: 0, items: [], currentGold: null, wardScore: null, isDead: null, respawnTimer: null, abilityLevels: null, team: null, position: null}, teams: null, events: []}, postgame: null};
   const html = renderToStaticMarkup(<LiveBuildSummary session={session} locale="en"/>);
   expect(html).toContain('Statistics unavailable');
   expect(html).not.toContain('Loading');

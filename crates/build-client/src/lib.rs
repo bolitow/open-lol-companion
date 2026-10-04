@@ -1,6 +1,8 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
+pub mod credentials;
 pub mod profiles;
+pub mod publications;
 
 use reqwest::{header::HeaderValue, Url};
 use serde::{Deserialize, Serialize};
@@ -161,18 +163,13 @@ struct Page {
 pub struct BuildClient {
     http: reqwest::Client,
     base: Url,
+    /// Jeton de lecture, réservé au premier message du WebSocket ; jamais journalisé.
+    token: String,
+    tls: Arc<rustls::ClientConfig>,
     slots: tokio::sync::Semaphore,
 }
 
 impl BuildClient {
-    /// Charge uniquement les variables desktop ; ni clé Riot ni secret serveur JWT.
-    pub fn from_env() -> Result<Self, BuildError> {
-        Self::new(
-            std::env::var("OLC_API_URL").ok(),
-            std::env::var("OLC_API_TOKEN").ok(),
-        )
-    }
-
     /// URL d'origine HTTPS ou HTTP sur IP loopback. Redirections interdites.
     pub fn new(url: Option<String>, token: Option<String>) -> Result<Self, BuildError> {
         let (Some(url), Some(token)) = (url, token) else {
@@ -211,7 +208,7 @@ impl BuildClient {
         .with_root_certificates(roots)
         .with_no_client_auth();
         let http = reqwest::Client::builder()
-            .use_preconfigured_tls(tls)
+            .use_preconfigured_tls(tls.clone())
             .default_headers(headers)
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(5))
@@ -221,6 +218,8 @@ impl BuildClient {
         Ok(Self {
             http,
             base,
+            token,
+            tls: Arc::new(tls),
             slots: tokio::sync::Semaphore::new(4),
         })
     }

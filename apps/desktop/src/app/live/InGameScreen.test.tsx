@@ -9,7 +9,7 @@ vi.mock('./useLiveSession', () => ({useLiveSession: () => connection}));
 const ready: LiveSession = {revision: 2, generation: 1, status: 'ready',
   context: {championId: 432, role: 'UTILITY', platform: 'EUW1', queue: 420, customGame: false},
   game: {gameTime: 125.8, gameMode: 'CLASSIC', mapNumber: 11,
-    player: {championKey: 'Bard', level: 3, kills: 2, deaths: 1, assists: 4, creepScore: 9, items: []}, events: []},
+    player: {championKey: 'Bard', level: 3, kills: 2, deaths: 1, assists: 4, creepScore: 9, items: [], currentGold: null, wardScore: null, isDead: null, respawnTimer: null, abilityLevels: null, team: null, position: null}, teams: null, events: []}, postgame: null,
 };
 beforeEach(() => { connection.session = ready; connection.native = true; connection.error = false; });
 
