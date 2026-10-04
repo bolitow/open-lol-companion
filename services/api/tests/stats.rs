@@ -178,7 +178,7 @@ fn report() -> Value {
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
         "ban_rank_basis":"match_median", "ban_rank_min_known_players":6,
         "pick_rate_definition":"champion_matches / bucket_matches * 100",
-        "tier_method":"wilson_lower_bound", "min_games":100,
+        "tier_method":"tier_method fixture", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
             "start_ms":1_000_000, "end_ms":2_000_000},
         "source_matches":100, "included_matches":99, "exclusions":{"remake":1},
@@ -440,6 +440,8 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["exclusions"], json!({"remake": 1}));
     assert_eq!(meta["ban_rank_basis"], "match_median");
     assert_eq!(meta["ban_rank_min_known_players"], 6);
+    // Valeur neutre : l'API relaie `tier_method` sans l'interpréter (#85).
+    assert_eq!(meta["tier_method"], "tier_method fixture");
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"

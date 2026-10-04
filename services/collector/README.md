@@ -236,15 +236,20 @@ inventé à partir des objets ou du rang.
 | `pick_rate` | Parties où le champion apparaît / `bucket_matches` × 100 (#84) : « présent dans la partie », même base que `bans` ; une partie compte une fois même si le champion y est en double, donc au plus 100 %. Défini par `pick_rate_definition` (`champion_matches / bucket_matches * 100`) |
 | `selection_share` | Participations du champion / population × 100 : part des sélections dans ce groupe, l'ancien `pick_rate` (#84), plafonnée à 50 % par rôle en 5v5 ; nulle avant #84 |
 | `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
-| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
+| `position` | Score de tier décroissant (#85), puis winrate brut, effectif et ID ; publiée pour tout groupe au-dessus du seuil, même sans tier |
+| `tier` | Lettre sur seuils absolus du score (#85), sans répartition forcée : S ≥ +2,5, A ≥ +1, B ≥ −1, C ≥ −2,5, D en dessous. Score = winrate lissé − μ + 0,02 × (`pick_rate` + ban rate), où μ est le winrate du compartiment en % (victoires / participations de tous ses champions × 100) et le winrate lissé (100 × victoires + 200 × μ) / (parties + 200). Le ban rate est celui du même périmètre au même rang de partie (#109) pour `ALL`, `UNRANKED_MODE` et les paliers classés, 0 pour `UNKNOWN`/`UNRANKED` (rangs de joueur sans équivalent par partie) ou sous le seuil de drafts. Nul si `pick_rate` < 0,5 % ou si moins de 20 champions du compartiment passent ce seuil. Formule publiée dans `tier_method` |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file/rang de partie (#109) : matchs bannissant le champion / drafts complètes du même rang ; un double ban ne compte qu'une fois. Le rang `ALL` garde toutes les drafts ; chaque draft compte aussi sous le palier de sa partie |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
 visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
 Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances
-entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
-une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
+entre parties d'un même joueur. La borne Wilson reste publiée comme intervalle mais
+n'entre plus dans le tier : elle classait 54 % sur 150 parties derrière 50 % sur 2 000.
+Le lissage rapproche un petit échantillon de la moyenne de son compartiment sans le
+pénaliser sous elle ; des champions tous entre 49 et 51 % reçoivent tous B. Le tier
+reste descriptif : il ne conseille aucun choix de draft. Le booléen `win` d'Arena ne
+signifie pas nécessairement une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
 
 Les remakes et parties incohérentes sont exclus avant toute contribution. Pour les files
 classées 420/440 (Solo/Duo et Flex), trois contrôles de qualité supplémentaires écartent

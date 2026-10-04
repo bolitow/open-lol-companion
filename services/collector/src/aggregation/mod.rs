@@ -7,6 +7,7 @@ mod scheduler;
 mod snapshot;
 mod stages;
 mod storage;
+mod tier;
 
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,

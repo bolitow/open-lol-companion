@@ -87,6 +87,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Tier des champions recalculé sans répartition forcée : winrate lissé vers la moyenne du compartiment, présence (pick rate + ban rate du même palier de partie) et seuils absolus S/A/B/C/D ; tier nul sous 0,5 % de pick rate ou sous 20 champions éligibles, position triée sur le même score, formule publiée dans `tier_method`. La borne Wilson reste publiée comme intervalle (#85).
 - Pick rate des champions calculé par partie (parties où le champion apparaît / parties du compartiment), donc comparable au ban rate et non plus plafonné à 50 % par rôle ; l’ancienne part des participations reste publiée sous `selection_share`, avec `bucket_matches` pour le dénominateur et `pick_rate_definition` mise à jour (#84).
 - Agrégats : en classé (Solo/Duo et Flex), les parties de moins de 300 s, celles où un participant est AFK (`wasAfk`) et celles où un participant a joué moins de 80 % de la durée sont exclues avec un compteur par motif (`short_game`, `afk`, `early_departure`), exposé dans le rapport et les métadonnées de l’API ; seuils réglables par `--min-game-duration-s` et `--min-played-percent`, filtre AFK désactivable par `--keep-afk`, redditions normales conservées ; sur la copie de recette, 37 parties courtes et 602 parties AFK supplémentaires sont écartées sur 17 112 (#111).
 - Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
