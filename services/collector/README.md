@@ -335,6 +335,41 @@ d'exploitation : publier le catalogue (`catalog`, ci-dessus) après `sync-static
 `aggregate --sync-static` ne le publie pas. Biais : le core et les emplacements ne
 décrivent que les parties assez longues pour les atteindre (survie et durée).
 
+### Durée, côté et premiers objectifs (#119)
+
+Trois lectures du déroulé de la partie, toutes tirées de données publiques de match-v5
+(`gameDuration`, `teamId`, `teams[].objectives.*.first`), sans estimation :
+
+- **Tranche de durée** (liste `splits`, `dimension: "duration"`) : parties et victoires
+  de chaque champion pour chaque groupe (patch, plateforme, file, rôle, rang, y compris
+  `ALL`). Tranches à borne basse incluse : `lt_20` (moins de 20 min), `20_25`, `25_30`,
+  `30_35`, `35_40`, `gte_40` ; `20_25` va donc de 20 min 00 s à 24 min 59 s. La durée est lue
+  dans la colonne `matches.game_duration_s`, déjà normalisée en secondes à l'ingestion
+  (pas dans le JSON brut, dont l'unité varie selon l'ancienneté de la partie). Une durée
+  nulle ou absente n'entre dans aucune tranche. Reddition et parties courtes hors remake
+  restent incluses : leur comptage séparé n'est pas encore publié.
+- **Côté** (`splits`, `dimension: "side"`, `bucket` `blue` ou `red`) : winrate du champion
+  selon l'équipe 100 (bleue) ou 200 (rouge), **uniquement pour le rang `ALL`** : une
+  ventilation par rang et par côté diluerait les effectifs. La couverture publie aussi
+  `blue_side_matches`, `blue_side_wins` et `blue_side_win_rate` (winrate du côté bleu du
+  périmètre).
+- **Premiers objectifs** (couverture : `first_blood`, `first_dragon`, `first_tower`) : pour
+  chaque objectif, `matches` et `wins` (parties où une équipe l'a pris en premier, et
+  victoires de cette équipe), `blue_matches` et `blue_wins` (même lecture quand c'est
+  l'équipe bleue ; le rouge se déduit par différence), `win_rate` et `blue_win_rate`. Le
+  premier sang est `objectives.champion.first`. Une partie n'est comptée que si exactement
+  une des deux équipes porte `first: true` : aucune équipe première (objectif jamais pris),
+  donnée contradictoire ou absente → partie ignorée pour cet objectif, jamais devinée. Une
+  équipe qui prend un objectif en premier a pu le prendre parce qu'elle était déjà en
+  avance : ce winrate décrit une corrélation, pas un effet causal.
+
+Taux et bornes de Wilson sont nuls sous le seuil `min_games` du rapport ; les effectifs
+restent publiés. Aucune ligne n'est produite pour Arena, la coop contre l'IA (les humains
+y occupent toujours le même camp) ni les modes qui n'opposent pas les équipes 100 et 200
+(Swarm), où `win` ne désigne pas une victoire de côté. Les
+instantanés antérieurs n'ont pas `splits` ni ces champs de couverture : ils se lisent comme
+vides (`0` ou `null`) jusqu'au prochain calcul.
+
 Les événements système `participantId=0` sont ignorés. Une timeline absente ou
 incohérente ne devient pas une séquence vide : les compteurs de couverture l'indiquent.
 Les remboursements `ITEM_UNDO` sans identifiant d’objet (`beforeId=afterId=0`,
@@ -347,8 +382,8 @@ relatifs au début du match, sans identifiant de joueur.
 
 `champion_stats_snapshot` contient une tête : `source_snapshot_at`, `published_at`,
 `storage_version`, `report`. En stockage v2, `report` contient les métadonnées ;
-les six listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`)
-sont dans `champion_stats_snapshot_chunks`, ordonnées par section et `chunk_index`.
+les sept listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`,
+`splits`) sont dans `champion_stats_snapshot_chunks`, ordonnées par section et `chunk_index`.
 Chaque morceau contient au plus 512 entrées et 1 Mio de JSON sérialisé avant conversion
 PostgreSQL. Une entrée individuelle dépassant cette borne fait échouer la publication,
 sans supprimer de statistiques. Le rapport JSON public et le CLI restent au schéma 2.
@@ -358,6 +393,11 @@ Ne pas reconstituer le rapport entier en JSONB SQL : sa limite interne est de 25
 La migration conserve les anciens rapports complets en stockage v1 jusqu'au prochain
 calcul réussi ; la lecture API des deux formats est livrée séparément par le #19. Un ancien écrivain est refusé après
 le passage en v2, pour éviter un mélange silencieux de versions.
+
+La migration `0014` ajoute la section `splits` (#119) à la contrainte de section des
+morceaux, en conservant les six sections existantes ; elle ne réécrit pas les lignes
+(simple validation de la contrainte, qui verrouille brièvement la table). Le premier calcul
+qui suit la publie.
 
 La migration `0009` ajoute aux morceaux une colonne `populations` calculée et stockée,
 avec un index GIN. Elle regroupe les combinaisons distinctes de dimensions sous leur

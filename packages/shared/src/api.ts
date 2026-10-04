@@ -113,6 +113,58 @@ export interface ItemEventStats extends GroupKey {
   events: number;
 }
 
+/** Axe d'une ligne `SplitStats`, miroir de `aggregation::SplitDimension`. */
+export type SplitDimension = "duration" | "side";
+
+/**
+ * Tranche de durée de partie (début inclus, fin exclue : `20_25` couvre de 20 min 00 s
+ * à 24 min 59 s) ou côté. Miroir de `aggregation::SplitBucket`.
+ */
+export type SplitBucket =
+  | "lt_20"
+  | "20_25"
+  | "25_30"
+  | "30_35"
+  | "35_40"
+  | "gte_40"
+  | "blue"
+  | "red";
+
+/**
+ * Winrate d'un champion selon la durée de la partie ou le côté (#119). Absent pour Arena
+ * et les modes sans équipes 100/200 ; le côté n'est publié que pour le rang `ALL`.
+ */
+export interface SplitStats extends GroupKey {
+  dimension: SplitDimension;
+  bucket: SplitBucket;
+  games: number;
+  wins: number;
+  /** Nul sous le seuil minimal de l'instantané. */
+  win_rate: number | null;
+  /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil. */
+  win_rate_lower_bound: number | null;
+}
+
+/**
+ * Issue des parties où une équipe a pris un premier objectif. Une partie n'est comptée
+ * que si exactement une équipe est marquée première ; la victoire rouge se déduit par
+ * différence (`wins - blue_wins` sur `matches - blue_matches`).
+ */
+export interface FirstObjectiveStats {
+  /** Parties où l'objectif a été pris en premier par une équipe identifiée. */
+  matches: number;
+  /** Victoires de l'équipe qui l'a pris en premier. */
+  wins: number;
+  /** Parties où l'équipe bleue l'a pris en premier. */
+  blue_matches: number;
+  /** Victoires de l'équipe bleue parmi ces parties. */
+  blue_wins: number;
+  /** Winrate (%) de l'équipe ayant pris l'objectif en premier ; nul sous le seuil. */
+  win_rate: number | null;
+  /** Winrate (%) de l'équipe bleue quand elle le prend en premier ; nul sous le seuil. */
+  blue_win_rate: number | null;
+}
+
 export interface Coverage {
   matches: number;
   participations: number;
@@ -143,6 +195,18 @@ export interface Coverage {
   missing_item_catalog_participations: number;
   /** Participations Arena sans placement de sous-équipe valide, comptées dans `games`. */
   unknown_placement_participations: number;
+  /** Parties à deux camps (hors Arena) dont le côté est compté (#119). */
+  blue_side_matches: number;
+  /** Victoires de l'équipe bleue parmi ces parties. */
+  blue_side_wins: number;
+  /** Winrate (%) du côté bleu ; nul sous le seuil. */
+  blue_side_win_rate: number | null;
+  /** Issue selon l'équipe ayant pris le premier sang. */
+  first_blood: FirstObjectiveStats;
+  /** Issue selon l'équipe ayant pris le premier dragon. */
+  first_dragon: FirstObjectiveStats;
+  /** Issue selon l'équipe ayant pris la première tour. */
+  first_tower: FirstObjectiveStats;
 }
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}
@@ -200,6 +264,8 @@ export interface BuildsResponse {
   builds: BuildStats[];
   skill_levels: SkillStats[];
   item_events: ItemEventStats[];
+  /** Tranches de durée puis côtés du champion (#119) ; vide pour un instantané antérieur. */
+  splits: SplitStats[];
   max_build_variants_per_category: number;
   omitted_build_variants: number;
   /** Règles des étapes d'achat ; vide pour un instantané antérieur à #81. */

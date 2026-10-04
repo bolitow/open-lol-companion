@@ -53,6 +53,7 @@ async fn published(db: &TestDb) -> Value {
             "builds",
             "skill_levels",
             "item_events",
+            "splits",
         ] {
             report[section] = json!([]);
         }
@@ -122,6 +123,7 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ] {
         assert!(
             !complete[section].as_array().unwrap().is_empty(),
@@ -665,6 +667,65 @@ async fn la_couverture_publie_les_dates_reelles_des_parties_incluses() {
     let stored = published(&db).await;
     assert_eq!(stored["coverage"][0]["first_game_start_ms"], 1_000_000);
     assert_eq!(stored["coverage"][0]["last_game_start_ms"], 5_000_250);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_tranches_de_duree_viennent_de_la_colonne_normalisee_et_sont_publiees() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_long").await;
+    // Le JSON brut dit 1 800 s ; la colonne, normalisée à l'ingestion, fait foi (#119).
+    sqlx::query("UPDATE matches SET game_duration_s=2500 WHERE match_id='EUW1_long'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    let report = recalculate(&db.storage, 1).await.unwrap();
+    let champion = report
+        .splits
+        .iter()
+        .filter(|s| s.key.champion_id == 1 && s.key.rank == "ALL")
+        .map(|s| serde_json::to_value(s.bucket).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(champion, [json!("gte_40"), json!("blue")]);
+    assert_eq!(
+        serde_json::to_value(&report.splits).unwrap(),
+        published(&db).await["splits"]
+    );
+    assert_eq!(
+        report.coverage[0].counts.blue_side_matches, 1,
+        "le côté est compté dans la couverture publiée"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_section_des_splits_s_ajoute_sans_retirer_les_sections_existantes() {
+    let db = db_or_skip!();
+    sqlx::query("INSERT INTO champion_stats_snapshot(id,source_snapshot_at,published_at,report) VALUES (1,now(),now(),'{}')")
+        .execute(db.storage.pool()).await.unwrap();
+    for (index, section) in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        sqlx::query("INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,'[]')")
+            .bind(section).bind(index as i32)
+            .execute(db.storage.pool()).await
+            .unwrap_or_else(|e| panic!("{section} : {e}"));
+    }
+    assert!(
+        sqlx::query("INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items) VALUES (1,'inconnue',0,'[]')")
+            .execute(db.storage.pool()).await.is_err(),
+        "une section inconnue reste refusée"
+    );
     db.cleanup().await;
 }
 

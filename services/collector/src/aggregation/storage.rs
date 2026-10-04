@@ -74,7 +74,7 @@ pub async fn recalculate_filtered(
     loop {
         // Pagination par clé unique, dans le même instantané : mémoire des détails bornée.
         let rows = sqlx::query(
-            "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.detail,t.timeline,
+            "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.game_duration_s,m.detail,t.timeline,
             (extract(epoch FROM m.game_start)*1000)::bigint AS game_start_ms,
             COALESCE((SELECT jsonb_object_agg(p->>'puuid',jsonb_build_object('status',r.status,'tier',r.tier,'gap_s',r.gap_s))
                 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.detail#>'{info,participants}')='array'
@@ -120,6 +120,7 @@ pub async fn recalculate_filtered(
                 timeline: row.try_get("timeline")?,
                 ranks: serde_json::from_value(row.try_get("ranks")?)?,
                 game_start_ms: row.try_get("game_start_ms")?,
+                game_duration_s: row.try_get("game_duration_s")?,
             };
             accumulator.add(&game);
             last_id = Some(game.match_id);

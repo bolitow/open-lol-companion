@@ -50,7 +50,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | --- | --- |
 | `/health` | Connectivité PostgreSQL, publique |
 | `/v1/tierlist` | Champions et bans de la page |
-| `/v1/builds/{champion_id}` | Variantes, compétences et achats |
+| `/v1/builds/{champion_id}` | Variantes, compétences, achats, winrate par tranche de durée et par côté |
 | `/v1/trends/{champion_id}` | Série patch par patch : winrate, pick, ban, effectif et écarts |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
@@ -93,7 +93,14 @@ d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque 
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
-(`0` pour un instantané antérieur). Couverture et bans ne sont pas ventilés par
+(`0` pour un instantané antérieur). La réponse builds ajoute `splits` (#119) : winrate du champion
+par tranche de durée (`lt_20`, `20_25`, `25_30`, `30_35`, `35_40`, `gte_40`, borne basse
+incluse) puis par côté (`blue`, `red`, publié pour le rang `ALL` seulement), triés dans cet
+ordre ; liste vide pour un instantané antérieur ou en Arena. La couverture, présente dans
+`meta` de toutes les réponses, ajoute `blue_side_*` et `first_blood`, `first_dragon`,
+`first_tower` (parties où une équipe a pris l'objectif en premier et issue ; définitions
+dans le [README du collecteur](../collector/README.md)), à `0`/`null` pour un instantané
+antérieur. Couverture et bans ne sont pas ventilés par
 rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
@@ -109,6 +116,8 @@ patch, plateforme, file, rôle, rang et champion avant de lire leurs entrées JS
 Un filtre fin reste appliqué aux morceaux contenant plusieurs populations. Une
 tierlist ne charge pas les morceaux de builds ou de timelines. Aucun rapport global
 dépassant la limite JSONB n'est reconstitué côté PostgreSQL.
+
+La migration `0014` (section `splits`, #119) s'applique au démarrage, sans réécriture des lignes.
 
 La migration `0009` renseigne l'index des morceaux déjà publiés et s'applique au
 démarrage du service. Elle réécrit et verrouille la table des morceaux : prévoir

@@ -106,7 +106,14 @@ fn report() -> Value {
         "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0,
         "first_game_start_ms":1_000_000, "last_game_start_ms":1_900_000,
         "item_stage_participations":700, "missing_item_catalog_participations":10,
-        "unknown_placement_participations":0
+        "unknown_placement_participations":0,
+        "blue_side_matches":98, "blue_side_wins":52, "blue_side_win_rate":53.06,
+        "first_blood":{"matches":90, "wins":60, "blue_matches":46, "blue_wins":31,
+            "win_rate":66.67, "blue_win_rate":67.39},
+        "first_dragon":{"matches":80, "wins":50, "blue_matches":38, "blue_wins":22,
+            "win_rate":62.5, "blue_win_rate":57.89},
+        "first_tower":{"matches":95, "wins":70, "blue_matches":50, "blue_wins":37,
+            "win_rate":73.68, "blue_win_rate":74.0}
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
@@ -159,6 +166,28 @@ fn report() -> Value {
     other_item["champion_id"] = json!(2);
     items.push(other_item);
 
+    let split = |bucket: &str, games: u64, wins: u64| {
+        json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "dimension": if ["blue", "red"].contains(&bucket) { "side" } else { "duration" },
+            "bucket":bucket, "games":games, "wins":wins,
+            "win_rate":100.0 * wins as f64 / games as f64, "win_rate_lower_bound":40.0
+        })
+    };
+    let mut splits = vec![
+        split("lt_20", 10, 7),
+        split("30_35", 50, 28),
+        split("blue", 60, 36),
+        split("red", 40, 24),
+    ];
+    for row in splits.clone() {
+        contaminated(&mut splits, &row);
+        let mut other_champion = row;
+        other_champion["champion_id"] = json!(2);
+        splits.push(other_champion);
+    }
+
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "pick_rate_definition":"participations_in_group",
@@ -167,7 +196,7 @@ fn report() -> Value {
             "start_ms":1_000_000, "end_ms":2_000_000},
         "source_matches":100, "included_matches":99, "exclusions":{"remake":1},
         "coverage":coverage_entries, "groups":groups, "bans":bans,
-        "builds":build_values, "skill_levels":skills, "item_events":items,
+        "builds":build_values, "skill_levels":skills, "item_events":items, "splits":splits,
         "max_build_variants_per_category":20, "omitted_build_variants":7
     })
 }
@@ -223,6 +252,7 @@ async fn une_lecture_de_build_ne_parcourt_pas_les_morceaux_des_autres_population
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ] {
         source.as_object_mut().unwrap().remove(section);
     }
@@ -319,6 +349,7 @@ async fn la_migration_indexe_les_morceaux_existants_sans_changer_les_reponses() 
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -668,6 +699,79 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
     db.cleanup().await;
 }
 
+#[tokio::test]
+async fn builds_publie_les_tranches_de_duree_et_les_cotes_du_champion_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let expected = |response: &olc_api::stats::BuildsResponse| {
+        // Population exacte, rang ALL et ordre stable : durée croissante puis bleu, rouge.
+        assert!(response
+            .splits
+            .iter()
+            .all(|s| s.key.champion_id == 1 && s.key.rank == "ALL"));
+        response
+            .splits
+            .iter()
+            .map(|s| (serde_json::to_value(s.bucket).unwrap(), s.games, s.wins))
+            .collect::<Vec<_>>()
+    };
+    let want = vec![
+        (json!("lt_20"), 10, 7),
+        (json!("30_35"), 50, 28),
+        (json!("blue"), 60, 36),
+        (json!("red"), 40, 24),
+    ];
+    publish(db.storage.pool(), report()).await;
+    let v1 = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(expected(&v1), want);
+    assert_eq!(
+        builds(db.storage.pool(), query(), 2)
+            .await
+            .unwrap()
+            .splits
+            .len(),
+        4
+    );
+    assert!(builds(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .splits
+        .is_empty());
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), report()).await;
+    let v2 = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(expected(&v2), want);
+    assert_eq!(v2.splits, v1.splits);
+    // La tierlist et les tendances ne chargent pas les tranches.
+    let tiers = serde_json::to_value(tierlist(db.storage.pool(), query()).await.unwrap()).unwrap();
+    assert!(tiers.get("splits").is_none());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_instantane_publie_avant_les_splits_reste_lisible_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("splits");
+    publish(db.storage.pool(), legacy.clone()).await;
+    assert!(builds(db.storage.pool(), query(), 1)
+        .await
+        .unwrap()
+        .splits
+        .is_empty());
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), legacy).await;
+    let response = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(response.splits.is_empty());
+    assert_eq!(response.total, 3);
+    db.cleanup().await;
+}
+
 fn trends_query() -> TrendsQuery {
     TrendsQuery {
         platform: "EUW1".into(),
@@ -721,9 +825,13 @@ async fn publish_chunked(pool: &PgPool, mut source: Value) {
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ];
     for section in sections {
-        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        // Un instantané antérieur à #119 n'a pas la section : aucun morceau à écrire.
+        let Some(items) = source.as_object_mut().unwrap().remove(section) else {
+            continue;
+        };
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
             sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
                 .bind(section).bind(index as i32).bind(json!(chunk)).execute(pool).await.unwrap();
