@@ -98,6 +98,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Cahier des charges et règles de conformité Riot recoupés sur les textes d'origine (Developer API Policy, Game Policy et politiques générales du Developer Portal) : suppression du bouton Lock, des premades en sélection, des tiers et taux d'augments et d'objets Arena ; refus explicite des cooldowns adverses, camps non vus, or adverse exact, conseils tactiques en temps réel et MMR estimé ; cas non tranchés suspendus jusqu'à décision écrite de Riot (#79).
+
 - Collecteur : les détails de parties sont réservés avant les demandes de rang, et une partie téléchargée puis exclue du périmètre est mémorisée (faits seulement, table `excluded_matches`) pour ne pas être retéléchargée par une autre exécution, puis purgée par `purge` après la durée de rétention des parties brutes (90 jours par défaut) ; budget d'appels Riot mieux employé (#90).
 - Export du catalogue desktop : conserve aussi les objets propres à l'ARAM (carte 12) et à l'Arena (carte 30), avec le décompte par carte dans le manifeste ; la publication versionnée n'est pas encore régénérée (#116).
 - Export du catalogue desktop : les tests de l'exemple `export_desktop_catalog` sont déclarés testables (`[[example]] test = true`) et tournent donc avec `pnpm test` et sur les trois OS de la CI ; l'étape dédiée Linux disparaît (#116).
