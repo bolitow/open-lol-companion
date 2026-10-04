@@ -79,6 +79,7 @@ async fn published(db: &TestDb) -> Value {
             "builds",
             "skill_levels",
             "item_events",
+            "performance",
         ] {
             report[section] = json!([]);
         }
@@ -140,6 +141,15 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
         .await
             > 1
     );
+    // Moyennes de performance (#100) : section propre, publiée dans la même transaction.
+    assert!(
+        db.scalar(
+            "SELECT count(*) FROM champion_stats_snapshot_chunks WHERE section='performance'"
+        )
+        .await
+            > 0
+    );
+    assert!(!report.performance_method.is_empty());
     let complete = serde_json::to_value(report).unwrap();
     for section in [
         "coverage",
@@ -148,6 +158,7 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
         "builds",
         "skill_levels",
         "item_events",
+        "performance",
     ] {
         assert!(
             !complete[section].as_array().unwrap().is_empty(),

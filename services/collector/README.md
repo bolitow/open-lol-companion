@@ -349,12 +349,36 @@ l’ordre net des achats concerné : aucun objet remboursé n’est deviné.
 `unidentified_item_undos` compte ces événements. Les timestamps exposés sont
 relatifs au début du match, sans identifiant de joueur.
 
+## Moyennes de performance (#100)
+
+`performance` publie, pour chaque population de `groups` (patch × plateforme × file ×
+rôle × rang × champion, `ALL` compris), des moyennes post-partie lues dans le détail et
+la timeline déjà chargés par la passe d'agrégation, sans requête supplémentaire.
+Ce sont des agrégats descriptifs : ni note, ni benchmark, ni radar, ni MMR. Les définitions
+exactes sont publiées dans `performance_method`.
+
+| Champ | Définition |
+| --- | --- |
+| `participations` | Toutes les participations de la population (dénominateur de couverture) |
+| `games` | Participations dont `kills`, `deaths`, `assists`, `totalDamageDealtToChampions`, `totalMinionsKilled`, `neutralMinionsKilled`, `goldEarned` et `visionScore` sont des entiers positifs ou nuls, avec une durée stockée > 0 ; sinon la participation est écartée en bloc, rien n'est deviné |
+| `kills`, `deaths`, `assists`, `damage_to_champions`, `vision_score` | Somme / `games` |
+| `kda` | `(ΣK + ΣA) / max(ΣD, 1)` sur les sommes de la population, pas une moyenne de KDA par partie |
+| `cs_per_min`, `gold_per_min` | Somme (CS = sbires + monstres neutres, or gagné) / somme des durées de partie en minutes |
+| `frames[]` | Minutes 10 et 15 : première frame de timeline avec `minute × 60 000 ≤ timestamp < minute × 60 000 + frameInterval` ; `gold` = `totalGold`, `cs` = `minionsKilled + jungleMinionsKilled`, `xp` ; moyenne sur les participations ayant cette frame (`games` propre). Une partie finie avant la minute n'y contribue pas |
+
+Sous `--min-games`, les moyennes sont nulles et les effectifs restent publiés ; chaque
+minute applique le seuil à son propre effectif. Les frames ne sont lues que si la timeline
+de la participation est valide (mêmes règles que les builds). Les parties exclues (remake,
+contrôles de qualité #111) n'y contribuent pas. Un rapport antérieur relit `performance`
+vide et `performance_method` vide.
+
 ## Publication, stockage et exploitation
 
 `champion_stats_snapshot` contient une tête : `source_snapshot_at`, `published_at`,
 `storage_version`, `report`. En stockage v2, `report` contient les métadonnées ;
-les six listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`)
-sont dans `champion_stats_snapshot_chunks`, ordonnées par section et `chunk_index`.
+les sept listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`,
+`performance`) sont dans `champion_stats_snapshot_chunks`, ordonnées par section et
+`chunk_index`. La migration `0012` autorise la section `performance` (#100).
 Chaque morceau contient au plus 512 entrées et 1 Mio de JSON sérialisé avant conversion
 PostgreSQL. Une entrée individuelle dépassant cette borne fait échouer la publication,
 sans supprimer de statistiques. Le rapport JSON public et le CLI restent au schéma 2.

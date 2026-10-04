@@ -29,6 +29,7 @@ struct Metadata<'a> {
     omitted_build_variants: u64,
     build_stage_method: &'a str,
     item_catalogs: &'a [super::ItemCatalogRef],
+    performance_method: &'a str,
 }
 
 /// La transaction du calcul possède déjà le verrou et l'instantané REPEATABLE READ.
@@ -55,6 +56,7 @@ pub(super) async fn publish(
         omitted_build_variants: report.omitted_build_variants,
         build_stage_method: &report.build_stage_method,
         item_catalogs: &report.item_catalogs,
+        performance_method: &report.performance_method,
     };
     // Premier verrou d'écriture : un instantané devenu ancien échoue avant de toucher
     // aux morceaux. Tête, suppression et nouveaux morceaux sont validés ensemble.
@@ -76,6 +78,7 @@ pub(super) async fn publish(
     write_section(tx, "builds", &report.builds).await?;
     write_section(tx, "skill_levels", &report.skill_levels).await?;
     write_section(tx, "item_events", &report.item_events).await?;
+    write_section(tx, "performance", &report.performance).await?;
     Ok(())
 }
 

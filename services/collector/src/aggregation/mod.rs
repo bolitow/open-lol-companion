@@ -2,6 +2,7 @@
 
 mod builds;
 mod model;
+mod performance;
 mod scheduler;
 mod snapshot;
 mod stages;
@@ -13,6 +14,7 @@ pub use model::{
     DEFAULT_MIN_GAME_DURATION_S, DEFAULT_MIN_PLAYED_PERCENT, DEFAULT_RANK_MAX_AGE_HOURS,
     MAX_MIN_GAME_DURATION_S, MAX_RANK_MAX_AGE_HOURS,
 };
+pub use performance::{PerformanceFrameStats, PerformanceStats};
 pub use scheduler::run_periodic;
 pub use storage::{recalculate, recalculate_filtered, recalculate_with_quality};
 

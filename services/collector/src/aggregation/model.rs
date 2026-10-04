@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
+use super::performance::{self, PerformanceStats, PerformanceSums, PERFORMANCE_METHOD};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::AggregationError;
 use crate::model::patch_from_version;
@@ -245,6 +246,12 @@ pub struct AggregationReport {
     pub build_stage_method: String,
     #[serde(default)]
     pub item_catalogs: Vec<ItemCatalogRef>,
+    /// Définitions des moyennes de performance (#100) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub performance_method: String,
+    /// Moyennes de performance par population (#100) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub performance: Vec<PerformanceStats>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -291,6 +298,8 @@ pub(super) struct Accumulator {
     rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
     /// Catalogue d'objets par patch (« 16.19 »), joint pour dériver les étapes (#81).
     item_catalogs: BTreeMap<String, ItemCatalog>,
+    /// Sommes des valeurs de performance (#100), mêmes clés que `counts`.
+    performance: BTreeMap<GroupKey, PerformanceSums>,
 }
 
 impl Accumulator {
@@ -312,11 +321,12 @@ impl Accumulator {
                 bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![],
                 max_build_variants_per_category: 20, omitted_build_variants: 0,
                 build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
+                performance_method: PERFORMANCE_METHOD.into(), performance: vec![],
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
             bans:BTreeMap::new(), builds:BTreeMap::new(), build_populations:BTreeMap::new(),
             skills:BTreeMap::new(), events:BTreeMap::new(), rank_gaps:BTreeMap::new(),
-            item_catalogs:BTreeMap::new(),
+            item_catalogs:BTreeMap::new(), performance:BTreeMap::new(),
         })
     }
 
@@ -418,14 +428,21 @@ impl Accumulator {
                 coverage.unknown_role_participations += 1;
             }
             let mut observations = builds::extract_detail(&p.raw);
+            let end_of_game = performance::extract_end_of_game(&p.raw, game.game_duration_s);
+            let mut frames = BTreeMap::new();
             if let Some(timeline) = &game.timeline {
-                let result = p.raw["participantId"]
+                let participant_id = p.raw["participantId"]
                     .as_u64()
-                    .and_then(|id| u32::try_from(id).ok())
+                    .and_then(|id| u32::try_from(id).ok());
+                let result = participant_id
                     .ok_or("missing_participant_id")
                     .and_then(|id| builds::extract_timeline(timeline, &game.match_id, id));
                 match result {
                     Ok(t) => {
+                        // Timeline déjà validée (partie, participant) : mêmes règles de couverture.
+                        if let Some(id) = participant_id {
+                            frames = performance::extract_frames(timeline, id);
+                        }
                         coverage.unidentified_item_undos += t.unidentified_item_undos;
                         coverage.timeline_participations += 1;
                         if !timeline_counted {
@@ -466,6 +483,10 @@ impl Accumulator {
                     .populations
                     .entry((scope.clone(), p.role, rank))
                     .or_default() += 1;
+                self.performance
+                    .entry(key.clone())
+                    .or_default()
+                    .add(end_of_game.as_ref(), &frames);
                 self.add_builds(&key, p.win, &observations);
             }
         }
@@ -678,6 +699,11 @@ impl Accumulator {
                 minute,
                 events,
             })
+            .collect();
+        self.report.performance = self
+            .performance
+            .into_iter()
+            .map(|(key, sums)| sums.finish(key, minimum))
             .collect();
         let mut rank_gaps = self.rank_gaps;
         self.report.coverage = self

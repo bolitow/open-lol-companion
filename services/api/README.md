@@ -51,6 +51,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/health` | Connectivité PostgreSQL, publique |
 | `/v1/tierlist` | Champions et bans de la page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
+| `/v1/performance/{champion_id}` | Moyennes de performance du champion dans la population (#100) |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
@@ -95,6 +96,14 @@ rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
 un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées.
+
+`/v1/performance/{champion_id}` (#100) prend les mêmes paramètres et renvoie `summary`
+(ligne de tierlist du champion), `performance` (moyennes KDA, dégâts aux champions,
+CS/min, or/min, vision et frames à 10 et 15 min, avec `participations` et `games`) et
+`performance_method` (définitions exactes). `performance` est `null` sans participation
+dans la population ou pour un instantané antérieur ; les moyennes sous seuil sont `null`.
+Agrégats seulement : aucune note, aucun benchmark. Définitions détaillées :
+[README du collecteur](../collector/README.md#moyennes-de-performance-100).
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
 du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le

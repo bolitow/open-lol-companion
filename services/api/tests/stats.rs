@@ -4,7 +4,7 @@ mod common;
 use common::TestDb;
 use olc_api::error::ApiError;
 use olc_api::query::StatsQuery;
-use olc_api::stats::{builds, tierlist};
+use olc_api::stats::{builds, performance, tierlist};
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
 use sqlx::PgPool;
@@ -56,6 +56,20 @@ fn contaminated(values: &mut Vec<Value>, base: &Value) {
         other[field] = value;
         values.push(other);
     }
+}
+
+fn performance_entry(champion: u32) -> Value {
+    json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+        "role":"TOP", "rank":"ALL", "champion_id":champion,
+        "participations":120, "games":110, "kills":5.5, "deaths":4.0, "assists":6.5,
+        "kda":3.0, "damage_to_champions":21_000.0, "cs_per_min":7.4, "gold_per_min":410.0,
+        "vision_score":22.0,
+        "frames":[
+            {"minute":10, "games":105, "gold":3_600.0, "cs":78.0, "xp":4_900.0},
+            {"minute":15, "games":90, "gold":null, "cs":null, "xp":null}
+        ]
+    })
 }
 
 fn report() -> Value {
@@ -152,6 +166,11 @@ fn report() -> Value {
     other_item["champion_id"] = json!(2);
     items.push(other_item);
 
+    let averages = performance_entry(1);
+    let mut performances = vec![averages.clone()];
+    contaminated(&mut performances, &averages);
+    performances.push(performance_entry(2));
+
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
@@ -162,6 +181,7 @@ fn report() -> Value {
         "source_matches":100, "included_matches":99, "exclusions":{"remake":1},
         "coverage":coverage_entries, "groups":groups, "bans":bans,
         "builds":build_values, "skill_levels":skills, "item_events":items,
+        "performance":performances, "performance_method":"kda = (sum kills + sum assists) / max(sum deaths, 1)",
         "max_build_variants_per_category":20, "omitted_build_variants":7
     })
 }
@@ -217,6 +237,7 @@ async fn une_lecture_de_build_ne_parcourt_pas_les_morceaux_des_autres_population
         "builds",
         "skill_levels",
         "item_events",
+        "performance",
     ] {
         source.as_object_mut().unwrap().remove(section);
     }
@@ -313,6 +334,7 @@ async fn la_migration_indexe_les_morceaux_existants_sans_changer_les_reponses() 
         "builds",
         "skill_levels",
         "item_events",
+        "performance",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -613,5 +635,116 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
         .builds
         .iter()
         .all(|b| b.win_rate_lower_bound.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn performance_isole_le_champion_et_la_population_sans_recalcul() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let response = performance(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(response.champion_id, 1);
+    assert_eq!(response.query, query());
+    assert_eq!(response.summary.as_ref().unwrap().games, 100);
+    let averages = response.performance.as_ref().unwrap();
+    assert_eq!(
+        serde_json::to_value(averages).unwrap(),
+        performance_entry(1)
+    );
+    assert_eq!(
+        response.performance_method,
+        "kda = (sum kills + sum assists) / max(sum deaths, 1)"
+    );
+    let meta = serde_json::to_value(&response.meta).unwrap();
+    assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
+    // Autre rang, rôle ou patch : aucune moyenne empruntée à une autre population.
+    for other in [
+        StatsQuery {
+            rank: "GOLD".into(),
+            role: "JUNGLE".into(),
+            ..query()
+        },
+        StatsQuery {
+            patch: "16.17".into(),
+            ..query()
+        },
+    ] {
+        assert!(performance(db.storage.pool(), other, 1)
+            .await
+            .unwrap()
+            .performance
+            .is_none());
+    }
+    assert!(performance(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .performance
+        .is_none());
+    assert_eq!(
+        performance(db.storage.pool(), query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    assert_eq!(
+        performance(
+            db.storage.pool(),
+            StatsQuery {
+                role: "MID".into(),
+                ..query()
+            },
+            1
+        )
+        .await
+        .err(),
+        Some(ApiError::InvalidRequest)
+    );
+    // Un instantané antérieur à #100 reste lisible, sans moyenne ni définition.
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("performance");
+    legacy.as_object_mut().unwrap().remove("performance_method");
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), legacy).await;
+    let old = performance(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(old.performance.is_none());
+    assert_eq!(old.performance_method, "");
+    assert!(old.summary.is_some());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn performance_lit_la_section_des_morceaux_v2() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let expected =
+        serde_json::to_value(performance(db.storage.pool(), query(), 1).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "performance",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(
+        serde_json::to_value(performance(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
+        expected
+    );
     db.cleanup().await;
 }
