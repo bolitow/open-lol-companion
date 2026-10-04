@@ -86,7 +86,11 @@ d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque 
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
-(`0` pour un instantané antérieur). Couverture et bans ne sont pas ventilés par
+(`0` pour un instantané antérieur). Les contrôles de qualité des files classées (#111) sont publiés dans les métadonnées :
+`min_game_duration_s` et `min_played_percent` (0 pour un instantané antérieur),
+`exclude_afk` (`false` pour un instantané antérieur) et `exclusions`, nombre de parties
+sources écartées par motif (`remake`, `invalid_match`, `short_game`, `afk`,
+`early_departure`). Couverture et bans ne sont pas ventilés par
 rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander

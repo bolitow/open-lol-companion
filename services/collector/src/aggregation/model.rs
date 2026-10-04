@@ -13,6 +13,49 @@ pub const DEFAULT_RANK_MAX_AGE_HOURS: u32 = 168;
 /// Borne haute de l'écart configurable : au-delà, le rang ne décrit plus la partie.
 pub const MAX_RANK_MAX_AGE_HOURS: u32 = 8760;
 
+/// Durée minimale par défaut (secondes) d'une partie classée : en dessous, la partie est écartée.
+pub const DEFAULT_MIN_GAME_DURATION_S: u32 = 300;
+/// Borne haute de la durée minimale configurable : au-delà, des parties classées légitimes
+/// (reddition possible dès 15 minutes) seraient écartées.
+pub const MAX_MIN_GAME_DURATION_S: u32 = 900;
+/// Part minimale (%) de la durée d'une partie classée que chaque participant doit avoir jouée.
+pub const DEFAULT_MIN_PLAYED_PERCENT: u32 = 80;
+/// Files concernées par les contrôles de qualité : Solo/Duo et Flex.
+const QUALITY_QUEUES: [i32; 2] = [420, 440];
+
+/// Seuils des contrôles de qualité des parties classées (#111). Zéro désactive le contrôle.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct QualityThresholds {
+    /// Durée minimale de la partie, en secondes (`short_game` en dessous).
+    pub min_game_duration_s: u32,
+    /// Part minimale, en %, de la durée jouée par chaque participant (`early_departure`).
+    pub min_played_percent: u32,
+    /// Écarte la partie dès qu'un participant porte `wasAfk = true` (`afk`).
+    pub exclude_afk: bool,
+}
+
+impl Default for QualityThresholds {
+    fn default() -> Self {
+        Self {
+            min_game_duration_s: DEFAULT_MIN_GAME_DURATION_S,
+            min_played_percent: DEFAULT_MIN_PLAYED_PERCENT,
+            exclude_afk: true,
+        }
+    }
+}
+
+impl QualityThresholds {
+    pub fn validate(&self) -> Result<(), AggregationError> {
+        if self.min_game_duration_s > MAX_MIN_GAME_DURATION_S {
+            return Err(AggregationError::InvalidMinGameDuration);
+        }
+        if self.min_played_percent > 100 {
+            return Err(AggregationError::InvalidMinPlayedPercent);
+        }
+        Ok(())
+    }
+}
+
 /// Rôle fourni par Riot ; UNKNOWN conserve les participations sans rôle exploitable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -173,6 +216,15 @@ pub struct AggregationReport {
     pub schema_version: u32,
     pub rank_scope: String,
     pub rank_max_age_hours: u32,
+    /// Durée minimale (s) d'une partie classée (#111) ; 0 pour un rapport antérieur ou sans contrôle.
+    #[serde(default)]
+    pub min_game_duration_s: u32,
+    /// Part minimale (%) de la durée jouée par chaque participant (#111) ; 0 sans contrôle.
+    #[serde(default)]
+    pub min_played_percent: u32,
+    /// Parties classées avec un participant `wasAfk` exclues (#111) ; `false` pour un rapport antérieur.
+    #[serde(default)]
+    pub exclude_afk: bool,
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub min_games: u32,
@@ -209,6 +261,8 @@ pub(super) struct StoredMatch {
     pub queue_id: i32,
     pub patch: String,
     pub is_remake: bool,
+    /// Durée stockée de la partie, en secondes (normalisée à la collecte).
+    pub game_duration_s: i32,
     pub detail: Value,
     pub timeline: Option<Value>,
     pub ranks: BTreeMap<String, ObservedRank>,
@@ -248,6 +302,9 @@ impl Accumulator {
             report: AggregationReport {
                 schema_version: 2, rank_scope: "observed_rank_nearest_to_game_start_of_same_ranked_queue".into(),
                 rank_max_age_hours: DEFAULT_RANK_MAX_AGE_HOURS,
+                min_game_duration_s: DEFAULT_MIN_GAME_DURATION_S,
+                min_played_percent: DEFAULT_MIN_PLAYED_PERCENT,
+                exclude_afk: true,
                 pick_rate_definition: "champion_participations / bucket_participations * 100".into(),
                 tier_method: "Wilson95 lower bound; S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
@@ -271,6 +328,18 @@ impl Accumulator {
         Ok(())
     }
 
+    /// Seuils des contrôles de qualité des parties classées (#111), publiés dans le rapport.
+    pub fn set_quality_thresholds(
+        &mut self,
+        thresholds: &QualityThresholds,
+    ) -> Result<(), AggregationError> {
+        thresholds.validate()?;
+        self.report.min_game_duration_s = thresholds.min_game_duration_s;
+        self.report.min_played_percent = thresholds.min_played_percent;
+        self.report.exclude_afk = thresholds.exclude_afk;
+        Ok(())
+    }
+
     pub fn set_filters(&mut self, filters: AggregationOptions) {
         self.report.filters = filters;
     }
@@ -289,13 +358,19 @@ impl Accumulator {
 
     pub fn add(&mut self, game: &StoredMatch) {
         self.report.source_matches += 1;
-        let participants = match validate(game) {
-            Ok(p) => p,
-            Err(reason) => {
-                *self.report.exclusions.entry(reason.into()).or_default() += 1;
-                return;
-            }
+        let thresholds = QualityThresholds {
+            min_game_duration_s: self.report.min_game_duration_s,
+            min_played_percent: self.report.min_played_percent,
+            exclude_afk: self.report.exclude_afk,
         };
+        let participants =
+            match validate(game).and_then(|p| quality_check(game, &p, thresholds).map(|()| p)) {
+                Ok(p) => p,
+                Err(reason) => {
+                    *self.report.exclusions.entry(reason.into()).or_default() += 1;
+                    return;
+                }
+            };
         self.report.included_matches += 1;
         let scope = ScopeKey {
             patch: game.patch.clone(),
@@ -706,6 +781,50 @@ fn is_bot(participant: &Value) -> bool {
         .as_str()
         .is_some_and(|p| p == "BOT" || (!p.is_empty() && p.bytes().all(|b| b == b'0')))
 }
+/// Contrôles de qualité des files classées, après la validité structurelle (#111).
+/// Ordre des motifs : `remake`, `invalid_match`, puis `short_game`, `afk` et enfin
+/// `early_departure` ; une partie n'est comptée que sous le premier motif rencontré.
+/// `afk` : au moins un participant a `wasAfk = true` (champ match-v5 déjà stocké).
+/// Une clé absente n'est pas jugée ; un type invalide rend la partie incohérente, mais
+/// seulement si le contrôle correspondant est actif. Une reddition normale n'est jamais
+/// un motif d'exclusion.
+fn quality_check(
+    game: &StoredMatch,
+    participants: &[Participant],
+    thresholds: QualityThresholds,
+) -> Result<(), &'static str> {
+    if !QUALITY_QUEUES.contains(&game.queue_id) {
+        return Ok(());
+    }
+    let duration_s = i64::from(game.game_duration_s);
+    if duration_s < i64::from(thresholds.min_game_duration_s) {
+        return Err("short_game");
+    }
+    let (mut afk, mut left_early) = (false, false);
+    for p in participants {
+        if thresholds.exclude_afk {
+            if let Some(value) = p.raw.get("wasAfk") {
+                afk |= value.as_bool().ok_or("invalid_match")?;
+            }
+        }
+        if thresholds.min_played_percent > 0 {
+            if let Some(value) = p.raw.get("timePlayed") {
+                let played_s = value.as_u64().ok_or("invalid_match")?;
+                // Entiers uniquement : pas d'arrondi flottant à la limite exacte des 80 %.
+                left_early |= i128::from(played_s) * 100
+                    < i128::from(thresholds.min_played_percent) * i128::from(duration_s);
+            }
+        }
+    }
+    if afk {
+        return Err("afk");
+    }
+    if left_early {
+        return Err("early_departure");
+    }
+    Ok(())
+}
+
 fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
     if game.is_remake {
         return Err("remake");

@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use common::TestDb;
 use olc_collector::aggregation::{
-    recalculate, recalculate_filtered, AggregationError, AggregationOptions,
-    DEFAULT_RANK_MAX_AGE_HOURS,
+    recalculate, recalculate_filtered, recalculate_with_quality, AggregationError,
+    AggregationOptions, QualityThresholds, DEFAULT_RANK_MAX_AGE_HOURS,
 };
 use olc_collector::config::RunParams;
 use olc_collector::model::fixtures::match_detail;
@@ -35,6 +35,32 @@ async fn insert_match(db: &TestDb, run_id: i64, id: &str) {
         VALUES ($1, 'EUW1', 420, '15.19.715.1234', '15.19', to_timestamp(1000), 1800, false, $2, $3)")
         .bind(id).bind(match_detail(id, "EUW1", 420, 1_000_000)).bind(run_id)
         .execute(db.storage.pool()).await.unwrap();
+}
+
+/// Une partie classée valide, une très courte (durée stockée), une avec un départ précoce
+/// et une avec un participant `wasAfk`.
+async fn insert_quality_matches(db: &TestDb, run_id: i64) {
+    for id in ["EUW1_ok", "EUW1_short", "EUW1_left", "EUW1_afk"] {
+        insert_match(db, run_id, id).await;
+    }
+    sqlx::query("UPDATE matches SET game_duration_s=200 WHERE match_id='EUW1_short'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    sqlx::query(
+        "UPDATE matches SET detail=jsonb_set(detail,'{info,participants,3,timePlayed}','1000')
+        WHERE match_id='EUW1_left'",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    sqlx::query(
+        "UPDATE matches SET detail=jsonb_set(detail,'{info,participants,7,wasAfk}','true')
+        WHERE match_id='EUW1_afk'",
+    )
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
 }
 
 async fn published(db: &TestDb) -> Value {
@@ -607,6 +633,140 @@ async fn le_rang_reste_fige_a_la_partie_quel_que_soit_l_heure_du_calcul() {
         recalculate_filtered(&db.storage, 1, 0, &AggregationOptions::default()).await,
         Err(AggregationError::InvalidRankMaxAge)
     ));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn aggregation_exclut_les_parties_classees_courtes_ou_avec_depart_precoce() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_quality_matches(&db, run_id).await;
+    let report = recalculate(&db.storage, 1).await.unwrap();
+    assert_eq!((report.source_matches, report.included_matches), (4, 1));
+    assert_eq!(report.exclusions.get("short_game"), Some(&1));
+    assert_eq!(report.exclusions.get("early_departure"), Some(&1));
+    assert_eq!(report.exclusions.get("afk"), Some(&1));
+    assert_eq!(report.coverage[0].counts.matches, 1);
+    let snapshot = published(&db).await;
+    assert_eq!(snapshot["min_game_duration_s"], 300);
+    assert_eq!(snapshot["min_played_percent"], 80);
+    assert_eq!(snapshot["exclude_afk"], true);
+    assert_eq!(
+        snapshot["exclusions"],
+        json!({"short_game": 1, "early_departure": 1, "afk": 1})
+    );
+    // Seuils assouplis : 1000 s sur 1800 (56 %) passe à 50 %, 200 s reste court à 300 s.
+    let relaxed = recalculate_with_quality(
+        &db.storage,
+        1,
+        DEFAULT_RANK_MAX_AGE_HOURS,
+        &AggregationOptions::default(),
+        &QualityThresholds {
+            min_game_duration_s: 300,
+            min_played_percent: 50,
+            exclude_afk: true,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(relaxed.included_matches, 2);
+    assert_eq!(relaxed.exclusions.get("early_departure"), None);
+    // AFK conservé seul : la partie avec `wasAfk` revient, les autres motifs restent actifs.
+    let keep_afk = recalculate_with_quality(
+        &db.storage,
+        1,
+        DEFAULT_RANK_MAX_AGE_HOURS,
+        &AggregationOptions::default(),
+        &QualityThresholds {
+            exclude_afk: false,
+            ..QualityThresholds::default()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(keep_afk.included_matches, 2);
+    assert_eq!(keep_afk.exclusions.get("afk"), None);
+    assert!(!keep_afk.exclude_afk);
+    assert_eq!(published(&db).await["exclude_afk"], false);
+    // Contrôles désactivés : toutes les parties valides sont conservées.
+    let off = recalculate_with_quality(
+        &db.storage,
+        1,
+        DEFAULT_RANK_MAX_AGE_HOURS,
+        &AggregationOptions::default(),
+        &QualityThresholds {
+            min_game_duration_s: 0,
+            min_played_percent: 0,
+            exclude_afk: false,
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(off.included_matches, 4);
+    assert!(off.exclusions.is_empty());
+    let invalid = recalculate_with_quality(
+        &db.storage,
+        1,
+        DEFAULT_RANK_MAX_AGE_HOURS,
+        &AggregationOptions::default(),
+        &QualityThresholds {
+            min_game_duration_s: 300,
+            min_played_percent: 101,
+            exclude_afk: true,
+        },
+    )
+    .await;
+    assert!(matches!(
+        invalid,
+        Err(AggregationError::InvalidMinPlayedPercent)
+    ));
+    db.cleanup().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn aggregation_cli_configure_les_seuils_de_qualite() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_quality_matches(&db, run_id).await;
+    let aggregate = |extra: &[&str]| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"))
+            .args(["aggregate", "--all-stored", "--min-games", "1", "--json"])
+            .args(extra)
+            .env("DATABASE_URL", db.database_url())
+            .env("RIOT_API_KEY", "")
+            .current_dir(std::env::temp_dir())
+            .output()
+            .unwrap()
+    };
+    let default = aggregate(&[]);
+    assert!(default.status.success());
+    let report: Value = serde_json::from_slice(&default.stdout).unwrap();
+    assert_eq!(report["included_matches"], 1);
+    assert_eq!(report["min_game_duration_s"], 300);
+    assert_eq!(report["exclude_afk"], true);
+    assert_eq!(report["exclusions"]["afk"], 1);
+    let keep_afk = aggregate(&["--keep-afk"]);
+    assert!(keep_afk.status.success());
+    let report: Value = serde_json::from_slice(&keep_afk.stdout).unwrap();
+    assert_eq!(report["included_matches"], 2);
+    assert_eq!(report["exclude_afk"], false);
+    let lenient = aggregate(&[
+        "--min-game-duration-s",
+        "0",
+        "--min-played-percent",
+        "0",
+        "--keep-afk",
+    ]);
+    assert!(lenient.status.success());
+    let report: Value = serde_json::from_slice(&lenient.stdout).unwrap();
+    assert_eq!(report["included_matches"], 4);
+    assert_eq!(report["min_played_percent"], 0);
+    for bad in [
+        ["--min-game-duration-s", "901"],
+        ["--min-played-percent", "101"],
+    ] {
+        assert_eq!(aggregate(&bad).status.code(), Some(2), "{bad:?}");
+    }
     db.cleanup().await;
 }
 

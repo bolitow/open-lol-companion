@@ -154,7 +154,8 @@ fn report() -> Value {
 
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
-        "rank_max_age_hours":168, "pick_rate_definition":"participations_in_group",
+        "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
+        "pick_rate_definition":"participations_in_group",
         "tier_method":"wilson_lower_bound", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
             "start_ms":1_000_000, "end_ms":2_000_000},
@@ -411,6 +412,10 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
     assert_eq!(meta["min_games"], 100);
     assert_eq!(meta["rank_max_age_hours"], 168);
+    assert_eq!(meta["min_game_duration_s"], 300);
+    assert_eq!(meta["min_played_percent"], 80);
+    assert_eq!(meta["exclude_afk"], true);
+    assert_eq!(meta["exclusions"], json!({"remake": 1}));
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"

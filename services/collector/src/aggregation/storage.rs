@@ -28,6 +28,24 @@ pub async fn recalculate_filtered(
     rank_max_age_hours: u32,
     filters: &super::AggregationOptions,
 ) -> Result<AggregationReport, AggregationError> {
+    recalculate_with_quality(
+        storage,
+        min_games,
+        rank_max_age_hours,
+        filters,
+        &super::QualityThresholds::default(),
+    )
+    .await
+}
+
+/// Comme `recalculate_filtered`, avec les seuils des contrôles de qualité classés (#111).
+pub async fn recalculate_with_quality(
+    storage: &Storage,
+    min_games: u32,
+    rank_max_age_hours: u32,
+    filters: &super::AggregationOptions,
+    quality: &super::QualityThresholds,
+) -> Result<AggregationReport, AggregationError> {
     if filters
         .start_ms
         .zip(filters.end_ms)
@@ -46,6 +64,7 @@ pub async fn recalculate_filtered(
     }
     let mut accumulator = Accumulator::new(min_games)?;
     accumulator.set_rank_max_age_hours(rank_max_age_hours)?;
+    accumulator.set_quality_thresholds(quality)?;
     accumulator.set_filters(filters.clone());
     let mut connection = storage.transaction_connection().await?;
     let mut tx = connection.begin().await?;
@@ -70,7 +89,7 @@ pub async fn recalculate_filtered(
     loop {
         // Pagination par clé unique, dans le même instantané : mémoire des détails bornée.
         let rows = sqlx::query(
-            "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.detail,t.timeline,
+            "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.game_duration_s,m.detail,t.timeline,
             COALESCE((SELECT jsonb_object_agg(p->>'puuid',jsonb_build_object('status',r.status,'tier',r.tier,'gap_s',r.gap_s))
                 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.detail#>'{info,participants}')='array'
                     THEN m.detail#>'{info,participants}' ELSE '[]'::jsonb END) p
@@ -102,6 +121,7 @@ pub async fn recalculate_filtered(
                 queue_id: row.try_get("queue_id")?,
                 patch: row.try_get("patch")?,
                 is_remake: row.try_get("is_remake")?,
+                game_duration_s: row.try_get("game_duration_s")?,
                 detail: row.try_get("detail")?,
                 timeline: row.try_get("timeline")?,
                 ranks: serde_json::from_value(row.try_get("ranks")?)?,

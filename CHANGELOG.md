@@ -85,6 +85,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Agrégats : en classé (Solo/Duo et Flex), les parties de moins de 300 s, celles où un participant est AFK (`wasAfk`) et celles où un participant a joué moins de 80 % de la durée sont exclues avec un compteur par motif (`short_game`, `afk`, `early_departure`), exposé dans le rapport et les métadonnées de l’API ; seuils réglables par `--min-game-duration-s` et `--min-played-percent`, filtre AFK désactivable par `--keep-afk`, redditions normales conservées ; sur la copie de recette, 37 parties courtes et 602 parties AFK supplémentaires sont écartées sur 17 112 (#111).
 - Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 
