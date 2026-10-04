@@ -376,7 +376,7 @@ cargo run -p olc-collector --release -- purge --watch   # immédiatement puis ch
 | Donnée | Durée | Après expiration |
 | --- | --- | --- |
 | Parties brutes : `matches`, `match_timelines` et leurs liens `run_matches` | 90 jours (`--raw-match-days`, `OLC_RETENTION_RAW_MATCH_DAYS`) | Supprimées, sauf partie liée à une exécution `running` |
-| PUUID et Riot ID dans le JSONB des parties et timelines | 30 jours (`--identifier-days`, `OLC_RETENTION_IDENTIFIER_DAYS`) | `puuid`, `summonerId`, `summonerName`, `riotIdGameName`, `riotIdName`, `riotIdTagline`, `profileIcon` retirés des participants ; `metadata.participants` remplacés par `""` |
+| Identifiants et profil des participants (PUUID, Riot ID, icône, niveau) dans le JSONB des parties et timelines | 30 jours (`--identifier-days`, `OLC_RETENTION_IDENTIFIER_DAYS`) | `puuid`, `summonerId`, `summonerName`, `riotIdGameName`, `riotIdName`, `riotIdTagline`, `profileIcon`, `summonerLevel` retirés des participants ; `metadata.participants` remplacés par `""` |
 | `participant_rank_observations` | 30 jours | Supprimées |
 | `seed_players`, `run_discoveries`, `collection_jobs` d'une exécution sans activité depuis 30 jours | 30 jours | Supprimés ; `run_matches.seed_puuid` vidé |
 | `excluded_matches` (cache négatif, #90) | Aucune purge | Faits de partie sans PUUID ni détail (identifiant de partie, file, patch, date, durée) : pas de donnée personnelle de joueur ; purge à décider avec les autres durées |
@@ -384,7 +384,8 @@ cargo run -p olc-collector --release -- purge --watch   # immédiatement puis ch
 Pourquoi ces valeurs : l'agrégation ne lit que les rangs observés depuis moins de
 24 h et ne recalcule par défaut que les deux derniers patches (environ 4 semaines) ;
 30 jours laissent la reprise d'une collecte et le contrôle d'une recette, 90 jours
-permettent de recalculer six patches après une correction de l'agrégation. Les parties
+permettent de recalculer six patches après une correction de l'agrégation. Le niveau de compte
+(`summonerLevel`) part avec les identifiants : donnée de profil que l'agrégation ne lit pas. Les parties
 pseudonymisées restent agrégées (champions, rôles, objets, timelines) ; leur rang
 n'est plus attribuable, ce qui est déjà le cas après 24 h. Les bots (`BOT`, zéros)
 gardent leur marqueur, nécessaire au comptage des files coop.

@@ -81,9 +81,10 @@ fn is_bot_marker(value: &str) -> bool {
     value == "BOT" || (!value.is_empty() && value.bytes().all(|b| b == b'0'))
 }
 
-/// Champs qui identifient un joueur dans `info.participants` (détail et timeline).
-/// Aucun n'est lu par l'agrégation.
-const IDENTIFIER_FIELDS: [&str; 7] = [
+/// Champs qui identifient ou profilent un joueur dans `info.participants` (détail et
+/// timeline). Aucun n'est lu par l'agrégation. `summonerLevel` (niveau du compte) en
+/// fait partie : il caractérise le joueur, pas la partie.
+const IDENTIFIER_FIELDS: [&str; 8] = [
     "puuid",
     "summonerId",
     "summonerName",
@@ -91,6 +92,7 @@ const IDENTIFIER_FIELDS: [&str; 7] = [
     "riotIdName",
     "riotIdTagline",
     "profileIcon",
+    "summonerLevel",
 ];
 
 /// Un identifiant est à effacer s'il appartient à un humain et, en mode ciblé, au sujet.
@@ -738,6 +740,12 @@ mod tests {
         detail["info"]["participants"][0]["summonerName"] = json!("Nom");
         detail["info"]["participants"][0]["riotIdTagline"] = json!("EUW");
         detail["info"]["participants"][0]["profileIcon"] = json!(29);
+        // Décision du 4 octobre (#99) : le niveau de compte est un profil, pas une donnée d'agrégation.
+        for participant in detail["info"]["participants"].as_array_mut().unwrap() {
+            participant["summonerLevel"] = json!(312);
+            participant["kills"] = json!(7);
+            participant["item0"] = json!(3078);
+        }
         let before = detail.clone();
         assert!(redact_identifiers(&mut detail, None));
         let text = detail.to_string();
@@ -748,6 +756,7 @@ mod tests {
             "Nom",
             "riotIdTagline",
             "profileIcon",
+            "summonerLevel",
         ] {
             assert!(!text.contains(private), "{private} encore présent");
         }
@@ -765,6 +774,8 @@ mod tests {
                 "teamId",
                 "teamPosition",
                 "win",
+                "kills",
+                "item0",
             ] {
                 assert_eq!(after[field], before[field], "{field}");
             }
@@ -789,6 +800,9 @@ mod tests {
     #[test]
     fn l_effacement_cible_ne_touche_que_le_joueur_demande() {
         let mut detail = match_detail("EUW1_1", "EUW1", 420, 1_000_000);
+        for participant in detail["info"]["participants"].as_array_mut().unwrap() {
+            participant["summonerLevel"] = json!(312);
+        }
         assert!(redact_identifiers(&mut detail, Some("fake-puuid-3")));
         assert!(!detail.to_string().contains("fake-puuid-3\""));
         assert!(!detail.to_string().contains("Joueur3"));
@@ -798,6 +812,19 @@ mod tests {
             detail["info"]["participants"][4]["riotIdGameName"],
             "Joueur4"
         );
+        // Le niveau de compte disparaît chez le sujet effacé, et seulement chez lui.
+        assert!(detail["info"]["participants"][3]
+            .get("summonerLevel")
+            .is_none());
+        for (index, participant) in detail["info"]["participants"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| *index != 3)
+        {
+            assert_eq!(participant["summonerLevel"], 312, "participant {index}");
+        }
         assert_eq!(detail["info"]["participants"][3]["championId"], 4);
         assert!(!redact_identifiers(&mut detail, Some("fake-puuid-3")));
         assert!(!redact_identifiers(&mut detail, Some("absent")));
