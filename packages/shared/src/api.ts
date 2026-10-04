@@ -156,6 +156,14 @@ export interface ProfileRank {
   tier: string | null;
   division: string | null;
   league_points: number | null;
+  /** Victoires et défaites de la saison (league-v4) ; absents d'un profil lu dans le client LoL. */
+  wins?: number | null;
+  losses?: number | null;
+  /** Drapeaux factuels league-v4 : série de victoires, vétéran, nouveau dans le palier, inactif. */
+  hot_streak?: boolean | null;
+  veteran?: boolean | null;
+  fresh_blood?: boolean | null;
+  inactive?: boolean | null;
 }
 
 export interface Profile {
@@ -219,12 +227,85 @@ export interface WsAuthenticate {
   token: string;
 }
 
+/**
+ * Corps de `POST /v1/privacy/export` et `POST /v1/privacy/erase` (#99), réservés aux
+ * sujets de jeton listés dans `OLC_API_PRIVACY_OPERATORS`.
+ */
+export interface PrivacyRequest {
+  puuid: string;
+}
+
+/** Classement d'un joueur de départ relevé par une exécution du collecteur. */
+export interface SeedEntry {
+  run_id: number;
+  platform_id: string;
+  tier: string;
+  division: string;
+  league_points: number | null;
+  observed_at_ms: number;
+}
+
+/** Rang Solo/Flex observé pour un participant. */
+export interface RankObservation {
+  platform_id: string;
+  queue_id: number;
+  status: "ranked" | "unranked";
+  tier: string | null;
+  division: string | null;
+  league_points: number | null;
+  observed_at_ms: number;
+}
+
+/** Partie trouvée ou retenue via l'historique du joueur. */
+export interface RunMatchLink {
+  run_id: number;
+  match_id: string;
+  recorded_at_ms: number;
+}
+
+/** Partie stockée où le joueur apparaît, avec sa seule fiche de participant match-v5. */
+export interface MatchParticipation {
+  match_id: string;
+  platform_id: string;
+  queue_id: number;
+  patch: string;
+  game_start_ms: number;
+  participant: JsonValue | null;
+}
+
+/** Données détenues pour un PUUID, sans celles des autres joueurs. */
+export interface SubjectExport {
+  puuid: string;
+  seed_entries: SeedEntry[];
+  rank_observations: RankObservation[];
+  discoveries: RunMatchLink[];
+  sampled_matches: RunMatchLink[];
+  matches: MatchParticipation[];
+  timeline_match_ids: string[];
+  /** Travaux de collecte, quel que soit leur état, qui portent encore ce PUUID. */
+  collection_jobs: number;
+}
+
+/** Bilan d'un effacement ; `jobs_in_flight > 0` impose de relancer après la collecte. */
+export interface SubjectErasure {
+  seed_entries: number;
+  rank_observations: number;
+  discoveries: number;
+  sampled_matches: number;
+  jobs: number;
+  jobs_in_flight: number;
+  matches: number;
+  timelines: number;
+}
+
 export type ApiErrorCode =
   | "invalid_request"
   | "unauthorized"
+  | "forbidden"
   | "not_found"
   | "unavailable"
-  | "rate_limited";
+  | "rate_limited"
+  | "riot_busy";
 
 export interface ApiErrorResponse {
   error: {
