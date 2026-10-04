@@ -19,7 +19,6 @@ fn game(id: &str) -> StoredMatch {
         timeline: None,
         ranks: Default::default(),
         game_start_ms: 1_000_000,
-        game_duration_s: 1800,
     }
 }
 

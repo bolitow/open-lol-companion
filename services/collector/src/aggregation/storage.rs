@@ -140,7 +140,6 @@ pub async fn recalculate_with_quality(
                 timeline: row.try_get("timeline")?,
                 ranks: serde_json::from_value(row.try_get("ranks")?)?,
                 game_start_ms: row.try_get("game_start_ms")?,
-                game_duration_s: row.try_get("game_duration_s")?,
             };
             accumulator.add(&game);
             last_id = Some(game.match_id);

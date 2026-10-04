@@ -339,8 +339,6 @@ pub(super) struct StoredMatch {
     pub ranks: BTreeMap<String, ObservedRank>,
     /// Début de la partie (ms Unix), colonne `game_start` : même source que les filtres de fenêtre.
     pub game_start_ms: i64,
-    /// Durée en secondes, colonne `game_duration_s` déjà normalisée à l'ingestion.
-    pub game_duration_s: i32,
 }
 
 type Population = (ScopeKey, Role, String);
