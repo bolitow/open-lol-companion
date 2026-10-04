@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Paliers de rang cumulés « X et plus » (`IRON_PLUS` à `MASTER_PLUS`, `EMERALD_PLUS` et `DIAMOND_PLUS` compris) calculés à l'agrégation pour les champions, les bans, les builds (cumulés avant la coupe des variantes), les compétences et les événements d'objets, avec des parties distinctes pour le pick rate ; acceptés par `/v1/tierlist`, `/v1/builds` et `/v1/bans` et par le client de builds du desktop, sans les proposer encore dans l'interface (#83).
+
 - Plancher de fiabilité et intervalles de Wilson à 95 % publiés par le collecteur et l'API : `reliability_floor` (30 parties, indépendant de `min_games`), `reliability` (`low` ou `sufficient`) sur chaque champion, ban et variante de build, bornes basse et haute du winrate, du pick rate et du ban rate, masquées avec le taux sous le seuil ; les instantanés antérieurs se relisent sans fiabilité ; la borne haute et la fiabilité des variantes de build sont relayées par le client de builds du desktop, sans affichage à ce stade (#91).
 
 - Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).

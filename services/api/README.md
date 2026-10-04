@@ -73,7 +73,13 @@ Origin acceptés. Les contrats sont dans [`api.ts`](../../packages/shared/src/ap
 
 Requis : `patch` technique (`16.19`), `platform`, `queue`, `role`
 (`TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN`). `rank=ALL` par défaut, ou rang Riot,
-`UNKNOWN`, `UNRANKED`, `UNRANKED_MODE`. Ne jamais additionner ces populations.
+`UNKNOWN`, `UNRANKED`, `UNRANKED_MODE`, ou palier cumulé (#83) : `IRON_PLUS`, `BRONZE_PLUS`,
+`SILVER_PLUS`, `GOLD_PLUS`, `PLATINUM_PLUS`, `EMERALD_PLUS`, `DIAMOND_PLUS`, `MASTER_PLUS`
+(« X et plus », calculés à l'agrégation ; `MASTER_PLUS` couvre Master, Grand maître et
+Challenger ; pas de `GRANDMASTER_PLUS` ni de `CHALLENGER_PLUS`). Un palier cumulé réunit des
+paliers observés : jamais à additionner à `ALL`, à un palier observé ni à un autre palier
+cumulé. Un instantané antérieur à #83 n'en contient pas : la réponse est vide, sans erreur.
+Valable pour `/v1/tierlist`, `/v1/builds` et `/v1/bans`.
 `offset=0`, `limit=50` ; bornes 0–10 000 et 1–200. Paramètres inconnus refusés.
 Tierlist triée par position puis champion ; builds par catégorie, effectif
 décroissant, sélection. La pagination des builds ne tronque pas compétences/achats.

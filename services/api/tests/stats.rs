@@ -748,6 +748,83 @@ async fn les_bans_de_la_draft_suivent_le_palier_sans_pagination_ni_filtre_de_rol
 }
 
 #[tokio::test]
+async fn les_paliers_cumules_se_lisent_comme_une_population_distincte_de_all_et_des_paliers() {
+    let db = db_or_skip!();
+    let mut value = report();
+    for (id, games) in [(1, 300), (2, 120)] {
+        let mut cumulated = champion(id, Some(id));
+        cumulated["rank"] = json!("EMERALD_PLUS");
+        cumulated["games"] = json!(games);
+        cumulated["wins"] = json!(games / 2);
+        cumulated["losses"] = json!(games / 2);
+        value["groups"].as_array_mut().unwrap().push(cumulated);
+    }
+    value["bans"].as_array_mut().unwrap().push(json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420, "rank":"EMERALD_PLUS",
+        "champion_id":1, "banned_matches":7, "draft_matches":14, "ban_rate":50.0
+    }));
+    publish(db.storage.pool(), value).await;
+
+    let page = tierlist(
+        db.storage.pool(),
+        StatsQuery {
+            rank: "EMERALD_PLUS".into(),
+            ..query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(page.total, 2);
+    assert!(page.entries.iter().all(|e| e.key.rank == "EMERALD_PLUS"));
+    assert_eq!(
+        page.entries.iter().map(|e| e.games).collect::<Vec<_>>(),
+        [300, 120]
+    );
+    assert_eq!(page.bans.len(), 1);
+    assert_eq!(
+        (page.bans[0].rank.as_str(), page.bans[0].banned_matches),
+        ("EMERALD_PLUS", 7)
+    );
+    // ALL et GOLD ne voient jamais les lignes cumulées.
+    let all = tierlist(db.storage.pool(), query()).await.unwrap();
+    assert!(all.entries.iter().all(|e| e.key.rank == "ALL"));
+    let cumulated_bans = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "EMERALD_PLUS".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(cumulated_bans.total, 1);
+    assert_eq!(cumulated_bans.bans[0].draft_matches, 14);
+    // Un palier cumulé sans donnée publiée reste vide, sans erreur ; un faux suffixe est refusé.
+    let empty = tierlist(
+        db.storage.pool(),
+        StatsQuery {
+            rank: "MASTER_PLUS".into(),
+            ..query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(empty.total, 0);
+    assert!(matches!(
+        tierlist(
+            db.storage.pool(),
+            StatsQuery {
+                rank: "CHALLENGER_PLUS".into(),
+                ..query()
+            },
+        )
+        .await,
+        Err(ApiError::InvalidRequest)
+    ));
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_requete_invalide() {
     let db = db_or_skip!();
     let mut source = report();

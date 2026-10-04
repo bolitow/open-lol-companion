@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { championIconUrl, displayPatch, screenForPhase } from "./index";
+import { CUMULATIVE_RANKS, championIconUrl, displayPatch, screenForPhase } from "./index";
 
 describe("screenForPhase", () => {
   it("envoie la sélection des champions vers l'écran de draft", () => {
@@ -23,5 +23,21 @@ describe("ddragon", () => {
   });
   it("raccourcit la version en patch", () => {
     expect(displayPatch("16.19.1")).toBe("16.19");
+  });
+});
+
+describe("CUMULATIVE_RANKS (#83)", () => {
+  it("liste huit paliers cumulés distincts, du plus large au plus étroit", () => {
+    expect(CUMULATIVE_RANKS).toEqual([
+      "IRON_PLUS",
+      "BRONZE_PLUS",
+      "SILVER_PLUS",
+      "GOLD_PLUS",
+      "PLATINUM_PLUS",
+      "EMERALD_PLUS",
+      "DIAMOND_PLUS",
+      "MASTER_PLUS",
+    ]);
+    expect(new Set(CUMULATIVE_RANKS).size).toBe(CUMULATIVE_RANKS.length);
   });
 });

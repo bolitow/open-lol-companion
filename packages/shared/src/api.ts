@@ -31,7 +31,30 @@ export interface ScopeKey {
   queue_id: number;
 }
 
-/** `ALL` représente une population distincte des rangs observés. */
+/**
+ * Paliers cumulés (#83) : « X et plus », regroupement de paliers observés calculé à
+ * l'agrégation. Miroir de `CUMULATIVE_RANKS` (collecteur) ; pas de `GRANDMASTER_PLUS` ni de
+ * `CHALLENGER_PLUS`, `MASTER_PLUS` couvrant les trois paliers apex.
+ */
+export const CUMULATIVE_RANKS = [
+  "IRON_PLUS",
+  "BRONZE_PLUS",
+  "SILVER_PLUS",
+  "GOLD_PLUS",
+  "PLATINUM_PLUS",
+  "EMERALD_PLUS",
+  "DIAMOND_PLUS",
+  "MASTER_PLUS",
+] as const;
+
+export type CumulativeRank = (typeof CUMULATIVE_RANKS)[number];
+
+/**
+ * `ALL` représente une population distincte des rangs observés. `rank` vaut `ALL`, un palier
+ * observé (`IRON` … `CHALLENGER`), `UNKNOWN`, `UNRANKED`, `UNRANKED_MODE` ou un palier cumulé
+ * (`CumulativeRank`, #83) : une population déjà calculée, jamais à additionner à `ALL`, à un
+ * palier observé ni à un autre palier cumulé.
+ */
 export interface GroupKey extends ScopeKey {
   role: Role;
   rank: string;
@@ -77,9 +100,11 @@ export interface ChampionStats extends GroupKey {
  */
 export interface BanStats extends ScopeKey {
   /**
-   * `ALL` (toutes les drafts du périmètre) ou palier de partie (`IRON` … `CHALLENGER`) ;
+   * `ALL` (toutes les drafts du périmètre), palier de partie (`IRON` … `CHALLENGER`) ou
+   * palier cumulé (`CumulativeRank`, #83, drafts dont le palier de partie est au moins égal) ;
    * `UNKNOWN` sans palier calculable, `UNRANKED_MODE` hors Solo/Flex. `ALL` avant #109.
-   * Ne jamais additionner `ALL` et les paliers : une draft compte sous les deux.
+   * Ne jamais additionner `ALL`, les paliers et les paliers cumulés : une draft compte sous
+   * plusieurs d'entre eux.
    */
   rank: string;
   champion_id: number;
@@ -206,6 +231,7 @@ export interface StatsQuery {
   platform: string;
   queue: number;
   role: string;
+  /** Mêmes valeurs que `GroupKey.rank`, paliers cumulés compris (#83). */
   rank: string;
   offset: number;
   limit: number;
