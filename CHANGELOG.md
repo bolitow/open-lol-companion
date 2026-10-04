@@ -7,7 +7,6 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 ### Ajouté
 
 - Matchups de lane dans les agrégats et l’API (`/v1/matchups/{champion_id}`) : pour chaque champion, résultats contre l’adversaire du même rôle en Solo/Duo et Flex, avec effectif, winrate et borne Wilson nuls sous le seuil, couverture des participations appariées et définitions publiées ; rang `ALL` seulement, aucune synergie de duo ni conseil de pick (#123).
-- Moyennes de performance par patch, rôle, champion et rang dans les agrégats et l’API (`/v1/performance/{champion_id}`) : KDA, dégâts aux champions, CS/min, or/min, score de vision, et or, CS et XP à 10 et 15 minutes depuis la timeline, avec effectifs et définitions publiées ; aucune note ni comparaison (#100).
 - Moyennes de performance par patch, rôle, champion et rang dans les agrégats et l’API (`/v1/performance/{champion_id}`) : KDA, dégâts aux champions, CS/min, or/min, score de vision, et or, CS et XP à 10 et 15 minutes depuis la timeline, avec effectifs et définitions publiées ; les parties de moins de 15 minutes sont écartées de ces moyennes (et comptées dans `short_games_excluded`) mais restent dans le winrate, le pick rate et les builds ; aucune note ni comparaison (#100).
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
 
