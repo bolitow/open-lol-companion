@@ -86,17 +86,31 @@ pub async fn recalculate_with_quality(
     // Rang figé à la partie (#80) : observation la plus proche du début, quelle que soit
     // l'heure du calcul ; à écart égal, la plus ancienne. L'écart maximal est appliqué
     // par l'accumulateur pour que la règle reste unique et testable sans base.
+    // Deux recherches bornées par l'index (platform_id, puuid, queue_id, observed_at) — la
+    // dernière observation jusqu'au début, la première après — plutôt qu'un tri de tout
+    // l'historique ; l'écart est arrondi à la seconde supérieure pour que la borne incluse
+    // soit exacte (48 h + 400 ms ne devient pas 48 h).
     loop {
         // Pagination par clé unique, dans le même instantané : mémoire des détails bornée.
         let rows = sqlx::query(
             "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.game_duration_s,m.detail,t.timeline,
+            (extract(epoch FROM m.game_start)*1000)::bigint AS game_start_ms,
             COALESCE((SELECT jsonb_object_agg(p->>'puuid',jsonb_build_object('status',r.status,'tier',r.tier,'gap_s',r.gap_s))
                 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.detail#>'{info,participants}')='array'
                     THEN m.detail#>'{info,participants}' ELSE '[]'::jsonb END) p
-                JOIN LATERAL (SELECT status,tier,round(abs(extract(epoch FROM o.observed_at-m.game_start)))::bigint AS gap_s
-                    FROM participant_rank_observations o
-                    WHERE o.platform_id=m.platform_id AND o.queue_id=m.queue_id AND o.puuid=p->>'puuid'
-                    ORDER BY abs(extract(epoch FROM o.observed_at-m.game_start)),o.observed_at,o.id DESC LIMIT 1) r ON true), '{}'::jsonb) AS ranks
+                JOIN LATERAL (SELECT c.status,c.tier,ceil(abs(extract(epoch FROM c.observed_at-m.game_start)))::bigint AS gap_s
+                    FROM (
+                        (SELECT o.status,o.tier,o.observed_at,o.id FROM participant_rank_observations o
+                            WHERE o.platform_id=m.platform_id AND o.queue_id=m.queue_id AND o.puuid=p->>'puuid'
+                                AND o.observed_at<=m.game_start
+                            ORDER BY o.observed_at DESC,o.id DESC LIMIT 1)
+                        UNION ALL
+                        (SELECT o.status,o.tier,o.observed_at,o.id FROM participant_rank_observations o
+                            WHERE o.platform_id=m.platform_id AND o.queue_id=m.queue_id AND o.puuid=p->>'puuid'
+                                AND o.observed_at>m.game_start
+                            ORDER BY o.observed_at,o.id DESC LIMIT 1)
+                    ) c
+                    ORDER BY abs(extract(epoch FROM c.observed_at-m.game_start)),c.observed_at,c.id DESC LIMIT 1) r ON true), '{}'::jsonb) AS ranks
             FROM matches m LEFT JOIN match_timelines t ON t.match_id=m.match_id AND t.status='available'
             WHERE ($1::text IS NULL OR m.match_id > $1)
                 AND (cardinality($2::text[])=0 OR m.patch=ANY($2))
@@ -125,6 +139,8 @@ pub async fn recalculate_with_quality(
                 detail: row.try_get("detail")?,
                 timeline: row.try_get("timeline")?,
                 ranks: serde_json::from_value(row.try_get("ranks")?)?,
+                game_start_ms: row.try_get("game_start_ms")?,
+                game_duration_s: row.try_get("game_duration_s")?,
             };
             accumulator.add(&game);
             last_id = Some(game.match_id);

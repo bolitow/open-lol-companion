@@ -44,6 +44,43 @@ pub(super) const RESOURCES: [(&str, Option<&str>, &str); 8] = [
     ),
 ];
 
+/// Augments Arena et Mayhem (#118) : noms FR/EN, icône, rareté et listes par mode viennent de
+/// `cherry-augments.json` (554 augments sur 16.19) ; `augment-lists.json` est identique dans toutes
+/// les langues (vérifié FR/EN sur 16.19), il n'est donc téléchargé qu'une fois. Les descriptions
+/// ne figurent pas dans ces fichiers : l'export généré `cdragon/arena/{fr_fr,en_us}.json` les publie
+/// (champ `desc`) pour 225 augments (HTTP 200 et correspondance vérifiés le 4 octobre 2026 sur 16.19),
+/// les autres, Mayhem, n'en ont pas. Cet export est produit par CommunityDragon et sort du schéma
+/// `plugins/rcp-be-lol-game-data` des autres ressources ; il est épinglé au patch, au build et à
+/// l'URL exacte comme elles. Ces cinq ressources restent facultatives à la relecture : une archive
+/// antérieure à #118 n'en a pas, un jeu partiel est refusé.
+pub(super) const AUGMENT_RESOURCES: [(&str, Option<&str>, &str); 5] = [
+    (
+        "fr_FR/cherry-augments.json",
+        Some("fr_FR"),
+        "plugins/rcp-be-lol-game-data/global/fr_fr/v1/cherry-augments.json",
+    ),
+    (
+        "en_US/cherry-augments.json",
+        Some("en_US"),
+        "plugins/rcp-be-lol-game-data/global/default/v1/cherry-augments.json",
+    ),
+    (
+        "augment-lists.json",
+        None,
+        "plugins/rcp-be-lol-game-data/global/default/v1/augment-lists.json",
+    ),
+    (
+        "fr_FR/arena-augments.json",
+        Some("fr_FR"),
+        "cdragon/arena/fr_fr.json",
+    ),
+    (
+        "en_US/arena-augments.json",
+        Some("en_US"),
+        "cdragon/arena/en_us.json",
+    ),
+];
+
 pub(super) fn patch(version: &str) -> Result<&str, CatalogError> {
     if !valid_version(version) {
         return Err(CatalogError::InvalidRequest);
@@ -186,7 +223,7 @@ pub async fn fetch_sources_with<T: StaticTransport>(
         metadata.clone(),
     )];
     // Une requête à la fois borne la mémoire du grand export BIN et la charge publique.
-    for (key, locale, path) in RESOURCES.iter().skip(1) {
+    for (key, locale, path) in RESOURCES.iter().skip(1).chain(AUGMENT_RESOURCES.iter()) {
         let url = url(patch, path);
         let data = fetch_json(&transport, &url).await?;
         sources.push(make_source(
