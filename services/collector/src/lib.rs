@@ -10,6 +10,7 @@ pub mod collector;
 pub mod config;
 pub mod model;
 pub mod privacy;
+pub mod queues;
 pub mod rate_limit;
 pub mod report;
 pub mod riot_client;
