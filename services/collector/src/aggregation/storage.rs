@@ -1,6 +1,9 @@
-use sqlx::Row;
+use std::collections::BTreeMap;
+
+use sqlx::{PgConnection, Row};
 
 use super::model::{Accumulator, StoredMatch};
+use super::stages::ItemCatalog;
 use super::{AggregationError, AggregationReport};
 use crate::storage::Storage;
 
@@ -58,6 +61,7 @@ pub async fn recalculate_filtered(
     if !acquired {
         return Err(AggregationError::Busy);
     }
+    accumulator.set_item_catalogs(load_item_catalogs(&mut tx, &filters.patches).await?);
 
     let mut last_id: Option<String> = None;
     // Rang figé à la partie (#80) : observation la plus proche du début, quelle que soit
@@ -110,4 +114,59 @@ pub async fn recalculate_filtered(
     super::snapshot::publish(&mut tx, &report).await?;
     tx.commit().await?;
     Ok(report)
+}
+
+/// Catalogue normalisé (#61) courant de chaque patch, lu dans l'instantané du calcul.
+/// Plusieurs révisions d'un même patch : la plus récente (16.19.2 avant 16.19.1).
+async fn load_item_catalogs(
+    connection: &mut PgConnection,
+    patches: &[String],
+) -> Result<BTreeMap<String, ItemCatalog>, AggregationError> {
+    let versions: Vec<String> = sqlx::query_scalar("SELECT version FROM game_catalog_current")
+        .fetch_all(&mut *connection)
+        .await?;
+    let mut selected = BTreeMap::<String, ((u32, u32, u32), String)>::new();
+    for version in versions {
+        let Some(parts) = version_parts(&version) else {
+            continue;
+        };
+        let patch = format!("{}.{}", parts.0, parts.1);
+        if !patches.is_empty() && !patches.contains(&patch) {
+            continue;
+        }
+        if selected.get(&patch).map_or(true, |(best, _)| parts > *best) {
+            selected.insert(patch, (parts, version));
+        }
+    }
+    let mut catalogs = BTreeMap::new();
+    for (patch, (_, version)) in selected {
+        // Les champs structurels sont identiques entre langues : une seule fiche par objet.
+        let rows = sqlx::query(
+            "SELECT DISTINCT ON (e.id) e.id, e.data->'fields' AS fields
+            FROM game_catalog_current c JOIN game_catalog_entries e ON e.publication_id=c.publication_id
+            WHERE c.version=$1 AND e.kind='item' AND e.namespace='standard'
+            ORDER BY e.id, (e.locale='en_US') DESC, e.locale",
+        )
+        .bind(&version)
+        .fetch_all(&mut *connection)
+        .await?;
+        let mut records = Vec::with_capacity(rows.len());
+        for row in rows {
+            let id: String = row.try_get("id")?;
+            let fields: Option<serde_json::Value> = row.try_get("fields")?;
+            records.push((id, fields.unwrap_or_default()));
+        }
+        let catalog =
+            ItemCatalog::from_records(&version, records.iter().map(|(id, f)| (id.as_str(), f)));
+        catalogs.insert(patch, catalog);
+    }
+    Ok(catalogs)
+}
+
+fn version_parts(version: &str) -> Option<(u32, u32, u32)> {
+    if !crate::catalog::valid_version(version) {
+        return None;
+    }
+    let mut parts = version.split('.').map(|p| p.parse::<u32>().ok());
+    Some((parts.next()??, parts.next()??, parts.next()??))
 }

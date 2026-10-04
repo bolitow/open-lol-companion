@@ -102,7 +102,8 @@ fn report() -> Value {
         "unknown_role_participations":0, "timeline_matches":80,
         "timeline_participations":800, "invalid_timeline_participations":5,
         "unidentified_item_undos":3, "draft_matches":100,
-        "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0
+        "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0,
+        "item_stage_participations":700, "missing_item_catalog_participations":10
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
@@ -558,5 +559,54 @@ async fn requetes_invalides_sont_rejetees_avant_la_lecture_du_snapshot() {
         builds(db.storage.pool(), query(), 0).await.err(),
         Some(ApiError::InvalidRequest)
     );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
+    let db = db_or_skip!();
+    let mut source = report();
+    let stage = |category: &str, selection: Value| {
+        json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "category":category, "selection":selection, "games":150,
+            "wins":90, "performance_available":true, "population":600,
+            "pick_rate":25.0, "win_rate":60.0, "win_rate_lower_bound":52.0
+        })
+    };
+    let builds_list = source["builds"].as_array_mut().unwrap();
+    builds_list.push(stage("core", json!([6672, 3031, 3089])));
+    builds_list.push(stage("starter", json!([1055, 2003])));
+    source["build_stage_method"] = json!("catalog #61 of the game patch");
+    source["item_catalogs"] = json!([
+        {"patch":"16.18", "version":"16.18.1"},
+        {"patch":"16.19", "version":"16.19.1"}
+    ]);
+    publish(db.storage.pool(), source).await;
+    let response = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(response.total, 5);
+    let core = response
+        .builds
+        .iter()
+        .find(|b| b.category == "core")
+        .unwrap();
+    // L'ordre du core est une donnée : il n'est jamais trié par la route.
+    assert_eq!(core.selection, vec![6672, 3031, 3089]);
+    assert_eq!(core.win_rate_lower_bound, Some(52.0));
+    assert_eq!(response.item_catalog_version.as_deref(), Some("16.19.1"));
+    assert_eq!(response.build_stage_method, "catalog #61 of the game patch");
+    // Un instantané antérieur aux étapes reste lisible, sans catalogue annoncé.
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), report()).await;
+    let legacy = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(legacy.item_catalog_version, None);
+    assert!(legacy
+        .builds
+        .iter()
+        .all(|b| b.win_rate_lower_bound.is_none()));
     db.cleanup().await;
 }

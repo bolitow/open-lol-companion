@@ -609,3 +609,83 @@ async fn le_rang_reste_fige_a_la_partie_quel_que_soit_l_heure_du_calcul() {
     ));
     db.cleanup().await;
 }
+
+async fn publish_item_catalog(
+    db: &TestDb,
+    publication: &str,
+    version: &str,
+    items: &[(&str, Value)],
+) {
+    sqlx::query("INSERT INTO game_catalog_publications(id,version,normalizer_version,manifest) VALUES ($1,$2,1,'{}')")
+        .bind(publication).bind(version).execute(db.storage.pool()).await.unwrap();
+    for (id, fields) in items {
+        let mut normalized = serde_json::Map::new();
+        for (name, value) in fields.as_object().unwrap() {
+            normalized.insert(
+                name.clone(),
+                json!({"value":value,"unit":null,"status":"verified","sources":[]}),
+            );
+        }
+        // Une fiche FR identique ne doit pas être comptée deux fois.
+        for locale in ["en_US", "fr_FR"] {
+            sqlx::query("INSERT INTO game_catalog_entries(publication_id,kind,id,namespace,locale,name,data) VALUES ($1,'item',$2,'standard',$3,$2,$4)")
+                .bind(publication).bind(id).bind(locale).bind(json!({"fields": normalized}))
+                .execute(db.storage.pool()).await.unwrap();
+        }
+    }
+    sqlx::query("INSERT INTO game_catalog_current(version,publication_id) VALUES ($1,$2)")
+        .bind(version)
+        .bind(publication)
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn aggregation_joint_le_catalogue_du_patch_pour_les_etapes_d_achat() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_stages").await;
+    let completed =
+        |price: u32| json!({"price_total":price,"purchasable":true,"categories":["Damage"]});
+    publish_item_catalog(&db, "pub-15-19-1", "15.19.1", &[
+        ("1055", json!({"price_total":450,"purchasable":true,"categories":["Lane"]})),
+        ("3006", json!({"price_total":1100,"purchasable":true,"categories":["Boots"],"builds_from":["1001"]})),
+        ("3031", completed(3500)), ("6672", completed(3000)), ("3072", completed(3400)),
+    ]).await;
+    // Une autre version du même patch, plus ancienne, ne doit pas être retenue.
+    publish_item_catalog(&db, "pub-15-19-0", "15.19.0", &[("3031", completed(3500))]).await;
+    let events: Vec<_> = [
+        (1055, 1_000),
+        (3006, 200_000),
+        (3031, 600_000),
+        (6672, 900_000),
+        (3072, 1_200_000),
+    ]
+    .iter()
+    .map(|(id, at)| json!({"type":"ITEM_PURCHASED","participantId":1,"timestamp":at,"itemId":id}))
+    .collect();
+    let timeline = json!({"metadata":{"matchId":"EUW1_stages"},"info":{"participants":(1..=10).map(|id|json!({"participantId":id})).collect::<Vec<_>>(),"frames":[{"timestamp":0,"events":events}]}});
+    sqlx::query("INSERT INTO match_timelines(match_id,status,timeline) VALUES ('EUW1_stages','available',$1)")
+        .bind(timeline).execute(db.storage.pool()).await.unwrap();
+    let report = recalculate(&db.storage, 1).await.unwrap();
+    let stage = |category: &str| {
+        report
+            .builds
+            .iter()
+            .find(|b| b.key.champion_id == 1 && b.key.rank == "ALL" && b.category == category)
+            .map(|b| b.selection.clone())
+    };
+    assert_eq!(stage("starter"), Some(vec![1055]));
+    assert_eq!(stage("boots"), Some(vec![3006]));
+    assert_eq!(stage("core"), Some(vec![3031, 6672, 3072]));
+    assert_eq!(
+        serde_json::to_value(&report.item_catalogs).unwrap(),
+        json!([{"patch":"15.19","version":"15.19.1"}])
+    );
+    assert_eq!(report.coverage[0].counts.item_stage_participations, 1);
+    let published = published(&db).await;
+    assert_eq!(published, serde_json::to_value(&report).unwrap());
+    assert_eq!(published["item_catalogs"][0]["version"], "15.19.1");
+    db.cleanup().await;
+}

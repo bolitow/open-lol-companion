@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
+
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).
@@ -104,6 +106,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Borne Wilson publiée bornée à 0–100 dans la tierlist et les builds : une variante ou un champion sans victoire n'affiche plus un résidu flottant négatif, qui faisait rejeter toute la page de builds par le client desktop (#81).
 - Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
 

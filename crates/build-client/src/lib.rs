@@ -102,6 +102,9 @@ pub struct BuildVariant {
     pub population: u64,
     pub pick_rate: Option<f64>,
     pub win_rate: Option<f64>,
+    /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_lower_bound: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -115,7 +118,7 @@ impl BuildVariant {
             || self.selection.len() > 4096
             || self.games > self.population
             || self.wins.is_some_and(|wins| wins > self.games)
-            || [self.pick_rate, self.win_rate]
+            || [self.pick_rate, self.win_rate, self.win_rate_lower_bound]
                 .into_iter()
                 .flatten()
                 .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
@@ -125,10 +128,12 @@ impl BuildVariant {
         if self.games < u64::from(min_games) {
             self.pick_rate = None;
             self.win_rate = None;
+            self.win_rate_lower_bound = None;
         }
         if !self.performance_available {
             self.win_rate = None;
             self.wins = None;
+            self.win_rate_lower_bound = None;
         }
         Ok(())
     }

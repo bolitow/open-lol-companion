@@ -11,6 +11,16 @@ pub(super) struct BuildObservation {
     pub skill_steps: Vec<SkillStep>,
     pub item_events: Vec<ItemEvent>,
     pub unidentified_item_undos: u64,
+    /// Achats nets horodatés, présents seulement si `purchase_order` est publiable.
+    /// Projection interne des étapes (#81) : jamais sérialisée.
+    #[serde(skip)]
+    pub net_purchases: Option<Vec<Purchase>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Purchase {
+    pub item_id: u32,
+    pub timestamp_ms: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -154,7 +164,7 @@ pub(super) fn extract_timeline(
                 if before > 0 {
                     let index = purchases
                         .iter()
-                        .rposition(|item| *item == before)
+                        .rposition(|p: &Purchase| p.item_id == before)
                         .ok_or(INVALID)?;
                     purchases.remove(index);
                     result.item_events.push(ItemEvent {
@@ -175,7 +185,10 @@ pub(super) fn extract_timeline(
             _ => {
                 let item_id = positive(&event["itemId"]).ok_or(INVALID)?;
                 if kind == "ITEM_PURCHASED" {
-                    purchases.push(item_id);
+                    purchases.push(Purchase {
+                        item_id,
+                        timestamp_ms,
+                    });
                     has_purchase = true;
                 }
                 // Une vente ou consommation ne retire pas un achat de son historique.
@@ -188,7 +201,11 @@ pub(super) fn extract_timeline(
         }
     }
     if has_purchase && result.unidentified_item_undos == 0 {
-        result.variants.insert("purchase_order".into(), purchases);
+        result.variants.insert(
+            "purchase_order".into(),
+            purchases.iter().map(|p| p.item_id).collect(),
+        );
+        result.net_purchases = Some(purchases);
     }
     if !skills.is_empty() {
         result.variants.insert("skill_order".into(), skills);

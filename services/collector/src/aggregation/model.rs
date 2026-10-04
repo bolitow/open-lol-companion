@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
+use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::AggregationError;
 use crate::model::patch_from_version;
 
@@ -92,6 +93,9 @@ pub struct BuildStats {
     pub population: u64,
     pub pick_rate: Option<f64>,
     pub win_rate: Option<f64>,
+    /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
+    #[serde(default)]
+    pub win_rate_lower_bound: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -139,6 +143,19 @@ pub struct Coverage {
     /// Écart maximal retenu, en heures ; toujours inférieur ou égal à `rank_max_age_hours`.
     #[serde(default)]
     pub rank_gap_max_hours: Option<f64>,
+    /// Participations dont les étapes d'achat (#81) ont été dérivées du catalogue du patch.
+    #[serde(default)]
+    pub item_stage_participations: u64,
+    /// Participations à achats nets connus, sans catalogue d'objets publié pour leur patch.
+    #[serde(default)]
+    pub missing_item_catalog_participations: u64,
+}
+
+/// Version du catalogue normalisé (#61) jointe à un patch agrégé.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ItemCatalogRef {
+    pub patch: String,
+    pub version: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -171,6 +188,11 @@ pub struct AggregationReport {
     pub item_events: Vec<ItemEventStats>,
     pub max_build_variants_per_category: u32,
     pub omitted_build_variants: u64,
+    /// Règles des catégories d'étapes (#81) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub build_stage_method: String,
+    #[serde(default)]
+    pub item_catalogs: Vec<ItemCatalogRef>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -213,6 +235,8 @@ pub(super) struct Accumulator {
     events: BTreeMap<(GroupKey, String, u32, u32), u64>,
     /// Écarts partie → observation des rangs retenus, en secondes, par périmètre.
     rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
+    /// Catalogue d'objets par patch (« 16.19 »), joint pour dériver les étapes (#81).
+    item_catalogs: BTreeMap<String, ItemCatalog>,
 }
 
 impl Accumulator {
@@ -230,10 +254,12 @@ impl Accumulator {
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
                 bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![],
                 max_build_variants_per_category: 20, omitted_build_variants: 0,
+                build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
             bans:BTreeMap::new(), builds:BTreeMap::new(), build_populations:BTreeMap::new(),
             skills:BTreeMap::new(), events:BTreeMap::new(), rank_gaps:BTreeMap::new(),
+            item_catalogs:BTreeMap::new(),
         })
     }
 
@@ -247,6 +273,18 @@ impl Accumulator {
 
     pub fn set_filters(&mut self, filters: AggregationOptions) {
         self.report.filters = filters;
+    }
+
+    /// Un patch absent de `catalogs` ne reçoit aucune étape : rien n'est deviné.
+    pub fn set_item_catalogs(&mut self, catalogs: BTreeMap<String, ItemCatalog>) {
+        self.report.item_catalogs = catalogs
+            .iter()
+            .map(|(patch, catalog)| ItemCatalogRef {
+                patch: patch.clone(),
+                version: catalog.version.clone(),
+            })
+            .collect();
+        self.item_catalogs = catalogs;
     }
 
     pub fn add(&mut self, game: &StoredMatch) {
@@ -322,6 +360,17 @@ impl Accumulator {
                         observations.variants.extend(t.variants);
                         observations.skill_steps = t.skill_steps;
                         observations.item_events = t.item_events;
+                        if let Some(purchases) = t.net_purchases {
+                            match self.item_catalogs.get(&game.patch) {
+                                Some(catalog) => {
+                                    observations
+                                        .variants
+                                        .extend(catalog.derive_steps(&purchases));
+                                    coverage.item_stage_participations += 1;
+                                }
+                                None => coverage.missing_item_catalog_participations += 1,
+                            }
+                        }
                     }
                     Err(_) => coverage.invalid_timeline_participations += 1,
                 }
@@ -491,10 +540,10 @@ impl Accumulator {
             .map(|((key, category, selection), c)| {
                 let population = self.build_populations[&(key.clone(), category.clone())];
                 let performance_available = !(self.arena_scopes.contains(&scope_of(&key))
-                    && matches!(
+                    && (matches!(
                         category.as_str(),
                         "item" | "final_items" | "trinket" | "purchase_order"
-                    ));
+                    ) || STAGE_CATEGORIES.contains(&category.as_str())));
                 BuildStats {
                     key,
                     category,
@@ -509,6 +558,8 @@ impl Accumulator {
                     } else {
                         None
                     },
+                    win_rate_lower_bound: (performance_available && c.games >= minimum)
+                        .then(|| wilson(c.wins, c.games)),
                 }
             })
             .collect();
@@ -584,13 +635,17 @@ fn median(sorted: &[u64]) -> Option<f64> {
         _ => Some((sorted[mid - 1] as f64 + sorted[mid] as f64) / 2.0),
     }
 }
+/// Borne inférieure de Wilson à 95 %, en pourcentage. Bornée à 0..=100 : pour 0 victoire,
+/// l'arrondi flottant donne parfois une valeur infime négative (≈ -1e-16), que le client
+/// desktop rejette avec toute la page.
 fn wilson(wins: u64, games: u64) -> f64 {
     let n = games as f64;
     let p = wins as f64 / n;
     let z = 1.959963984540054_f64;
     let z2 = z * z;
-    100.0 * (p + z2 / (2.0 * n) - z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt())
-        / (1.0 + z2 / n)
+    let bound = 100.0 * (p + z2 / (2.0 * n) - z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt())
+        / (1.0 + z2 / n);
+    bound.clamp(0.0, 100.0)
 }
 fn scope_of(key: &GroupKey) -> ScopeKey {
     ScopeKey {

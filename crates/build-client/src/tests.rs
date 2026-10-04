@@ -196,3 +196,58 @@ async fn ne_transmet_ni_corps_d_erreur_ni_statistiques_sous_seuil() {
     assert!(report.builds[0].pick_rate.is_none());
     job.await.unwrap();
 }
+
+#[tokio::test]
+async fn transmet_la_borne_wilson_des_etapes_et_la_masque_comme_le_winrate() {
+    let mut core = variant("core", vec![6672, 3031, 3089]);
+    core["win_rate_lower_bound"] = json!(41.2);
+    let mut low = variant("starter", vec![1055, 2003]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["win_rate_lower_bound"] = json!(10.0);
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_lower_bound"] = json!(30.0);
+    let legacy = variant("item", vec![1055]);
+    let mut invalid = variant("core", vec![1, 2, 3]);
+    invalid["win_rate_lower_bound"] = json!(120.0);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![core, low, arena, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let bounds: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| b.win_rate_lower_bound)
+        .collect();
+    assert_eq!(bounds, vec![Some(41.2), None, None, None]);
+    // Le core garde son ordre d'achat, sans tri.
+    assert_eq!(report.builds[0].selection, vec![6672, 3031, 3089]);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn accepte_une_variante_sans_victoire_dont_la_borne_wilson_est_nulle() {
+    // Contrat avec le collecteur : 0 victoire sur 118 parties publie une borne de 0,
+    // jamais une valeur flottante infime négative qui ferait rejeter toute la page.
+    let mut afk = variant("starter", vec![]);
+    afk["games"] = json!(118);
+    afk["wins"] = json!(0);
+    afk["win_rate"] = json!(0.0);
+    afk["win_rate_lower_bound"] = json!(0.0);
+    let core = variant("core", vec![6672, 3031, 3089]);
+    let (url, job) = server(vec![(200, page(0, 2, vec![afk, core]))]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    assert_eq!(report.builds.len(), 2);
+    assert_eq!(report.builds[0].wins, Some(0));
+    assert_eq!(report.builds[0].win_rate_lower_bound, Some(0.0));
+    job.await.unwrap();
+}

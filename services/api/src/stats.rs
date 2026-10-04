@@ -37,6 +37,10 @@ pub struct BuildsResponse {
     pub item_events: Vec<ItemEventStats>,
     pub max_build_variants_per_category: u32,
     pub omitted_build_variants: u64,
+    /// Règles des étapes d'achat (#81) ; vide pour un instantané antérieur.
+    pub build_stage_method: String,
+    /// Version du catalogue d'objets jointe au patch demandé ; nulle sans étapes.
+    pub item_catalog_version: Option<String>,
 }
 /// Tierlist filtrée sur une population explicite, triée selon le rang publié.
 pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
@@ -110,6 +114,11 @@ pub async fn builds(
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
+    let item_catalog_version = report
+        .item_catalogs
+        .into_iter()
+        .find(|c| c.patch == query.patch)
+        .map(|c| c.version);
     Ok(BuildsResponse {
         meta,
         query,
@@ -121,6 +130,8 @@ pub async fn builds(
         item_events,
         max_build_variants_per_category: report.max_build_variants_per_category,
         omitted_build_variants: report.omitted_build_variants,
+        build_stage_method: report.build_stage_method,
+        item_catalog_version,
     })
 }
 
