@@ -9,6 +9,7 @@ mod scheduler;
 mod snapshot;
 mod stages;
 mod storage;
+mod tier;
 
 pub use context::{FirstObjectiveStats, SplitBucket, SplitDimension, SplitStats};
 pub use cumulative::CUMULATIVE_RANKS;

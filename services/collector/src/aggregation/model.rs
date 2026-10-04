@@ -9,6 +9,7 @@ use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
 use super::cumulative;
 use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
+use super::tier;
 
 /// Catégories de variantes publiées sur le placement moyen en Arena (#104). Liste
 /// positive et volontairement fermée : jamais d'objets ni d'augments (politique Riot).
@@ -471,7 +472,8 @@ impl Accumulator {
         }
         Ok(Self {
             report: AggregationReport {
-                schema_version: 2, rank_scope: "observed_rank_nearest_to_game_start_of_same_ranked_queue".into(),
+                schema_version: 2,
+                rank_scope: "observed_rank_nearest_to_game_start_of_same_ranked_queue".into(),
                 rank_max_age_hours: DEFAULT_RANK_MAX_AGE_HOURS,
                 min_game_duration_s: DEFAULT_MIN_GAME_DURATION_S,
                 min_played_percent: DEFAULT_MIN_PLAYED_PERCENT,
@@ -479,18 +481,41 @@ impl Accumulator {
                 ban_rank_basis: BAN_RANK_BASIS.into(),
                 ban_rank_min_known_players: MIN_KNOWN_PLAYERS as u32,
                 pick_rate_definition: "champion_matches / bucket_matches * 100".into(),
-                tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
-                min_games, reliability_floor: RELIABILITY_FLOOR, filters: AggregationOptions::default(), source_matches: 0,
-                included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
-                bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![], splits: vec![],
-                max_build_variants_per_category: 20, omitted_build_variants: 0,
-                build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
+                tier_method: tier::tier_method(),
+                min_games,
+                reliability_floor: RELIABILITY_FLOOR,
+                filters: AggregationOptions::default(),
+                source_matches: 0,
+                included_matches: 0,
+                exclusions: BTreeMap::new(),
+                coverage: vec![],
+                groups: vec![],
+                bans: vec![],
+                builds: vec![],
+                skill_levels: vec![],
+                item_events: vec![],
+                splits: vec![],
+                max_build_variants_per_category: 20,
+                omitted_build_variants: 0,
+                build_stage_method: STAGE_METHOD.into(),
+                item_catalogs: vec![],
             },
-            counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), bucket_matches:BTreeMap::new(),
-            champion_matches:BTreeMap::new(), coverage:BTreeMap::new(),
-            bans:BTreeMap::new(), ban_drafts:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
-            skills:BTreeMap::new(), events:BTreeMap::new(), splits:BTreeMap::new(), rank_gaps:BTreeMap::new(),
-            item_catalogs:BTreeMap::new(),
+            counts: BTreeMap::new(),
+            arena_scopes: BTreeSet::new(),
+            populations: BTreeMap::new(),
+            bucket_matches: BTreeMap::new(),
+            champion_matches: BTreeMap::new(),
+            coverage: BTreeMap::new(),
+            bans: BTreeMap::new(),
+            ban_drafts: BTreeMap::new(),
+            builds: BTreeMap::new(),
+            inverted_spells: BTreeMap::new(),
+            build_populations: BTreeMap::new(),
+            skills: BTreeMap::new(),
+            events: BTreeMap::new(),
+            splits: BTreeMap::new(),
+            rank_gaps: BTreeMap::new(),
+            item_catalogs: BTreeMap::new(),
         })
     }
 
@@ -894,7 +919,45 @@ impl Accumulator {
             })
             .collect();
         let bucket = |key: &GroupKey| (scope_of(key), key.role, key.rank.clone());
-        self.report.groups.sort_by(|a, b| {
+        // Winrate moyen de chaque compartiment, depuis les comptes entiers : indépendant de
+        // l'ordre d'ajout des parties (#85).
+        let mut bucket_totals = BTreeMap::<Population, (u64, u64)>::new();
+        for g in &self.report.groups {
+            let (wins, games) = bucket_totals.entry(bucket(&g.key)).or_default();
+            *wins += g.wins;
+            *games += g.games;
+        }
+        let ban_rate = |key: &GroupKey| -> f64 {
+            // Les rangs de joueur UNKNOWN/UNRANKED n'ont pas d'équivalent au palier de partie.
+            if key.rank != "ALL" && key.rank != "UNRANKED_MODE" && !is_ranked_tier(&key.rank) {
+                return 0.0;
+            }
+            let scope = scope_of(key);
+            let drafts = self
+                .ban_drafts
+                .get(&(scope.clone(), key.rank.clone()))
+                .copied()
+                .unwrap_or(0);
+            let banned = self
+                .bans
+                .get(&(scope, key.rank.clone(), key.champion_id))
+                .copied()
+                .unwrap_or(0);
+            rate(banned, drafts, minimum).unwrap_or(0.0)
+        };
+        let mut scored: Vec<(Option<f64>, ChampionStats)> = std::mem::take(&mut self.report.groups)
+            .into_iter()
+            .map(|g| {
+                let score = g.win_rate.map(|_| {
+                    let (wins, games) = bucket_totals[&bucket(&g.key)];
+                    let baseline = 100.0 * wins as f64 / games as f64;
+                    let presence = g.pick_rate.unwrap_or(0.0) + ban_rate(&g.key);
+                    tier::tier_score(g.wins, g.games, baseline, presence)
+                });
+                (score, g)
+            })
+            .collect();
+        scored.sort_by(|(sa, a), (sb, b)| {
             bucket(&a.key)
                 .cmp(&bucket(&b.key))
                 // Arena : placement moyen croissant (les non éligibles en dernier).
@@ -904,9 +967,8 @@ impl Accumulator {
                         .total_cmp(&b.average_placement.unwrap_or(f64::INFINITY))
                 })
                 .then_with(|| {
-                    b.win_rate_lower_bound
-                        .unwrap_or(-1.0)
-                        .total_cmp(&a.win_rate_lower_bound.unwrap_or(-1.0))
+                    sb.unwrap_or(f64::NEG_INFINITY)
+                        .total_cmp(&sa.unwrap_or(f64::NEG_INFINITY))
                 })
                 .then_with(|| {
                     // Arena : le booléen `win` n'est pas une première place, son ratio brut
@@ -921,36 +983,32 @@ impl Accumulator {
                 .then_with(|| b.games.cmp(&a.games))
                 .then_with(|| a.key.champion_id.cmp(&b.key.champion_id))
         });
+        let tier_eligible = |g: &ChampionStats| {
+            g.win_rate.is_some() && g.pick_rate.is_some_and(|p| p >= tier::MIN_TIER_PICK_RATE)
+        };
         let mut eligible = BTreeMap::<Population, u32>::new();
-        // Un groupe Arena est classé sur son placement moyen, les autres sur leur taux.
-        let rankable = |g: &ChampionStats| g.win_rate.is_some() || g.average_placement.is_some();
-        for g in &self.report.groups {
-            if rankable(g) {
+        for (_, g) in &scored {
+            if tier_eligible(g) {
                 *eligible.entry(bucket(&g.key)).or_default() += 1;
             }
         }
         let mut positions = BTreeMap::<Population, u32>::new();
-        for g in &mut self.report.groups {
+        // Un groupe Arena est classé sur son placement moyen (#104), les autres sur leur score (#85).
+        let rankable = |g: &ChampionStats| g.win_rate.is_some() || g.average_placement.is_some();
+        for (score, g) in &mut scored {
             if rankable(g) {
                 let b = bucket(&g.key);
                 let position = positions.entry(b.clone()).or_default();
                 *position += 1;
                 g.position = Some(*position);
-                if eligible[&b] >= 5 {
-                    let pct = 100 * (*position - 1) / eligible[&b];
-                    g.tier = Some(
-                        match pct {
-                            0..=9 => "S",
-                            10..=29 => "A",
-                            30..=59 => "B",
-                            60..=89 => "C",
-                            _ => "D",
-                        }
-                        .into(),
-                    );
+                if tier_eligible(g)
+                    && eligible.get(&b).copied().unwrap_or(0) >= tier::MIN_TIER_CHAMPIONS
+                {
+                    g.tier = (*score).map(|score| tier::tier_letter(score).into());
                 }
             }
         }
+        self.report.groups = scored.into_iter().map(|(_, g)| g).collect();
         self.report.bans = self
             .bans
             .into_iter()

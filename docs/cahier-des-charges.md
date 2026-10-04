@@ -358,7 +358,9 @@ observations horodatées des rangs Solo/Flex, sans prétendre connaître le rang
 Synchronisation atomique Data Dragon FR/EN (champions standard/Classic, compétences,
 objets, runes, sorts et catalogues). Agrégats par patch/plateforme/file/rôle/rang,
 winrate, part des sélections, bans par draft, builds, achats et ordre des compétences ;
-seuils et couvertures explicites, tiers descriptifs à partir de la borne Wilson.
+seuils et couvertures explicites, tiers descriptifs (amendement #85 : winrate lissé vers
+la moyenne du compartiment, présence pick + ban, seuils absolus sans répartition forcée,
+au moins 20 champions éligibles ; la borne Wilson reste publiée comme intervalle).
 Une campagne de recette peut tourner jusqu'à 24 h avec rotation des régions et
 reprise. L'accès à tous les modes ne garantit pas un échantillon exhaustif ou
 représentatif ; les seeds restent issus du classement. Les modes non classés ne

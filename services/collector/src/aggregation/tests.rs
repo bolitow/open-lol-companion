@@ -214,6 +214,8 @@ fn classe_par_taux_puis_effectif_puis_identifiant_independamment_de_l_ordre() {
         .iter()
         .filter(|g| g.key.role == Role::Top && g.key.rank == "ALL")
         .collect();
+    // Score #85 : 6 (0/2) précède 21 (0/1) grâce à sa présence (pick rate 66,7 % contre
+    // 33,3 %), pas au départage par effectif.
     assert_eq!(
         top.iter()
             .map(|g| (g.key.champion_id, g.position))
@@ -503,30 +505,432 @@ fn arena_utilise_les_sous_equipes_et_ne_deduit_pas_de_role() {
         .all(|g| g.key.role == Role::Unknown && g.games == 4 && g.population == 16));
 }
 
-#[test]
-fn le_classement_wilson_et_les_tiers_demandent_assez_de_champions() {
-    let mut acc = Accumulator::new(1).unwrap();
-    for n in 0..6 {
-        let mut g = game(&format!("EUW1_tier{n}"));
-        g.detail["info"]["participants"][0]["championId"] = json!(100 + n);
-        acc.add(&g);
-    }
-    let r = acc.finish();
-    let top: Vec<_> = r
+/// Partie dont les TOP bleu (gagnant) et rouge sont remplacés ; bans facultatifs (équipe bleue).
+fn top_duel(id: &str, blue: u32, red: u32, bans: &[u32]) -> StoredMatch {
+    let mut g = game(id);
+    g.detail["info"]["participants"][0]["championId"] = json!(blue);
+    g.detail["info"]["participants"][5]["championId"] = json!(red);
+    let slot = |turn: usize| json!({"championId": bans.get(turn - 1).map_or(-1, |c| i64::from(*c)), "pickTurn": turn});
+    g.detail["info"]["teams"] = json!([
+        {"teamId": 100, "bans": (1..=5).map(slot).collect::<Vec<_>>()},
+        {"teamId": 200, "bans": (6..=10).map(slot).collect::<Vec<_>>()}
+    ]);
+    g
+}
+
+fn top_all(report: &super::AggregationReport) -> Vec<&super::ChampionStats> {
+    report
         .groups
         .iter()
         .filter(|g| g.key.rank == "ALL" && g.key.role == Role::Top)
-        .collect();
-    assert_eq!(top.len(), 7);
-    assert_eq!(top[0].tier.as_deref(), Some("S"));
-    assert!(top
-        .iter()
-        .all(|g| g.win_rate_lower_bound.is_some() && g.tier.is_some()));
+        .collect()
+}
+
+/// Dix parties, vingt champions TOP distincts (100..110 gagnants, 200..210 perdants).
+fn twenty_top_champions(acc: &mut Accumulator, games: u32) {
+    for n in 0..games {
+        acc.add(&top_duel(&format!("EUW1_tier{n}"), 100 + n, 200 + n, &[]));
+    }
+}
+
+#[test]
+fn des_champions_proches_de_50_pourcent_restent_tous_b_sans_repartition_forcee() {
+    let mut acc = Accumulator::new(1).unwrap();
+    twenty_top_champions(&mut acc, 10);
+    let r = acc.finish();
+    let top = top_all(&r);
+    assert_eq!(top.len(), 20);
+    assert!(top.iter().all(|g| g.tier.as_deref() == Some("B")));
+    assert!(top.iter().all(|g| g.win_rate_lower_bound.is_some()));
+    // Les gagnants (1 sur 1) précèdent les perdants, sans lettre S ni D imposée.
+    assert!(top[..10].iter().all(|g| g.wins == 1));
+    assert_eq!(top[0].position, Some(1));
+    // JUNGLE : deux champions seulement, aucun tier mais une position.
     assert!(r
         .groups
         .iter()
         .filter(|g| g.key.role == Role::Jungle)
-        .all(|g| g.tier.is_none()));
+        .all(|g| g.tier.is_none() && g.position.is_some()));
+}
+
+#[test]
+fn sous_vingt_champions_eligibles_aucun_tier_n_est_attribue() {
+    let mut acc = Accumulator::new(1).unwrap();
+    twenty_top_champions(&mut acc, 9);
+    let r = acc.finish();
+    let top = top_all(&r);
+    assert_eq!(top.len(), 18);
+    assert!(top.iter().all(|g| g.tier.is_none() && g.position.is_some()));
+}
+
+#[test]
+fn un_champion_dominant_est_s_son_adversaire_d_et_le_reste_b() {
+    let mut games: Vec<_> = (0..10)
+        .map(|n| top_duel(&format!("EUW1_tier{n}"), 100 + n, 200 + n, &[]))
+        .collect();
+    games.extend((0..60).map(|n| top_duel(&format!("EUW1_duel{n}"), 500, 501, &[])));
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut reversed = Accumulator::new(1).unwrap();
+    for g in &games {
+        acc.add(g);
+    }
+    for g in games.iter().rev() {
+        reversed.add(g);
+    }
+    let r = acc.finish();
+    assert_eq!(r, reversed.finish());
+    let top = top_all(&r);
+    assert_eq!(top.len(), 22);
+    assert_eq!(
+        (
+            top[0].key.champion_id,
+            top[0].tier.as_deref(),
+            top[0].position
+        ),
+        (500, Some("S"), Some(1))
+    );
+    let last = top.last().unwrap();
+    assert_eq!(
+        (last.key.champion_id, last.tier.as_deref(), last.position),
+        (501, Some("D"), Some(22))
+    );
+    assert!(top[1..21].iter().all(|g| g.tier.as_deref() == Some("B")));
+}
+
+#[test]
+fn un_pick_rate_sous_le_seuil_garde_sa_position_sans_tier() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for n in 0..200 {
+        acc.add(&top_duel(
+            &format!("EUW1_tier{n}"),
+            100 + n % 10,
+            110 + n % 10,
+            &[],
+        ));
+    }
+    // 1 partie sur 201 : pick rate de 0,497 %, sous le seuil de 0,5 %.
+    acc.add(&top_duel("EUW1_rare", 999, 110, &[]));
+    let r = acc.finish();
+    let top = top_all(&r);
+    let rare = top.iter().find(|g| g.key.champion_id == 999).unwrap();
+    assert!(rare.pick_rate.unwrap() < 0.5);
+    assert!(rare.position.is_some() && rare.tier.is_none());
+    assert!(top
+        .iter()
+        .filter(|g| g.key.champion_id != 999)
+        .all(|g| g.tier.is_some()));
+}
+
+#[test]
+fn un_champion_sous_le_seuil_de_pick_rate_ne_compte_pas_parmi_les_vingt_eligibles() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // 19 champions réguliers : 100 à 109 en bleu, 110 à 118 en rouge.
+    for n in 0..200 {
+        acc.add(&top_duel(
+            &format!("EUW1_tier{n}"),
+            100 + n % 10,
+            110 + n % 9,
+            &[],
+        ));
+    }
+    // Vingtième champion avec winrate, mais 1 partie sur 201 : pick rate sous 0,5 %.
+    acc.add(&top_duel("EUW1_rare", 999, 110, &[]));
+    let r = acc.finish();
+    let top = top_all(&r);
+    assert_eq!(top.iter().filter(|g| g.win_rate.is_some()).count(), 20);
+    assert!(top.iter().all(|g| g.position.is_some() && g.tier.is_none()));
+}
+
+#[test]
+fn le_ban_rate_de_all_entre_dans_le_score_mais_pas_pour_un_rang_unknown() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // 100 et 101 gagnent chacun leur unique partie ; 100 est banni dans les neuf autres.
+    for n in 0..10 {
+        let bans = if n == 0 { vec![] } else { vec![100] };
+        acc.add(&top_duel(&format!("EUW1_tier{n}"), 100 + n, 200 + n, &bans));
+    }
+    let r = acc.finish();
+    let banned = find_group(&r, 100, Role::Top, "ALL");
+    let twin = find_group(&r, 101, Role::Top, "ALL");
+    assert_eq!((banned.wins, twin.wins), (1, 1));
+    // Présence : 10 % de pick + 90 % de ban → +2 points, contre +0,2 pour 101.
+    assert_eq!(
+        (banned.tier.as_deref(), banned.position),
+        (Some("A"), Some(1))
+    );
+    assert_eq!(twin.tier.as_deref(), Some("B"));
+    // Rang de joueur UNKNOWN : sans équivalent au palier de partie, le ban n'est pas compté.
+    let unknown = find_group(&r, 100, Role::Top, "UNKNOWN");
+    assert_eq!(unknown.tier.as_deref(), Some("B"));
+}
+
+/// Partie `top_duel` dont les dix joueurs ont un rang observé `tier` proche du début.
+fn ranked_top_duel(id: &str, blue: u32, red: u32, bans: &[u32], tier: &str) -> StoredMatch {
+    let mut g = top_duel(id, blue, red, bans);
+    rank_first_players(&mut g, 10, tier, 3600);
+    g
+}
+
+#[test]
+fn un_palier_classe_utilise_le_ban_rate_de_son_palier_et_non_celui_de_all() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Dix parties GOLD, vingt champions TOP : 100 y est banni neuf fois, 101 jamais.
+    for n in 0..10 {
+        let bans = if n == 0 { vec![] } else { vec![100] };
+        acc.add(&ranked_top_duel(
+            &format!("EUW1_gold{n}"),
+            100 + n,
+            200 + n,
+            &bans,
+            "GOLD",
+        ));
+    }
+    // Trente parties DIAMOND sans 100 ni 101 en jeu : 101 y est toujours banni.
+    for n in 0..30 {
+        acc.add(&ranked_top_duel(
+            &format!("EUW1_diamond{n}"),
+            300 + n,
+            400 + n,
+            &[101],
+            "DIAMOND",
+        ));
+    }
+    let r = acc.finish();
+    let ban = |rank: &str, champion: u32| find_ban(&r, rank, champion).and_then(|b| b.ban_rate);
+    // Bans de GOLD et de ALL volontairement opposés pour 100 et 101.
+    assert_eq!(
+        (ban("GOLD", 100), ban("ALL", 100)),
+        (Some(90.0), Some(22.5))
+    );
+    assert_eq!((ban("GOLD", 101), ban("ALL", 101)), (None, Some(75.0)));
+    let gold: Vec<_> = r
+        .groups
+        .iter()
+        .filter(|g| g.key.rank == "GOLD" && g.key.role == Role::Top)
+        .collect();
+    assert_eq!(gold.len(), 20);
+    assert!(gold.iter().all(|g| g.pick_rate == Some(10.0)));
+    // GOLD, ban GOLD : 100 → 0,25 + 0,02 × (10 + 90) = 2,25 (A) ; 101 → 0,45 (B). Avec le ban
+    // de ALL, 100 tomberait à 0,90 (B) et 101 monterait à 1,95 (A) ; sans ban, 100 serait B.
+    let gold_100 = find_group(&r, 100, Role::Top, "GOLD");
+    let gold_101 = find_group(&r, 101, Role::Top, "GOLD");
+    assert_eq!(
+        (gold_100.tier.as_deref(), gold_100.position),
+        (Some("A"), Some(1))
+    );
+    assert_eq!(gold_101.tier.as_deref(), Some("B"));
+    assert!(gold
+        .iter()
+        .filter(|g| g.key.champion_id != 100)
+        .all(|g| g.tier.as_deref() == Some("B")));
+    // ALL, ban ALL (40 drafts) : l'ordre s'inverse, 101 → 1,80 (A) et 100 → 0,75 (B).
+    let all_100 = find_group(&r, 100, Role::Top, "ALL");
+    let all_101 = find_group(&r, 101, Role::Top, "ALL");
+    assert_eq!(
+        (all_101.tier.as_deref(), all_101.position),
+        (Some("A"), Some(1))
+    );
+    assert_eq!(all_100.tier.as_deref(), Some("B"));
+}
+
+#[test]
+fn une_file_non_classee_compte_le_ban_rate_de_unranked_mode() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for n in 0..10 {
+        let bans = if n == 0 { vec![] } else { vec![100] };
+        let mut g = top_duel(&format!("EUW1_normal{n}"), 100 + n, 200 + n, &bans);
+        g.queue_id = 400;
+        g.detail["info"]["queueId"] = json!(400);
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    assert_eq!(
+        find_ban(&r, "UNRANKED_MODE", 100).and_then(|b| b.ban_rate),
+        Some(90.0)
+    );
+    let banned = find_group(&r, 100, Role::Top, "UNRANKED_MODE");
+    let twin = find_group(&r, 101, Role::Top, "UNRANKED_MODE");
+    // 0,25 + 0,02 × (10 + 90) = 2,25 (A) ; sans le ban, 0,45 (B) comme 101.
+    assert_eq!(
+        (banned.tier.as_deref(), banned.position),
+        (Some("A"), Some(1))
+    );
+    assert_eq!(twin.tier.as_deref(), Some("B"));
+}
+
+fn top_rank<'a>(report: &'a super::AggregationReport, rank: &str) -> Vec<&'a super::ChampionStats> {
+    report
+        .groups
+        .iter()
+        .filter(|g| g.key.rank == rank && g.key.role == Role::Top)
+        .collect()
+}
+
+/// Winrate moyen (%) d'un compartiment, recalculé depuis les comptes publiés.
+fn bucket_mean(groups: &[&super::ChampionStats]) -> f64 {
+    let wins: u64 = groups.iter().map(|g| g.wins).sum();
+    let games: u64 = groups.iter().map(|g| g.games).sum();
+    100.0 * wins as f64 / games as f64
+}
+
+/// Agrège les parties dans l'ordre puis à rebours et vérifie que le bilan est identique.
+fn finish_in_both_orders(games: &[StoredMatch]) -> super::AggregationReport {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut reversed = Accumulator::new(1).unwrap();
+    for g in games {
+        acc.add(g);
+    }
+    for g in games.iter().rev() {
+        reversed.add(g);
+    }
+    let report = acc.finish();
+    assert_eq!(report, reversed.finish());
+    report
+}
+
+/// Partie `top_duel` où seuls les cinq joueurs bleus ont un rang GOLD : le compartiment
+/// GOLD TOP ne contient que des TOP bleus, dont le winrate moyen n'est plus forcé à 50 %.
+fn gold_blue_top(id: &str, blue: u32, red: u32, blue_wins: bool) -> StoredMatch {
+    let mut g = top_duel(id, blue, red, &[]);
+    rank_first_players(&mut g, 5, "GOLD", 3600);
+    if !blue_wins {
+        reverse_winner(&mut g);
+    }
+    g
+}
+
+#[test]
+fn le_score_part_du_winrate_moyen_du_compartiment_et_non_de_50_pourcent() {
+    // (champion bleu GOLD, parties, victoires) : 300 victoires sur 500, μ = 60 %.
+    let mut plan = vec![(500, 30, 18), (600, 100, 55), (700, 100, 65)];
+    plan.extend((0..18).map(|n| (100 + n, 15, 9)));
+    let mut games = Vec::new();
+    for (champion, played, won) in plan {
+        for n in 0..played {
+            games.push(gold_blue_top(
+                &format!("EUW1_g{champion}_{n}"),
+                champion,
+                900 + n % 20,
+                n < won,
+            ));
+        }
+    }
+    let r = finish_in_both_orders(&games);
+    let gold = top_rank(&r, "GOLD");
+    assert_eq!(gold.len(), 21);
+    assert_eq!(gold.iter().filter(|g| g.tier.is_some()).count(), 21);
+    assert!((bucket_mean(&gold) - 60.0).abs() < 1e-9);
+    let at_mean = find_group(&r, 500, Role::Top, "GOLD");
+    assert!((at_mean.win_rate.unwrap() - 60.0).abs() < 1e-9);
+    assert!((at_mean.pick_rate.unwrap() - 6.0).abs() < 1e-9);
+    // μ = 60 : 500 → 0 + 0,02 × 6 = 0,12 (B), 700 (65 %) → 2,07 (A), 600 (55 %) → −1,27 (C).
+    // Avec une base fixe de 50 : 500 → 1,42 (A), 700 → 5,40 (S), 600 → 2,07 (A).
+    let tier = |champion: u32| {
+        let g = find_group(&r, champion, Role::Top, "GOLD");
+        (g.tier.as_deref(), g.position)
+    };
+    assert_eq!(tier(500), (Some("B"), Some(2)));
+    assert_eq!(tier(700), (Some("A"), Some(1)));
+    assert_eq!(tier(600), (Some("C"), Some(21)));
+    assert!((100..118).all(|c| tier(c).0 == Some("B")));
+    // ALL TOP : un gagnant et un perdant par partie, μ = 50 ; 600 y est donc A.
+    assert!((bucket_mean(&top_all(&r)) - 50.0).abs() < 1e-9);
+    assert_eq!(
+        find_group(&r, 600, Role::Top, "ALL").tier.as_deref(),
+        Some("A")
+    );
+}
+
+/// Partie `top_duel` entre un TOP bleu GOLD et un TOP rouge DIAMOND (dix rangs observés).
+fn gold_vs_diamond(id: &str, gold: u32, diamond: u32, gold_wins: bool) -> StoredMatch {
+    let mut g = top_duel(id, gold, diamond, &[]);
+    for i in 0..10 {
+        let tier = if i < 5 { "GOLD" } else { "DIAMOND" };
+        g.ranks.insert(
+            format!("fake-puuid-{i}"),
+            observed("ranked", Some(tier), 3600),
+        );
+    }
+    if !gold_wins {
+        reverse_winner(&mut g);
+    }
+    g
+}
+
+#[test]
+fn un_meme_winrate_change_de_lettre_selon_la_moyenne_de_son_palier() {
+    let mut games = Vec::new();
+    // Vingt duels GOLD contre DIAMOND de dix parties, gagnés sept fois par GOLD.
+    for pair in 0..20 {
+        for n in 0..10 {
+            games.push(gold_vs_diamond(
+                &format!("EUW1_pair{pair}_{n}"),
+                100 + pair,
+                200 + pair,
+                n < 7,
+            ));
+        }
+    }
+    // 500 joue 100 parties en GOLD et 100 en DIAMOND, avec 50 % de victoires de chaque côté.
+    for n in 0..100 {
+        games.push(gold_vs_diamond(
+            &format!("EUW1_g500_{n}"),
+            500,
+            200 + n % 20,
+            n % 2 == 0,
+        ));
+        games.push(gold_vs_diamond(
+            &format!("EUW1_d500_{n}"),
+            100 + n % 20,
+            500,
+            n % 2 == 1,
+        ));
+    }
+    let r = finish_in_both_orders(&games);
+    let gold = top_rank(&r, "GOLD");
+    let diamond = top_rank(&r, "DIAMOND");
+    for bucket in [&gold, &diamond] {
+        assert_eq!(bucket.len(), 21);
+        assert_eq!(bucket.iter().filter(|g| g.tier.is_some()).count(), 21);
+    }
+    // GOLD gagne 240 parties sur 400 : μ = 60 % en GOLD, 40 % en DIAMOND.
+    assert!((bucket_mean(&gold) - 60.0).abs() < 1e-9);
+    assert!((bucket_mean(&diamond) - 40.0).abs() < 1e-9);
+    let in_gold = find_group(&r, 500, Role::Top, "GOLD");
+    let in_diamond = find_group(&r, 500, Role::Top, "DIAMOND");
+    for g in [in_gold, in_diamond] {
+        assert_eq!((g.games, g.wins), (100, 50));
+        assert!((g.pick_rate.unwrap() - 25.0).abs() < 1e-9);
+    }
+    // GOLD : (5 000 + 200 × 60) / 300 − 60 + 0,02 × 25 = −2,83 (D, dernier) ;
+    // DIAMOND : +3,83 (S, premier). Avec une base fixe de 50, les deux vaudraient 0,5 (B).
+    assert_eq!(
+        (in_gold.tier.as_deref(), in_gold.position),
+        (Some("D"), Some(21))
+    );
+    assert_eq!(
+        (in_diamond.tier.as_deref(), in_diamond.position),
+        (Some("S"), Some(1))
+    );
+}
+
+#[test]
+fn tier_method_publie_les_constantes_appliquees() {
+    let method = Accumulator::new(1).unwrap().finish().tier_method;
+    for expected in [
+        "(games + 200)",
+        "0.02*(pick_rate + ban_rate)",
+        "S>=2.5 A>=1 B>=-1 C>=-2.5 else D",
+        "pick_rate>=0.5",
+        "at least 20 such champions",
+        "no forced distribution",
+    ] {
+        assert!(
+            method.contains(expected),
+            "« {expected} » absent de {method}"
+        );
+    }
+    assert!(!method.contains("percentile"));
 }
 
 #[test]
@@ -1459,18 +1863,14 @@ fn arena_classe_les_champions_sur_le_placement_et_masque_le_taux_de_victoire() {
     for g in &r.groups {
         assert_eq!((g.win_rate, g.win_rate_lower_bound), (None, None));
     }
-    // Position et tier suivent le placement moyen croissant (égalité : effectif, puis id).
-    assert_eq!(
-        (first.position, first.tier.as_deref()),
-        (Some(1), Some("S"))
-    );
+    // La position suit le placement moyen croissant (égalité : effectif, puis id) ; aucun
+    // tier en Arena (#85) : le score demande un winrate, absent ici.
+    assert_eq!((first.position, first.tier.as_deref()), (Some(1), None));
     assert_eq!(all_group(&r, 4).position, Some(4));
-    assert_eq!((last.position, last.tier.as_deref()), (Some(16), Some("C")));
+    assert_eq!((last.position, last.tier.as_deref()), (Some(16), None));
     let worst = all_group(&r, 18);
-    assert_eq!(
-        (worst.position, worst.tier.as_deref()),
-        (Some(18), Some("D"))
-    );
+    assert_eq!((worst.position, worst.tier.as_deref()), (Some(18), None));
+    assert!(r.groups.iter().all(|g| g.tier.is_none()));
     assert!(r.tier_method.contains("placement"));
 }
 
@@ -1520,8 +1920,8 @@ fn arena_depart_a_placement_moyen_egal_suit_l_effectif_puis_l_id_et_non_les_vict
         (ordre[0]..ordre[0] + 6).collect::<Vec<_>>(),
         "positions consécutives dans l'ordre effectif puis id"
     );
-    let rang = |g: &super::ChampionStats| "SABCD".find(g.tier.as_deref().unwrap()).unwrap();
-    assert!(rang(b) <= rang(a));
+    // Aucun tier en Arena (#85) : seule la position classe les sous-équipes.
+    assert!(a.tier.is_none() && b.tier.is_none());
 }
 
 #[test]

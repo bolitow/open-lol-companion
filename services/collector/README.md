@@ -330,13 +330,21 @@ inventé à partir des objets ou du rang.
 | `win_rate_upper_bound` | Borne supérieure de Wilson à 95 % du winrate (#91), publiée et masquée avec `win_rate_lower_bound` |
 | `pick_rate_lower_bound`, `pick_rate_upper_bound` | Intervalle de Wilson à 95 % du `pick_rate` (parties du champion sur `bucket_matches`, #91), nul quand le `pick_rate` l'est |
 | `reliability` | `low` si `games` < `reliability_floor` (30), sinon `sufficient` (#91). Calculé même quand `min_games` masque le taux ; absent d'un instantané antérieur |
-| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe. En Arena : placement moyen croissant, puis effectif décroissant et ID ; le ratio brut de victoires n'intervient jamais |
+| `position` | Score de tier décroissant (#85), puis winrate brut, effectif et ID ; publiée pour tout groupe au-dessus du seuil, même sans tier. En Arena (#104) : placement moyen croissant, puis effectif décroissant et ID ; le ratio brut de victoires n'intervient jamais |
+| `tier` | Lettre sur seuils absolus du score (#85), sans répartition forcée : S ≥ +2,5, A ≥ +1, B ≥ −1, C ≥ −2,5, D en dessous. Score = winrate lissé − μ + 0,02 × (`pick_rate` + ban rate), où μ est le winrate du compartiment en % (victoires / participations de tous ses champions × 100) et le winrate lissé (100 × victoires + 200 × μ) / (parties + 200). Le ban rate est celui du même périmètre au même rang de partie (#109) pour `ALL`, `UNRANKED_MODE` et les paliers classés, 0 pour `UNKNOWN`/`UNRANKED` (rangs de joueur sans équivalent par partie) ou sous le seuil de drafts. Nul si `pick_rate` < 0,5 % ou si moins de 20 champions du compartiment passent ce seuil. Formule publiée dans `tier_method`. Nul en Arena : sans winrate, pas de score |
 | `placement_games`, `average_placement`, `top1_rate`, `top2_rate` | Arena seulement (#104) : participations au placement valide, placement moyen de la sous-équipe (1 = première), part (%) des participations classées première, puis première ou deuxième. Nuls hors Arena et sous le seuil (`placement_games` reste visible) |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file/rang de partie (#109) : matchs bannissant le champion / drafts complètes du même rang ; un double ban ne compte qu'une fois. Le rang `ALL` garde toutes les drafts ; chaque draft compte aussi sous le palier de sa partie |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
-visibles.
+visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
+Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances
+entre parties d'un même joueur. La borne Wilson reste publiée comme intervalle mais
+n'entre plus dans le tier : elle classait 54 % sur 150 parties derrière 50 % sur 2 000.
+Le lissage rapproche un petit échantillon de la moyenne de son compartiment sans le
+pénaliser sous elle ; des champions tous entre 49 et 51 % reçoivent tous B. Le tier
+reste descriptif : il ne conseille aucun choix de draft. Le booléen `win` d'Arena ne
+signifie pas nécessairement une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
 
 Plancher de fiabilité (#91) : `reliability_floor` (constante de 30, publiée dans le rapport)
 est **indépendant de `min_games`**. `min_games` décide de la publication des taux ; le plancher
