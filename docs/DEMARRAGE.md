@@ -317,3 +317,9 @@ Le transport desktop conserve le résumé du champion, les points de compétence
 Dans la préparation et la fiche champion : **Source & méthode** affiche le résumé et les variantes non publiées par catégorie ; les volets compétences et objets donnent accès aux observations chronologiques. Les points désignent l’ordre d’investissement, pas le niveau du champion. Le temps est une moyenne publiée, pas une recommandation. Les événements sont comptés par objet, type et minute, par pages de 24 lignes : ce ne sont ni des parties distinctes ni une médiane d’achèvement. Les événements rares (ventes notamment) peuvent être absents après plafonnement ; le plafond et les lignes non servies sont explicités.
 
 Les anciens rapports restent lisibles. Un ancien total global de variantes omises sans ventilation par catégorie n’est jamais attribué au champion. Les statistiques détaillées de performance, matchups, splits et classement relèvent de #185. Le recalcul chiffré sur la base de collecte reste côté Matthieu ; les tests de pagination du client utilisent des réponses locales représentatives sur Mac, la recette native Windows reste à faire.
+
+### Patch des statistiques (#93)
+
+La préparation, les fiches champion et la vue en partie affichent le patch effectivement consulté, résolu depuis le client et le manifeste API. Un patch antérieur est signalé ; les imports communautaires sont suspendus tant que client, catalogue et données ne sont pas compatibles. La lecture est mutualisée et renouvelée sur sélection/publication, sans polling. Détails, replis et limites : [patch-client.md](patch-client.md).
+
+Pour distribuer les mises à jour du catalogue desktop depuis votre API, voir [catalogue-desktop.md](catalogue-desktop.md). Sans configuration, le catalogue embarqué reste utilisable.

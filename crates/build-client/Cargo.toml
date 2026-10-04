@@ -7,6 +7,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+olc-catalog-cache = { path = "../catalog-cache" }
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true
@@ -17,6 +18,7 @@ tokio-tungstenite.workspace = true
 futures-util.workspace = true
 
 [dev-dependencies]
+tempfile = "3"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util"] }
 
 # Trousseau natif du système pour le jeton d'accès desktop : Keychain sous macOS,

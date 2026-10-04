@@ -6,6 +6,10 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Catalogue desktop téléchargeable : instantanés FR/EN et artworks versionnés publiés par l’API, cache Rust vérifié avec reprise, bascule complète et conservation du dernier catalogue sain ; recherche, draft et fiches suivent le snapshot actif, avec état et nouvelle tentative FR/EN (#93).
+
+- Desktop : patch des builds résolu depuis le client et le manifeste API, repli antérieur explicite, versions publiques cohérentes et imports suspendus si le catalogue diverge ; lectures partagées sans polling (#93).
+
 - Desktop : résumé de champion, temps des points de compétence, événements d’objets par minute et variantes omises du groupe relayés depuis l’API, vérifiés entre les pages puis consultables dans les détails des builds. Plafond d’événements explicite, ancien compteur global masqué, aucune médiane ou recommandation temporelle inventée (#113).
 
 - Modèle de draft, première version : chaque champion disponible noté par la borne basse de Wilson publiée à son poste, part du rôle et estimation du draft explicitement descriptive (moyenne des taux publiés de chaque camp, couverture exposée) ; aucun choix imposé, aucun poste adverse attribué, matchups et synergies signalés comme non disponibles (#39).

@@ -1,4 +1,6 @@
 mod api_access;
+mod build_patch;
+mod catalog;
 mod desktop;
 mod diagnostics;
 mod friends;
@@ -83,6 +85,8 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
     builder
+        .manage(catalog::CatalogService::default())
+        .register_asynchronous_uri_scheme_protocol("catalog", catalog::protocol)
         .manage(diagnostics::DiagnosticsState::default())
         .manage(Arc::new(Mutex::new(LcuSession::default())))
         .manage(api_access::ApiState::default())
@@ -156,6 +160,10 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            catalog::catalog_state,
+            catalog::catalog_sync,
+            catalog::catalog_read,
+            build_patch::build_patch_context,
             friends::friends_state,
             live::live_session,
             live::live_custom_role,

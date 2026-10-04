@@ -32,6 +32,10 @@
     "allow-export-diagnostics",
     "allow-api-access-status",
     "allow-save-api-access",
-    "allow-clear-api-access"
+    "allow-clear-api-access",
+    "allow-build-patch-context",
+    "allow-catalog-state",
+    "allow-catalog-read",
+    "allow-catalog-sync"
   ]
 }

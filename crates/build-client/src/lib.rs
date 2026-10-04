@@ -1,7 +1,9 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
 pub mod credentials;
+pub mod desktop_catalog;
 mod observations;
+pub mod static_versions;
 pub use observations::{BuildDetails, BuildSummary, ItemObservation, SkillObservation};
 pub mod profiles;
 pub mod publications;

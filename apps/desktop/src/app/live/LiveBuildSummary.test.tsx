@@ -34,7 +34,7 @@ it('choisit la variante la plus jouée, limite à six objets sans ordre d’acha
   expect(html).toContain('Insufficient sample');
   expect(html).toContain('Bard');
   expect(html).toContain('Support');
-  expect(html).toContain('16.19');
+  expect(html).toContain('26.19');
   expect(html).toContain('EUW1');
   expect(html).not.toMatch(/<(button|input|select|a|form|ol)\b/);
 });

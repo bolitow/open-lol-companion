@@ -1,6 +1,6 @@
 # Patch du client LoL — #93 (cœur Rust)
 
-Le desktop peut lire la version du jeu installée dans le client League au lieu de la déduire du catalogue embarqué. La lecture Rust et l’affichage dans les réglages sont disponibles. Le choix du patch des requêtes, le recoupement avec le manifeste et le repli restent dans #93.
+Le desktop peut lire la version du jeu installée dans le client League au lieu de la déduire du catalogue embarqué. La lecture Rust et l’affichage dans les réglages sont disponibles. Le choix du patch des requêtes, le recoupement avec le manifeste et le repli sont décrits ci-dessous.
 
 ## Contrat
 
@@ -30,3 +30,19 @@ desktop, sans tenter de découvrir League. La paire majeure/mineure de la versio
 La première recette macOS avait renvoyé `invalid_response` : la limite de 64 caractères rejetait le suffixe légitime. La correction est couverte par le format observé, les bornes, les suffixes corrompus et la cohérence Rust/interface. Aucun patch de remplacement n’est inventé.
 
 Après correction, recette native macOS du 4 octobre 2026 : la carte des réglages affiche **26.19** depuis le client ouvert, et conserve cette valeur après actualisation manuelle. Windows reste à vérifier.
+
+## Choix du patch statistique — lot desktop #93
+
+`build_patch_context` lit en Rust, en parallèle, la version LCU et une projection bornée de `/v1/static/manifest` sur l’origine API configurée. Les erreurs sont indépendantes : une panne du manifeste ne remplace pas le patch connu du client. La fenêtre principale et l’overlay passif ne reçoivent que versions et codes publics.
+
+Le store partagé relit au démarrage, à une nouvelle session/draft, à une sélection ou modification des filtres et sur une publication serveur. Les lectures simultanées sont mutualisées, les réponses invalidées ignorées ; aucun polling. Les quatre usages (préparation, fiche champion, imports et live) partagent cette résolution. `live_version` n’est pas une preuve du patch installé sur une plateforme : le serveur le calcule actuellement depuis EUW, donc il ne remplace jamais une lecture client manquante. Sans client, la référence embarquée est explicitement indiquée ; sans manifeste, le patch connu est demandé mais sa disponibilité reste non confirmée.
+
+Les versions statiques du manifeste sont triées numériquement : version demandée si connue, sinon version antérieure la plus proche, jamais future. Elles ne prouvent pas qu’un groupe statistique existe. Si une réponse valide ne contient aucune variante, résumé ni observation, une seule lecture supplémentaire sur le patch antérieur est autorisée, avec exactement les mêmes champion/région/file/poste/rang. Si elle aussi est vide, le résultat courant vide est conservé. Aucun repli sur une erreur réseau, d’authentification ou de contrat. L’interface annonce le patch effectivement consulté au format public et tout repli.
+
+Les imports communautaires manuels et automatiques ne sont permis que lorsque patch client, patch résolu, catalogue embarqué et rapport correspondent, avec manifeste confirmé. Les imports automatiques ne consultent jamais le patch précédent et un import déjà envoyé n’est pas répété après publication. Un catalogue d’un autre patch reste consultable avec avertissement, sans prétendre fournir les détails actuels.
+
+Ce lot ne ferme pas #93 : régénération atomique et téléchargement des catalogues/effets/icônes/séries, suppression des alias `latest` et manifeste régional côté serveur restent distincts. Le contrôle de compatibilité porte ici sur le patch majeur.mineur, pas une attestation de fraîcheur de chaque asset. La recette Windows et les changements de patch sur un vrai service publié restent nécessaires.
+
+## Catalogue actualisable
+
+Le lot suivant ajoute la distribution d’instantanés, la reprise et l’activation native du catalogue : voir [le contrat et l’exploitation](catalogue-desktop.md). Les versions effectives du catalogue activé remplacent les références embarquées dans les contrôles d’import. Les autres familles d’assets et la recette Windows restent suivies dans #93.

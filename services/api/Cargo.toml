@@ -9,6 +9,7 @@ rust-version = "1.80"
 publish = false
 
 [dependencies]
+olc-catalog-cache = { path = "../../crates/catalog-cache" }
 olc-collector = { path = "../collector" }
 axum = { version = "0.8.9", features = ["ws"] }
 serde.workspace = true
@@ -24,6 +25,7 @@ dotenvy = "0.15"
 tower-http = { version = "0.6", features = ["cors"] }
 
 [dev-dependencies]
+tempfile = "3"
 tower = { version = "0.5", features = ["util"] }
 tokio-tungstenite.workspace = true
 olc-collector = { path = "../collector", features = ["test-fixtures"] }

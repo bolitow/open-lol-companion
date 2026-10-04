@@ -648,3 +648,121 @@ async fn accepte_des_omissions_partiellement_connues_sans_total_invente() {
     assert_eq!(result.unwrap().details.omitted_build_variants, None);
     job.await.unwrap();
 }
+
+#[tokio::test]
+async fn manifeste_statique_borne_et_valide_les_versions() {
+    let (url, job) = server(vec![(
+        200,
+        json!({"live_version":"16.20.1","versions":["16.20.1","16.19.1"],"catalogs":{}}),
+    )])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let result = client.static_versions().await.unwrap();
+    assert_eq!(result.versions, vec!["16.20.1", "16.19.1"]);
+    assert!(job.await.unwrap()[0].starts_with("GET /v1/static/manifest "));
+    for value in [
+        json!({"live_version":"bad","versions":[]}),
+        json!({"live_version":"16.20.1","versions":["../secret"]}),
+    ] {
+        let (url, job) = server(vec![(200, value)]).await;
+        let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+        assert!(matches!(
+            client.static_versions().await,
+            Err(BuildError::InvalidResponse)
+        ));
+        job.await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn catalogue_refuse_une_autre_release_et_un_manifeste_altere() {
+    use olc_catalog_cache::*;
+    let mut m = Manifest {
+        schema_version: 1,
+        version: "16.20.1".into(),
+        normalizer_version: 3,
+        snapshot_id: String::new(),
+        files: std::collections::BTreeMap::from([(
+            "test.json".into(),
+            FileEntry {
+                bytes: 2,
+                sha256: digest(b"{}"),
+                media_type: "application/json".into(),
+            },
+        )]),
+    };
+    m.snapshot_id = snapshot_id(&m).unwrap();
+    let (url, job) = server(vec![(200, serde_json::to_value(&m).unwrap())]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    assert!(matches!(
+        client.catalog_manifest("16.19.1", None).await,
+        Err(BuildError::InvalidResponse)
+    ));
+    job.await.unwrap();
+    m.files.get_mut("test.json").unwrap().bytes = 3;
+    let (url, job) = server(vec![(200, serde_json::to_value(&m).unwrap())]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    assert!(matches!(
+        client.catalog_manifest("16.20.1", None).await,
+        Err(BuildError::InvalidResponse)
+    ));
+    job.await.unwrap();
+}
+#[tokio::test]
+async fn catalogue_verifie_les_octets_et_le_chemin() {
+    use olc_catalog_cache::*;
+    let f = FileEntry {
+        bytes: 2,
+        sha256: digest(b"{}"),
+        media_type: "application/json".into(),
+    };
+    let (url, job) = server(vec![(200, json!({}))]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    assert_eq!(
+        client
+            .catalog_file(&"a".repeat(64), "test.json", &f)
+            .await
+            .unwrap(),
+        b"{}"
+    );
+    assert!(matches!(
+        client
+            .catalog_file(&"a".repeat(64), "../bad.json", &f)
+            .await,
+        Err(BuildError::InvalidRequest)
+    ));
+    job.await.unwrap();
+}
+#[tokio::test]
+async fn reprise_du_catalogue_ne_redemande_pas_un_fichier_verifie() {
+    use olc_catalog_cache::*;
+    let dir = tempfile::tempdir().unwrap();
+    let mut cache = Cache::open(dir.path()).unwrap();
+    let a = FileEntry {
+        bytes: 2,
+        sha256: digest(b"{}"),
+        media_type: "application/json".into(),
+    };
+    let b = FileEntry {
+        bytes: 7,
+        sha256: digest(b"{\"b\":1}"),
+        media_type: "application/json".into(),
+    };
+    cache.put(&a, b"{}").unwrap();
+    let mut m = Manifest {
+        schema_version: 1,
+        version: "16.20.1".into(),
+        normalizer_version: 3,
+        snapshot_id: String::new(),
+        files: std::collections::BTreeMap::from([("a.json".into(), a), ("b.json".into(), b)]),
+    };
+    m.snapshot_id = snapshot_id(&m).unwrap();
+    let (url, job) = server(vec![(200, json!({"b":1}))]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    client.download_catalog(&mut cache, &m).await.unwrap();
+    assert!(cache.verify(&m).is_ok());
+    assert!(cache.active().unwrap().is_none());
+    let requests = job.await.unwrap();
+    assert_eq!(requests.len(), 1);
+    assert!(requests[0].contains("/b.json"));
+}

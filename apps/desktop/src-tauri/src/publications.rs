@@ -48,7 +48,9 @@ fn apply(app: &tauri::AppHandle, generation: u64, event: PublicationEvent) {
         return;
     };
     if accept(&mut current, generation, event) {
-        let _ = app.emit_to("main", STATE_EVENT, current.1.clone());
+        for window in ["main", "game-overlay"] {
+            let _ = app.emit_to(window, STATE_EVENT, current.1.clone());
+        }
     }
 }
 
@@ -67,7 +69,9 @@ pub fn restart(
         let mut current = state.0.lock().ok()?;
         let (generation, changed) = reset(&mut current);
         if changed {
-            let _ = app.emit_to("main", STATE_EVENT, current.1.clone());
+            for window in ["main", "game-overlay"] {
+                let _ = app.emit_to(window, STATE_EVENT, current.1.clone());
+            }
         }
         generation
     };
@@ -101,7 +105,7 @@ mod tests {
             .as_array()
             .unwrap()
             .contains(&permission));
-        assert!(!overlay["permissions"]
+        assert!(overlay["permissions"]
             .as_array()
             .unwrap()
             .contains(&permission));

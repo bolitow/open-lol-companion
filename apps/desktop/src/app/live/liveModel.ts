@@ -1,13 +1,13 @@
 import {rankForQueue} from '../buildRanks';
 import type {BuildRequest, LiveSession} from '@olc/shared';
-import championIndex from '../../../public/game-data/champions.json';
+import {catalogRuntime,championImage} from '../catalogRuntime';
 import type {Locale} from '../state';
 
 export function liveChampion(session: LiveSession | null, locale: Locale): {id: number; name: string; image: string} | null {
   if (session?.status !== 'ready' || !session.game) return null;
   const key = session.game.player.championKey.replace(/^game_character_displayname_/, '');
-  const champion = Object.entries(championIndex).find(([, entry]) => entry.key === key);
-  return champion ? {id: Number(champion[0]), name: champion[1][locale], image: `/game-data/champions/${champion[0]}.jpg`} : null;
+  const champion = Object.entries(catalogRuntime.getSnapshot().index).find(([, entry]) => entry.key === key);
+  return champion ? {id: Number(champion[0]), name: champion[1][locale], image: championImage(Number(champion[0]))} : null;
 }
 
 /** Le contexte provient de la draft réelle ; aucun poste ni file par défaut. */

@@ -68,6 +68,23 @@ impl ApiState {
         current.client.clone()
     }
 
+    /// Le commit du catalogue partage le verrou avec le remplacement de configuration.
+    pub(crate) fn with_current_client<T>(
+        &self,
+        client: &Arc<BuildClient>,
+        commit: impl FnOnce() -> Result<T, &'static str>,
+    ) -> Result<T, &'static str> {
+        let current = self.current.read().map_err(|_| "catalog_changed")?;
+        if !current
+            .client
+            .as_ref()
+            .is_ok_and(|active| Arc::ptr_eq(active, client))
+        {
+            return Err("catalog_changed");
+        }
+        commit()
+    }
+
     async fn status(&self) -> ApiAccessView {
         self.wait_loaded().await;
         let current = self.current.read().unwrap_or_else(|e| e.into_inner());
@@ -213,6 +230,28 @@ mod tests {
     use super::*;
     use olc_build_client::credentials::ApiAccessSource;
 
+    #[test]
+    fn activation_catalogue_refuse_un_client_remplace_et_garde_le_verrou() {
+        let state = ApiState::default();
+        let (a, _) = state.replace(configured());
+        let a = a.unwrap();
+        assert_eq!(
+            state.with_current_client(&a, || {
+                assert!(state.current.try_write().is_err());
+                Ok(42)
+            }),
+            Ok(42)
+        );
+        state.replace(configured());
+        let called = std::cell::Cell::new(false);
+        assert!(state
+            .with_current_client(&a, || {
+                called.set(true);
+                Ok(())
+            })
+            .is_err());
+        assert!(!called.get());
+    }
     fn configured() -> LoadedAccess {
         LoadedAccess {
             client: BuildClient::new(

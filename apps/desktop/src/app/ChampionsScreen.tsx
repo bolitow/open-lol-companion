@@ -1,3 +1,4 @@
+import {championImage} from './catalogRuntime';
 import {useLayoutEffect,useRef} from 'react';
 import type {ChampionsState,Locale} from './state';
 import {Icon} from '../ui/Icon';
@@ -8,7 +9,7 @@ import './champions.css';
 export function ChampionTile({champion,locale,selected,onSelect}:{champion:ChampionSummary;locale:Locale;selected:boolean;onSelect:()=>void}){
  const t=championsCopy[locale];
  return <button className={`champion-tile ${selected?'selected':''}`} aria-pressed={selected} aria-label={`${champion.names[locale]} · ${t.open}`} onClick={onSelect}>
- <img src={`/game-data/champions/${champion.id}.jpg`} alt="" loading="lazy" width="308" height="560"/><span className="champion-tile-caption"><strong>{champion.names[locale]}</strong><small>{champion.categories.map(c=>t.classes[c as keyof typeof t.classes]).join(' · ')}</small></span>{selected&&<span className="champion-selected"><Icon name="check" size={15}/></span>}</button>;
+ <img src={championImage(champion.id)} alt="" loading="lazy" width="308" height="560"/><span className="champion-tile-caption"><strong>{champion.names[locale]}</strong><small>{champion.categories.map(c=>t.classes[c as keyof typeof t.classes]).join(' · ')}</small></span>{selected&&<span className="champion-selected"><Icon name="check" size={15}/></span>}</button>;
 }
 export function ChampionsScreen({locale,state,update}:{locale:Locale;state:ChampionsState;update:(patch:Partial<ChampionsState>)=>void}){
  const t=championsCopy[locale],grid=useRef<HTMLDivElement>(null),cards=findChampions(state.query,state.category,locale,state.descending),selected=championDirectory.champions.find(c=>c.id===state.selected);

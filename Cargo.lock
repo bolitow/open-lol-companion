@@ -1165,6 +1165,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "fs2"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9564fc758e15025b46aa6643b1b77d047d1a56a1aea6e01002ac0c7026876213"
+dependencies = [
+ "libc",
+ "winapi",
+]
+
+[[package]]
 name = "futures-channel"
 version = "0.3.34"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2774,11 +2784,13 @@ dependencies = [
  "dotenvy",
  "futures-util",
  "jsonwebtoken",
+ "olc-catalog-cache",
  "olc-collector",
  "serde",
  "serde_json",
  "sha2",
  "sqlx",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tokio-tungstenite 0.28.0",
@@ -2792,13 +2804,27 @@ version = "0.1.0"
 dependencies = [
  "futures-util",
  "keyring",
+ "olc-catalog-cache",
  "reqwest 0.12.28",
  "rustls",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
  "tokio-tungstenite 0.28.0",
  "webpki-roots",
+]
+
+[[package]]
+name = "olc-catalog-cache"
+version = "0.1.0"
+dependencies = [
+ "fs2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -2807,6 +2833,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "dotenvy",
+ "olc-catalog-cache",
  "olc-collector",
  "reqwest 0.12.28",
  "rustls",
@@ -2814,6 +2841,7 @@ dependencies = [
  "serde_json",
  "sha2",
  "sqlx",
+ "tempfile",
  "thiserror 2.0.21",
  "tokio",
  "tracing",
@@ -2831,7 +2859,9 @@ dependencies = [
  "objc2",
  "objc2-app-kit",
  "olc-build-client",
+ "olc-catalog-cache",
  "olc-desktop-support",
+ "percent-encoding",
  "serde",
  "serde_json",
  "tauri",

@@ -1,3 +1,4 @@
+import {championImage} from './catalogRuntime';
 import {playersCopy} from './playersCopy';
 import {playerPlatforms} from './playerStore';
 import {useEffect,useId,useRef,useState} from 'react';
@@ -11,7 +12,7 @@ export function ChampionSearch({locale,t,screen,onPage,onChampion,onPlayer}:{loc
  const c=championsCopy[locale],[query,setQuery]=useState(''),[open,setOpen]=useState(false),[active,setActive]=useState(0),input=useRef<HTMLInputElement>(null),id=useId();
  const champions=query.trim()?findChampions(query,'ALL',locale).slice(0,8):[];
  const pages=(Object.keys(t.navigation) as Screen[]).filter(p=>t.navigation[p].toLocaleLowerCase(locale).includes(query.trim().toLocaleLowerCase(locale)));
- const results=[...(query.includes('#')?[{key:'player-query',name:`${p.search} ${query.trim()}`,image:null,choose:()=>onPlayer(query,platform)}]:[]),...champions.map(champion=>({key:`c${champion.id}`,name:champion.names[locale],image:`/game-data/champions/${champion.id}.jpg`,choose:()=>onChampion(champion.id)})),...pages.map(page=>({key:page,name:t.navigation[page],image:null,choose:()=>onPage(page)}))];
+ const results=[...(query.includes('#')?[{key:'player-query',name:`${p.search} ${query.trim()}`,image:null,choose:()=>onPlayer(query,platform)}]:[]),...champions.map(champion=>({key:`c${champion.id}`,name:champion.names[locale],image:championImage(champion.id),choose:()=>onChampion(champion.id)})),...pages.map(page=>({key:page,name:t.navigation[page],image:null,choose:()=>onPage(page)}))];
  const choose=(index:number)=>{results[index]?.choose();setOpen(false);setQuery('');setActive(0)};
  useEffect(()=>{const handle=(event:KeyboardEvent)=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();input.current?.focus();setOpen(true)}};window.addEventListener('keydown',handle);return()=>window.removeEventListener('keydown',handle)},[]);
  useEffect(()=>{if(open&&results[active])document.getElementById(`${id}-${results[active].key}`)?.scrollIntoView({block:'nearest'})},[active,open,query,locale]);

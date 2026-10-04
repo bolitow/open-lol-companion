@@ -1,3 +1,6 @@
+import {publicClientPatch} from './clientPatch';
+import {useBuildPatch} from './useBuildPatch';
+import {BuildPatchNotice} from './BuildPatchNotice';
 import {rankLabel} from './buildRanks';
 import {usePreparation} from './PreparationContext';
 import {useSettings} from './SettingsContext';
@@ -29,7 +32,7 @@ function errorMessage(error: unknown, locale: Locale): string {
 export function Progress({progress,locale,label}:{progress:AutoImportProgress;locale:Locale;label:string}) {
     const t = messages[locale], metrics = progress.metrics, adjustments = progress.adjustments;
     return <div className="auto-import-progress"><strong>{label}</strong><span>{progress.status === 'error' ? errorMessage(progress.error,locale) : t[progress.status]}</span>
-        {progress.scope&&<small>{progress.scope.platform} · {buildCopy[locale].queues[progress.scope.queue as 420]??progress.scope.queue} · {buildCopy[locale].roles[progress.scope.role]} · {t.scope} {progress.scope.patch} · {rankLabel(progress.scope.rank,locale)}</small>}
+        {progress.scope&&<small>{progress.scope.platform} · {buildCopy[locale].queues[progress.scope.queue as 420]??progress.scope.queue} · {buildCopy[locale].roles[progress.scope.role]} · {t.scope} {publicClientPatch(progress.scope.patch)??progress.scope.patch} · {rankLabel(progress.scope.rank,locale)}</small>}
         {metrics && <small>{metrics.games} {t.games}{metrics.wins !== null && <> · {metrics.wins} {t.wins} · {t.observed} : {metrics.observedWinRate?.toLocaleString(locale,{maximumFractionDigits:1})}%</>}{metrics.lowSample && <> · {t.sample}</>}</small>}
         {adjustments?.converted ? <small>{t.converted(adjustments.converted)}</small> : null}{adjustments?.dropped ? <small>{t.dropped(adjustments.dropped)}</small> : null}</div>;
 }
@@ -51,7 +54,8 @@ export function AutoImportPanel({session,locale,native,visible=true}:{session:Lc
         send:request=>invoke<AutoImportReceipt>('import_selected_build',{request}),
     }),[]);
     const snapshot = useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);
-    const target = catalog && native && rankReady && syncedRole === (preferences.customRole??null) ? autoImportTarget(session,catalog,locale,preferences.customRole,{...preparation,customRole:preferences.customRole??null}) : null;
+    const patchChoice=useBuildPatch(catalog?.version??'',JSON.stringify([session.connected,session.draftId,session.draft?.allies.find(p=>p.local)?.championId,catalog?.version,preparation.platform,preparation.queue,preparation.rank,preparation.roleOverride,preferences.customRole]));
+    const target = catalog && native && rankReady && patchChoice.canImport && syncedRole === (preferences.customRole??null) ? autoImportTarget(session,catalog,locale,preferences.customRole,{...preparation,customRole:preferences.customRole??null}) : null;
     useEffect(()=>{
         let active = true; setCatalogError(false);setCatalog(null);
         void loadCatalog(locale).then(value=>{if(active)setCatalog(value);},()=>{if(active)setCatalogError(true);});
@@ -65,7 +69,7 @@ export function AutoImportPanel({session,locale,native,visible=true}:{session:Lc
     const enabled=(['runes','items','spells'] as const).filter(kind=>preferences[kind]);
     if (!visible) return null;
     return <details className="auto-import-panel"><summary>{t.title} · {enabled.length ? enabled.every(kind=>snapshot[kind].status==='confirmed') ? t.confirmed : t.active : t.disabled}</summary>
-        <p>{t.hint}</p><p>{t.singlePage}</p>{!native && <p>{t.desktop}</p>}
+        <BuildPatchNotice choice={patchChoice} locale={locale}/><p>{t.hint}</p><p>{t.singlePage}</p>{!native && <p>{t.desktop}</p>}
         <div className="auto-import-controls"><label><input type="checkbox" checked={preferences.runes} disabled={!native} onChange={e=>setPreferences(p=>({...p,runes:e.target.checked}))}/>{t.runes}</label>
         <label><input type="checkbox" checked={preferences.items} disabled={!native} onChange={e=>setPreferences(p=>({...p,items:e.target.checked}))}/>{t.items}</label>
         <label><input type="checkbox" checked={preferences.spells} disabled={!native} onChange={e=>setPreferences(p=>({...p,spells:e.target.checked}))}/>{t.spells}</label>
@@ -74,7 +78,7 @@ export function AutoImportPanel({session,locale,native,visible=true}:{session:Lc
         <label>{t.role}<select value={preferences.customRole??''} disabled={!native} onChange={e=>setPreferences(p=>({...p,customRole:e.target.value?e.target.value as Role:undefined}))}><option value="">{t.chooseRole}</option>{(['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'] as const).map(role=><option key={role} value={role}>{buildCopy[locale].roles[role]}</option>)}</select></label></div>
         {session.draft?.customGame && <p>{t.source}</p>}
         {import.meta.env.DEV && <small>{t.development}</small>}
-        {target && <p>{target.championName} · {buildCopy[locale].roles[target.request.role]} · {target.request.platform} · {buildCopy[locale].queues[target.request.queue as 400|420|440]} · {t.scope} {target.request.patch} · {rankLabel(target.request.rank,locale)}</p>}
+        {target && <p>{target.championName} · {buildCopy[locale].roles[target.request.role]} · {target.request.platform} · {buildCopy[locale].queues[target.request.queue as 400|420|440]} · {t.scope} {publicClientPatch(target.request.patch)??target.request.patch} · {rankLabel(target.request.rank,locale)}</p>}
         <div role="status" aria-live="polite"><Progress progress={snapshot.runes} locale={locale} label={t.runes}/><Progress progress={snapshot.items} locale={locale} label={t.items}/><Progress progress={snapshot.spells} locale={locale} label={t.spells}/></div>
         <p>{t.itemsHint}</p>
         {native && enabled.some(kind=>snapshot[kind].status==='error'||snapshot[kind].status==='empty') && <button onClick={controller.retry}>{t.retry}</button>}

@@ -15,7 +15,7 @@ it('présente les statistiques sans import ni réglage des sorts dans les deux l
     expect(html).toContain('50');
     expect(html).toContain('EUW1');
     expect(html).toContain('Support');
-    expect(html).toContain('16.19');
+    expect(html).toContain('26.19');
     expect(html).not.toMatch(/Importer|Import items|Import runes|Flash sur|Flash on/);
     expect(html).toContain(locale === 'fr' ? 'Échantillon insuffisant' : 'Insufficient sample');
   }

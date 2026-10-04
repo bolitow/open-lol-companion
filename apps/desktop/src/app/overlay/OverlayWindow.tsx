@@ -1,3 +1,5 @@
+import {useCatalogRuntime} from '../useCatalogRuntime';
+import {usePatchRefresh} from '../useBuildPatch';
 import {useCallback, useEffect, useRef} from 'react';
 import {invoke} from '@tauri-apps/api/core';
 import {useLiveSession} from '../live/useLiveSession';
@@ -8,6 +10,8 @@ import {createContentSizer} from './contentSize';
 /** Fenêtre passive : lecture de DTO locaux uniquement, aucune commande de configuration. */
 export function OverlayWindow() {
     const {state} = useOverlayState(), {session, error} = useLiveSession();
+    const catalog=useCatalogRuntime(String(session?.generation??'none'));
+    usePatchRefresh(String(session?.generation??'none'));
     const lastHeight = useRef(0), sizer = useRef<ReturnType<typeof createContentSizer> | null>(null);
     useEffect(() => {
         const current = createContentSizer(height => invoke('overlay_content_height', {height}));
@@ -20,5 +24,5 @@ export function OverlayWindow() {
         sizer.current?.update(height);
     }, []);
     useEffect(() => {if (state) document.documentElement.lang = state.preferences.locale;}, [state?.preferences.locale]);
-    return state ? <OverlayView onHeight={resize} state={state} session={error ? null : session}/> : null;
+    return state ? <OverlayView key={catalog.generation} onHeight={resize} state={state} session={error ? null : session}/> : null;
 }

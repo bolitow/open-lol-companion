@@ -49,3 +49,12 @@ export type BuildError =
     | 'invalid_response'
     | 'changed_snapshot'
     | 'desktop_required';
+
+/** Projection publique et bornée du manifeste, sans catalogue complet. */
+export interface StaticVersions {live_version:string;versions:string[]}
+export interface BuildPatchContext {
+ client:import('./gameflow').ClientPatch|null;
+ clientError:import('./gameflow').ClientPatchError|null;
+ manifest:StaticVersions|null;
+ manifestError:BuildError|null;
+}
