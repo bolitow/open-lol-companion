@@ -501,6 +501,71 @@ fn les_variantes_builds_sont_bornees_sans_modifier_leur_population() {
     assert_eq!(r.omitted_build_variants, 10); // cinq variantes dans ALL, cinq dans UNKNOWN.
 }
 
+fn spell_games(acc: &mut Accumulator, prefix: &str, first: u32, second: u32, count: u32) {
+    for n in 0..count {
+        let mut g = game(&format!("{prefix}{n}"));
+        let p = &mut g.detail["info"]["participants"][0];
+        p["summoner1Id"] = json!(first);
+        p["summoner2Id"] = json!(second);
+        acc.add(&g);
+    }
+}
+
+fn spell_selections(report: &super::AggregationReport) -> Vec<(Vec<u32>, u64)> {
+    report
+        .builds
+        .iter()
+        .filter(|b| {
+            b.key.rank == "ALL" && b.key.champion_id == 1 && b.category == "summoner_spells"
+        })
+        .map(|b| (b.selection.clone(), b.games))
+        .collect()
+}
+
+#[test]
+fn les_sorts_publient_l_orientation_d_f_majoritaire_meme_sans_flash() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Téléportation (12) en D, Fantôme (6) en F : majoritaire malgré l'ordre numérique,
+    // et une seule variante (paire non ordonnée) malgré les deux orientations.
+    spell_games(&mut acc, "EUW1_d", 6, 12, 1);
+    spell_games(&mut acc, "EUW1_e", 12, 6, 2);
+    assert_eq!(spell_selections(&acc.finish()), vec![(vec![12, 6], 3)]);
+}
+
+#[test]
+fn les_sorts_a_egalite_d_orientation_suivent_l_ordre_numerique() {
+    let mut acc = Accumulator::new(1).unwrap();
+    spell_games(&mut acc, "EUW1_f", 12, 6, 2);
+    spell_games(&mut acc, "EUW1_g", 6, 12, 2);
+    assert_eq!(spell_selections(&acc.finish()), vec![(vec![6, 12], 4)]);
+}
+
+#[test]
+fn l_orientation_majoritaire_s_applique_aussi_aux_paires_avec_flash() {
+    let mut acc = Accumulator::new(1).unwrap();
+    spell_games(&mut acc, "EUW1_h", 14, 4, 3);
+    spell_games(&mut acc, "EUW1_i", 4, 14, 1);
+    assert_eq!(spell_selections(&acc.finish()), vec![(vec![14, 4], 4)]);
+}
+
+#[test]
+fn l_orientation_ne_modifie_ni_le_classement_ni_les_compteurs_des_variantes() {
+    let mut acc = Accumulator::new(1).unwrap();
+    spell_games(&mut acc, "EUW1_j", 12, 6, 2);
+    spell_games(&mut acc, "EUW1_k", 4, 14, 3);
+    let r = acc.finish();
+    // Classement par effectif ; population commune aux deux paires.
+    assert_eq!(
+        spell_selections(&r),
+        vec![(vec![4, 14], 3), (vec![12, 6], 2)]
+    );
+    assert!(r
+        .builds
+        .iter()
+        .filter(|b| b.category == "summoner_spells" && b.key.rank == "ALL")
+        .all(|b| b.population == 5));
+}
+
 #[test]
 fn preserve_arena_trio_et_le_mode_pve_solo_sans_leur_inventer_des_adversaires() {
     let mut trio = game("EUW1_trio");

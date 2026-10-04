@@ -85,6 +85,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Builds : les sorts d’invocateur publient l’orientation D/F la plus fréquente observée pour chaque paire, avec ou sans Flash (ordre numérique à égalité), sans changer les effectifs ni le classement des variantes ; l’import sans Flash en profite (#124).
 - Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 

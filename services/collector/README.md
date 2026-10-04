@@ -268,7 +268,10 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 
 - `final_items` : ensemble trié d'items distincts des slots 0–5 ; `item` donne chaque
   item individuel, au plus une fois par participation ; `trinket` correspond au slot 6.
-- `summoner_spells` : paire d'identifiants, indépendante de l'ordre D/F.
+- `summoner_spells` : paire d'identifiants regroupée sans tenir compte de l'ordre D/F
+  (une seule variante par paire). L'ordre publié est l'orientation D/F la plus fréquente
+  parmi les parties de la variante (`summoner1Id` en D, `summoner2Id` en F), avec ou sans
+  Flash ; à égalité, l'ordre numérique. Cette orientation n'influence ni l'effectif ni le classement.
 - `runes` : 11 identifiants ordonnés — arbre principal, 4 runes principales, arbre
   secondaire, 2 runes secondaires, fragments offense/flex/défense.
 - `skill_order` : points Q/W/E/R normaux dans l'ordre temporel ; `special_skill_order`
