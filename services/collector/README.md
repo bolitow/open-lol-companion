@@ -236,12 +236,27 @@ inventé à partir des objets ou du rang.
 | `pick_rate` | Parties où le champion apparaît / `bucket_matches` × 100 (#84) : « présent dans la partie », même base que `bans` ; une partie compte une fois même si le champion y est en double, donc au plus 100 %. Défini par `pick_rate_definition` (`champion_matches / bucket_matches * 100`) |
 | `selection_share` | Participations du champion / population × 100 : part des sélections dans ce groupe, l'ancien `pick_rate` (#84), plafonnée à 50 % par rôle en 5v5 ; nulle avant #84 |
 | `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
+| `win_rate_upper_bound` | Borne supérieure de Wilson à 95 % du winrate (#91), publiée et masquée avec `win_rate_lower_bound` |
+| `pick_rate_lower_bound`, `pick_rate_upper_bound` | Intervalle de Wilson à 95 % du `pick_rate` (parties du champion sur `bucket_matches`, #91), nul quand le `pick_rate` l'est |
+| `reliability` | `low` si `games` < `reliability_floor` (30), sinon `sufficient` (#91). Calculé même quand `min_games` masque le taux ; absent d'un instantané antérieur |
 | `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file/rang de partie (#109) : matchs bannissant le champion / drafts complètes du même rang ; un double ban ne compte qu'une fois. Le rang `ALL` garde toutes les drafts ; chaque draft compte aussi sous le palier de sa partie |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
-visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
+visibles.
+
+Plancher de fiabilité (#91) : `reliability_floor` (constante de 30, publiée dans le rapport)
+est **indépendant de `min_games`**. `min_games` décide de la publication des taux ; le plancher
+signale qu'un taux publié repose sur un petit effectif. Avec `--min-games 1`, un champion à
+10 parties a donc un `win_rate`, un intervalle de Wilson large et `reliability: low`. Les
+bornes (`*_lower_bound`, `*_upper_bound`, 0–100) sont publiées pour le winrate et le pick rate
+des champions, le ban rate et le winrate des variantes de build (borne haute) ; elles sont
+nulles quand le taux correspondant l'est. L'effectif jugé est `games` pour un champion ou une
+variante et `draft_matches` pour un ban. Aucun instantané n'est refusé sous le plancher : le
+choix d'afficher, de marquer « test » ou de refuser la publication relève du client et du
+produit. Un instantané antérieur à #91 se relit avec `reliability_floor` à 0 et sans
+intervalle ni fiabilité. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
 Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances
 entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
 une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
@@ -300,6 +315,9 @@ partie que les picks (`rank_max_age_hours`). Ce palier est observé, jamais un M
   Ne jamais additionner `ALL` et un palier.
 - Le seuil `min_games` s'applique au dénominateur de chaque rang : un palier peu observé
   garde ses comptes mais un `ban_rate` nul.
+- Chaque ban publie (#91) `ban_rate_lower_bound` et `ban_rate_upper_bound` (Wilson 95 %, nuls
+  avec le taux) et `reliability` (`low` sous `reliability_floor` drafts du palier, même si
+  `min_games` autorise le taux).
 - `ban_rank_basis` (`match_median`) et `ban_rank_min_known_players` sont publiés dans le
   rapport ; la couverture ajoute `match_tier_matches` et `unknown_match_tier_matches`
   (parties Solo/Flex retenues avec ou sans palier). Un instantané antérieur se relit : ses
@@ -333,7 +351,8 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 - `item_events` : achats, ventes, destructions et annulations regroupés par minute.
 
 Chaque variante publie aussi `win_rate_lower_bound`, borne inférieure de Wilson à 95 %
-bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena).
+bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena), et depuis #91 `win_rate_upper_bound` (même règle)
+et `reliability` (`low` sous `reliability_floor` parties, y compris pour Arena où seul l'effectif est publié).
 
 ### Étapes d'achat (#81)
 

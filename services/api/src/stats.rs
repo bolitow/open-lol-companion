@@ -14,6 +14,9 @@ pub struct SnapshotMeta {
     pub published_at: String,
     pub schema_version: u32,
     pub min_games: u32,
+    /// Plancher de fiabilité (#91), indépendant de `min_games` : sous cet effectif, un taux est
+    /// signalé `low`. 0 pour un instantané antérieur, qui ne porte aucune fiabilité.
+    pub reliability_floor: u32,
     pub rank_scope: String,
     pub rank_max_age_hours: u32,
     /// Durée minimale (s) d'une partie classée (#111) ; 0 pour un instantané antérieur.
@@ -239,6 +242,7 @@ async fn load(
         published_at: row.try_get("published_at")?,
         schema_version: report.schema_version,
         min_games: report.min_games,
+        reliability_floor: report.reliability_floor,
         rank_scope: report.rank_scope.clone(),
         rank_max_age_hours: report.rank_max_age_hours,
         min_game_duration_s: report.min_game_duration_s,

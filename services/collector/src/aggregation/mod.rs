@@ -10,9 +10,9 @@ mod storage;
 
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
-    ItemCatalogRef, ItemEventStats, QualityThresholds, Role, ScopeCoverage, ScopeKey, SkillStats,
-    DEFAULT_MIN_GAME_DURATION_S, DEFAULT_MIN_PLAYED_PERCENT, DEFAULT_RANK_MAX_AGE_HOURS,
-    MAX_MIN_GAME_DURATION_S, MAX_RANK_MAX_AGE_HOURS,
+    ItemCatalogRef, ItemEventStats, QualityThresholds, Reliability, Role, ScopeCoverage, ScopeKey,
+    SkillStats, DEFAULT_MIN_GAME_DURATION_S, DEFAULT_MIN_PLAYED_PERCENT,
+    DEFAULT_RANK_MAX_AGE_HOURS, MAX_MIN_GAME_DURATION_S, MAX_RANK_MAX_AGE_HOURS, RELIABILITY_FLOOR,
 };
 pub use scheduler::run_periodic;
 pub use storage::{recalculate, recalculate_filtered, recalculate_with_quality};

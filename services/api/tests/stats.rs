@@ -433,6 +433,8 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["filters"], source["filters"]);
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
     assert_eq!(meta["min_games"], 100);
+    // Instantané antérieur à #91 : aucun plancher publié.
+    assert_eq!(meta["reliability_floor"], 0);
     assert_eq!(meta["rank_max_age_hours"], 168);
     assert_eq!(meta["min_game_duration_s"], 300);
     assert_eq!(meta["min_played_percent"], 80);
@@ -794,5 +796,75 @@ async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_
             Some(ApiError::InvalidRequest)
         );
     }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn l_api_expose_le_plancher_les_intervalles_et_la_fiabilite_sans_les_recalculer() {
+    let db = db_or_skip!();
+    let mut source = report();
+    source["reliability_floor"] = json!(30);
+    source["min_games"] = json!(1);
+    let intervals = json!({
+        "win_rate_lower_bound": 50.2, "win_rate_upper_bound": 69.1,
+        "pick_rate_lower_bound": 35.0, "pick_rate_upper_bound": 45.0,
+        "reliability": "sufficient"
+    });
+    for group in source["groups"].as_array_mut().unwrap() {
+        if group["champion_id"] == 3 && group["rank"] == "ALL" && group["role"] == "TOP" {
+            for (field, value) in intervals.as_object().unwrap() {
+                group[field] = value.clone();
+            }
+        }
+    }
+    for ban in source["bans"].as_array_mut().unwrap() {
+        if ban["rank"] == "GOLD" && ban["champion_id"] == 999 {
+            ban["ban_rate_lower_bound"] = json!(49.0);
+            ban["ban_rate_upper_bound"] = json!(95.0);
+            ban["reliability"] = json!("low");
+        }
+    }
+    for build in source["builds"].as_array_mut().unwrap() {
+        build["win_rate_upper_bound"] = json!(58.0);
+        build["reliability"] = json!("sufficient");
+    }
+    publish(db.storage.pool(), source).await;
+
+    let list = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(&list.meta).unwrap();
+    assert_eq!(meta["reliability_floor"], 30);
+    assert_eq!(meta["min_games"], 1);
+    let champion = serde_json::to_value(
+        list.entries
+            .iter()
+            .find(|e| e.key.champion_id == 3)
+            .unwrap(),
+    )
+    .unwrap();
+    for (field, value) in intervals.as_object().unwrap() {
+        assert_eq!(&champion[field], value, "{field}");
+    }
+    // Un groupe publié avant #91 reste lisible : aucune fiabilité inventée.
+    let legacy = list
+        .entries
+        .iter()
+        .find(|e| e.key.champion_id == 2)
+        .unwrap();
+    assert_eq!(legacy.reliability, None);
+    assert_eq!(legacy.win_rate_upper_bound, None);
+
+    let gold = bans(db.storage.pool(), bans_query()).await.unwrap();
+    let ban =
+        serde_json::to_value(gold.bans.iter().find(|b| b.champion_id == 999).unwrap()).unwrap();
+    assert_eq!(ban["ban_rate_lower_bound"], 49.0);
+    assert_eq!(ban["ban_rate_upper_bound"], 95.0);
+    assert_eq!(ban["reliability"], "low");
+
+    let detail = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(!detail.builds.is_empty());
+    assert!(detail.builds.iter().all(|b| {
+        let value = serde_json::to_value(b).unwrap();
+        value["win_rate_upper_bound"] == 58.0 && value["reliability"] == "sufficient"
+    }));
     db.cleanup().await;
 }

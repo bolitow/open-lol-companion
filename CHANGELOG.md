@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Plancher de fiabilité et intervalles de Wilson à 95 % publiés par le collecteur et l'API : `reliability_floor` (30 parties, indépendant de `min_games`), `reliability` (`low` ou `sufficient`) sur chaque champion, ban et variante de build, bornes basse et haute du winrate, du pick rate et du ban rate, masquées avec le taux sous le seuil ; les instantanés antérieurs se relisent sans fiabilité ; la borne haute et la fiabilité des variantes de build sont relayées par le client de builds du desktop, sans affichage à ce stade (#91).
+
 - Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).
 
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).

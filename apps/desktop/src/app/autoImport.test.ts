@@ -8,7 +8,7 @@ const session: LcuSession = {revision: 1, draftId:'draft-1', connected: true, ph
     account: {game_name: 'Player', tag_line: 'EUW', platform: 'EUW1'},
     draft: {supported: true, gameId: '123', queueId: 420, allySide: 'blue', allies: [{cellId: 0, championId: 432, locked: true, local: true, position: 'utility', acting: false}], enemies: [], allyBans: [], enemyBans: [], timer: null, localSpells: [4, 14]}};
 const target = (): AutoImportTarget => autoImportTarget(session, data, 'en')!;
-const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null,...change});
+const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null,win_rate_upper_bound:null,reliability:null,...change});
 const report = (builds = [variant()]): BuildReport => ({request:target().request,meta:{min_games:100,source_snapshot_at:'2026-10-02T08:00:00Z',published_at:'2026-10-02T08:01:00Z'},builds});
 const preferences = {runes:true,items:true,spells:false,minGames:1};
 function deferred<T>() {let resolve!:(value:T)=>void; const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve};}
