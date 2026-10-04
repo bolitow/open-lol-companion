@@ -629,6 +629,70 @@ fn la_priorite_et_le_depart_des_sorts_ont_leur_population_et_leurs_victoires() {
 }
 
 #[test]
+fn le_taux_conditionnel_rapporte_la_rune_a_sa_cle_de_voute_ou_a_son_arbre() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Clé 8005 : 50 parties dont 36 avec la rune 9111 à l'emplacement 1 ; clé 8010 : 10 parties.
+    for n in 0..60 {
+        let keystone = if n < 50 { 8005 } else { 8010 };
+        let mut g = with_runes(game(&format!("EUW1_cond{n}")), keystone, 5011, true);
+        if (36..50).contains(&n) {
+            g.detail["info"]["participants"][0]["perks"]["styles"][0]["selections"][1]["perk"] =
+                json!(9105);
+        }
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    let slot = rune_rows(&r, "rune_slot_1");
+    let row = |selection: &[u32]| {
+        *slot
+            .iter()
+            .find(|b| b.selection == selection)
+            .expect("ligne d'emplacement")
+    };
+    // 36 parties de la rune sous une clé à 50 parties.
+    assert_eq!(row(&[8005, 9111]).conditional_rate, Some(72.0));
+    assert_eq!(row(&[8005, 9105]).conditional_rate, Some(28.0));
+    assert_eq!(row(&[8010, 9111]).conditional_rate, Some(100.0));
+    // Le taux global existant reste calculé sur toutes les parties du groupe (60).
+    assert_eq!(row(&[8005, 9111]).pick_rate, Some(60.0));
+    assert_eq!(row(&[8005, 9111]).population, 60);
+    // Paire secondaire rapportée à son arbre secondaire (8200 : 60 parties).
+    let pairs = rune_rows(&r, "rune_secondary_pair");
+    assert_eq!(pairs.len(), 1);
+    assert_eq!(pairs[0].selection, vec![8200, 8224, 8234]);
+    assert_eq!(pairs[0].conditional_rate, Some(100.0));
+    assert_eq!(pairs[0].pick_rate, Some(100.0));
+    // Sans clé parente dans la structure : pas de taux conditionnel.
+    for category in [
+        "rune_keystone",
+        "rune_primary_style",
+        "rune_secondary_style",
+        "rune_shard_offense",
+        "rune_shard_flex",
+        "rune_shard_defense",
+        "runes",
+    ] {
+        assert!(
+            rune_rows(&r, category)
+                .iter()
+                .all(|b| b.conditional_rate.is_none()),
+            "{category}"
+        );
+    }
+}
+
+#[test]
+fn le_taux_conditionnel_est_nul_sans_denominateur() {
+    use super::model::conditional_rate;
+    assert_eq!(conditional_rate(36, Some(50), 1), Some(72.0));
+    // Clé de voûte (ou arbre) absente de la table des parents, ou dénominateur nul.
+    assert_eq!(conditional_rate(36, None, 1), None);
+    assert_eq!(conditional_rate(0, Some(0), 1), None);
+    // Sous le seuil minimal, comme le pick_rate.
+    assert_eq!(conditional_rate(4, Some(50), 5), None);
+}
+
+#[test]
 fn les_variantes_builds_sont_bornees_sans_modifier_leur_population() {
     let mut acc = Accumulator::new(1).unwrap();
     for n in 0..25 {
@@ -1069,6 +1133,7 @@ fn une_variante_publiee_avant_les_etapes_reste_lisible() {
         "category":"final_items","selection":[3031],"games":3,"wins":2,"performance_available":true,"population":3,"pick_rate":100.0,"win_rate":66.6});
     let build: super::BuildStats = serde_json::from_value(legacy).unwrap();
     assert_eq!(build.win_rate_lower_bound, None);
+    assert_eq!(build.conditional_rate, None);
     let mut coverage = serde_json::to_value(super::Coverage::default()).unwrap();
     for field in [
         "item_stage_participations",

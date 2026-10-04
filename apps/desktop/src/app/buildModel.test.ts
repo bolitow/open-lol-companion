@@ -27,7 +27,7 @@ function catalog(): CatalogRecord[] {
 function variant(changes: Partial<BuildStats> = {}): BuildStats {
     return {patch: '16.19', platform_id: 'EUW1', queue_id: 420, role: 'MIDDLE', rank: 'ALL', champion_id: 103,
         category: 'runes', selection: [...selection], games: 100, wins: 60, population: 200,
-        performance_available: true, pick_rate: 50, win_rate: 60, win_rate_lower_bound: null, win_rate_upper_bound: null, win_rate_delta: null, ...changes};
+        performance_available: true, pick_rate: 50, win_rate: 60, win_rate_lower_bound: null, win_rate_upper_bound: null, win_rate_delta: null, conditional_rate: null, ...changes};
 }
 function report(builds: BuildStats[]): BuildReport {
     return {request, meta: {source_snapshot_at: '2026-10-01T10:00:00Z', published_at: '2026-10-01T10:01:00Z', min_games: 100}, builds};

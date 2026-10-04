@@ -111,6 +111,9 @@ pub struct BuildVariant {
     /// Écart signé (points) au winrate du groupe champion (#112) ; absent des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_delta: Option<f64>,
+    /// Taux conditionnel des runes (#86), en pourcentage (0 à 100, comme `pick_rate`) ; absent des instantanés antérieurs.
+    #[serde(default)]
+    pub conditional_rate: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -136,6 +139,9 @@ impl BuildVariant {
             || self
                 .win_rate_delta
                 .is_some_and(|v| !v.is_finite() || !(-100.0..=100.0).contains(&v))
+            || self
+                .conditional_rate
+                .is_some_and(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
         {
             return Err(BuildError::InvalidResponse);
         }
@@ -145,6 +151,7 @@ impl BuildVariant {
             self.win_rate_lower_bound = None;
             self.win_rate_upper_bound = None;
             self.win_rate_delta = None;
+            self.conditional_rate = None;
         }
         if !self.performance_available {
             self.win_rate = None;

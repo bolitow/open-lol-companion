@@ -6,7 +6,7 @@ import {LiveBuilds} from './LiveBuilds';
 const report: BuildReport = {
   request: {patch: '16.19', platform: 'EUW1', queue: 420, role: 'UTILITY', rank: 'ALL', champion_id: 432},
   meta: {min_games: 100, published_at: '2026-10-01T12:00:00Z', source_snapshot_at: '2026-10-01T11:00:00Z'},
-  builds: [{patch: '16.19', platform_id: 'EUW1', queue_id: 420, role: 'UTILITY', rank: 'ALL', champion_id: 432, category: 'purchase_order', selection: [], games: 50, wins: 40, performance_available: true, population: 200, pick_rate: 25, win_rate: 80, win_rate_lower_bound: null, win_rate_upper_bound: null, win_rate_delta: null}],
+  builds: [{patch: '16.19', platform_id: 'EUW1', queue_id: 420, role: 'UTILITY', rank: 'ALL', champion_id: 432, category: 'purchase_order', selection: [], games: 50, wins: 40, performance_available: true, population: 200, pick_rate: 25, win_rate: 80, win_rate_lower_bound: null, win_rate_upper_bound: null, win_rate_delta: null, conditional_rate: null}],
 };
 
 it('présente les statistiques sans import ni réglage des sorts dans les deux langues', () => {
