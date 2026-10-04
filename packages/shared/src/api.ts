@@ -129,6 +129,15 @@ export interface Coverage {
    * `ranked_participations` ; vide hors Solo/Flex ou avant #82.
    */
   tier_participations: Record<string, number>;
+  /**
+   * Part des participations classées en Master, Grandmaster et Challenger parmi
+   * `tier_participations` (#82). Fraction entre 0 et 1, pas un pourcentage (contrairement à
+   * `unknown_rank_rate`, en %). Null sans participation classée ou avant l'indicateur de biais
+   * quand aucune répartition ne permet de la recalculer : l'API la recalcule sinon.
+   */
+  apex_share: number | null;
+  /** Vrai quand `apex_share` dépasse strictement 0,5 : l'échantillon de `ALL` est dominé par le haut du ladder. */
+  high_elo_biased: boolean;
   unranked_participations: number;
   unknown_rank_participations: number;
   unranked_mode_participations: number;

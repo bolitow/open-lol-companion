@@ -118,6 +118,7 @@ fn report() -> Value {
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
         "matches":100, "participations":1000, "excluded_bot_participations":0,
         "ranked_participations":500, "tier_participations":{"GOLD":300, "MASTER":200},
+        "apex_share":0.4, "high_elo_biased":false,
         "unranked_participations":0,
         "unknown_rank_participations":500, "unranked_mode_participations":0,
         "unknown_role_participations":0, "timeline_matches":80,
@@ -447,12 +448,55 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
         meta["coverage"][0]["tier_participations"],
         json!({"GOLD": 300, "MASTER": 200})
     );
+    // L'indicateur de biais Master+ est publié tel quel dans la couverture (#82).
+    assert_eq!(meta["coverage"][0]["apex_share"], 0.4);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"
     );
     assert_ne!(meta["source_snapshot_at"], meta["published_at"]);
     assert!(!meta["source_snapshot_at"].as_str().unwrap().is_empty());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_part_apex_est_servi_avec_l_indicateur_recalcule_depuis_les_paliers() {
+    // Instantané publié avec le premier commit de #82 : `tier_participations` sans indicateur.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    coverage.remove("apex_share");
+    coverage.remove("high_elo_biased");
+    coverage.insert("ranked_participations".into(), json!(100));
+    coverage.insert(
+        "tier_participations".into(),
+        json!({"GOLD": 8, "MASTER": 60, "GRANDMASTER": 20, "CHALLENGER": 12}),
+    );
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    let share = meta["coverage"][0]["apex_share"].as_f64().unwrap();
+    assert!((share - 0.92).abs() < 1e-9, "part apex servie : {share}");
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], true);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_repartition_ni_part_apex_reste_non_mesure_et_non_biaise() {
+    // Antérieur à #82 : ni `tier_participations` ni indicateur, rien à recalculer.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    for field in ["tier_participations", "apex_share", "high_elo_biased"] {
+        coverage.remove(field);
+    }
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    assert_eq!(meta["coverage"][0]["tier_participations"], json!({}));
+    assert_eq!(meta["coverage"][0]["apex_share"], Value::Null);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     db.cleanup().await;
 }
 

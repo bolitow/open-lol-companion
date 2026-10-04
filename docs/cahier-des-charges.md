@@ -352,7 +352,9 @@ proche du début, écart maximal configurable, 7 jours par défaut) et ne dépen
 l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.
 Correctif #82 (étape immédiate) : `ALL` est un échantillon collecté non repondéré, pas
 « tous les rangs » ; la couverture publie la répartition des participations par palier
-(`tier_participations`) et l'API l'étiquette `collected_sample`. La repondération et les
+(`tier_participations`) et l'API l'étiquette `collected_sample` ; un indicateur
+`apex_share` (part Master+) et `high_elo_biased` (au-delà de 0,5) signale le biais de haut
+du ladder en attendant une collecte équilibrée par palier. La repondération et les
 quotas de seeds proportionnels restent à décider.
 
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement

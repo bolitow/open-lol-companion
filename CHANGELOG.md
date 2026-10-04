@@ -6,7 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
-- Population « tous rangs » étiquetée honnêtement : la couverture de chaque périmètre publie la répartition des participations classées par palier observé (`tier_participations`), et l’API sert `population_label` (`collected_sample` pour `ALL`, échantillon collecté non repondéré sur le ladder) ; la clé `ALL` du contrat est conservée (#82).
+- Population « tous rangs » étiquetée honnêtement : la couverture de chaque périmètre publie la répartition des participations classées par palier observé (`tier_participations`), et l’API sert `population_label` (`collected_sample` pour `ALL`, échantillon collecté non repondéré sur le ladder) ; la clé `ALL` du contrat est conservée. Un indicateur de biais l’accompagne : `apex_share` (part, entre 0 et 1, des participations classées en Master, Grandmaster et Challenger) et `high_elo_biased` (vrai au-delà de 0,5 strict), en attendant une collecte équilibrée par palier ; l’API recalcule ces deux champs à la lecture d’un instantané publié avant l’indicateur mais déjà doté de `tier_participations` (#82).
 
 - Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).
 

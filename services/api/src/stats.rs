@@ -1,4 +1,5 @@
-//! Lecture des instantanés publiés par #18, sans recalcul ni mélange de populations.
+//! Lecture des instantanés publiés par #18, sans recalcul des taux ni mélange de populations.
+//! Seul l'indicateur de biais d'une couverture ancienne est complété à la lecture (#82).
 use crate::{
     error::ApiError,
     query::{BansQuery, StatsQuery},
@@ -56,7 +57,7 @@ pub enum PopulationLabel {
     UnrankedMode,
 }
 /// Dérive l'étiquette du `rank` validé ; `by_player` est faux pour les bans, rangés au palier
-/// de leur partie. Aucun seuil ni jugement sur la répartition : elle est publiée à côté.
+/// de leur partie. L'étiquette ne juge pas la répartition : elle est publiée à côté, avec son biais.
 fn population_label(rank: &str, by_player: bool) -> PopulationLabel {
     match rank {
         "ALL" => PopulationLabel::CollectedSample,
@@ -262,10 +263,15 @@ async fn load(
             }
         }
     }
-    let report: AggregationReport =
+    let mut report: AggregationReport =
         serde_json::from_value(value).map_err(|_| ApiError::Unavailable)?;
     if report.schema_version != 2 || report.min_games == 0 {
         return Err(ApiError::Unavailable);
+    }
+    // Un instantané publié avant l'indicateur de biais (#82) a sa répartition de paliers mais pas
+    // `apex_share` : le servir avec `null`/`false` le ferait passer pour non biaisé.
+    for coverage in &mut report.coverage {
+        coverage.counts.complete_tier_bias();
     }
     let meta = SnapshotMeta {
         source_snapshot_at: row.try_get("source_snapshot_at")?,
