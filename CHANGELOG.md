@@ -109,6 +109,12 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Set d’objets importé : uniquement des objets achetables du catalogue (`purchasable` et `in_store`) ; les formes évoluées, bottes de niveau 3 et objets de quête sont remplacés par l’objet achetable dont ils découlent, les autres sont retirés et signalés, et la variante entière est rejetée si le statut boutique d’un objet ou d’un maillon n’est pas lisible (#88).
+
+- Import du set d’objets : seuls l’ordre des achats et l’inventaire final sont importables (les catégories objet isolé et relique sont désactivées) ; le panneau d’import et le statut de l’import automatique affichent le nombre d’objets remplacés ou retirés (#88).
+
+- Cœur Rust de l’import d’objets : la table de conversion codée en dur disparaît, la conversion se fait côté interface avec le catalogue du patch (#88).
+
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
 
 - Compteur CS en partie : précision de la source LoL indiquée en FR/EN ; tests garantissant que chaque valeur reçue est transmise sans arrondi ni seuil de dix (#23).
