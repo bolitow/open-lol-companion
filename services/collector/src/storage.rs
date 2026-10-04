@@ -13,7 +13,7 @@ use sqlx::{Connection, Postgres, Row, Transaction};
 use thiserror::Error;
 
 use crate::config::{ConfigError, Division, RunParams, Tier};
-use crate::model::{Exclusion, LeagueEntry, MatchFacts, ParticipantRank, Scope};
+use crate::model::{Exclusion, LeagueEntry, MatchFacts, ParticipantRank, Scope, RANKED_QUEUE_IDS};
 
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations");
 
@@ -409,11 +409,13 @@ impl Storage {
         )
     }
 
-    /// Réserve le prochain travail exécutable. Les détails de parties ne sont plus
-    /// réservés une fois la cible atteinte (parties retenues + détails en cours), ni
-    /// tant qu'une découverte est en attente ou en cours : l'ordre d'alternance entre
-    /// joueurs ne dépend ainsi pas du moment où chaque historique arrive. Une découverte
-    /// en attente de nouvelle tentative ne bloque pas les détails.
+    /// Réserve le prochain travail exécutable. Les détails de parties passent avant les
+    /// rangs : un rang n'a d'intérêt que pour une partie déjà retenue, et il ne doit pas
+    /// consommer le budget d'appels qui servirait à télécharger davantage de parties (#90).
+    /// Les détails ne sont plus réservés une fois la cible atteinte (parties retenues +
+    /// détails en cours), ni tant qu'une découverte est en attente ou en cours : l'ordre
+    /// d'alternance entre joueurs ne dépend ainsi pas du moment où chaque historique
+    /// arrive. Une découverte en attente de nouvelle tentative ne bloque pas les détails.
     pub async fn claim_next(&self, run_id: i64, target: i64) -> Result<Option<Job>, StorageError> {
         let mut connection = self.transaction_connection().await?;
         let mut tx = connection.begin().await?;
@@ -435,7 +437,7 @@ impl Storage {
                             WHERE d.run_id = $1 AND d.kind IN ('seed_page', 'match_ids')
                               AND d.state IN ('pending', 'running'))))
              ORDER BY CASE j.kind WHEN 'seed_page' THEN 0 WHEN 'match_ids' THEN 1
-                                  WHEN 'timeline' THEN 2 WHEN 'participant_rank' THEN 3 ELSE 4 END,
+                                  WHEN 'timeline' THEN 2 WHEN 'participant_rank' THEN 4 ELSE 3 END,
                       j.sort_key, j.id
              LIMIT 1
              FOR UPDATE OF j SKIP LOCKED",
@@ -649,12 +651,30 @@ impl Storage {
 
     /// Colonnes d'une partie déjà en base.
     pub async fn find_match(&self, match_id: &str) -> Result<Option<MatchFacts>, StorageError> {
-        let row = sqlx::query(
+        self.find_facts("matches", match_id).await
+    }
+
+    /// Colonnes d'une partie déjà téléchargée puis exclue d'un périmètre (cache négatif).
+    pub async fn find_excluded_match(
+        &self,
+        match_id: &str,
+    ) -> Result<Option<MatchFacts>, StorageError> {
+        self.find_facts("excluded_matches", match_id).await
+    }
+
+    /// `table` est une constante interne (`matches` ou `excluded_matches`), jamais une
+    /// valeur externe : même structure de colonnes dans les deux tables.
+    async fn find_facts(
+        &self,
+        table: &'static str,
+        match_id: &str,
+    ) -> Result<Option<MatchFacts>, StorageError> {
+        let row = sqlx::query(&format!(
             "SELECT match_id, platform_id, queue_id, game_version, patch, game_duration_s,
                     is_remake, data_version,
                     round(extract(epoch FROM game_start) * 1000)::bigint AS start_ms
-             FROM matches WHERE match_id = $1",
-        )
+             FROM {table} WHERE match_id = $1"
+        ))
         .bind(match_id)
         .fetch_optional(&self.pool)
         .await?;
@@ -735,6 +755,39 @@ impl Storage {
         self.finish_job(job, exclusion.outcome(), calls).await
     }
 
+    /// Exclut une partie qui vient d'être téléchargée (un appel) et mémorise ses faits :
+    /// une autre exécution au même périmètre ne la retéléchargera pas (#90).
+    pub async fn exclude_downloaded_match(
+        &self,
+        job: &Job,
+        exclusion: Exclusion,
+        facts: &MatchFacts,
+    ) -> Result<(), StorageError> {
+        let mut connection = self.transaction_connection().await?;
+        let mut tx = connection.begin().await?;
+        sqlx::query(
+            "INSERT INTO excluded_matches
+                (match_id, platform_id, queue_id, game_version, patch, game_start,
+                 game_duration_s, is_remake, data_version)
+             VALUES ($1, $2, $3, $4, $5, to_timestamp($6::float8 / 1000), $7, $8, $9)
+             ON CONFLICT (match_id) DO NOTHING",
+        )
+        .bind(&facts.match_id)
+        .bind(&facts.platform_id)
+        .bind(facts.queue_id)
+        .bind(&facts.game_version)
+        .bind(&facts.patch)
+        .bind(facts.game_start_ms)
+        .bind(facts.game_duration_s)
+        .bind(facts.is_remake)
+        .bind(&facts.data_version)
+        .execute(&mut *tx)
+        .await?;
+        finish(&mut tx, job, exclusion.outcome(), 1).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Termine un travail sans autre écriture.
     pub async fn finish_job(
         &self,
@@ -747,6 +800,53 @@ impl Storage {
         finish(&mut tx, job, outcome, calls).await?;
         tx.commit().await?;
         Ok(())
+    }
+
+    /// Maintenance (#90) : ferme les demandes de rang encore en attente dont aucune partie
+    /// retenue n'est classée (files 420/440 hors remake). Celles créées avant le filtrage
+    /// par file consomment sinon du budget d'appels pour un rang jamais lu. Un joueur lié à
+    /// aucune partie lisible (détail purgé ou caviardé) est conservé : dans le doute, la
+    /// demande reste. `apply = false` compte sans rien modifier. Les travaux déjà terminés
+    /// ne sont pas touchés ; ceux fermés gardent leur trace (`skipped:unserved_queue`).
+    pub async fn close_unserved_rank_jobs(
+        &self,
+        run_id: Option<i64>,
+        apply: bool,
+    ) -> Result<u64, StorageError> {
+        const ELIGIBLE: &str = "j.kind = 'participant_rank'
+             AND j.state IN ('pending', 'retry_wait')
+             AND ($1::bigint IS NULL OR j.run_id = $1)
+             AND EXISTS (
+                 SELECT 1 FROM run_matches rm JOIN matches m ON m.match_id = rm.match_id
+                 WHERE rm.run_id = j.run_id
+                   AND m.detail -> 'metadata' -> 'participants' @> to_jsonb(j.job_key))
+             AND NOT EXISTS (
+                 SELECT 1 FROM run_matches rm JOIN matches m ON m.match_id = rm.match_id
+                 WHERE rm.run_id = j.run_id
+                   AND m.queue_id = ANY($2) AND NOT m.is_remake
+                   AND m.detail -> 'metadata' -> 'participants' @> to_jsonb(j.job_key))";
+        if !apply {
+            let count: i64 = sqlx::query_scalar(&format!(
+                "SELECT count(*) FROM collection_jobs j WHERE {ELIGIBLE}"
+            ))
+            .bind(run_id)
+            .bind(RANKED_QUEUE_IDS.as_slice())
+            .fetch_one(&self.pool)
+            .await?;
+            return Ok(count as u64);
+        }
+        let closed = sqlx::query(&format!(
+            "UPDATE collection_jobs j
+             SET state = 'done', outcome = 'skipped:unserved_queue', last_error = NULL,
+                 updated_at = now()
+             WHERE {ELIGIBLE}"
+        ))
+        .bind(run_id)
+        .bind(RANKED_QUEUE_IDS.as_slice())
+        .execute(&self.pool)
+        .await?
+        .rows_affected();
+        Ok(closed)
     }
 
     /// Cache des deux files de classement pendant 24 h ; aucune absence n'est inférée.
@@ -773,7 +873,7 @@ impl Storage {
     ) -> Result<(), StorageError> {
         let mut connection = self.transaction_connection().await?;
         let mut tx = connection.begin().await?;
-        for queue_id in [420, 440] {
+        for queue_id in RANKED_QUEUE_IDS {
             let rank = ranks.iter().find(|r| r.queue_id == queue_id);
             sqlx::query(
                 "INSERT INTO participant_rank_observations
