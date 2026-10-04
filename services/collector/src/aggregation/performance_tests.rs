@@ -254,10 +254,16 @@ fn une_participation_incomplete_reste_dans_le_denominateur_de_couverture() {
     let stats = top_one(&report, "ALL");
     assert_eq!((stats.participations, stats.games), (2, 1));
     assert_eq!(stats.kills, Some(1.0));
+    // Les paliers cumulés (#83) n'ont pas de moyennes : une ligne par population observée.
+    let observed = report
+        .groups
+        .iter()
+        .filter(|g| !crate::aggregation::CUMULATIVE_RANKS.contains(&g.key.rank.as_str()))
+        .count();
     assert_eq!(
         report.performance.len(),
-        report.groups.len(),
-        "une ligne par population de la tierlist"
+        observed,
+        "une ligne par population observée de la tierlist"
     );
 }
 
