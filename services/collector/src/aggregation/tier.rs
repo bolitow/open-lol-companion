@@ -41,7 +41,8 @@ pub(super) fn tier_method() -> String {
          scope and match rank for ALL, UNRANKED_MODE and ranked tiers, else 0; {} else D (absolute, \
          no forced distribution); tier requires pick_rate>={MIN_TIER_PICK_RATE} and at least \
          {MIN_TIER_CHAMPIONS} such champions in the bucket; position by score, then win rate, \
-         games, champion id; win_rate_lower_bound (Wilson95) published, not used",
+         games, champion id; Arena: position by ascending average placement, then games, \
+         champion id, no tier; win_rate_lower_bound (Wilson95) published, not used",
         thresholds.join(" ")
     )
 }

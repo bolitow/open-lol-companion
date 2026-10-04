@@ -1,14 +1,27 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
+use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
+use super::cumulative;
 use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::tier;
+
+/// Catégories de variantes publiées sur le placement moyen en Arena (#104). Liste
+/// positive et volontairement fermée : jamais d'objets ni d'augments (politique Riot).
+const ARENA_PLACEMENT_CATEGORIES: [&str; 4] = [
+    "runes",
+    "summoner_spells",
+    "skill_order",
+    "special_skill_order",
+];
 use super::AggregationError;
 use crate::model::patch_from_version;
+use crate::queues;
 
 /// Écart maximal par défaut entre le début de la partie et l'observation de rang retenue.
 pub const DEFAULT_RANK_MAX_AGE_HOURS: u32 = 168;
@@ -22,6 +35,9 @@ pub const DEFAULT_MIN_GAME_DURATION_S: u32 = 300;
 pub const MAX_MIN_GAME_DURATION_S: u32 = 900;
 /// Part minimale (%) de la durée d'une partie classée que chaque participant doit avoir jouée.
 pub const DEFAULT_MIN_PLAYED_PERCENT: u32 = 80;
+/// Plancher de fiabilité (#91) : sous cet effectif, un taux est signalé `low`. Constant et
+/// indépendant de `min_games`, qui ne décide que de la publication des taux.
+pub const RELIABILITY_FLOOR: u32 = 30;
 /// Files concernées par les contrôles de qualité : Solo/Duo et Flex.
 const QUALITY_QUEUES: [i32; 2] = [420, 440];
 
@@ -104,6 +120,7 @@ pub struct ChampionStats {
     /// au moins une participation ; 0 dans un instantané antérieur à #84.
     #[serde(default)]
     pub bucket_matches: u64,
+    /// Nul en Arena : le booléen `win` n'y désigne pas une première place (#104).
     pub win_rate: Option<f64>,
     /// Parties où le champion apparaît / `bucket_matches` × 100 (#84) : comparable au ban rate.
     pub pick_rate: Option<f64>,
@@ -111,11 +128,36 @@ pub struct ChampionStats {
     /// `pick_rate` ; nulle avant #84.
     #[serde(default)]
     pub selection_share: Option<f64>,
+    /// Nul en Arena, comme `win_rate`.
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % du winrate (#91), publiée avec le taux.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// Bornes de Wilson à 95 % du pick rate (#91), publiées avec le taux.
+    #[serde(default)]
+    pub pick_rate_lower_bound: Option<f64>,
+    #[serde(default)]
+    pub pick_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` parties du champion, quel que soit `min_games` ;
+    /// absent d'un instantané antérieur à #91.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
     pub position: Option<u32>,
     pub tier: Option<String>,
     /// Rang connu comptant le plus de sélections ; ce n'est pas un taux de popularité corrigé.
     pub most_picked_rank: Option<String>,
+    /// Arena : participations dont le placement de sous-équipe est valide ; 0 hors Arena.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena : placement moyen de la sous-équipe (1 = première), nul sous le seuil.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
+    /// Arena : part (%) des participations classées première, nulle sous le seuil.
+    #[serde(default)]
+    pub top1_rate: Option<f64>,
+    /// Arena : part (%) des participations classées première ou deuxième, nulle sous le seuil.
+    #[serde(default)]
+    pub top2_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -138,6 +180,33 @@ pub struct BanStats {
     pub banned_matches: u64,
     pub draft_matches: u64,
     pub ban_rate: Option<f64>,
+    /// Bornes de Wilson à 95 % du ban rate (#91), publiées avec le taux.
+    #[serde(default)]
+    pub ban_rate_lower_bound: Option<f64>,
+    #[serde(default)]
+    pub ban_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` drafts du palier, quel que soit `min_games`.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
+}
+
+/// Fiabilité d'un taux au regard de son effectif (#91), jamais d'un MMR ni d'une valeur cachée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Reliability {
+    /// Effectif inférieur à `RELIABILITY_FLOOR` : le taux est publié mais fragile.
+    Low,
+    Sufficient,
+}
+
+impl Reliability {
+    fn of(sample: u64) -> Self {
+        if sample < u64::from(RELIABILITY_FLOOR) {
+            Self::Low
+        } else {
+            Self::Sufficient
+        }
+    }
 }
 
 fn all_ranks() -> String {
@@ -159,6 +228,24 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#91), nulle comme la borne basse.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` parties de la variante, y compris sans performance publiable.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
+    /// Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique
+    /// pour toutes ses variantes ; nul dans un rapport antérieur, où le compte est inconnu.
+    #[serde(default)]
+    pub omitted_variants: Option<u32>,
+    /// Arena, variantes hors objets : participations au placement de sous-équipe valide
+    /// (#104) ; 0 hors Arena et pour les catégories d'objets.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena, variantes hors objets : placement moyen de la sous-équipe (1 = première),
+    /// nul sous le seuil, hors Arena et pour les catégories d'objets.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -212,12 +299,42 @@ pub struct Coverage {
     /// Parties Solo/Flex retenues sans palier de partie : moins de joueurs connus que le minimum.
     #[serde(default)]
     pub unknown_match_tier_matches: u64,
+    /// Début (ms Unix) de la plus ancienne partie incluse du périmètre (#103) ; nul si
+    /// l'instantané est antérieur ou si aucune partie n'est incluse.
+    #[serde(default)]
+    pub first_game_start_ms: Option<i64>,
+    /// Début (ms Unix) de la plus récente partie incluse : la vraie fraîcheur des données,
+    /// distincte de l'heure du calcul (#103).
+    #[serde(default)]
+    pub last_game_start_ms: Option<i64>,
     /// Participations dont les étapes d'achat (#81) ont été dérivées du catalogue du patch.
     #[serde(default)]
     pub item_stage_participations: u64,
     /// Participations à achats nets connus, sans catalogue d'objets publié pour leur patch.
     #[serde(default)]
     pub missing_item_catalog_participations: u64,
+    /// Participations Arena sans placement de sous-équipe valide (#104) ; comptées dans
+    /// `games` mais absentes des métriques de placement.
+    #[serde(default)]
+    pub unknown_placement_participations: u64,
+    /// Parties à deux camps (équipes 100 et 200, hors Arena) dont le côté a été compté (#119).
+    #[serde(default)]
+    pub blue_side_matches: u64,
+    /// Parmi elles, victoires de l'équipe bleue.
+    #[serde(default)]
+    pub blue_side_wins: u64,
+    /// Winrate du côté bleu (%), nul sous le seuil.
+    #[serde(default)]
+    pub blue_side_win_rate: Option<f64>,
+    /// Issue des parties selon l'équipe ayant pris le premier sang (#119).
+    #[serde(default)]
+    pub first_blood: FirstObjectiveStats,
+    /// Issue des parties selon l'équipe ayant pris le premier dragon.
+    #[serde(default)]
+    pub first_dragon: FirstObjectiveStats,
+    /// Issue des parties selon l'équipe ayant pris la première tour.
+    #[serde(default)]
+    pub first_tower: FirstObjectiveStats,
 }
 
 /// Version du catalogue normalisé (#61) jointe à un patch agrégé.
@@ -260,6 +377,9 @@ pub struct AggregationReport {
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub min_games: u32,
+    /// Plancher de fiabilité (#91), indépendant de `min_games` ; 0 pour un rapport antérieur.
+    #[serde(default)]
+    pub reliability_floor: u32,
     pub filters: AggregationOptions,
     pub source_matches: u64,
     pub included_matches: u64,
@@ -270,6 +390,9 @@ pub struct AggregationReport {
     pub builds: Vec<BuildStats>,
     pub skill_levels: Vec<SkillStats>,
     pub item_events: Vec<ItemEventStats>,
+    /// Winrate par tranche de durée et par côté (#119) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub splits: Vec<SplitStats>,
     pub max_build_variants_per_category: u32,
     pub omitted_build_variants: u64,
     /// Règles des catégories d'étapes (#81) ; vide dans les rapports antérieurs.
@@ -298,14 +421,20 @@ pub(super) struct StoredMatch {
     pub detail: Value,
     pub timeline: Option<Value>,
     pub ranks: BTreeMap<String, ObservedRank>,
+    /// Début de la partie (ms Unix), colonne `game_start` : même source que les filtres de fenêtre.
+    pub game_start_ms: i64,
 }
 
 type Population = (ScopeKey, Role, String);
 type BuildKey = (GroupKey, String, Vec<u32>);
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Count {
     games: u64,
     wins: u64,
+    placement_games: u64,
+    placement_sum: u64,
+    top1: u64,
+    top2: u64,
 }
 
 pub(super) struct Accumulator {
@@ -322,9 +451,14 @@ pub(super) struct Accumulator {
     /// Drafts complètes par périmètre et rang de la partie : dénominateur du ban rate.
     ban_drafts: BTreeMap<(ScopeKey, String), u64>,
     builds: BTreeMap<BuildKey, Count>,
+    /// Parties où la paire de sorts a été observée en ordre décroissant (case D > case F),
+    /// par paire triée ; l'autre orientation se déduit de `games` (#124).
+    inverted_spells: BTreeMap<(GroupKey, Vec<u32>), u64>,
     build_populations: BTreeMap<(GroupKey, String), u64>,
     skills: BTreeMap<(GroupKey, u32, u32), (u64, u128)>,
     events: BTreeMap<(GroupKey, String, u32, u32), u64>,
+    /// Parties et victoires par groupe et par tranche de durée ou côté (#119).
+    splits: BTreeMap<(GroupKey, SplitBucket), Count>,
     /// Écarts partie → observation des rangs retenus, en secondes, par périmètre.
     rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
     /// Catalogue d'objets par patch (« 16.19 »), joint pour dériver les étapes (#81).
@@ -349,6 +483,7 @@ impl Accumulator {
                 pick_rate_definition: "champion_matches / bucket_matches * 100".into(),
                 tier_method: tier::tier_method(),
                 min_games,
+                reliability_floor: RELIABILITY_FLOOR,
                 filters: AggregationOptions::default(),
                 source_matches: 0,
                 included_matches: 0,
@@ -359,6 +494,7 @@ impl Accumulator {
                 builds: vec![],
                 skill_levels: vec![],
                 item_events: vec![],
+                splits: vec![],
                 max_build_variants_per_category: 20,
                 omitted_build_variants: 0,
                 build_stage_method: STAGE_METHOD.into(),
@@ -373,9 +509,11 @@ impl Accumulator {
             bans: BTreeMap::new(),
             ban_drafts: BTreeMap::new(),
             builds: BTreeMap::new(),
+            inverted_spells: BTreeMap::new(),
             build_populations: BTreeMap::new(),
             skills: BTreeMap::new(),
             events: BTreeMap::new(),
+            splits: BTreeMap::new(),
             rank_gaps: BTreeMap::new(),
             item_catalogs: BTreeMap::new(),
         })
@@ -440,13 +578,42 @@ impl Accumulator {
         };
         // Politique Riot : aucun winrate d'item Arena dans le rapport publiable.
         // https://developer.riotgames.com/docs/lol#game-policy
-        if game.detail["info"]["gameMode"] == "CHERRY"
-            || [1700, 1710, 1740, 1750].contains(&game.queue_id)
-        {
+        let arena_game = is_arena(game);
+        if arena_game {
             self.arena_scopes.insert(scope.clone());
         }
         let coverage = self.coverage.entry(scope.clone()).or_default();
         coverage.matches += 1;
+        coverage.first_game_start_ms = Some(
+            coverage
+                .first_game_start_ms
+                .map_or(game.game_start_ms, |v| v.min(game.game_start_ms)),
+        );
+        coverage.last_game_start_ms = Some(
+            coverage
+                .last_game_start_ms
+                .map_or(game.game_start_ms, |v| v.max(game.game_start_ms)),
+        );
+        // Victoire du côté bleu : seulement pour deux camps réellement opposés (#119). La coop
+        // contre l'IA est exclue : les humains y occupent toujours le même camp.
+        let blue_won = (!arena_game && !is_coop(game.queue_id))
+            .then(|| blue_side_won(&participants))
+            .flatten();
+        if let Some(blue_won) = blue_won {
+            coverage.blue_side_matches += 1;
+            coverage.blue_side_wins += u64::from(blue_won);
+            for (stats, objective) in [
+                (&mut coverage.first_blood, "champion"),
+                (&mut coverage.first_dragon, "dragon"),
+                (&mut coverage.first_tower, "tower"),
+            ] {
+                if let Some(team) = context::first_team(&game.detail, objective) {
+                    let blue_first = team == context::BLUE_TEAM;
+                    stats.record(blue_first, blue_first == blue_won);
+                }
+            }
+        }
+        let duration_bucket = SplitBucket::from_duration_s(game.game_duration_s);
         // Rang des bans (#109) : médiane des paliers observés des joueurs de la partie.
         let max_age_s = u64::from(self.report.rank_max_age_hours) * 3600;
         let ban_rank = if QUALITY_QUEUES.contains(&game.queue_id) {
@@ -509,6 +676,9 @@ impl Accumulator {
             if p.role == Role::Unknown {
                 coverage.unknown_role_participations += 1;
             }
+            if arena_game && p.placement.is_none() {
+                coverage.unknown_placement_participations += 1;
+            }
             let mut observations = builds::extract_detail(&p.raw);
             if let Some(timeline) = &game.timeline {
                 let result = p.raw["participantId"]
@@ -542,7 +712,7 @@ impl Accumulator {
                     Err(_) => coverage.invalid_timeline_participations += 1,
                 }
             }
-            for rank in ["ALL".to_owned(), rank] {
+            for rank in ["ALL".to_owned(), rank.clone()] {
                 let key = GroupKey {
                     patch: game.patch.clone(),
                     platform_id: game.platform_id.clone(),
@@ -554,11 +724,42 @@ impl Accumulator {
                 let c = self.counts.entry(key.clone()).or_default();
                 c.games += 1;
                 c.wins += u64::from(p.win);
+                if let Some(placement) = p.placement {
+                    c.placement_games += 1;
+                    c.placement_sum += u64::from(placement);
+                    c.top1 += u64::from(placement == 1);
+                    c.top2 += u64::from(placement <= 2);
+                }
+                if blue_won.is_some() {
+                    let side = (key.rank == "ALL")
+                        .then(|| SplitBucket::from_team(p.team))
+                        .flatten();
+                    for bucket in duration_bucket.into_iter().chain(side) {
+                        let c = self.splits.entry((key.clone(), bucket)).or_default();
+                        c.games += 1;
+                        c.wins += u64::from(p.win);
+                    }
+                }
                 let bucket = (scope.clone(), p.role, rank);
                 *self.populations.entry(bucket.clone()).or_default() += 1;
                 seen_buckets.insert(bucket);
                 seen_champions.insert(key.clone());
-                self.add_builds(&key, p.win, &observations);
+                self.add_builds(&key, p.win, p.placement, &observations);
+            }
+            // Paliers cumulés (#83) : seules les parties distinctes se comptent ici, car une
+            // partie dont les joueurs ont des paliers différents ne compte qu'une fois dans
+            // « X et plus ». Les autres effectifs s'additionnent dans `finish`.
+            for plus in cumulative::containing(&rank) {
+                let key = GroupKey {
+                    patch: game.patch.clone(),
+                    platform_id: game.platform_id.clone(),
+                    queue_id: game.queue_id,
+                    role: p.role,
+                    rank: (*plus).to_owned(),
+                    champion_id: p.champion,
+                };
+                seen_buckets.insert((scope.clone(), p.role, key.rank.clone()));
+                seen_champions.insert(key);
             }
         }
         for bucket in seen_buckets {
@@ -569,7 +770,13 @@ impl Accumulator {
         }
     }
 
-    fn add_builds(&mut self, key: &GroupKey, win: bool, observations: &BuildObservation) {
+    fn add_builds(
+        &mut self,
+        key: &GroupKey,
+        win: bool,
+        placement: Option<u32>,
+        observations: &BuildObservation,
+    ) {
         for (category, selection) in &observations.variants {
             *self
                 .build_populations
@@ -581,6 +788,18 @@ impl Accumulator {
                 .or_default();
             c.games += 1;
             c.wins += u64::from(win);
+            if let Some(placement) = placement {
+                c.placement_games += 1;
+                c.placement_sum += u64::from(placement);
+            }
+            if category == "summoner_spells"
+                && matches!(observations.spell_slots, Some([d, f]) if d > f)
+            {
+                *self
+                    .inverted_spells
+                    .entry((key.clone(), selection.clone()))
+                    .or_default() += 1;
+            }
             if category == "final_items" {
                 *self
                     .build_populations
@@ -615,6 +834,28 @@ impl Accumulator {
 
     pub fn finish(mut self) -> AggregationReport {
         let minimum = u64::from(self.report.min_games);
+        // Paliers cumulés (#83) : les effectifs observés partitionnent les participations
+        // classées, donc ils s'additionnent. Les builds sont cumulés avant la coupe des
+        // variantes, sans multiplier les clés de l'accumulateur pendant la lecture des parties.
+        cumulative::extend(&mut self.counts, |k| &mut k.rank, merge_count);
+        cumulative::extend(&mut self.populations, |k| &mut k.2, |a, b| *a += b);
+        cumulative::extend(&mut self.bans, |k| &mut k.1, |a, b| *a += b);
+        cumulative::extend(&mut self.ban_drafts, |k| &mut k.1, |a, b| *a += b);
+        cumulative::extend(&mut self.builds, |k| &mut k.0.rank, merge_count);
+        cumulative::extend(
+            &mut self.build_populations,
+            |k| &mut k.0.rank,
+            |a, b| *a += b,
+        );
+        cumulative::extend(
+            &mut self.skills,
+            |k| &mut k.0.rank,
+            |a, b| {
+                a.0 += b.0;
+                a.1 += b.1;
+            },
+        );
+        cumulative::extend(&mut self.events, |k| &mut k.0.rank, |a, b| *a += b);
         let mut popular: BTreeMap<(ScopeKey, Role, u32), (u64, String)> = BTreeMap::new();
         for (key, c) in &self.counts {
             if is_ranked_tier(&key.rank) {
@@ -637,6 +878,14 @@ impl Accumulator {
                 let most_picked_rank = popular
                     .get(&(scope_of(&key), key.role, key.champion_id))
                     .map(|(_, r)| r.clone());
+                // Arena : le booléen `win` n'est pas une première place (#104). Aucun taux
+                // de victoire ni borne de Wilson ; le classement repose sur le placement.
+                let arena = self.arena_scopes.contains(&scope_of(&key));
+                let placement_rate = |n: u64| rate(n, c.placement_games, minimum);
+                let win = (!arena && c.games >= minimum).then(|| wilson_interval(c.wins, c.games));
+                let pick = rate(champion_matches, bucket_matches, minimum)
+                    .filter(|_| c.games >= minimum)
+                    .map(|_| wilson_interval(champion_matches, bucket_matches));
                 ChampionStats {
                     key,
                     games: c.games,
@@ -644,15 +893,28 @@ impl Accumulator {
                     losses: c.games - c.wins,
                     population,
                     bucket_matches,
-                    win_rate: rate(c.wins, c.games, minimum),
+                    win_rate: if arena {
+                        None
+                    } else {
+                        rate(c.wins, c.games, minimum)
+                    },
                     pick_rate: rate(champion_matches, bucket_matches, minimum)
                         .filter(|_| c.games >= minimum),
                     selection_share: rate(c.games, population, minimum)
                         .filter(|_| c.games >= minimum),
-                    win_rate_lower_bound: (c.games >= minimum).then(|| wilson(c.wins, c.games)),
+                    win_rate_lower_bound: win.map(|(lower, _)| lower),
+                    win_rate_upper_bound: win.map(|(_, upper)| upper),
+                    pick_rate_lower_bound: pick.map(|(lower, _)| lower),
+                    pick_rate_upper_bound: pick.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(c.games)),
                     position: None,
                     tier: None,
                     most_picked_rank,
+                    placement_games: c.placement_games,
+                    average_placement: (c.placement_games >= minimum && c.placement_games > 0)
+                        .then(|| c.placement_sum as f64 / c.placement_games as f64),
+                    top1_rate: placement_rate(c.top1),
+                    top2_rate: placement_rate(c.top2),
                 }
             })
             .collect();
@@ -698,13 +960,25 @@ impl Accumulator {
         scored.sort_by(|(sa, a), (sb, b)| {
             bucket(&a.key)
                 .cmp(&bucket(&b.key))
+                // Arena : placement moyen croissant (les non éligibles en dernier).
+                .then_with(|| {
+                    a.average_placement
+                        .unwrap_or(f64::INFINITY)
+                        .total_cmp(&b.average_placement.unwrap_or(f64::INFINITY))
+                })
                 .then_with(|| {
                     sb.unwrap_or(f64::NEG_INFINITY)
                         .total_cmp(&sa.unwrap_or(f64::NEG_INFINITY))
                 })
                 .then_with(|| {
-                    (u128::from(b.wins) * u128::from(a.games))
-                        .cmp(&(u128::from(a.wins) * u128::from(b.games)))
+                    // Arena : le booléen `win` n'est pas une première place, son ratio brut
+                    // ne départage donc jamais deux champions (effectif, puis id).
+                    if self.arena_scopes.contains(&scope_of(&a.key)) {
+                        Ordering::Equal
+                    } else {
+                        (u128::from(b.wins) * u128::from(a.games))
+                            .cmp(&(u128::from(a.wins) * u128::from(b.games)))
+                    }
                 })
                 .then_with(|| b.games.cmp(&a.games))
                 .then_with(|| a.key.champion_id.cmp(&b.key.champion_id))
@@ -719,8 +993,10 @@ impl Accumulator {
             }
         }
         let mut positions = BTreeMap::<Population, u32>::new();
+        // Un groupe Arena est classé sur son placement moyen (#104), les autres sur leur score (#85).
+        let rankable = |g: &ChampionStats| g.win_rate.is_some() || g.average_placement.is_some();
         for (score, g) in &mut scored {
-            if let Some(score) = score {
+            if rankable(g) {
                 let b = bucket(&g.key);
                 let position = positions.entry(b.clone()).or_default();
                 *position += 1;
@@ -728,7 +1004,7 @@ impl Accumulator {
                 if tier_eligible(g)
                     && eligible.get(&b).copied().unwrap_or(0) >= tier::MIN_TIER_CHAMPIONS
                 {
-                    g.tier = Some(tier::tier_letter(*score).into());
+                    g.tier = (*score).map(|score| tier::tier_letter(score).into());
                 }
             }
         }
@@ -738,13 +1014,18 @@ impl Accumulator {
             .into_iter()
             .map(|((scope, rank, champion_id), banned_matches)| {
                 let draft_matches = self.ban_drafts[&(scope.clone(), rank.clone())];
+                let ban_rate = rate(banned_matches, draft_matches, minimum);
+                let interval = ban_rate.map(|_| wilson_interval(banned_matches, draft_matches));
                 BanStats {
                     scope,
                     rank,
                     champion_id,
                     banned_matches,
                     draft_matches,
-                    ban_rate: rate(banned_matches, draft_matches, minimum),
+                    ban_rate,
+                    ban_rate_lower_bound: interval.map(|(lower, _)| lower),
+                    ban_rate_upper_bound: interval.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(draft_matches)),
                 }
             })
             .collect();
@@ -753,11 +1034,25 @@ impl Accumulator {
             .into_iter()
             .map(|((key, category, selection), c)| {
                 let population = self.build_populations[&(key.clone(), category.clone())];
-                let performance_available = !(self.arena_scopes.contains(&scope_of(&key))
-                    && (matches!(
-                        category.as_str(),
-                        "item" | "final_items" | "trinket" | "purchase_order"
-                    ) || STAGE_CATEGORIES.contains(&category.as_str())));
+                // Politique Riot : aucun taux de victoire d'objet en Arena, ni placement
+                // par objet, ni aucune statistique par augment. Seules les catégories
+                // listées explicitement (runes, sorts, ordre de compétences) sont
+                // publiées sur le placement moyen, le booléen `win` d'Arena n'étant
+                // pas une première place (#104). Liste positive : une catégorie
+                // nouvelle (objets, augments…) ne publie rien tant qu'elle n'y est pas.
+                let arena = self.arena_scopes.contains(&scope_of(&key));
+                debug_assert!(
+                    !ARENA_PLACEMENT_CATEGORIES.iter().any(|c| {
+                        matches!(*c, "item" | "final_items" | "trinket" | "purchase_order")
+                            || STAGE_CATEGORIES.contains(c)
+                    }),
+                    "aucune catégorie d'objets ne doit publier de placement en Arena"
+                );
+                let performance_available = !arena;
+                let placement_published =
+                    arena && ARENA_PLACEMENT_CATEGORIES.contains(&category.as_str());
+                let win = (performance_available && c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games));
                 BuildStats {
                     key,
                     category,
@@ -772,8 +1067,19 @@ impl Accumulator {
                     } else {
                         None
                     },
-                    win_rate_lower_bound: (performance_available && c.games >= minimum)
-                        .then(|| wilson(c.wins, c.games)),
+                    win_rate_lower_bound: win.map(|(lower, _)| lower),
+                    win_rate_upper_bound: win.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(c.games)),
+                    omitted_variants: None,
+                    placement_games: if placement_published {
+                        c.placement_games
+                    } else {
+                        0
+                    },
+                    average_placement: (placement_published
+                        && c.placement_games >= minimum
+                        && c.placement_games > 0)
+                        .then(|| c.placement_sum as f64 / c.placement_games as f64),
                 }
             })
             .collect();
@@ -781,11 +1087,42 @@ impl Accumulator {
             (&a.key, &a.category)
                 .cmp(&(&b.key, &b.category))
                 .then_with(|| b.games.cmp(&a.games))
+                // Arena : placement moyen croissant (non publié en dernier), neutre hors
+                // Arena ; `wins` est alors nul et ne départage plus rien.
+                .then_with(|| {
+                    a.average_placement
+                        .unwrap_or(f64::INFINITY)
+                        .total_cmp(&b.average_placement.unwrap_or(f64::INFINITY))
+                })
                 .then_with(|| b.wins.cmp(&a.wins))
                 .then_with(|| a.selection.cmp(&b.selection))
         });
+        // Effectif de chaque (groupe, catégorie) avant plafond : le compteur global additionne
+        // des groupes sans rapport entre eux, il ne dit rien de ce que voit une fiche (#113).
+        let mut totals = BTreeMap::<(GroupKey, String), u32>::new();
+        for build in &builds {
+            *totals
+                .entry((build.key.clone(), build.category.clone()))
+                .or_default() += 1;
+        }
+        let cap = self.report.max_build_variants_per_category;
         let mut variants = BTreeMap::<(GroupKey, String), u32>::new();
-        for build in builds {
+        for mut build in builds {
+            let total = totals[&(build.key.clone(), build.category.clone())];
+            build.omitted_variants = Some(total.saturating_sub(cap));
+            // La variante est comptée sur la paire triée, sans changer population ni
+            // classement ; seul l'ordre publié suit l'orientation D/F majoritaire.
+            // Égalité : ordre numérique, pas de préférence inventée.
+            if build.category == "summoner_spells" {
+                let inverted = self
+                    .inverted_spells
+                    .get(&(build.key.clone(), build.selection.clone()))
+                    .copied()
+                    .unwrap_or(0);
+                if inverted * 2 > build.games {
+                    build.selection.reverse();
+                }
+            }
             let n = variants
                 .entry((build.key.clone(), build.category.clone()))
                 .or_default();
@@ -818,6 +1155,20 @@ impl Accumulator {
                 events,
             })
             .collect();
+        self.report.splits = self
+            .splits
+            .into_iter()
+            .map(|((key, bucket), c)| SplitStats {
+                key,
+                dimension: bucket.dimension(),
+                bucket,
+                games: c.games,
+                wins: c.wins,
+                win_rate: rate(c.wins, c.games, minimum),
+                win_rate_lower_bound: (c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games).0),
+            })
+            .collect();
         let mut rank_gaps = self.rank_gaps;
         self.report.coverage = self
             .coverage
@@ -830,6 +1181,15 @@ impl Accumulator {
                 gaps.sort_unstable();
                 counts.rank_gap_median_hours = median(&gaps).map(|s| s / 3600.0);
                 counts.rank_gap_max_hours = gaps.last().map(|s| *s as f64 / 3600.0);
+                counts.blue_side_win_rate =
+                    rate(counts.blue_side_wins, counts.blue_side_matches, minimum);
+                for stats in [
+                    &mut counts.first_blood,
+                    &mut counts.first_dragon,
+                    &mut counts.first_tower,
+                ] {
+                    stats.finish(minimum);
+                }
                 ScopeCoverage { scope, counts }
             })
             .collect();
@@ -837,7 +1197,11 @@ impl Accumulator {
     }
 }
 
-fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
+fn merge_count(total: &mut Count, other: &Count) {
+    total.games += other.games;
+    total.wins += other.wins;
+}
+pub(super) fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
     (d >= min && d > 0).then(|| 100.0 * n as f64 / d as f64)
 }
 /// Médiane d'une liste triée ; moyenne des deux valeurs centrales si l'effectif est pair.
@@ -849,17 +1213,30 @@ fn median(sorted: &[u64]) -> Option<f64> {
         _ => Some((sorted[mid - 1] as f64 + sorted[mid] as f64) / 2.0),
     }
 }
-/// Borne inférieure de Wilson à 95 %, en pourcentage. Bornée à 0..=100 : pour 0 victoire,
-/// l'arrondi flottant donne parfois une valeur infime négative (≈ -1e-16), que le client
-/// desktop rejette avec toute la page.
-fn wilson(wins: u64, games: u64) -> f64 {
-    let n = games as f64;
-    let p = wins as f64 / n;
+/// Intervalle de Wilson à 95 % `(borne basse, borne haute)`, en pourcentage. Bornes dans
+/// 0..=100 : pour 0 victoire, l'arrondi flottant donne parfois une borne basse infime négative
+/// (≈ -1e-16), que le client desktop rejette avec toute la page ; symétriquement, 100 % peut
+/// dépasser 100 d'un résidu.
+fn wilson_interval(successes: u64, total: u64) -> (f64, f64) {
+    let n = total as f64;
+    let p = successes as f64 / n;
     let z = 1.959963984540054_f64;
     let z2 = z * z;
-    let bound = 100.0 * (p + z2 / (2.0 * n) - z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt())
-        / (1.0 + z2 / n);
-    bound.clamp(0.0, 100.0)
+    let center = p + z2 / (2.0 * n);
+    let margin = z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt();
+    let scale = 1.0 + z2 / n;
+    // Bornes exactes aux extrêmes : 0 succès → borne basse 0, tous succès → borne haute 100.
+    let lower = if successes == 0 {
+        0.0
+    } else {
+        100.0 * (center - margin) / scale
+    };
+    let upper = if successes == total {
+        100.0
+    } else {
+        100.0 * (center + margin) / scale
+    };
+    (lower.clamp(0.0, 100.0), upper.clamp(0.0, 100.0))
 }
 fn scope_of(key: &GroupKey) -> ScopeKey {
     ScopeKey {
@@ -908,6 +1285,48 @@ struct Participant {
     champion: u32,
     role: Role,
     win: bool,
+    /// Sous-équipe Arena (ou équipe), pour contrôler la cohérence des placements.
+    team: u32,
+    /// Placement de la sous-équipe en Arena (1 = première) ; nul si absent ou incohérent.
+    placement: Option<u32>,
+}
+/// Issue de l'équipe bleue ; nulle sans les deux camps ou si les deux ont le même résultat.
+fn blue_side_won(participants: &[Participant]) -> Option<bool> {
+    let outcome = |team| participants.iter().find(|p| p.team == team).map(|p| p.win);
+    let (blue, red) = (outcome(context::BLUE_TEAM)?, outcome(context::RED_TEAM)?);
+    (blue != red).then_some(blue)
+}
+fn is_arena(game: &StoredMatch) -> bool {
+    game.detail["info"]["gameMode"].as_str() == Some("CHERRY")
+        || queues::ARENA.contains(&game.queue_id)
+}
+/// Placement de sous-équipe : `subteamPlacement`, à défaut `placement` ; 0 signifie absent.
+fn placement_of(raw: &Value) -> Option<u32> {
+    ["subteamPlacement", "placement"]
+        .iter()
+        .find_map(|key| number(raw, key).filter(|v| *v > 0))
+}
+/// Les placements ne servent que si chaque sous-équipe a une valeur unique et que les
+/// sous-équipes occupent des places distinctes de 1 au nombre de sous-équipes ; sinon
+/// aucune n'est conservée (la partie reste comptée, sans classement inventé).
+fn placements_are_consistent(participants: &[Participant]) -> bool {
+    let mut by_team = BTreeMap::<u32, u32>::new();
+    for p in participants {
+        let Some(placement) = p.placement else {
+            return false;
+        };
+        if by_team
+            .insert(p.team, placement)
+            .is_some_and(|old| old != placement)
+        {
+            return false;
+        }
+    }
+    let distinct: BTreeSet<_> = by_team.values().collect();
+    distinct.len() == by_team.len()
+        && by_team
+            .values()
+            .all(|v| (1..=by_team.len() as u32).contains(v))
 }
 fn number(raw: &Value, key: &str) -> Option<u32> {
     raw[key].as_u64().and_then(|v| u32::try_from(v).ok())
@@ -981,16 +1400,15 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
     {
         return Err("invalid_match");
     }
+    // Une file hors des formats connus n'est jamais agrégée : exclusion explicite.
+    if !queues::is_identified(game.queue_id) {
+        return Err("unknown_queue");
+    }
     let raw = info["participants"].as_array().ok_or("invalid_match")?;
     let ranked = [420, 440].contains(&game.queue_id);
-    let standard = [
-        400, 420, 430, 440, 450, 480, 490, 700, 720, 830, 840, 850, 870, 880, 890, 900, 1020, 1300,
-        1400, 1900, 2300, 2400,
-    ]
-    .contains(&game.queue_id);
-    let arena = info["gameMode"].as_str() == Some("CHERRY")
-        || [1700, 1710, 1740, 1750].contains(&game.queue_id);
-    let swarm = [1810, 1820, 1830, 1840].contains(&game.queue_id);
+    let standard = queues::STANDARD.contains(&game.queue_id);
+    let arena = is_arena(game);
+    let swarm = queues::SWARM.contains(&game.queue_id);
     if !(1..=64).contains(&raw.len()) || (standard && raw.len() != 10) {
         return Err("invalid_match");
     }
@@ -1067,6 +1485,8 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
             champion,
             role,
             win,
+            team,
+            placement: arena.then(|| placement_of(p)).flatten(),
         });
     }
     if standard
@@ -1084,6 +1504,11 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
         };
         if team_sizes.len() < 2 || team_sizes.values().any(|n| *n != size) {
             return Err("invalid_match");
+        }
+    }
+    if arena && !placements_are_consistent(&participants) {
+        for p in &mut participants {
+            p.placement = None;
         }
     }
     if !arena && outcomes.len() == 2 && outcomes.values().all(|v| *v) {

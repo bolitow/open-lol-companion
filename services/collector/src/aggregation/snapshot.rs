@@ -23,6 +23,7 @@ struct Metadata<'a> {
     pick_rate_definition: &'a str,
     tier_method: &'a str,
     min_games: u32,
+    reliability_floor: u32,
     filters: &'a AggregationOptions,
     source_matches: u64,
     included_matches: u64,
@@ -51,6 +52,7 @@ pub(super) async fn publish(
         pick_rate_definition: &report.pick_rate_definition,
         tier_method: &report.tier_method,
         min_games: report.min_games,
+        reliability_floor: report.reliability_floor,
         filters: &report.filters,
         source_matches: report.source_matches,
         included_matches: report.included_matches,
@@ -80,6 +82,7 @@ pub(super) async fn publish(
     write_section(tx, "builds", &report.builds).await?;
     write_section(tx, "skill_levels", &report.skill_levels).await?;
     write_section(tx, "item_events", &report.item_events).await?;
+    write_section(tx, "splits", &report.splits).await?;
     Ok(())
 }
 

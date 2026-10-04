@@ -1,6 +1,6 @@
 # Cahier des charges — Open LoL Companion
 
-Version du 29/09/2026. Document de référence du projet ; la version de travail collaborative est tenue en parallèle et reportée ici à chaque changement important.
+Version du 29/09/2026, amendée le 04/10/2026 pour la conformité Riot (§2, §5.1, §5.5, §6, §8.4, §10.3 ; #79). Document de référence du projet ; la version de travail collaborative est tenue en parallèle et reportée ici à chaque changement important.
 
 ## 1. Contexte, objectifs et périmètre
 
@@ -26,11 +26,15 @@ Objectif : construire une application compagnon League of Legends gratuite et op
 
 ## 2. Cadre légal et conformité Riot
 
-La conformité Riot est la condition de survie du produit : une clé API révoquée coupe toutes les fonctions. Chaque fonctionnalité doit être validée contre la [Developer API Policy](https://support-developer.riotgames.com/hc/en-us/articles/22698698001939) avant développement.
+La conformité Riot est la condition de survie du produit : une clé API révoquée coupe toutes les fonctions. Chaque fonctionnalité doit être validée avant développement contre les textes primaires de Riot : la [Developer API Policy](https://developer.riotgames.com/docs/lol#developer-api-policy) (rubriques « Registration », « Monetization », « Security » et « Game Integrity », publiée sur la page docs/lol), les [politiques générales](https://developer.riotgames.com/policies/general) (rubriques « Core Policies », « Monetization » et « Game Integrity », mises à jour le 29/05/2025) et la [Game Policy de League of Legends](https://developer.riotgames.com/docs/lol#game-policy) (rubriques « Approved Use Cases » et « Unapproved Use Cases »). Ces pages ont été relues sur le texte d'origine le 04/10/2026 ; une lecture de seconde main (presse, résumé automatique, outil concurrent) ne suffit jamais à trancher. L'ancien lien de support (centre d'aide) vers la Developer API Policy n'a pas pu être relu et n'est pas la référence : c'est la version publiée sur docs/lol qui fait foi. La règle n°1 du projet (« information not present in the game client ») vient de la rubrique « Game Integrity » de cette Developer API Policy. En cas de doute, la fonction est suspendue jusqu'à une décision écrite de Riot, demandée via #2 et #30.
 
 **Interdit (bloquant)**
 
-- Utiliser une information absente du client de jeu qui donne un avantage (ex. cooldown des ultimes ennemis, interdit depuis le 13/03/2025).
+- Utiliser une information absente du client de jeu ou propre à la partie en cours que le joueur ne connaît pas, ce qui donne un avantage. Base primaire : Developer API Policy, rubrique « Game Integrity » ([docs/lol#developer-api-policy_game-integrity](https://developer.riotgames.com/docs/lol#developer-api-policy_game-integrity)) : « Products must not use or incorporate information not present in the game client that would give players a competitive edge (e.g., automatically or manually allowing tracking enemy ultimate cooldowns) ». La Game Policy exclut de plus toute « game-session-specific information that would be previously unknown to the player ». Exemples refusés : cooldowns des ultimes et des sorts adverses (cité en exemple par le texte ci-dessus ; la date du 13/03/2025, annoncée par Riot Developer Relations et relayée par la presse, n'est qu'un contexte de seconde main), camps de jungle non vus, or exact de l'adversaire non affiché par le client.
+- Afficher un taux de victoire d'augment (Arena ou Mayhem) ou d'objet du mode Arena, y compris sous forme de tier, de note ou de classement qui en dérive. La Game Policy précise que la règle s'applique à « all websites, applications and overlays » : site, app et overlay, en partie comme hors partie, tous modes. « Augment » n'y est pas qualifié par le mode, donc Mayhem est traité comme Arena.
+- Proposer une alternative au classement officiel : les politiques interdisent les calculateurs de MMR ou d'ELO. Aucune note, courbe ou comparaison ne repose sur un MMR estimé ou déduit.
+- Désanonymiser un joueur qui ne peut pas être identifié à partir de ce que le client montre (sélection des champions anonymisée, par exemple). Base : Developer API Policy, « Game Integrity » : « Products cannot identify or analyze players who are deliberately hidden by the game ».
+- Dicter ou supprimer des décisions de jeu : un produit peut mettre en évidence des décisions importantes et proposer plusieurs choix, jamais imposer l'unique bon geste ni agir à la place du joueur.
 - Automatiser des décisions de jeu, modifier l'objectif du jeu, créer un avantage déloyal.
 - Publicité tierce dans le client Riot, les écrans de chargement ou les overlays (politique de mai 2025).
 - Overlays imitant l'UI de Riot.
@@ -39,19 +43,33 @@ La conformité Riot est la condition de survie du produit : une clé API révoqu
 **Autorisé**
 
 - Riot Web API officielle, Data Dragon / CommunityDragon pour les assets.
-- League Client API (LCU) locale : tolérée mais non supportée officiellement, peut casser à chaque patch.
+- Overlays de données statiques disponibles avant la partie, statistiques agrégées sans joueur précis, statistiques et historique du joueur lui-même : ce sont des usages approuvés par la Game Policy. Les autres usages d'overlay en partie (probabilité de victoire, suggestions, benchmark) ne sont pas listés comme approuvés : ils passent par la validation de #30.
+- League Client API (LCU) locale : non supportée officiellement, peut casser à chaque patch ; Riot demande de déclarer son usage sur le Developer Portal (#2).
 - Live Client Data API (port 2999) pendant la partie.
 - Financement par dons ou crowdfunding.
 
 **Obligations administratives**
 
 - [ ] Enregistrer le produit sur le Riot Developer Portal et obtenir une clé de production.
-- [ ] Faire valider les overlays et le draft IA par Riot avant la sortie publique.
+- [ ] Faire valider les overlays et le draft IA par Riot avant la sortie publique (#30).
+- [ ] Obtenir une décision écrite de Riot sur les cas non tranchés par les textes (ci-dessous) avant tout développement qui en dépend (#2, #30).
 - [ ] Mention légale Riot (« isn't endorsed by Riot Games ») sur le site et l'app.
 - [ ] CGU, politique de confidentialité RGPD, mentions légales.
 - [ ] Vérifier la disponibilité du nom (INPI, domaine).
 
 Riot exige qu'un overlay ait une version gratuite : notre modèle étant entièrement gratuit, cette règle est respectée d'office.
+
+**Décisions de conformité (recoupées sur les textes Riot le 04/10/2026, ticket #79)**
+
+| Sujet | Décision | Base |
+| --- | --- | --- |
+| Taux d'augments (Arena, Mayhem) et d'objets Arena | Ni collectés, ni calculés, ni affichés (ni tiers, ni note). Jamais étendu aux objets Arena. | Game Policy, usages non approuvés |
+| Popularité seule d'un augment (taux de sélection, sans victoire) | Non couverte par le texte : suspendue jusqu'à décision écrite de Riot. D'ici là, données statiques seulement (nom, icône, description : #118). | Silence du texte, à soumettre via #2 |
+| Overlay en sélection d'augment (OCR) | Suspendu : aucun développement avant décision écrite (#45). Même autorisé, il n'afficherait que des données statiques, sans classement ni conseil. | Overlays statiques approuvés ; « dictate player decisions » refusé |
+| Lock, premades et recherche des joueurs en sélection | Voir §5.1 et §8.4. | Désanonymisation interdite (Developer API Policy, « Game Integrity » : joueurs « deliberately hidden by the game ») ; décisions de #4 |
+| Information cachée en partie | Refus des cooldowns adverses, camps non vus, or adverse exact, conseils tactiques en temps réel (§6). | Developer API Policy, « Game Integrity » (docs/lol#developer-api-policy_game-integrity) ; Game Policy |
+| MMR, ELO | Aucune estimation affichée, aucune note ni courbe « de niveau caché » (§10.3). | Politiques générales, « Game Integrity » |
+| Coaching vocal tactique par IA | Refusé tant que Riot ne l'a pas validé (zone grise : conseil en temps réel). | Game Policy, décisions dictées |
 
 ## 3. Architecture technique et stack Mac / Windows
 
@@ -163,11 +181,13 @@ Dès le début des bans, l'app propose le meilleur pick pour la composition et i
 
 **5.1 Vue draft en direct**
 
-- Bans et picks affichés en temps réel, chrono du tour en cours.
-- Bouton « Lock » visible uniquement quand c'est notre tour.
-- Glisser-déposer d'une carte de joueur vers un autre rôle (lane swap, autofill) → recalcul immédiat des suggestions.
-- Détection des premades, badges joueurs, pas de doublon avec les comptes anonymes.
+- Bans et picks affichés en temps réel, en lecture seule, chrono du tour en cours.
+- Aucun bouton « Lock » ni aucune action de pick, de ban ou de verrouillage envoyée au client : le joueur verrouille dans League. Retiré le 04/10/2026 (#79) : ce serait une action dans le client hors de la liste blanche du §5.4 (imports de runes, sorts et objets), et la décision de #4 ne l'exige pas.
+- Glisser-déposer d'une carte de joueur vers un autre rôle (lane swap, autofill) → recalcul immédiat des suggestions. C'est une correction locale à l'app : aucune action n'est envoyée au client.
+- Pas de détection de premades ni de badges joueurs pendant la sélection : en file classée, les autres joueurs y sont anonymisés et les retrouver reviendrait à contourner cette anonymisation. Premades et badges se limitent (1) au groupe du joueur, visible dans son propre lobby, (2) à la phase de chargement et à la partie, quand les identités sont publiques dans le client. Le point (2) reste suspendu à la validation de Riot (#30). Aucune déduction par croisement d'historiques.
 - Compte à rebours jusqu'à la partie une fois tous les picks verrouillés.
+
+**Anonymat de la sélection (règle bloquante)** : la vue draft n'expose ni identité (puuid, gameName, tagLine, pseudo d'invocateur), ni intention ou poste non publics des autres joueurs. Toute fonction de profil (multi-recherche, maîtrise, « joué récemment avec », rang d'un tiers) est déclenchée par une saisie manuelle du joueur ou par le compte actif, jamais par la sélection ni par la liste de ses participants. Voir [`rules/conformite-riot.md`](../rules/conformite-riot.md).
 
 **5.2 Suggestions IA**
 
@@ -189,7 +209,7 @@ Dès le début des bans, l'app propose le meilleur pick pour la composition et i
 | --- | --- | --- |
 | Page de runes | `/lol-perks/v1/pages` | Nommée « [Marque] : Champion », remplace l'ancienne page de l'app, pas deux secondaires de la même ligne |
 | Sorts d'invocateur | `/lol-champ-select/v1/session/my-selection` | Respect de la position Flash (D/F) choisie par l'utilisateur |
-| Set d'items | `/lol-item-sets/v1/item-sets/{summonerId}/sets` | Affiché en premier dans la boutique, items « larme » importés sous forme achetable |
+| Set d'items | `/lol-item-sets/v1/item-sets/{summonerId}/sets` | Affiché en premier dans la boutique, items non achetables (« larme », bottes de niveau 3, quêtes) importés sous forme achetable, ou retirés et signalés (#88) |
 
 - Import automatique ou manuel, activable séparément pour runes, sorts et items.
 - Parcours minimal #63 : une tentative par draft/champion/poste/catégorie ; le
@@ -204,7 +224,7 @@ Dès le début des bans, l'app propose le meilleur pick pour la composition et i
 - **ARAM / ARAM Mayhem** : écran dédié avec coéquipiers et banc, winrate ARAM par champion, échange en un clic, build ARAM importé dès l'arrivée du champion ; en Mayhem, pas de runes, place aux items.
 - **Builds fun** (ARAM) : styles hors méta ayant réellement gagné, jamais importés automatiquement.
 - **Swiftplay** : deux champions choisis avant la file, un build par champion, les deux envoyés au client.
-- **Arena** : écran de fin de partie dédié ; recommandations d'augments à prévoir.
+- **Arena** : écran de fin de partie dédié. Aucune recommandation, aucun tier ni taux de victoire d'augments ou d'objets Arena (interdit, §2). Seules des données statiques d'augments (nom, icône, description) sont envisageables, via le catalogue de #118 et après décision écrite de Riot pour tout affichage en sélection d'augment. Mayhem est soumis à la même règle.
 
 ## 6. Module 3 — Overlays in-game
 
@@ -213,14 +233,14 @@ Chaque overlay est une fenêtre transparente indépendante, activable séparéme
 | Overlay | Ce qu'il affiche | Source | Par défaut |
 | --- | --- | --- | --- |
 | Probabilité de victoire | % de victoire en direct, courbe | Modèle IA sur données live | On |
-| Différence d'or | Barre des totaux d'équipe sur le tableau des scores (Tab) + marqueur par lane | Valeur des items de chaque joueur | On |
+| Différence d'or | Barre des totaux d'équipe sur le tableau des scores (Tab) + marqueur par lane. Cas limite : limité à ce que le tableau des scores montre déjà, validation de Riot requise avant sortie (#30) | Valeur des items de chaque joueur | On |
 | Timers d'objectifs | Dragon, Larves, Héraut, Baron, Ancien ; apparition X min avant (5 par défaut) ou permanent | Événements de kill + temps de respawn | On |
 | Buffs d'objectifs | Qui a le buff Baron/Ancien, durée restante, joueurs morts exclus | Événements + état des joueurs | Off |
-| Benchmark | CS/min, vision… vs moyenne du rang ou vs adversaire direct | Live Client Data + stats backend | On |
+| Benchmark | CS/min, vision… vs moyenne du rang affiché et du rôle (jamais un MMR déduit). La comparaison à l'adversaire direct est un cas limite soumis à #30 et #26 | Live Client Data + stats backend | On |
 | Suggestions d'items | Item conseillé à chaque retour base selon le matchup | Backend + inventaire live | On |
 | Rappels | Sort à maxer, changement de trinket | Niveau + items live | On |
 | Alertes / notifications | Pile d'alertes (haut ou bas), secondes entières | Tous modules | On |
-| Tiers d'augments (Mayhem) | Tier S+ à D sous chaque carte d'augment, adapté au champion | Lecture d'écran (OCR) | Off (bêta) |
+| ~~Tiers d'augments (Mayhem)~~ | Suspendu et retiré (#79) : un tier dérive d'un taux de victoire, interdit par la Game Policy. Au mieux, des données statiques sous les cartes, après décision écrite de Riot (#45, #118) ; jamais de classement | Lecture d'écran (OCR) | Non développé |
 | Timers de reliques (ARAM) | Timer sur chaque relique de soin de la minimap | Lecture du scoreboard (Tab) | Off (bêta) |
 
 **Personnalisation**
@@ -235,7 +255,10 @@ Chaque overlay est une fenêtre transparente indépendante, activable séparéme
 - Impact FPS < 2 %, CPU < 3 % en moyenne pendant la partie.
 - Overlays qui survivent au changement de résolution et à plusieurs parties d'affilée.
 - En plein écran exclusif : alertes seulement.
-- **Conformité** : aucune info cachée sur l'ennemi. Les deux overlays OCR doivent être validés par Riot avant sortie.
+- **Conformité** : aucune info cachée sur l'ennemi. Les overlays OCR (reliques ARAM et, le cas échéant, données statiques d'augments) doivent être validés par Riot avant sortie.
+- **Fonctions refusées, à ne pas réintroduire** : cooldowns et timers de sorts ou d'ultimes adverses ; timers de camps de jungle non vus ; or exact de l'adversaire non affiché par le client ; conseils tactiques en temps réel qui dictent une décision ; tout taux, tier ou note d'augment ou d'objet Arena ; tout MMR estimé. Le coaching vocal tactique par IA reste refusé sans validation de Riot.
+- **Module Jungle (maquette #4)** : limité aux camps que le joueur a lui-même tués, déduits de son propre or et de son CS jungle, visibles pour lui. Le Live Client Data n'expose aucun événement de camp : jamais de camp adverse ni de camp non vu.
+- **Suggestions et rappels** : ils mettent en évidence des options et en proposent plusieurs ; ils n'imposent pas l'unique bon choix.
 
 ## 7. Module 4 — Enregistrement, clips et replays
 
@@ -293,7 +316,7 @@ L'app enregistre les parties en arrière-plan et repère kills et objectifs. La 
 
 **8.3 Spectate des pros en 1 clic** : liste des pros / streamers en partie, lancement via le client LoL, multi-régions (spectator-v5).
 
-**8.4 Parties live** : pour n'importe quel joueur, les 10 participants, rangs, champions, runes, premades, badges.
+**8.4 Parties live** : pour un joueur recherché par saisie manuelle ou pour le compte actif, quand sa partie est lancée (spectator-v5), les 10 participants avec leurs identités publiques, rangs, champions, runes et badges descriptifs. Jamais pendant la sélection des champions (voir §5.1), et jamais déclenché par la liste des participants d'une sélection. Les premades ne s'affichent que si l'information est publique (même groupe visible au chargement), après validation de Riot (#30) ; aucune déduction par croisement d'historiques. Aucun MMR.
 
 ## 9. Module 6 — Site web de stats
 
@@ -325,6 +348,7 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 - account-v1 / summoner-v4, champion-mastery-v4, spectator-v5.
 - Respect strict des rate limits (file par région, backoff), clé de production obligatoire.
 - Files séparées : Ranked Solo, Flex, Ranked 5v5, ARAM, Mayhem, Swiftplay, Arena.
+- Décision du 4 octobre 2026 (#90) : une campagne de collecte vise par défaut Solo (420) et Flex (440) ; les autres files (ARAM, Swiftplay, Arena…) sont collectées sur demande, en les listant explicitement (`campaign --queues`).
 
 **10.2 Agrégation** : par patch, rang, région, rôle ; recalcul horaire de la tierlist ; seuils minimaux d'échantillon ; données statiques par patch mises à jour automatiquement.
 
@@ -367,9 +391,11 @@ des nouvelles agrégations #39/#41/#42, modèles IA et écrans aval.
 | --- | --- | --- | --- |
 | Draft | 10 champions + rôles, maîtrise, patch | Score par champion, % victoire du draft, prédiction de rôle | À chaque patch |
 | Win probability live | Or, kills, objectifs, tours, niveaux, temps | % victoire par équipe | Mensuel |
-| Note de partie /100 | Stats joueur vs benchmark rang/rôle | Score + MVP/ACE | Par saison |
-| Tiers d'augments | Winrate augment × champion | Tier S+ à D | À chaque patch |
+| Note de partie /100 | Stats joueur vs benchmark du rang affiché et du rôle (jamais un MMR déduit) ; revue de conformité à chaque évolution (#26, #40, #41) | Score + MVP/ACE | Par saison |
+| ~~Tiers d'augments~~ | Retiré (#79) : aucun taux d'augment ni d'objet Arena n'est collecté ni calculé (Game Policy) | — | — |
 | Détection de moments | Événements + timeline | Horodatage des clips | — |
+
+Garde-fous des modèles : aucun modèle n'estime ni n'affiche un MMR, un ELO ou une courbe de niveau caché (alternative interdite au classement officiel). Les comparaisons se font par rapport au rang affiché et au rôle. Le delta de LP réel annoncé par le client peut être affiché tel quel (notification `current-lp-change-notification` citée par #79, à vérifier dans le client avant usage).
 
 **10.4 API interne** : REST + WebSocket pour l'app, authentification JWT, cache CDN pour les données statiques.
 
@@ -451,6 +477,9 @@ Chaque lot est validé sur Windows 11 et macOS (Apple Silicon).
 
 - [DPM.LOL — page Premium](https://dpm.lol/premium)
 - [DPM.LOL — Changelog](https://dpm.lol/changelog)
-- [Riot — Developer API Policy](https://support-developer.riotgames.com/hc/en-us/articles/22698698001939)
-- [Interdiction du suivi des ultimes ennemis (Softonic)](https://en.softonic.com/articles/riot-games-will-stop-allowing-third-party-applications-in-league-of-legends)
-- [Politique Riot sur les overlays, mai 2025 (LolNow)](https://lolnow.gg/riot-cracks-down-on-overlays-in-league-of-legends-a-long-overdue-clean-up/)
+- [Riot — Developer API Policy](https://developer.riotgames.com/docs/lol#developer-api-policy) (rubriques registration, monetization, security et game-integrity ; ancre [#developer-api-policy_game-integrity](https://developer.riotgames.com/docs/lol#developer-api-policy_game-integrity) ; texte d'origine, relu le 04/10/2026)
+- [Riot — politiques générales du Developer Portal](https://developer.riotgames.com/policies/general) (texte d'origine, relu le 04/10/2026)
+- [Riot — Game Policy de League of Legends](https://developer.riotgames.com/docs/lol#game-policy) (texte d'origine, relu le 04/10/2026)
+- [Riot — usage de la League Client API](https://developer.riotgames.com/league-client-apis.html) (relu le 04/10/2026 par résumé automatique)
+- Seconde main, non décisif : [Interdiction du suivi des ultimes ennemis (Softonic)](https://en.softonic.com/articles/riot-games-will-stop-allowing-third-party-applications-in-league-of-legends)
+- Seconde main, non décisif : [Politique Riot sur les overlays, mai 2025 (LolNow)](https://lolnow.gg/riot-cracks-down-on-overlays-in-league-of-legends-a-long-overdue-clean-up/)
