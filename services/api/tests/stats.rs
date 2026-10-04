@@ -35,8 +35,8 @@ fn champion(id: u32, position: Option<u32>) -> Value {
     json!({
         "patch": "16.19", "platform_id": "EUW1", "queue_id": 420,
         "role": "TOP", "rank": "ALL", "champion_id": id,
-        "games": 100, "wins": 60, "losses": 40, "population": 500,
-        "win_rate": 60.0, "pick_rate": 20.0, "win_rate_lower_bound": 50.2,
+        "games": 100, "wins": 60, "losses": 40, "population": 500, "bucket_matches": 250,
+        "win_rate": 60.0, "pick_rate": 40.0, "selection_share": 20.0, "win_rate_lower_bound": 50.2,
         "position": position, "tier": "A", "most_picked_rank": "GOLD"
     })
 }
@@ -61,7 +61,13 @@ fn contaminated(values: &mut Vec<Value>, base: &Value) {
 
 fn report() -> Value {
     let mut insufficient = champion(4, None);
-    for field in ["win_rate", "pick_rate", "win_rate_lower_bound", "tier"] {
+    for field in [
+        "win_rate",
+        "pick_rate",
+        "selection_share",
+        "win_rate_lower_bound",
+        "tier",
+    ] {
         insufficient[field] = Value::Null;
     }
     insufficient["games"] = json!(3);
@@ -191,7 +197,7 @@ fn report() -> Value {
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
-        "pick_rate_definition":"participations_in_group",
+        "pick_rate_definition":"champion_matches / bucket_matches * 100",
         "tier_method":"wilson_lower_bound", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
             "start_ms":1_000_000, "end_ms":2_000_000},
@@ -493,6 +499,10 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     assert_eq!(insufficient.tier, None);
     assert_eq!(insufficient.win_rate, None);
     assert_eq!(insufficient.pick_rate, None);
+    assert_eq!(insufficient.selection_share, None);
+    assert_eq!(insufficient.bucket_matches, 250);
+    assert_eq!(response.entries[0].pick_rate, Some(40.0));
+    assert_eq!(response.entries[0].selection_share, Some(20.0));
     assert_eq!(insufficient.win_rate_lower_bound, None);
     let gold = tierlist(
         db.storage.pool(),
@@ -879,11 +889,12 @@ async fn tendances_donnent_la_serie_du_champion_sur_les_patchs_publies_en_v1_com
     assert_eq!((new.games, new.wins, new.population), (100, 60, 500));
     assert_eq!((old.games, old.wins, old.population), (250, 120, 1000));
     assert_eq!(new.win_rate, Some(60.0));
-    assert_eq!(new.pick_rate, Some(20.0));
+    // Pick rate par partie (#84) : 100 parties du champion / 250 parties du compartiment.
+    assert_eq!(new.pick_rate, Some(40.0));
     assert_eq!((new.banned_matches, new.draft_matches), (20, 100));
     assert_eq!(new.ban_rate, Some(20.0));
     assert_eq!(new.delta_win_rate, Some(12.0));
-    assert_eq!(new.delta_pick_rate, Some(-5.0));
+    assert_eq!(new.delta_pick_rate, Some(15.0));
     assert_eq!(new.delta_ban_rate, Some(10.0));
     assert_eq!(old.delta_win_rate, None);
     // La couverture annoncée porte tous les patchs de la plateforme et de la file.

@@ -110,9 +110,18 @@ pub struct ChampionStats {
     pub losses: u64,
     /// Participations de tous les champions du même patch/plateforme/file/rôle/rang.
     pub population: u64,
+    /// Parties distinctes du même compartiment (patch/plateforme/file/rôle/rang) comptant
+    /// au moins une participation ; 0 dans un instantané antérieur à #84.
+    #[serde(default)]
+    pub bucket_matches: u64,
     /// Nul en Arena : le booléen `win` n'y désigne pas une première place (#104).
     pub win_rate: Option<f64>,
+    /// Parties où le champion apparaît / `bucket_matches` × 100 (#84) : comparable au ban rate.
     pub pick_rate: Option<f64>,
+    /// Part des sélections : participations du champion / `population` × 100, l'ancien
+    /// `pick_rate` ; nulle avant #84.
+    #[serde(default)]
+    pub selection_share: Option<f64>,
     /// Nul en Arena, comme `win_rate`.
     pub win_rate_lower_bound: Option<f64>,
     pub position: Option<u32>,
@@ -358,6 +367,9 @@ pub(super) struct Accumulator {
     counts: BTreeMap<GroupKey, Count>,
     arena_scopes: BTreeSet<ScopeKey>,
     populations: BTreeMap<Population, u64>,
+    /// Parties distinctes par compartiment et par champion (#84) : une partie compte une fois.
+    bucket_matches: BTreeMap<Population, u64>,
+    champion_matches: BTreeMap<GroupKey, u64>,
     coverage: BTreeMap<ScopeKey, Coverage>,
     bans: BTreeMap<(ScopeKey, u32), u64>,
     builds: BTreeMap<BuildKey, Count>,
@@ -387,7 +399,7 @@ impl Accumulator {
                 min_game_duration_s: DEFAULT_MIN_GAME_DURATION_S,
                 min_played_percent: DEFAULT_MIN_PLAYED_PERCENT,
                 exclude_afk: true,
-                pick_rate_definition: "champion_participations / bucket_participations * 100".into(),
+                pick_rate_definition: "champion_matches / bucket_matches * 100".into(),
                 tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
@@ -395,7 +407,8 @@ impl Accumulator {
                 max_build_variants_per_category: 20, omitted_build_variants: 0,
                 build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
             },
-            counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
+            counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), bucket_matches:BTreeMap::new(),
+            champion_matches:BTreeMap::new(), coverage:BTreeMap::new(),
             bans:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
             skills:BTreeMap::new(), events:BTreeMap::new(), splits:BTreeMap::new(), rank_gaps:BTreeMap::new(),
             item_catalogs:BTreeMap::new(),
@@ -504,6 +517,8 @@ impl Accumulator {
             }
         }
         let mut timeline_counted = false;
+        let mut seen_buckets = BTreeSet::<Population>::new();
+        let mut seen_champions = BTreeSet::<GroupKey>::new();
         for p in participants {
             if is_coop(game.queue_id) && is_bot(&p.raw) {
                 self.coverage
@@ -592,12 +607,18 @@ impl Accumulator {
                         c.wins += u64::from(p.win);
                     }
                 }
-                *self
-                    .populations
-                    .entry((scope.clone(), p.role, rank))
-                    .or_default() += 1;
+                let bucket = (scope.clone(), p.role, rank);
+                *self.populations.entry(bucket.clone()).or_default() += 1;
+                seen_buckets.insert(bucket);
+                seen_champions.insert(key.clone());
                 self.add_builds(&key, p.win, p.placement, &observations);
             }
+        }
+        for bucket in seen_buckets {
+            *self.bucket_matches.entry(bucket).or_default() += 1;
+        }
+        for key in seen_champions {
+            *self.champion_matches.entry(key).or_default() += 1;
         }
     }
 
@@ -680,7 +701,10 @@ impl Accumulator {
             .counts
             .into_iter()
             .map(|(key, c)| {
-                let population = self.populations[&(scope_of(&key), key.role, key.rank.clone())];
+                let bucket = (scope_of(&key), key.role, key.rank.clone());
+                let population = self.populations[&bucket];
+                let bucket_matches = self.bucket_matches[&bucket];
+                let champion_matches = self.champion_matches[&key];
                 let most_picked_rank = popular
                     .get(&(scope_of(&key), key.role, key.champion_id))
                     .map(|(_, r)| r.clone());
@@ -694,12 +718,16 @@ impl Accumulator {
                     wins: c.wins,
                     losses: c.games - c.wins,
                     population,
+                    bucket_matches,
                     win_rate: if arena {
                         None
                     } else {
                         rate(c.wins, c.games, minimum)
                     },
-                    pick_rate: rate(c.games, population, minimum).filter(|_| c.games >= minimum),
+                    pick_rate: rate(champion_matches, bucket_matches, minimum)
+                        .filter(|_| c.games >= minimum),
+                    selection_share: rate(c.games, population, minimum)
+                        .filter(|_| c.games >= minimum),
                     win_rate_lower_bound: (!arena && c.games >= minimum)
                         .then(|| wilson(c.wins, c.games)),
                     position: None,

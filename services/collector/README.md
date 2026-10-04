@@ -322,8 +322,10 @@ inventé à partir des objets ou du rang.
 | --- | --- |
 | `games`, `wins`, `losses` | Participations, pas toujours matchs distincts : les modes autorisant plusieurs exemplaires d'un champion peuvent contribuer plusieurs fois par match |
 | `population` | Toutes les participations du même patch/plateforme/file/rôle/rang |
+| `bucket_matches` | Parties distinctes comptant au moins une participation du même patch/plateforme/file/rôle/rang (#84) ; 0 dans un instantané antérieur |
 | `win_rate` | Victoires / participations du champion × 100 ; nul en Arena (voir ci-dessous) |
-| `pick_rate` | Participations du champion / population × 100 ; part des sélections dans ce groupe |
+| `pick_rate` | Parties où le champion apparaît / `bucket_matches` × 100 (#84) : « présent dans la partie », même base que `bans` ; une partie compte une fois même si le champion y est en double, donc au plus 100 %. Défini par `pick_rate_definition` (`champion_matches / bucket_matches * 100`) |
+| `selection_share` | Participations du champion / population × 100 : part des sélections dans ce groupe, l'ancien `pick_rate` (#84), plafonnée à 50 % par rôle en 5v5 ; nulle avant #84 |
 | `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) ; nulle en Arena |
 | `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe. En Arena : placement moyen croissant, puis effectif décroissant et ID ; le ratio brut de victoires n'intervient jamais |
 | `placement_games`, `average_placement`, `top1_rate`, `top2_rate` | Arena seulement (#104) : participations au placement valide, placement moyen de la sous-équipe (1 = première), part (%) des participations classées première, puis première ou deuxième. Nuls hors Arena et sous le seuil (`placement_games` reste visible) |

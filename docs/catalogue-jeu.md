@@ -243,7 +243,7 @@ Aucune fiche descriptive n’est recopiée dans les groupes statistiques.
 | Usage | Disponibilité et définition | Dépendance/limite |
 | --- | --- | --- |
 | Winrate champion | #18 : victoires/participations ×100, patch/plateforme/file/rôle/rang | Seuil défaut 100 ; intervalle temporel `[from_ms,to_ms)` configurable au calcul ; rang observé le plus proche de la partie (écart ≤ 168 h par défaut, #80), pas un MMR |
-| Pickrate | #18 : participations champion / toutes participations du même groupe ×100 | `ALL` et rangs se recouvrent : ne pas les additionner ; échantillon collecté, pas population Riot entière |
+| Pickrate | #18, #84 : parties où le champion apparaît / parties du même compartiment (patch, plateforme, file, rôle, rang) ×100, comme le banrate ; `selection_share` garde l’ancienne part des participations | `ALL` et rangs se recouvrent : ne pas les additionner ; une partie compte une fois même si le champion est en double ; échantillon collecté, pas population Riot entière |
 | Banrate | #18 : drafts bannissant le champion / drafts complètes ×100 | Pas de faux rang/rôle du ban ; seuil de drafts |
 | Builds, objets, runes, sorts | #18 : effectif, population éligible de chaque catégorie, taux de sélection/victoire | Variantes limitées aux20 plus populaires ; seuil ; achats tardifs et durée créent des biais ; pas de causalité |
 | Compétences/achats | #18 : ordre des points Q/W/E/R, temps moyen ; achats nets hors annulations ambiguës | Timeline absente signalée, inventaire final distinct de l’ordre d’achat |
