@@ -6,6 +6,15 @@ use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
+
+/// Catégories de variantes publiées sur le placement moyen en Arena (#104). Liste
+/// positive et volontairement fermée : jamais d'objets ni d'augments (politique Riot).
+const ARENA_PLACEMENT_CATEGORIES: [&str; 4] = [
+    "runes",
+    "summoner_spells",
+    "skill_order",
+    "special_skill_order",
+];
 use super::AggregationError;
 use crate::model::patch_from_version;
 
@@ -111,6 +120,14 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Arena, variantes hors objets : participations au placement de sous-équipe valide
+    /// (#104) ; 0 hors Arena et pour les catégories d'objets.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena, variantes hors objets : placement moyen de la sous-équipe (1 = première),
+    /// nul sous le seuil, hors Arena et pour les catégories d'objets.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -445,12 +462,18 @@ impl Accumulator {
                     .populations
                     .entry((scope.clone(), p.role, rank))
                     .or_default() += 1;
-                self.add_builds(&key, p.win, &observations);
+                self.add_builds(&key, p.win, p.placement, &observations);
             }
         }
     }
 
-    fn add_builds(&mut self, key: &GroupKey, win: bool, observations: &BuildObservation) {
+    fn add_builds(
+        &mut self,
+        key: &GroupKey,
+        win: bool,
+        placement: Option<u32>,
+        observations: &BuildObservation,
+    ) {
         for (category, selection) in &observations.variants {
             *self
                 .build_populations
@@ -462,6 +485,10 @@ impl Accumulator {
                 .or_default();
             c.games += 1;
             c.wins += u64::from(win);
+            if let Some(placement) = placement {
+                c.placement_games += 1;
+                c.placement_sum += u64::from(placement);
+            }
             if category == "summoner_spells"
                 && matches!(observations.spell_slots, Some([d, f]) if d > f)
             {
@@ -629,11 +656,23 @@ impl Accumulator {
             .into_iter()
             .map(|((key, category, selection), c)| {
                 let population = self.build_populations[&(key.clone(), category.clone())];
-                let performance_available = !(self.arena_scopes.contains(&scope_of(&key))
-                    && (matches!(
-                        category.as_str(),
-                        "item" | "final_items" | "trinket" | "purchase_order"
-                    ) || STAGE_CATEGORIES.contains(&category.as_str())));
+                // Politique Riot : aucun taux de victoire d'objet en Arena, ni placement
+                // par objet, ni aucune statistique par augment. Seules les catégories
+                // listées explicitement (runes, sorts, ordre de compétences) sont
+                // publiées sur le placement moyen, le booléen `win` d'Arena n'étant
+                // pas une première place (#104). Liste positive : une catégorie
+                // nouvelle (objets, augments…) ne publie rien tant qu'elle n'y est pas.
+                let arena = self.arena_scopes.contains(&scope_of(&key));
+                debug_assert!(
+                    !ARENA_PLACEMENT_CATEGORIES.iter().any(|c| {
+                        matches!(*c, "item" | "final_items" | "trinket" | "purchase_order")
+                            || STAGE_CATEGORIES.contains(c)
+                    }),
+                    "aucune catégorie d'objets ne doit publier de placement en Arena"
+                );
+                let performance_available = !arena;
+                let placement_published =
+                    arena && ARENA_PLACEMENT_CATEGORIES.contains(&category.as_str());
                 BuildStats {
                     key,
                     category,
@@ -650,6 +689,15 @@ impl Accumulator {
                     },
                     win_rate_lower_bound: (performance_available && c.games >= minimum)
                         .then(|| wilson(c.wins, c.games)),
+                    placement_games: if placement_published {
+                        c.placement_games
+                    } else {
+                        0
+                    },
+                    average_placement: (placement_published
+                        && c.placement_games >= minimum
+                        && c.placement_games > 0)
+                        .then(|| c.placement_sum as f64 / c.placement_games as f64),
                 }
             })
             .collect();
@@ -657,6 +705,13 @@ impl Accumulator {
             (&a.key, &a.category)
                 .cmp(&(&b.key, &b.category))
                 .then_with(|| b.games.cmp(&a.games))
+                // Arena : placement moyen croissant (non publié en dernier), neutre hors
+                // Arena ; `wins` est alors nul et ne départage plus rien.
+                .then_with(|| {
+                    a.average_placement
+                        .unwrap_or(f64::INFINITY)
+                        .total_cmp(&b.average_placement.unwrap_or(f64::INFINITY))
+                })
                 .then_with(|| b.wins.cmp(&a.wins))
                 .then_with(|| a.selection.cmp(&b.selection))
         });

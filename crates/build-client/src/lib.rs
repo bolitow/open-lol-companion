@@ -105,6 +105,13 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Arena, variantes hors objets : participations au placement valide (#104) ; 0 sinon.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena, variantes hors objets : placement moyen (1 = première) ; absent des
+    /// instantanés antérieurs, nul sous le seuil.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -122,13 +129,23 @@ impl BuildVariant {
                 .into_iter()
                 .flatten()
                 .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || self.placement_games > self.games
+            || self
+                .average_placement
+                .is_some_and(|v| !v.is_finite() || v < 1.0)
         {
             return Err(BuildError::InvalidResponse);
         }
         if self.games < u64::from(min_games) {
+            self.average_placement = None;
             self.pick_rate = None;
             self.win_rate = None;
             self.win_rate_lower_bound = None;
+        }
+        // Même seuil que le collecteur : le placement moyen n'est publié qu'à partir de
+        // `min_games` parties avec placement, pas seulement `min_games` parties jouées.
+        if self.placement_games < u64::from(min_games) {
+            self.average_placement = None;
         }
         if !self.performance_available {
             self.win_rate = None;
