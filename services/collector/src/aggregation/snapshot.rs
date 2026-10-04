@@ -33,6 +33,7 @@ struct Metadata<'a> {
     build_stage_method: &'a str,
     item_catalogs: &'a [super::ItemCatalogRef],
     performance_method: &'a str,
+    matchup_method: &'a str,
 }
 
 /// La transaction du calcul possède déjà le verrou et l'instantané REPEATABLE READ.
@@ -76,6 +77,7 @@ fn metadata(report: &AggregationReport) -> Metadata<'_> {
         build_stage_method: &report.build_stage_method,
         item_catalogs: &report.item_catalogs,
         performance_method: &report.performance_method,
+        matchup_method: &report.matchup_method,
     }
 }
 
@@ -141,6 +143,7 @@ pub(super) async fn write_sections(
     write_section(tx, writer, "item_events", &report.item_events).await?;
     write_section(tx, writer, "splits", &report.splits).await?;
     write_section(tx, writer, "performance", &report.performance).await?;
+    write_section(tx, writer, "matchups", &report.matchups).await?;
     Ok(())
 }
 

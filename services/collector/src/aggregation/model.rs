@@ -8,6 +8,7 @@ use super::builds::{self, BuildObservation};
 use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
 use super::cumulative;
 use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
+use super::matchups::{self, LaneSlot, MatchupStats, MATCHUP_METHOD};
 use super::performance::{self, PerformanceStats, PerformanceSums, PERFORMANCE_METHOD};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::tier;
@@ -367,6 +368,9 @@ pub struct Coverage {
     /// Issue des parties selon l'équipe ayant pris la première tour.
     #[serde(default)]
     pub first_tower: FirstObjectiveStats,
+    /// Participations appariées à un adversaire de lane (#123) ; 0 hors files 420 et 440.
+    #[serde(default)]
+    pub lane_matchup_participations: u64,
 }
 
 /// Version du catalogue normalisé (#61) jointe à un patch agrégé.
@@ -450,6 +454,12 @@ pub struct AggregationReport {
     /// Moyennes de performance par population (#100) ; vide dans les rapports antérieurs.
     #[serde(default)]
     pub performance: Vec<PerformanceStats>,
+    /// Définitions des matchups de lane (#123) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub matchup_method: String,
+    /// Matchups de lane par rôle, rang `ALL` seulement (#123) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub matchups: Vec<MatchupStats>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -515,6 +525,8 @@ pub(super) struct Accumulator {
     item_catalogs: BTreeMap<String, ItemCatalog>,
     /// Sommes des valeurs de performance (#100), mêmes clés que `counts`.
     performance: BTreeMap<GroupKey, PerformanceSums>,
+    /// Matchups de lane (#123) : (population du sujet, champion adverse).
+    matchups: BTreeMap<(GroupKey, u32), Count>,
 }
 
 impl Accumulator {
@@ -553,6 +565,8 @@ impl Accumulator {
                 item_catalogs: vec![],
                 performance_method: PERFORMANCE_METHOD.into(),
                 performance: vec![],
+                matchup_method: MATCHUP_METHOD.into(),
+                matchups: vec![],
             },
             counts: BTreeMap::new(),
             arena_scopes: BTreeSet::new(),
@@ -571,6 +585,7 @@ impl Accumulator {
             rank_gaps: BTreeMap::new(),
             item_catalogs: BTreeMap::new(),
             performance: BTreeMap::new(),
+            matchups: BTreeMap::new(),
         })
     }
 
@@ -706,6 +721,8 @@ impl Accumulator {
             }
         }
         let mut timeline_counted = false;
+        // Appariement de lane (#123) après la boucle, qui consomme les participations.
+        let (mut slots, mut wins) = (vec![], vec![]);
         let mut seen_buckets = BTreeSet::<Population>::new();
         let mut seen_champions = BTreeSet::<GroupKey>::new();
         for p in participants {
@@ -716,6 +733,13 @@ impl Accumulator {
                     .excluded_bot_participations += 1;
                 continue;
             }
+            slots.push(LaneSlot {
+                team: p.team,
+                role: p.role,
+                champion: p.champion,
+            });
+            wins.push(p.win);
+            let max_age_s = u64::from(self.report.rank_max_age_hours) * 3600;
             let (rank, gap) = rank_for(game, &p.raw, max_age_s);
             if let Some(gap) = gap {
                 self.rank_gaps.entry(scope.clone()).or_default().push(gap);
@@ -840,6 +864,29 @@ impl Accumulator {
         }
         for key in seen_champions {
             *self.champion_matches.entry(key).or_default() += 1;
+        }
+        let pairs = matchups::lane_opponents(game.queue_id, &slots);
+        self.coverage
+            .entry(scope)
+            .or_default()
+            .lane_matchup_participations += pairs.len() as u64;
+        for (subject, opponent) in pairs {
+            // Rang ALL seulement : le rang individuel rendrait « A contre B » et
+            // « B contre A » non complémentaires ; le rang de partie n'existe pas encore.
+            let key = GroupKey {
+                patch: game.patch.clone(),
+                platform_id: game.platform_id.clone(),
+                queue_id: game.queue_id,
+                role: slots[subject].role,
+                rank: "ALL".into(),
+                champion_id: slots[subject].champion,
+            };
+            let c = self
+                .matchups
+                .entry((key, slots[opponent].champion))
+                .or_default();
+            c.games += 1;
+            c.wins += u64::from(wins[subject]);
         }
     }
 
@@ -1233,6 +1280,20 @@ impl Accumulator {
             .into_iter()
             .map(|(key, sums)| sums.finish(key, minimum))
             .collect();
+        self.report.matchups = self
+            .matchups
+            .into_iter()
+            .map(|((key, opponent_champion_id), c)| MatchupStats {
+                key,
+                opponent_champion_id,
+                games: c.games,
+                wins: c.wins,
+                losses: c.games - c.wins,
+                win_rate: rate(c.wins, c.games, minimum),
+                win_rate_lower_bound: (c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games).0),
+            })
+            .collect();
         self.report.splits = self
             .splits
             .into_iter()
@@ -1365,7 +1426,8 @@ struct Participant {
     champion: u32,
     role: Role,
     win: bool,
-    /// Sous-équipe Arena (ou équipe), pour contrôler la cohérence des placements.
+    /// `teamId` : sous-équipe Arena (ou équipe), déjà contrôlé par `validate`, pour la
+    /// cohérence des placements (#104) et l'appariement de lane (#123).
     team: u32,
     /// Placement de la sous-équipe en Arena (1 = première) ; nul si absent ou incohérent.
     placement: Option<u32>,

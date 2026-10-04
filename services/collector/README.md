@@ -642,13 +642,35 @@ en ARAM et en Arena, `short_games_excluded` peut donc représenter une grosse pa
 `participations`. Un rapport antérieur relit `performance` vide, `performance_method` vide
 et `short_games_excluded` à 0.
 
+## Matchups de lane (#123)
+
+`matchups` publie, pour chaque champion, ses résultats contre l'adversaire qui occupait
+le même rôle dans l'autre équipe. Ce sont des agrégats descriptifs de parties publiques :
+aucune recommandation, aucun contre conseillé, aucune décision de draft. Les définitions
+exactes sont publiées dans `matchup_method`.
+
+| Champ | Définition |
+| --- | --- |
+| Files | 420 et 440 seulement : la validation y garantit un seul participant par (équipe, rôle). Les autres files, dont la normale 400, ne publient aucun matchup tant que l'appariement n'y est pas validé |
+| Paire | Les deux participations d'équipes opposées ayant le même `teamPosition` (`TOP`, `JUNGLE`, `MIDDLE`, `BOTTOM`, `UTILITY`) ; un rôle `UNKNOWN`, absent ou en double n'est jamais apparié |
+| Clé | patch × plateforme × file × rôle × `rank = ALL` × `champion_id` × `opponent_champion_id` ; une ligne par sens (`A contre B` et `B contre A`) |
+| `rank` | `ALL` seulement : le rang observé est individuel, il rendrait les deux sens non complémentaires. Un rang de partie reste à définir |
+| `games`, `wins`, `losses` | Parties appariées ; victoires et défaites de `champion_id`. Les deux sens d'une paire ont le même effectif et des victoires complémentaires |
+| `win_rate`, `win_rate_lower_bound` | `wins / games × 100` et borne inférieure de Wilson à 95 %, toutes deux nulles sous `--min-games` ; l'effectif reste publié |
+
+La couverture ajoute `lane_matchup_participations` : participations appariées à un
+adversaire de lane dans le périmètre (0 hors files 420 et 440). Les parties exclues
+(remake, contrôles de qualité #111) n'y contribuent pas. Aucune synergie de duo n'est
+encore publiée. Un rapport antérieur relit `matchups` vide et `matchup_method` vide.
+
 ## Publication, stockage et exploitation
 
 `champion_stats_snapshot` contient une tête : `source_snapshot_at`, `published_at`,
 `storage_version`, `report`. En stockage v2, `report` contient les métadonnées ;
-les huit listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`,
-`splits`, `performance`) sont dans `champion_stats_snapshot_chunks`, ordonnées par section et
-`chunk_index`. Les migrations `0012` et `0014` autorisent les sections `performance` (#100) et `splits` (#119).
+les neuf listes (`coverage`, `groups`, `bans`, `builds`, `skill_levels`, `item_events`,
+`splits`, `performance`, `matchups`) sont dans `champion_stats_snapshot_chunks`, ordonnées par
+section et `chunk_index`. Les migrations `0012`, `0013` et `0014` autorisent les sections
+`performance` (#100), `matchups` (#123) et `splits` (#119).
 Chaque morceau contient au plus 512 entrées et 1 Mio de JSON sérialisé avant conversion
 PostgreSQL. Une entrée individuelle dépassant cette borne fait échouer la publication,
 sans supprimer de statistiques. Le rapport JSON public et le CLI restent au schéma 2.

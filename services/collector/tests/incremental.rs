@@ -24,7 +24,7 @@ macro_rules! db_or_skip {
     };
 }
 
-const SECTIONS: [&str; 8] = [
+const SECTIONS: [&str; 9] = [
     "coverage",
     "groups",
     "bans",
@@ -33,6 +33,7 @@ const SECTIONS: [&str; 8] = [
     "item_events",
     "splits",
     "performance",
+    "matchups",
 ];
 
 async fn run(db: &TestDb) -> i64 {
@@ -210,6 +211,7 @@ fn without_sections(mut report: AggregationReport) -> AggregationReport {
     report.item_events.clear();
     report.splits.clear();
     report.performance.clear();
+    report.matchups.clear();
     report
 }
 

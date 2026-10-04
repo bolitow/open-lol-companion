@@ -284,6 +284,8 @@ export interface Coverage {
   item_stage_participations: number;
   /** Participations à achats nets connus mais sans catalogue d'objets pour leur patch. */
   missing_item_catalog_participations: number;
+  /** Participations appariées à un adversaire de lane (#123) ; 0 hors files 420 et 440. */
+  lane_matchup_participations: number;
   /** Participations Arena sans placement de sous-équipe valide, comptées dans `games`. */
   unknown_placement_participations: number;
   /** Parties à deux camps (hors Arena) dont le côté est compté (#119). */
@@ -476,6 +478,36 @@ export interface PerformanceResponse {
   performance: PerformanceStats | null;
   /** Définitions des moyennes ; vide pour un instantané antérieur à #100. */
   performance_method: string;
+}
+
+/**
+ * Résultats d'un champion contre un adversaire de lane (#123), même rôle, files 420 et
+ * 440, rang `ALL` seulement. Taux nuls sous le seuil `min_games` ; définitions exactes
+ * dans `matchup_method`.
+ */
+export interface MatchupStats extends GroupKey {
+  opponent_champion_id: number;
+  games: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil. */
+  win_rate_lower_bound: number | null;
+}
+
+export interface MatchupsResponse {
+  meta: SnapshotMeta;
+  query: StatsQuery;
+  champion_id: number;
+  summary: ChampionStats | null;
+  /** Adversaires publiés pour la population, avant pagination. */
+  total: number;
+  /** Parties du champion appariées à un adversaire de lane, avant pagination. */
+  paired_games: number;
+  /** Effectif décroissant, puis identifiant d'adversaire croissant. */
+  matchups: MatchupStats[];
+  /** Définitions des matchups ; vide pour un instantané antérieur à #123. */
+  matchup_method: string;
 }
 
 /** Population d'une série entre patchs : le patch n'en fait pas partie, il est l'axe. */

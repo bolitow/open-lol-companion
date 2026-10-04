@@ -5,6 +5,7 @@ mod context;
 mod cumulative;
 mod incremental;
 mod match_tier;
+mod matchups;
 mod model;
 mod performance;
 mod scheduler;
@@ -16,6 +17,7 @@ mod tier;
 pub use context::{FirstObjectiveStats, SplitBucket, SplitDimension, SplitStats};
 pub use cumulative::CUMULATIVE_RANKS;
 pub use incremental::{recalculate_incremental, IncrementalReport};
+pub use matchups::MatchupStats;
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
     ItemCatalogRef, ItemEventStats, QualityThresholds, Reliability, Role, ScopeCoverage, ScopeKey,

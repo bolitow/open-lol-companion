@@ -4,7 +4,7 @@ mod common;
 use common::TestDb;
 use olc_api::error::ApiError;
 use olc_api::query::{BansQuery, StatsQuery, TrendsQuery};
-use olc_api::stats::{bans, builds, performance, tierlist};
+use olc_api::stats::{bans, builds, matchups, performance, tierlist};
 use olc_api::trends::trends;
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
@@ -71,6 +71,21 @@ fn performance_entry(champion: u32) -> Value {
             {"minute":10, "games":105, "gold":3_600.0, "cs":78.0, "xp":4_900.0},
             {"minute":15, "games":90, "gold":null, "cs":null, "xp":null}
         ]
+    })
+}
+
+fn matchup_entry(champion: u32, opponent: u32, games: u64) -> Value {
+    let wins = games * 3 / 5;
+    let (rate, bound) = if games >= 100 {
+        (json!(60.0), json!(51.3))
+    } else {
+        (Value::Null, Value::Null)
+    };
+    json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+        "role":"TOP", "rank":"ALL", "champion_id":champion,
+        "opponent_champion_id":opponent, "games":games, "wins":wins, "losses":games - wins,
+        "win_rate":rate, "win_rate_lower_bound":bound
     })
 }
 
@@ -151,7 +166,8 @@ fn report() -> Value {
             "win_rate":62.5, "blue_win_rate":57.89},
         "first_tower":{"matches":95, "wins":70, "blue_matches":50, "blue_wins":37,
             "win_rate":73.68, "blue_win_rate":74.0},
-        "match_tier_matches":60, "unknown_match_tier_matches":40
+        "match_tier_matches":60, "unknown_match_tier_matches":40,
+        "lane_matchup_participations":900
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
@@ -230,6 +246,16 @@ fn report() -> Value {
         splits.push(other_champion);
     }
 
+    // Champion 1 : deux adversaires au-dessus du seuil (150 parties), un en dessous (40).
+    let mut lane_matchups = vec![
+        matchup_entry(1, 3, 40),
+        matchup_entry(1, 5, 150),
+        matchup_entry(1, 2, 150),
+    ];
+    let reference = matchup_entry(1, 2, 150);
+    contaminated(&mut lane_matchups, &reference);
+    lane_matchups.push(matchup_entry(2, 1, 150));
+
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
@@ -242,6 +268,7 @@ fn report() -> Value {
         "coverage":coverage_entries, "groups":groups, "bans":bans,
         "builds":build_values, "skill_levels":skills, "item_events":items, "splits":splits,
         "performance":performances, "performance_method":"kda = (sum kills + sum assists) / max(sum deaths, 1)",
+        "matchups":lane_matchups, "matchup_method":"lane matchups: queues 420 and 440 only",
         "max_build_variants_per_category":20, "omitted_build_variants":7
     })
 }
@@ -298,6 +325,7 @@ async fn une_lecture_de_build_ne_parcourt_pas_les_morceaux_des_autres_population
         "skill_levels",
         "item_events",
         "performance",
+        "matchups",
         "splits",
     ] {
         source.as_object_mut().unwrap().remove(section);
@@ -396,6 +424,7 @@ async fn la_migration_indexe_les_morceaux_existants_sans_changer_les_reponses() 
         "skill_levels",
         "item_events",
         "performance",
+        "matchups",
         "splits",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
@@ -920,6 +949,7 @@ async fn performance_lit_la_section_des_morceaux_v2() {
         "item_events",
         "splits",
         "performance",
+        "matchups",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -935,6 +965,147 @@ async fn performance_lit_la_section_des_morceaux_v2() {
     tx.commit().await.unwrap();
     assert_eq!(
         serde_json::to_value(performance(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
+        expected
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn matchups_isole_le_champion_et_la_population_avec_leur_couverture() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let response = matchups(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(response.champion_id, 1);
+    assert_eq!(response.query, query());
+    assert_eq!(response.summary.as_ref().unwrap().games, 100);
+    // Effectif décroissant puis adversaire croissant ; la ligne sous le seuil reste publiée.
+    let opponents: Vec<_> = response
+        .matchups
+        .iter()
+        .map(|m| m.opponent_champion_id)
+        .collect();
+    assert_eq!(opponents, [2, 5, 3]);
+    assert_eq!(response.total, 3);
+    assert_eq!(response.paired_games, 340);
+    assert_eq!(
+        serde_json::to_value(&response.matchups[0]).unwrap(),
+        matchup_entry(1, 2, 150)
+    );
+    assert_eq!(response.matchups[2].win_rate, None);
+    assert_eq!(
+        response.matchup_method,
+        "lane matchups: queues 420 and 440 only"
+    );
+    let meta = serde_json::to_value(&response.meta).unwrap();
+    assert_eq!(meta["coverage"][0]["lane_matchup_participations"], 900);
+    // La pagination ne change ni le total ni l'effectif apparié.
+    let page = matchups(
+        db.storage.pool(),
+        StatsQuery {
+            offset: 1,
+            limit: 1,
+            ..query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        page.matchups
+            .iter()
+            .map(|m| m.opponent_champion_id)
+            .collect::<Vec<_>>(),
+        [5]
+    );
+    assert_eq!((page.total, page.paired_games), (3, 340));
+    // Autre rang, rôle ou patch : seule la ligne de cette population, rien d'emprunté.
+    for other in [
+        StatsQuery {
+            rank: "GOLD".into(),
+            ..query()
+        },
+        StatsQuery {
+            role: "JUNGLE".into(),
+            ..query()
+        },
+        StatsQuery {
+            patch: "16.18".into(),
+            ..query()
+        },
+    ] {
+        let isolated = matchups(db.storage.pool(), other, 1).await.unwrap();
+        assert_eq!((isolated.total, isolated.paired_games), (1, 150));
+    }
+    let empty = matchups(
+        db.storage.pool(),
+        StatsQuery {
+            role: "MIDDLE".into(),
+            ..query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    assert!(empty.matchups.is_empty());
+    assert_eq!((empty.total, empty.paired_games), (0, 0));
+    assert!(matchups(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .matchups
+        .is_empty());
+    assert_eq!(
+        matchups(db.storage.pool(), query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    // Un instantané antérieur à #123 reste lisible, sans matchup ni définition.
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("matchups");
+    legacy.as_object_mut().unwrap().remove("matchup_method");
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), legacy).await;
+    let old = matchups(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(old.matchups.is_empty());
+    assert_eq!(old.matchup_method, "");
+    assert!(old.summary.is_some());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn matchups_lit_la_section_des_morceaux_v2() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let expected =
+        serde_json::to_value(matchups(db.storage.pool(), query(), 1).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+        "performance",
+        "matchups",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(
+        serde_json::to_value(matchups(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
         expected
     );
     db.cleanup().await;
@@ -1177,6 +1348,7 @@ async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_
         "item_events",
         "splits",
         "performance",
+        "matchups",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -1362,6 +1534,7 @@ async fn publish_chunked(pool: &PgPool, mut source: Value) {
         "item_events",
         "splits",
         "performance",
+        "matchups",
     ];
     for section in sections {
         // Un instantané antérieur à #119 n'a pas la section : aucun morceau à écrire.
