@@ -7,6 +7,36 @@ use sqlx::Row;
 use std::collections::BTreeMap;
 use std::time::Duration;
 
+/// Part du seau Riot gardée pour les appels interactifs (en pourcentage de chaque limite).
+/// Le collecteur s'arrête avant : une recherche de profil n'attend pas la fin d'une rafale.
+const INTERACTIVE_RESERVE_PERCENT: u32 = 20;
+
+/// Priorité d'un appelant sur le seau partagé. Elle ne change jamais le plafond global :
+/// seule la part que le collecteur a le droit de consommer est réduite.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Priority {
+    /// Requête déclenchée par un utilisateur (API des profils) : plafond complet de la clé.
+    Interactive,
+    /// Collecte de fond : plafond réduit de la part réservée à l'interactif.
+    #[default]
+    Background,
+}
+impl Priority {
+    /// Limite effectivement utilisable par cet appelant. Jamais inférieure à 1 pour une
+    /// fenêtre non nulle, sinon une fenêtre d'un appel bloquerait la collecte sans fin.
+    fn effective_limit(self, limit: u32) -> u32 {
+        match self {
+            Self::Interactive => limit,
+            Self::Background if limit == 0 => 0,
+            Self::Background => {
+                let reserved = (u64::from(limit) * u64::from(INTERACTIVE_RESERVE_PERCENT))
+                    .div_ceil(100) as u32;
+                limit.saturating_sub(reserved).max(1)
+            }
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 struct Window {
     limit: u32,
@@ -52,12 +82,15 @@ impl Default for QuotaState {
     }
 }
 impl QuotaState {
-    fn reserve(&mut self, method: &str, now: i64) -> Option<i64> {
+    fn reserve(&mut self, method: &str, now: i64, priority: Priority) -> Option<i64> {
         // Le transport HTTP est borné à 15 s ; les abandons restent prudents pendant 60 s.
         self.inflight
             .retain(|_, (_, at)| at.saturating_add(60_000) > now);
         let bucket = self.methods.entry(method.into()).or_default();
-        let until = self.app.available_at(now).max(bucket.available_at(now));
+        let until = self
+            .app
+            .available_at(now, priority)
+            .max(bucket.available_at(now, priority));
         if until > now {
             return Some(until);
         }
@@ -105,26 +138,26 @@ impl QuotaState {
 }
 
 impl Bucket {
-    fn available_at(&mut self, now: i64) -> i64 {
+    fn available_at(&mut self, now: i64, priority: Priority) -> i64 {
         let mut until = self.blocked_until;
         for window in &mut self.windows {
             window
                 .sent
                 .retain(|sent| sent.saturating_add(window.period_ms) > now);
-            if window.limit == 0 {
+            let limit = priority.effective_limit(window.limit) as usize;
+            if limit == 0 {
                 until = until.max(now.saturating_add(window.period_ms));
-            } else if window.sent.len() >= window.limit as usize {
-                until = until.max(
-                    window.sent[window.sent.len() - window.limit as usize]
-                        .saturating_add(window.period_ms),
-                );
+            } else if window.sent.len() >= limit {
+                until = until
+                    .max(window.sent[window.sent.len() - limit].saturating_add(window.period_ms));
             }
         }
         until
     }
 
     fn observe(&mut self, now: i64, limits: Option<&str>, counts: Option<&str>, pending: usize) {
-        self.available_at(now);
+        // Simple purge des fenêtres : la priorité ne change pas ce qui est compté.
+        self.available_at(now, Priority::Interactive);
         if let Some(limits) = limits.and_then(parse_limits) {
             let mut previous = std::mem::take(&mut self.windows);
             let history = previous
@@ -168,10 +201,22 @@ impl Bucket {
 pub struct CoordinatedTransport<T> {
     inner: T,
     storage: Storage,
+    priority: Priority,
 }
 impl<T> CoordinatedTransport<T> {
+    /// Transport de collecte de fond ([`Priority::Background`]) : c'est le défaut le plus prudent.
     pub fn new(inner: T, storage: Storage) -> Self {
-        Self { inner, storage }
+        Self {
+            inner,
+            storage,
+            priority: Priority::Background,
+        }
+    }
+
+    /// Fixe la priorité de l'appelant (l'API des profils utilise [`Priority::Interactive`]).
+    pub fn with_priority(mut self, priority: Priority) -> Self {
+        self.priority = priority;
+        self
     }
 
     async fn change<R>(
@@ -222,7 +267,7 @@ impl<T: Transport> Transport for CoordinatedTransport<T> {
                 .change(request, |state, now| {
                     (
                         state
-                            .reserve(request.endpoint.name(), now)
+                            .reserve(request.endpoint.name(), now, self.priority)
                             .map(|until| until.saturating_sub(now)),
                         state.next_id,
                     )
@@ -249,9 +294,9 @@ mod tests {
     #[test]
     fn apprendre_une_nouvelle_fenetre_ne_perd_pas_les_reservations_en_vol() {
         let mut state = QuotaState::default();
-        state.reserve("method", 1000);
-        state.reserve("method", 1001);
-        state.reserve("method", 1002);
+        state.reserve("method", 1000, Priority::Background);
+        state.reserve("method", 1001, Priority::Background);
+        state.reserve("method", 1002, Priority::Background);
         state.observe(
             "method",
             1003,
@@ -276,12 +321,18 @@ mod tests {
             period_ms: 100,
             sent: vec![],
         }];
-        assert_eq!(state.reserve("method", 1000), None);
+        assert_eq!(state.reserve("method", 1000, Priority::Background), None);
         let mut reloaded: QuotaState =
             serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
-        assert_eq!(reloaded.reserve("other", 1001), Some(1100));
-        assert_eq!(reloaded.reserve("other", 1100), None);
-        assert_eq!(reloaded.reserve("method", 1101), Some(1200));
+        assert_eq!(
+            reloaded.reserve("other", 1001, Priority::Background),
+            Some(1100)
+        );
+        assert_eq!(reloaded.reserve("other", 1100, Priority::Background), None);
+        assert_eq!(
+            reloaded.reserve("method", 1101, Priority::Background),
+            Some(1200)
+        );
     }
     #[test]
     fn les_methodes_et_blocages_restent_distincts() {
@@ -293,8 +344,60 @@ mod tests {
                 blocked_until: 2000,
             },
         );
-        assert_eq!(state.reserve("blocked", 1000), Some(2000));
-        assert_eq!(state.reserve("free", 1000), None);
+        assert_eq!(
+            state.reserve("blocked", 1000, Priority::Background),
+            Some(2000)
+        );
+        assert_eq!(state.reserve("free", 1000, Priority::Background), None);
         assert_eq!(state.app.windows[0].sent.len(), 1);
+    }
+    #[test]
+    fn le_collecteur_laisse_une_part_de_la_fenetre_courte_a_l_interactif() {
+        let mut state = QuotaState::default();
+        // 20 par seconde : le collecteur s'arrête à 16, quatre appels restent réservés.
+        for _ in 0..16 {
+            assert_eq!(state.reserve("m", 1000, Priority::Background), None);
+        }
+        assert_eq!(state.reserve("m", 1000, Priority::Background), Some(2000));
+        for _ in 0..4 {
+            assert_eq!(state.reserve("m", 1000, Priority::Interactive), None);
+        }
+        // Le plafond global de Riot reste intact pour tout le monde.
+        assert_eq!(state.reserve("m", 1000, Priority::Interactive), Some(2000));
+    }
+    #[test]
+    fn le_collecteur_laisse_une_part_de_la_fenetre_longue_a_l_interactif() {
+        let mut state = QuotaState::default();
+        // Une réservation par seconde : la fenêtre de 20 par seconde n'intervient pas.
+        for i in 0..80 {
+            assert_eq!(
+                state.reserve("m", 1000 + i * 1000, Priority::Background),
+                None
+            );
+        }
+        let now = 1000 + 80 * 1000;
+        // 100 par 2 minutes : le collecteur s'arrête à 80, vingt appels restent réservés.
+        assert_eq!(
+            state.reserve("m", now, Priority::Background),
+            Some(1000 + 120_000)
+        );
+        assert_eq!(state.reserve("m", now, Priority::Interactive), None);
+    }
+    #[test]
+    fn une_fenetre_d_un_seul_appel_reste_utilisable_par_le_collecteur() {
+        let mut state = QuotaState::default();
+        state.app.windows = vec![Window {
+            limit: 1,
+            period_ms: 100,
+            sent: vec![],
+        }];
+        assert_eq!(state.reserve("m", 1000, Priority::Background), None);
+        assert_eq!(state.reserve("m", 1001, Priority::Background), Some(1100));
+    }
+    #[test]
+    fn un_blocage_429_s_applique_aussi_a_l_interactif() {
+        let mut state = QuotaState::default();
+        state.app.blocked_until = 5000;
+        assert_eq!(state.reserve("m", 1000, Priority::Interactive), Some(5000));
     }
 }

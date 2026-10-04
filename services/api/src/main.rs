@@ -7,7 +7,9 @@ use olc_api::{
     server::{router, AppState},
 };
 use olc_collector::{
-    config::ApiKey, riot_client::HttpsTransport, shared_quota::CoordinatedTransport,
+    config::ApiKey,
+    riot_client::HttpsTransport,
+    shared_quota::{CoordinatedTransport, Priority},
     storage::Storage,
 };
 use std::{net::SocketAddr, process::ExitCode, sync::Arc, time::Duration};
@@ -102,10 +104,12 @@ async fn run(args: Args) -> Result<(), String> {
                 let transport = HttpsTransport::new(&key, Duration::from_secs(15))
                     .map_err(|_| "transport Riot indisponible")?
                     .with_max_response_bytes(8 * 1024 * 1024);
-                state.profiles = Some(Arc::new(Profiles::new(CoordinatedTransport::new(
-                    transport,
-                    storage.clone(),
-                ))));
+                // L'API sert des requêtes d'utilisateurs : elle garde la part du quota Riot
+                // que le collecteur n'a pas le droit de consommer.
+                state.profiles = Some(Arc::new(Profiles::new(
+                    CoordinatedTransport::new(transport, storage.clone())
+                        .with_priority(Priority::Interactive),
+                )));
             }
             let listener = tokio::net::TcpListener::bind(bind)
                 .await

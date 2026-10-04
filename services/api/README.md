@@ -121,6 +121,14 @@ base** ; les outils tiers ne sont pas coordonnés. Une base représente un produ
 Riot ; aucun joueur ni clé dans les états. Les appels en vol non confirmés sont
 comptés prudemment pendant 60 s (timeout HTTP réel 15 s).
 
+Priorité : chaque transport déclare sa priorité. L'API utilise `Interactive`
+(plafond complet de la clé) ; le collecteur reste en `Background` et ne consomme
+que 80 % de chaque fenêtre (au moins 1 appel), soit 16 par seconde et 80 par
+2 minutes avec les limites d'une clé de développement. Les 20 % restants servent
+à l'interactif même quand une rafale de collecte sature le seau ; le plafond
+global de Riot n'est jamais dépassé et aucune seconde clé n'est utilisée. Un 429
+Riot bloque les deux appelants. Une fenêtre d'un seul appel ne laisse aucune réserve.
+
 ### Cache et erreurs
 
 Statiques : `ETag` SHA-256 du contenu, `If-None-Match` et 304 vide. Manifeste :
@@ -130,7 +138,9 @@ en-têtes et cacher uniquement les routes statiques. Images sur les CDN Riot.
 Cette commande ne déploie ni CDN ni terminaison TLS.
 
 Erreurs JSON : `{"error":{"code":"…"}}`. Codes : `invalid_request` (400),
-`unauthorized` (401), `not_found` (404), `unavailable` (503), `rate_limited` (429).
+`unauthorized` (401), `not_found` (404), `unavailable` (503), `rate_limited` (429,
+refus immédiat : plus de 4 appels Riot en cours sur l'instance), `riot_busy` (503,
+aucun créneau de quota Riot obtenu en 20 s : réessayer plus tard, ce n'est pas une panne).
 Aucun corps brut Riot, URL sensible ou détail SQL. Le consommateur traduit ces
 codes en FR/EN. Durée HTTP maximale 45 s, appel Riot 20 s avec attente de quota ;
 maximum 4 appels Riot et 32 requêtes HTTP simultanés par instance.

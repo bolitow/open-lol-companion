@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Quota Riot partagé : l'API des profils garde 20 % de chaque fenêtre (4 appels/s, 20 par 2 min) que le collecteur ne consomme plus, pour qu'une recherche de profil ne dorme plus pendant une rafale de collecte ; le plafond global de la clé reste intact. Nouveau code d'erreur `riot_busy` (503) quand aucun créneau n'est obtenu en 20 s, distinct de `unavailable` et du refus immédiat `rate_limited` (#122).
+
 - Desktop : commande `client_patch` qui lit la version du jeu installée dans le client LoL (`/lol-patch/v1/game-version`) et en tire le patch `majeur.mineur`, avec son type partagé ; l'interface ne l'utilise pas encore (#93, partie cœur Rust).
 - Catalogue : l'infobulle des compétences et des sorts d'invocateur garde le type de dégâts (physique, magique, brut) sous forme de segments typés `tooltip_segments`, lu dans les balises de Data Dragon et non dans la formulation, donc valable dans toutes les langues ; le texte brut `tooltip` ne change pas, la regex du desktop reste à supprimer (#107).
 - Catalogue : augments Arena et Mayhem en données statiques (noms FR/EN, description, rareté, icône), exposés par l'API du référentiel et l'export desktop ; sans statistique, popularité ni tier, catalogue publié non régénéré (#118).

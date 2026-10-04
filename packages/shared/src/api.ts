@@ -224,7 +224,8 @@ export type ApiErrorCode =
   | "unauthorized"
   | "not_found"
   | "unavailable"
-  | "rate_limited";
+  | "rate_limited"
+  | "riot_busy";
 
 export interface ApiErrorResponse {
   error: {
