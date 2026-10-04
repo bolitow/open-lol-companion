@@ -94,7 +94,10 @@ Tierlist triée par position puis champion ; builds par catégorie, effectif
 décroissant, sélection. La pagination des builds ne tronque pas compétences/achats.
 
 Les métadonnées conservent les dates source/publication, seuil, méthode, couverture
-du périmètre et fenêtre calculée. Couverture et bans ne sont pas ventilés par
+du périmètre et fenêtre calculée. `rank_scope` et `rank_max_age_hours` décrivent le
+rang figé à la partie (#80) ; la couverture ajoute la part `UNKNOWN`
+(`unknown_rank_rate`) et les écarts partie → observation (`rank_gap_median_hours`,
+`rank_gap_max_hours`), `null` pour un instantané antérieur. Couverture et bans ne sont pas ventilés par
 rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander

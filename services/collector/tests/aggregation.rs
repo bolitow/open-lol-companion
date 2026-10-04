@@ -6,6 +6,7 @@ use std::time::Duration;
 use common::TestDb;
 use olc_collector::aggregation::{
     recalculate, recalculate_filtered, AggregationError, AggregationOptions,
+    DEFAULT_RANK_MAX_AGE_HOURS,
 };
 use olc_collector::config::RunParams;
 use olc_collector::model::fixtures::match_detail;
@@ -391,7 +392,15 @@ async fn aggregation_cli_publie_du_json_sans_cle_riot_et_refuse_un_seuil_nul() {
     let run_id = run(&db).await;
     insert_match(&db, run_id, "EUW1_cli").await;
     let output = std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"))
-        .args(["aggregate", "--all-stored", "--min-games", "1", "--json"])
+        .args([
+            "aggregate",
+            "--all-stored",
+            "--min-games",
+            "1",
+            "--rank-max-age-hours",
+            "48",
+            "--json",
+        ])
         .env("DATABASE_URL", db.database_url())
         .env("RIOT_API_KEY", "")
         .current_dir(std::env::temp_dir())
@@ -405,7 +414,16 @@ async fn aggregation_cli_publie_du_json_sans_cle_riot_et_refuse_un_seuil_nul() {
     let report: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(report["included_matches"], 1);
     assert_eq!(report["groups"][0]["games"], 1);
+    assert_eq!(report["rank_max_age_hours"], 48);
     assert_eq!(published(&db).await, report);
+    let invalid_age = std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"))
+        .args(["aggregate", "--rank-max-age-hours", "0"])
+        .env("DATABASE_URL", "postgres://invalid.invalid/test")
+        .env("RIOT_API_KEY", "")
+        .current_dir(std::env::temp_dir())
+        .output()
+        .unwrap();
+    assert_eq!(invalid_age.status.code(), Some(2));
     let invalid = std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"))
         .args(["aggregate", "--min-games", "0"])
         .env("DATABASE_URL", "postgres://invalid.invalid/test")
@@ -420,17 +438,17 @@ async fn aggregation_cli_publie_du_json_sans_cle_riot_et_refuse_un_seuil_nul() {
 }
 
 #[tokio::test]
-async fn aggregation_filtre_et_lit_les_observations_recentes_et_la_timeline() {
+async fn aggregation_filtre_et_lit_les_observations_proches_de_la_partie_et_la_timeline() {
     let db = db_or_skip!();
     let run_id = run(&db).await;
     insert_match(&db, run_id, "EUW1_recent").await;
     insert_match(&db, run_id, "EUW1_old").await;
     sqlx::query("UPDATE matches SET patch='15.18',game_version='15.18.1',detail=jsonb_set(detail,'{info,gameVersion}','\"15.18.1\"') WHERE match_id='EUW1_old'")
         .execute(db.storage.pool()).await.unwrap();
-    sqlx::query("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status) VALUES ('EUW1','fake-puuid-0',420,'GOLD','I',50,'ranked')")
+    sqlx::query("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES ('EUW1','fake-puuid-0',420,'GOLD','I',50,'ranked',to_timestamp(1000)+interval '2 hours')")
         .execute(db.storage.pool()).await.unwrap();
-    // Un rang périmé ne devient jamais une observation actuelle.
-    sqlx::query("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES ('EUW1','fake-puuid-1',420,'DIAMOND','I',50,'ranked',now()-interval '25 hours')")
+    // Une observation trop éloignée de la partie ne lui attribue jamais de rang.
+    sqlx::query("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES ('EUW1','fake-puuid-1',420,'DIAMOND','I',50,'ranked',to_timestamp(1000)+interval '169 hours')")
         .execute(db.storage.pool()).await.unwrap();
     let timeline = json!({"metadata":{"matchId":"EUW1_recent"},"info":{"participants":(1..=10).map(|id|json!({"participantId":id})).collect::<Vec<_>>(),"frames":[{"timestamp":0,"events":[
         {"type":"SKILL_LEVEL_UP","timestamp":1000,"participantId":1,"skillSlot":2,"levelUpType":"NORMAL"},
@@ -445,7 +463,7 @@ async fn aggregation_filtre_et_lit_les_observations_recentes_et_la_timeline() {
         start_ms: Some(1_000_000),
         end_ms: Some(2_000_000),
     };
-    let report = recalculate_filtered(&db.storage, 1, &filters)
+    let report = recalculate_filtered(&db.storage, 1, DEFAULT_RANK_MAX_AGE_HOURS, &filters)
         .await
         .unwrap();
     assert_eq!(report.included_matches, 1);
@@ -462,7 +480,7 @@ async fn aggregation_filtre_et_lit_les_observations_recentes_et_la_timeline() {
     assert_eq!(report.filters, filters);
     assert_eq!(published(&db).await, serde_json::to_value(&report).unwrap());
     assert_eq!(
-        recalculate_filtered(&db.storage, 1, &filters)
+        recalculate_filtered(&db.storage, 1, DEFAULT_RANK_MAX_AGE_HOURS, &filters)
             .await
             .unwrap(),
         report
@@ -505,20 +523,22 @@ async fn cli_selection_explicite_du_patch_et_de_la_file() {
 }
 
 #[tokio::test]
-async fn le_rang_le_plus_recent_prime_et_les_files_sont_separees() {
+async fn le_rang_le_plus_proche_de_la_partie_prime_et_les_files_sont_separees() {
     let db = db_or_skip!();
     let run_id = run(&db).await;
     insert_match(&db, run_id, "EUW1_rank_history").await;
+    // La plus récente n'est pas la plus proche ; l'autre file ne compte jamais.
     sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES
-        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',now()-interval '1 hour'),
-        ('EUW1','fake-puuid-0',440,'DIAMOND','I',10,'ranked',now()),
-        ('EUW1','fake-puuid-0',420,NULL,NULL,NULL,'unranked',now());")
+        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '30 hours'),
+        ('EUW1','fake-puuid-0',420,'SILVER','I',10,'ranked',to_timestamp(1000)-interval '5 hours'),
+        ('EUW1','fake-puuid-0',440,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        ('EUW1','fake-puuid-0',420,NULL,NULL,NULL,'unranked',to_timestamp(1000)+interval '2 hours');")
         .execute(db.storage.pool()).await.unwrap();
     let r = recalculate(&db.storage, 1).await.unwrap();
     assert!(!r
         .groups
         .iter()
-        .any(|g| g.key.rank == "GOLD" || g.key.rank == "DIAMOND"));
+        .any(|g| ["GOLD", "SILVER", "DIAMOND"].contains(&g.key.rank.as_str())));
     assert!(r
         .groups
         .iter()
@@ -538,9 +558,54 @@ async fn un_filtre_de_plateforme_invalide_preserve_le_rapport_publie() {
         ..Default::default()
     };
     assert!(matches!(
-        recalculate_filtered(&db.storage, 1, &filters).await,
+        recalculate_filtered(&db.storage, 1, DEFAULT_RANK_MAX_AGE_HOURS, &filters).await,
         Err(AggregationError::InvalidFilters)
     ));
     assert_eq!(published(&db).await, before);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn le_rang_reste_fige_a_la_partie_quel_que_soit_l_heure_du_calcul() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_frozen_rank").await;
+    sqlx::query("UPDATE matches SET game_start=now()-interval '30 days'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    // Observée il y a 30 jours, deux heures après la partie : le rang reste valable.
+    // Observée il y a une heure, un mois après la partie : il ne lui est pas attribué.
+    sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at)
+        SELECT 'EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',game_start+interval '2 hours' FROM matches
+        UNION ALL SELECT 'EUW1','fake-puuid-1',420,'DIAMOND','I',10,'ranked',now()-interval '1 hour';")
+        .execute(db.storage.pool()).await.unwrap();
+    let r = recalculate(&db.storage, 1).await.unwrap();
+    assert!(r
+        .groups
+        .iter()
+        .any(|g| g.key.champion_id == 1 && g.key.rank == "GOLD"));
+    assert!(!r.groups.iter().any(|g| g.key.rank == "DIAMOND"));
+    let c = &r.coverage[0].counts;
+    assert_eq!(
+        (c.ranked_participations, c.unknown_rank_participations),
+        (1, 9)
+    );
+    assert_eq!(c.unknown_rank_rate, Some(90.0));
+    assert_eq!(
+        (c.rank_gap_median_hours, c.rank_gap_max_hours),
+        (Some(2.0), Some(2.0))
+    );
+    assert_eq!(r.rank_max_age_hours, DEFAULT_RANK_MAX_AGE_HOURS);
+    assert_eq!(recalculate(&db.storage, 1).await.unwrap(), r);
+    let strict = recalculate_filtered(&db.storage, 1, 1, &AggregationOptions::default())
+        .await
+        .unwrap();
+    assert!(!strict.groups.iter().any(|g| g.key.rank == "GOLD"));
+    assert_eq!(strict.rank_max_age_hours, 1);
+    assert!(matches!(
+        recalculate_filtered(&db.storage, 1, 0, &AggregationOptions::default()).await,
+        Err(AggregationError::InvalidRankMaxAge)
+    ));
     db.cleanup().await;
 }

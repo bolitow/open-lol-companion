@@ -131,6 +131,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).
 - Set d’objets importé : uniquement des objets achetables du catalogue (`purchasable` et `in_store`) ; les formes évoluées, bottes de niveau 3 et objets de quête sont remplacés par l’objet achetable dont ils découlent, les autres sont retirés et signalés, et la variante entière est rejetée si le statut boutique d’un objet ou d’un maillon n’est pas lisible (#88).
 
 - Import du set d’objets : seuls l’ordre des achats et l’inventaire final sont importables (les catégories objet isolé et relique sont désactivées) ; le panneau d’import et le statut de l’import automatique affichent le nombre d’objets remplacés ou retirés (#88).

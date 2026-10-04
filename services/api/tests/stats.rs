@@ -101,7 +101,8 @@ fn report() -> Value {
         "unknown_rank_participations":500, "unranked_mode_participations":0,
         "unknown_role_participations":0, "timeline_matches":80,
         "timeline_participations":800, "invalid_timeline_participations":5,
-        "unidentified_item_undos":3, "draft_matches":100
+        "unidentified_item_undos":3, "draft_matches":100,
+        "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
@@ -151,8 +152,8 @@ fn report() -> Value {
     items.push(other_item);
 
     json!({
-        "schema_version":2, "rank_scope":"observed_current_rank_of_same_ranked_queue",
-        "rank_max_age_hours":24, "pick_rate_definition":"participations_in_group",
+        "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
+        "rank_max_age_hours":168, "pick_rate_definition":"participations_in_group",
         "tier_method":"wilson_lower_bound", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
             "start_ms":1_000_000, "end_ms":2_000_000},
@@ -408,7 +409,11 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["filters"], source["filters"]);
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
     assert_eq!(meta["min_games"], 100);
-    assert_eq!(meta["rank_max_age_hours"], 24);
+    assert_eq!(meta["rank_max_age_hours"], 168);
+    assert_eq!(
+        meta["rank_scope"],
+        "observed_rank_nearest_to_game_start_of_same_ranked_queue"
+    );
     assert_ne!(meta["source_snapshot_at"], meta["published_at"]);
     assert!(!meta["source_snapshot_at"].as_str().unwrap().is_empty());
     db.cleanup().await;

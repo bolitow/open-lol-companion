@@ -100,6 +100,12 @@ export interface Coverage {
   invalid_timeline_participations: number;
   unidentified_item_undos: number;
   draft_matches: number;
+  /** Part (%) des participations Solo/Flex sans rang attribuable ; null hors files classées. */
+  unknown_rank_rate: number | null;
+  /** Écart médian (heures) entre début de partie et observation de rang retenue. */
+  rank_gap_median_hours: number | null;
+  /** Écart maximal retenu (heures), au plus `rank_max_age_hours`. */
+  rank_gap_max_hours: number | null;
 }
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}

@@ -88,6 +88,13 @@ enum Command {
         /// Parties minimales par champion/rôle/patch pour publier taux et position.
         #[arg(long, default_value_t = 100, value_parser = clap::value_parser!(u32).range(1..))]
         min_games: u32,
+        /// Écart maximal, en heures, entre le début d'une partie et l'observation de rang retenue.
+        #[arg(
+            long,
+            default_value_t = aggregation::DEFAULT_RANK_MAX_AGE_HOURS,
+            value_parser = clap::value_parser!(u32).range(1..=i64::from(aggregation::MAX_RANK_MAX_AGE_HOURS))
+        )]
+        rank_max_age_hours: u32,
         /// Recalcule immédiatement puis chaque heure (Ctrl+C pour arrêter).
         #[arg(long)]
         watch: bool,
@@ -377,6 +384,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
         }
         Command::Aggregate {
             min_games,
+            rank_max_age_hours,
             watch,
             json,
             patches,
@@ -390,6 +398,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             aggregate(
                 &db_url,
                 min_games,
+                rank_max_age_hours,
                 watch,
                 json,
                 AggregationOptions {
@@ -693,9 +702,12 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
     }
 }
 
+// Un paramètre par option CLI de `aggregate` ; les regrouper n'apporterait aucune règle.
+#[allow(clippy::too_many_arguments)]
 async fn aggregate(
     db_url: &str,
     min_games: u32,
+    rank_max_age_hours: u32,
     watch: bool,
     json: bool,
     filters: AggregationOptions,
@@ -713,7 +725,9 @@ async fn aggregate(
         if selected.patches.is_empty() && !all_stored {
             selected.patches = static_data::cached_patches(&storage, 2).await?;
         }
-        let report = aggregation::recalculate_filtered(&storage, min_games, &selected).await?;
+        let report =
+            aggregation::recalculate_filtered(&storage, min_games, rank_max_age_hours, &selected)
+                .await?;
         if json {
             println!("{}", serde_json::to_string(&report)?);
         } else {
