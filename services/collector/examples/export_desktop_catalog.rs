@@ -42,6 +42,11 @@ struct ItemSelection {
     maps: [&'static str; 3],
     /// Objets conservés disponibles sur chaque carte ; un objet commun à deux cartes compte deux fois.
     by_map: BTreeMap<String, usize>,
+    /// Repli `all_items` seulement : objets dont la disponibilité sur la carte n'a pas pu être
+    /// lue (clé absente, valeur non booléenne ou champ `maps` incertain), par carte. Vide quand
+    /// le filtre par carte a pu s'appliquer.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    unreadable_by_map: BTreeMap<String, usize>,
 }
 
 fn on_map(record: &CatalogRecord, map: &str) -> bool {
@@ -100,28 +105,50 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
         mode,
         reason,
         maps: ITEM_MAPS,
+        unreadable_by_map: BTreeMap::new(),
     };
     let all = |reason| selection(items.keys().cloned().collect(), "all_items", Some(reason));
     let mut selected = BTreeSet::new();
+    // Premier objet illisible : sa raison est conservée. Tous les objets sont parcourus pour
+    // dénombrer, par carte, ce qui a déclenché le repli (un seul objet suffit à le déclencher).
+    let mut fallback: Option<&'static str> = None;
+    let mut unreadable_by_map: BTreeMap<String, usize> = BTreeMap::new();
     for (id, record) in &items {
-        let Some(maps) = record.fields.get("maps") else {
-            return all("unknown_map");
+        let readable = record
+            .fields
+            .get("maps")
+            .filter(|maps| matches!(maps.status, ValueStatus::Verified | ValueStatus::Derived));
+        let Some(maps) = readable else {
+            fallback.get_or_insert(if record.fields.contains_key("maps") {
+                "uncertain_map"
+            } else {
+                "unknown_map"
+            });
+            for map in ITEM_MAPS {
+                *unreadable_by_map.entry(map.to_string()).or_default() += 1;
+            }
+            continue;
         };
-        if !matches!(maps.status, ValueStatus::Verified | ValueStatus::Derived) {
-            return all("uncertain_map");
-        }
         // Une carte exportée absente ou non booléenne rend la disponibilité incertaine :
         // mieux vaut tout garder que perdre un objet propre à l'ARAM ou à l'Arena.
         let mut available = false;
         for map in ITEM_MAPS {
             match maps.value.get(map).and_then(Value::as_bool) {
                 Some(on_map) => available |= on_map,
-                None => return all("unknown_map"),
+                None => {
+                    fallback.get_or_insert("unknown_map");
+                    *unreadable_by_map.entry(map.to_string()).or_default() += 1;
+                }
             }
         }
         if available {
             selected.insert(id.clone());
         }
+    }
+    if let Some(reason) = fallback {
+        let mut result = all(reason);
+        result.unreadable_by_map = unreadable_by_map;
+        return result;
     }
     // Une recette peut inclure un composant réservé : garder sa fiche même si sa
     // carte est différente. Le parcours par ensemble termine aussi sur un cycle.
@@ -546,6 +573,12 @@ async fn main() -> Result<(), ExportError> {
             "{locale} : {count} fiches racine, {total_records} au total, filtre {}",
             item_filter.mode
         );
+        if let Some(reason) = item_filter.reason {
+            eprintln!("{locale} : repli sur tous les objets ({reason})");
+            for (map, count) in &item_filter.unreadable_by_map {
+                eprintln!("{locale} : carte {map}, {count} objet(s) à disponibilité illisible");
+            }
+        }
         locale_meta.insert(
             locale.into(),
             LocaleMeta {
@@ -784,6 +817,42 @@ mod tests {
             assert_eq!(result.reason, Some("unknown_map"));
             assert_eq!(result.ids, ["100", "200"].map(String::from).into());
         }
+    }
+
+    #[test]
+    fn le_repli_all_items_denombre_par_carte_les_objets_a_disponibilite_illisible() {
+        let records = vec![
+            item_on(
+                "100",
+                Some(json!({"11": true, "12": false, "30": false})),
+                &[],
+            ),
+            item_on("200", Some(json!({"11": true, "30": false})), &[]),
+            item_on(
+                "300",
+                Some(json!({"11": true, "12": "oui", "30": null})),
+                &[],
+            ),
+            item_on("400", None, &[]),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "all_items");
+        // 200 ne dit rien de la carte 12, 300 est illisible sur 12 et 30, 400 sur les trois.
+        assert_eq!(
+            result.unreadable_by_map,
+            [("11", 1), ("12", 3), ("30", 2)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+        assert_eq!(result.ids.len(), 4);
+    }
+
+    #[test]
+    fn le_filtre_normal_ne_signale_aucune_disponibilite_illisible() {
+        let records = vec![item("100", Some(true), &[]), item("200", Some(false), &[])];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
+        assert!(result.unreadable_by_map.is_empty());
     }
 
     #[test]

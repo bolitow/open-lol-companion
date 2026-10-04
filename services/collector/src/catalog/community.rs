@@ -470,6 +470,54 @@ const STATS: [(&str, &str, &str); 24] = [
     ("mFlatAttackRangeMod", "attack_range", "points"),
 ];
 
+/// Paramètres nommés d'une liste `mName`/`mValue` (`mDataValues` d'un objet ou `DataValues`
+/// d'une surcharge de mode) : ajoute chaque valeur à `parameters` avec sa provenance et
+/// range dans `mapped` les chemins effectivement interprétés. Retourne les noms en conflit ;
+/// l'appelant en tire ses propres signalements de couverture.
+fn data_values(
+    source: &CatalogSource,
+    values: &[Value],
+    array_pointer: &str,
+    parameters: &mut BTreeMap<String, CatalogValue>,
+    mapped: &mut BTreeSet<String>,
+) -> Vec<String> {
+    let mut conflicts = Vec::new();
+    for (index, parameter) in values.iter().enumerate() {
+        let (Some(name), Some(value)) = (
+            parameter.get("mName").and_then(Value::as_str),
+            parameter.get("mValue"),
+        ) else {
+            continue;
+        };
+        let prefix = format!("{array_pointer}/{index}");
+        let status = if value.is_null() {
+            ValueStatus::Missing
+        } else if value.is_number() {
+            ValueStatus::Verified
+        } else {
+            ValueStatus::Unsupported
+        };
+        if status == ValueStatus::Verified {
+            mapped.insert(format!("{prefix}/mName"));
+            mapped.insert(format!("{prefix}/mValue"));
+            if parameter.get("__type").and_then(Value::as_str) == Some("ItemDataValue") {
+                mapped.insert(format!("{prefix}/__type"));
+            }
+        }
+        let incoming = observed(
+            source,
+            format!("{prefix}/mValue"),
+            value.clone(),
+            None,
+            status,
+        );
+        if merge(parameters, name, incoming) {
+            conflicts.push(name.to_owned());
+        }
+    }
+    conflicts
+}
+
 /// Surcharges de valeurs par mode (`DataValuesModeOverride`, #116) : un effet
 /// `cdragon_parameters:{mode}` par mode, à côté des valeurs de base qui restent intactes.
 /// La clé de mode est conservée telle que la source la donne (`ARAM`, `cherry`…) : aucune
@@ -487,7 +535,7 @@ fn mode_overrides(
     };
     let mut effects = Vec::new();
     let mut issues = Vec::new();
-    let mut paths = Vec::new();
+    let mut paths = BTreeSet::new();
     for (mode, entry) in modes {
         let Some(values) = entry
             .get("DataValues")
@@ -498,41 +546,14 @@ fn mode_overrides(
         };
         let mode_pointer = format!("{pointer}/DataValuesModeOverride/{}", escape(mode));
         let mut parameters = BTreeMap::new();
-        for (index, parameter) in values.iter().enumerate() {
-            let (Some(name), Some(value)) = (
-                parameter.get("mName").and_then(Value::as_str),
-                parameter.get("mValue"),
-            ) else {
-                continue;
-            };
-            let prefix = format!("{mode_pointer}/DataValues/{index}");
-            let status = if value.is_null() {
-                ValueStatus::Missing
-            } else if value.is_number() {
-                ValueStatus::Verified
-            } else {
-                ValueStatus::Unsupported
-            };
-            if status == ValueStatus::Verified {
-                paths.push(format!("{prefix}/mName"));
-                paths.push(format!("{prefix}/mValue"));
-                if parameter.get("__type").and_then(Value::as_str) == Some("ItemDataValue") {
-                    paths.push(format!("{prefix}/__type"));
-                }
-            }
-            if merge(
-                &mut parameters,
-                name,
-                observed(
-                    source,
-                    format!("{prefix}/mValue"),
-                    value.clone(),
-                    None,
-                    status,
-                ),
-            ) {
-                issues.push(format!("conflict:effect_parameter.{mode}.{name}"));
-            }
+        for name in data_values(
+            source,
+            values,
+            &format!("{mode_pointer}/DataValues"),
+            &mut parameters,
+            &mut paths,
+        ) {
+            issues.push(format!("conflict:effect_parameter.{mode}.{name}"));
         }
         if parameters.is_empty() {
             return false;
@@ -541,7 +562,7 @@ fn mode_overrides(
             issues.push(format!("unresolved_mode_key:{mode}"));
         }
         if entry.get("__type").and_then(Value::as_str) == Some("ItemDataValues") {
-            paths.push(format!("{mode_pointer}/__type"));
+            paths.insert(format!("{mode_pointer}/__type"));
         }
         effects.push(CatalogEffect {
             id: format!("cdragon_parameters:{mode}"),
@@ -702,44 +723,17 @@ fn bin_item(record: &mut CatalogRecord, source: &CatalogSource, item: &Value) {
     }
     let mut parameters = BTreeMap::new();
     if let Some(values) = item.get("mDataValues").and_then(Value::as_array) {
-        for (index, parameter) in values.iter().enumerate() {
-            let (Some(name), Some(value)) = (
-                parameter.get("mName").and_then(Value::as_str),
-                parameter.get("mValue"),
-            ) else {
-                continue;
-            };
-            let prefix = format!("{pointer}/mDataValues/{index}");
-            let status = if value.is_null() {
-                ValueStatus::Missing
-            } else if value.is_number() {
-                ValueStatus::Verified
-            } else {
-                ValueStatus::Unsupported
-            };
-            if status == ValueStatus::Verified {
-                mapped.insert(format!("{prefix}/mName"));
-                mapped.insert(format!("{prefix}/mValue"));
-                if parameter.get("__type").and_then(Value::as_str) == Some("ItemDataValue") {
-                    mapped.insert(format!("{prefix}/__type"));
-                }
-            }
-            if merge(
-                &mut parameters,
-                name,
-                observed(
-                    source,
-                    format!("{prefix}/mValue"),
-                    value.clone(),
-                    None,
-                    status,
-                ),
-            ) {
-                record
-                    .coverage
-                    .issues
-                    .push(format!("conflict:effect_parameter.{name}"));
-            }
+        for name in data_values(
+            source,
+            values,
+            &format!("{pointer}/mDataValues"),
+            &mut parameters,
+            &mut mapped,
+        ) {
+            record
+                .coverage
+                .issues
+                .push(format!("conflict:effect_parameter.{name}"));
         }
     }
     if !parameters.is_empty() {
