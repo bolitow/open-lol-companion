@@ -82,7 +82,13 @@ Les métadonnées conservent les dates source/publication, seuil, méthode, couv
 du périmètre et fenêtre calculée. `rank_scope` et `rank_max_age_hours` décrivent le
 rang figé à la partie (#80) ; la couverture ajoute la part `UNKNOWN`
 (`unknown_rank_rate`) et les écarts partie → observation (`rank_gap_median_hours`,
-`rank_gap_max_hours`), `null` pour un instantané antérieur. Les builds incluent les étapes
+`rank_gap_max_hours`), `null` pour un instantané antérieur. La fraîcheur réelle (#103) est
+dans `meta.freshness` : `computed_at` (date du calcul, même instant que
+`source_snapshot_at`) et les bornes `first_game_start_ms` / `last_game_start_ms` (ms Unix)
+des parties incluses dans les périmètres lus ; chaque couverture porte les mêmes dates pour
+son propre périmètre. `published_at` et `source_snapshot_at` avancent à chaque recalcul,
+même sans nouvelle partie : seule `last_game_start_ms` date la dernière partie. Les dates de
+parties valent `null` pour un instantané antérieur jusqu'au prochain calcul. Les builds incluent les étapes
 d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque variante
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la

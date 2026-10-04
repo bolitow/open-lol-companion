@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Fraîcheur réelle des statistiques : la couverture de chaque périmètre publie le début de sa première et de sa dernière partie incluse, et la méta de l’API ajoute `freshness` (date du calcul et bornes des parties lues), car « Données au » n’était que l’heure du recalcul. Les écarts partie → rang (médian, maximal) restent servis par la couverture ; affichage desktop, alerte d’obsolescence et date de dernière collecte par plateforme restent à livrer (#103).
+
 - Tendances entre patchs : route `/v1/trends/{champion_id}` donnant, pour un champion, un rôle et un rang, la série winrate, pick, ban et effectif de chaque patch de l’instantané publié, avec les écarts au patch précédent ; patch vide ou taux sous le seuil laissés explicites (#110).
 
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).

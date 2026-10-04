@@ -133,6 +133,10 @@ export interface Coverage {
   rank_gap_median_hours: number | null;
   /** Écart maximal retenu (heures), au plus `rank_max_age_hours`. */
   rank_gap_max_hours: number | null;
+  /** Début (ms Unix) de la plus ancienne partie incluse du périmètre ; null pour un instantané antérieur. */
+  first_game_start_ms: number | null;
+  /** Début (ms Unix) de la plus récente partie incluse : la vraie fraîcheur, distincte du calcul. */
+  last_game_start_ms: number | null;
   /** Participations dont les étapes d'achat ont été dérivées du catalogue du patch. */
   item_stage_participations: number;
   /** Participations à achats nets connus mais sans catalogue d'objets pour leur patch. */
@@ -142,6 +146,16 @@ export interface Coverage {
 }
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}
+
+/** Fraîcheur réelle des périmètres lus (#103) ; dates de parties nulles pour un instantané antérieur. */
+export interface Freshness {
+  /** Date du calcul, identique à `source_snapshot_at`. */
+  computed_at: string;
+  /** Début (ms Unix) de la plus ancienne partie incluse des périmètres lus. */
+  first_game_start_ms: number | null;
+  /** Début (ms Unix) de la plus récente partie incluse des périmètres lus. */
+  last_game_start_ms: number | null;
+}
 
 /** Métadonnées et contenu sont lus depuis le même instantané publié. */
 export interface SnapshotMeta {
@@ -154,6 +168,7 @@ export interface SnapshotMeta {
   pick_rate_definition: string;
   tier_method: string;
   filters: AggregationOptions;
+  freshness: Freshness;
   coverage: ScopeCoverage[];
 }
 

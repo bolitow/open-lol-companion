@@ -646,6 +646,29 @@ async fn la_borne_d_ecart_est_incluse_exactement_et_l_arrondi_ne_la_depasse_pas(
 }
 
 #[tokio::test]
+async fn la_couverture_publie_les_dates_reelles_des_parties_incluses() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_early").await;
+    insert_match(&db, run_id, "EUW1_late").await;
+    sqlx::query("UPDATE matches SET game_start=to_timestamp(5000.25) WHERE match_id='EUW1_late'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    let r = recalculate(&db.storage, 1).await.unwrap();
+    let c = &r.coverage[0].counts;
+    assert_eq!(
+        (c.first_game_start_ms, c.last_game_start_ms),
+        (Some(1_000_000), Some(5_000_250))
+    );
+    // Les dates sont lues dans la couverture publiée, pas recalculées par le lecteur.
+    let stored = published(&db).await;
+    assert_eq!(stored["coverage"][0]["first_game_start_ms"], 1_000_000);
+    assert_eq!(stored["coverage"][0]["last_game_start_ms"], 5_000_250);
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn la_recherche_de_l_observation_la_plus_proche_choisit_entre_avant_et_apres() {
     let db = db_or_skip!();
     let run_id = run(&db).await;
