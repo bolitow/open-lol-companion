@@ -56,6 +56,15 @@ impl BuildRequest {
                 "UNKNOWN",
                 "UNRANKED",
                 "UNRANKED_MODE",
+                // Paliers cumulés (#83), miroir de `CUMULATIVE_RANKS` côté collecteur.
+                "IRON_PLUS",
+                "BRONZE_PLUS",
+                "SILVER_PLUS",
+                "GOLD_PLUS",
+                "PLATINUM_PLUS",
+                "EMERALD_PLUS",
+                "DIAMOND_PLUS",
+                "MASTER_PLUS",
             ]
             .contains(&self.rank.as_str())
         {

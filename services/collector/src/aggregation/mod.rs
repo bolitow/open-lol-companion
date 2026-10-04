@@ -2,6 +2,7 @@
 
 mod builds;
 mod context;
+mod cumulative;
 mod match_tier;
 mod model;
 mod scheduler;
@@ -10,6 +11,7 @@ mod stages;
 mod storage;
 
 pub use context::{FirstObjectiveStats, SplitBucket, SplitDimension, SplitStats};
+pub use cumulative::CUMULATIVE_RANKS;
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
     ItemCatalogRef, ItemEventStats, QualityThresholds, Reliability, Role, ScopeCoverage, ScopeKey,

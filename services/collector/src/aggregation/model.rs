@@ -6,6 +6,7 @@ use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
 use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
+use super::cumulative;
 use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 
@@ -425,7 +426,7 @@ pub(super) struct StoredMatch {
 
 type Population = (ScopeKey, Role, String);
 type BuildKey = (GroupKey, String, Vec<u32>);
-#[derive(Default)]
+#[derive(Default, Clone)]
 struct Count {
     games: u64,
     wins: u64,
@@ -686,7 +687,7 @@ impl Accumulator {
                     Err(_) => coverage.invalid_timeline_participations += 1,
                 }
             }
-            for rank in ["ALL".to_owned(), rank] {
+            for rank in ["ALL".to_owned(), rank.clone()] {
                 let key = GroupKey {
                     patch: game.patch.clone(),
                     platform_id: game.platform_id.clone(),
@@ -719,6 +720,21 @@ impl Accumulator {
                 seen_buckets.insert(bucket);
                 seen_champions.insert(key.clone());
                 self.add_builds(&key, p.win, p.placement, &observations);
+            }
+            // Paliers cumulés (#83) : seules les parties distinctes se comptent ici, car une
+            // partie dont les joueurs ont des paliers différents ne compte qu'une fois dans
+            // « X et plus ». Les autres effectifs s'additionnent dans `finish`.
+            for plus in cumulative::containing(&rank) {
+                let key = GroupKey {
+                    patch: game.patch.clone(),
+                    platform_id: game.platform_id.clone(),
+                    queue_id: game.queue_id,
+                    role: p.role,
+                    rank: (*plus).to_owned(),
+                    champion_id: p.champion,
+                };
+                seen_buckets.insert((scope.clone(), p.role, key.rank.clone()));
+                seen_champions.insert(key);
             }
         }
         for bucket in seen_buckets {
@@ -793,6 +809,28 @@ impl Accumulator {
 
     pub fn finish(mut self) -> AggregationReport {
         let minimum = u64::from(self.report.min_games);
+        // Paliers cumulés (#83) : les effectifs observés partitionnent les participations
+        // classées, donc ils s'additionnent. Les builds sont cumulés avant la coupe des
+        // variantes, sans multiplier les clés de l'accumulateur pendant la lecture des parties.
+        cumulative::extend(&mut self.counts, |k| &mut k.rank, merge_count);
+        cumulative::extend(&mut self.populations, |k| &mut k.2, |a, b| *a += b);
+        cumulative::extend(&mut self.bans, |k| &mut k.1, |a, b| *a += b);
+        cumulative::extend(&mut self.ban_drafts, |k| &mut k.1, |a, b| *a += b);
+        cumulative::extend(&mut self.builds, |k| &mut k.0.rank, merge_count);
+        cumulative::extend(
+            &mut self.build_populations,
+            |k| &mut k.0.rank,
+            |a, b| *a += b,
+        );
+        cumulative::extend(
+            &mut self.skills,
+            |k| &mut k.0.rank,
+            |a, b| {
+                a.0 += b.0;
+                a.1 += b.1;
+            },
+        );
+        cumulative::extend(&mut self.events, |k| &mut k.0.rank, |a, b| *a += b);
         let mut popular: BTreeMap<(ScopeKey, Role, u32), (u64, String)> = BTreeMap::new();
         for (key, c) in &self.counts {
             if is_ranked_tier(&key.rank) {
@@ -1101,6 +1139,10 @@ impl Accumulator {
     }
 }
 
+fn merge_count(total: &mut Count, other: &Count) {
+    total.games += other.games;
+    total.wins += other.wins;
+}
 pub(super) fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
     (d >= min && d > 0).then(|| 100.0 * n as f64 / d as f64)
 }

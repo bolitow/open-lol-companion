@@ -2180,6 +2180,273 @@ fn un_instantane_publie_avant_91_se_relit_sans_fiabilite_ni_intervalle() {
     assert_eq!(old.reliability_floor, 0);
 }
 
+// --- Paliers cumulés (#83) ---------------------------------------------------------------
+
+fn rank_player(game: &mut StoredMatch, index: usize, tier: &str) {
+    game.ranks.insert(
+        format!("fake-puuid-{index}"),
+        observed("ranked", Some(tier), 3600),
+    );
+}
+
+fn try_group<'a>(
+    report: &'a super::AggregationReport,
+    champion_id: u32,
+    role: Role,
+    rank: &str,
+) -> Option<&'a super::ChampionStats> {
+    report
+        .groups
+        .iter()
+        .find(|g| g.key.champion_id == champion_id && g.key.role == role && g.key.rank == rank)
+}
+
+#[test]
+fn un_palier_cumule_additionne_les_paliers_observes_sans_compter_deux_fois_une_partie() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Partie A : top bleu (champion 1) GOLD, top rouge (champion 6) DIAMOND.
+    let mut a = game("EUW1_cumul_a");
+    rank_player(&mut a, 0, "GOLD");
+    rank_player(&mut a, 5, "DIAMOND");
+    acc.add(&a);
+    // Partie B : top bleu (champion 1) DIAMOND, top rouge sans palier.
+    let mut b = game("EUW1_cumul_b");
+    rank_player(&mut b, 0, "DIAMOND");
+    acc.add(&b);
+    let report = acc.finish();
+
+    // GOLD_PLUS : GOLD + DIAMOND ; la partie A compte une fois dans le compartiment.
+    let gold_plus = find_group(&report, 1, Role::Top, "GOLD_PLUS");
+    assert_eq!((gold_plus.games, gold_plus.wins), (2, 2));
+    assert_eq!((gold_plus.population, gold_plus.bucket_matches), (3, 2));
+    assert_eq!(gold_plus.pick_rate, Some(100.0));
+    assert_eq!(gold_plus.selection_share.map(f64::round), Some(67.0));
+    let other = find_group(&report, 6, Role::Top, "GOLD_PLUS");
+    assert_eq!(
+        (other.games, other.wins, other.pick_rate),
+        (1, 0, Some(50.0))
+    );
+    // DIAMOND_PLUS exclut le GOLD ; MASTER_PLUS n'existe pas sans joueur Master ou plus.
+    let diamond_plus = find_group(&report, 1, Role::Top, "DIAMOND_PLUS");
+    assert_eq!((diamond_plus.games, diamond_plus.population), (1, 2));
+    assert_eq!(diamond_plus.bucket_matches, 2);
+    assert!(try_group(&report, 1, Role::Top, "MASTER_PLUS").is_none());
+    // Même population pour tous les seuils jusqu'à GOLD ; différente de ALL (rangs inconnus).
+    for rank in ["IRON_PLUS", "BRONZE_PLUS", "SILVER_PLUS"] {
+        let same = find_group(&report, 1, Role::Top, rank);
+        assert_eq!((same.games, same.population), (2, 3), "{rank}");
+    }
+    assert_eq!(find_group(&report, 1, Role::Top, "ALL").population, 4);
+    // Les groupes observés restent intacts.
+    assert_eq!(find_group(&report, 1, Role::Top, "GOLD").games, 1);
+    // Le palier cumulé n'est jamais « le rang le plus joué » d'un champion.
+    assert!(report.groups.iter().all(|g| !g
+        .most_picked_rank
+        .as_deref()
+        .unwrap_or("")
+        .ends_with("_PLUS")));
+}
+
+#[test]
+fn les_paliers_cumules_sont_classes_comme_les_autres_populations() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut a = game("EUW1_rang_a");
+    rank_player(&mut a, 0, "EMERALD");
+    acc.add(&a);
+    let report = acc.finish();
+    let emerald_plus = find_group(&report, 1, Role::Top, "EMERALD_PLUS");
+    assert_eq!(emerald_plus.position, Some(1));
+    assert_eq!(emerald_plus.reliability, Some(super::Reliability::Low));
+    assert!(emerald_plus.win_rate_lower_bound.is_some());
+}
+
+#[test]
+fn les_bans_cumules_additionnent_les_paliers_de_partie_sans_les_parties_sans_palier() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut gold = game("EUW1_ban_gold");
+    set_bans(&mut gold, &[99, 98], &[99]);
+    rank_first_players(&mut gold, 6, "GOLD", 3600);
+    acc.add(&gold);
+    let mut diamond = game("EUW1_ban_diamond");
+    set_bans(&mut diamond, &[99], &[-1]);
+    rank_first_players(&mut diamond, 6, "DIAMOND", 3600);
+    acc.add(&diamond);
+    let mut sparse = game("EUW1_ban_sparse");
+    set_bans(&mut sparse, &[99], &[]);
+    rank_first_players(&mut sparse, 5, "GOLD", 3600);
+    acc.add(&sparse);
+    let report = acc.finish();
+
+    let gold_plus_99 = find_ban(&report, "GOLD_PLUS", 99).unwrap();
+    assert_eq!(
+        (gold_plus_99.banned_matches, gold_plus_99.draft_matches),
+        (2, 2)
+    );
+    let gold_plus_98 = find_ban(&report, "GOLD_PLUS", 98).unwrap();
+    assert_eq!(
+        (gold_plus_98.banned_matches, gold_plus_98.draft_matches),
+        (1, 2)
+    );
+    assert_eq!(gold_plus_98.ban_rate, Some(50.0));
+    let diamond_plus_99 = find_ban(&report, "DIAMOND_PLUS", 99).unwrap();
+    assert_eq!(
+        (
+            diamond_plus_99.banned_matches,
+            diamond_plus_99.draft_matches
+        ),
+        (1, 1)
+    );
+    assert!(find_ban(&report, "DIAMOND_PLUS", 98).is_none());
+    assert!(find_ban(&report, "MASTER_PLUS", 99).is_none());
+    // La draft sans palier ne figure ni dans IRON_PLUS ni dans un palier cumulé.
+    assert_eq!(find_ban(&report, "IRON_PLUS", 99).unwrap().draft_matches, 2);
+    assert_eq!(find_ban(&report, "ALL", 99).unwrap().draft_matches, 3);
+}
+
+#[test]
+fn les_builds_cumules_sont_additionnes_avant_la_coupe_des_variantes() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let spells = |g: &mut StoredMatch, second: u32| {
+        let p = &mut g.detail["info"]["participants"][0];
+        p["summoner1Id"] = json!(4);
+        p["summoner2Id"] = json!(second);
+    };
+    // GOLD : vingt variantes d'un match chacune, plus la variante 500.
+    for n in 0..20 {
+        let mut g = game(&format!("EUW1_build_gold{n}"));
+        rank_player(&mut g, 0, "GOLD");
+        spells(&mut g, 100 + n);
+        acc.add(&g);
+    }
+    let mut g = game("EUW1_build_gold_x");
+    rank_player(&mut g, 0, "GOLD");
+    spells(&mut g, 500);
+    acc.add(&g);
+    // DIAMOND : la variante 500 revient une seconde fois.
+    let mut g = game("EUW1_build_diamond_x");
+    rank_player(&mut g, 0, "DIAMOND");
+    spells(&mut g, 500);
+    acc.add(&g);
+    let report = acc.finish();
+
+    let variants = |rank: &str| -> Vec<&super::BuildStats> {
+        report
+            .builds
+            .iter()
+            .filter(|b| {
+                b.key.rank == rank && b.key.champion_id == 1 && b.category == "summoner_spells"
+            })
+            .collect()
+    };
+    // Par palier observé, la variante 500 est la 21ᵉ à égalité (une partie) : coupée.
+    let gold = variants("GOLD");
+    assert_eq!(gold.len(), 20);
+    assert!(gold.iter().all(|b| !b.selection.contains(&500)));
+    // Cumulée, elle compte deux parties : elle passe en tête et reste publiée.
+    let gold_plus = variants("GOLD_PLUS");
+    assert_eq!(gold_plus.len(), 20);
+    assert!(gold_plus.iter().all(|b| b.population == 22));
+    let x = &gold_plus[0];
+    assert!(x.selection.contains(&500));
+    assert_eq!((x.games, x.wins), (2, Some(2)));
+    let diamond_plus = variants("DIAMOND_PLUS");
+    assert_eq!(diamond_plus.len(), 1);
+    assert_eq!((diamond_plus[0].games, diamond_plus[0].population), (1, 1));
+}
+
+#[test]
+fn les_competences_et_evenements_d_objets_cumules_additionnent_leurs_effectifs() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for (n, tier, at_ms) in [(0, "GOLD", 1000), (1, "DIAMOND", 3000)] {
+        let mut g = game(&format!("EUW1_skill{n}"));
+        rank_player(&mut g, 0, tier);
+        g.timeline = Some(json!({
+            "metadata":{"matchId":g.match_id},
+            "info":{"participants":[{"participantId":1}],"frames":[{"events":[
+                {"type":"SKILL_LEVEL_UP","participantId":1,"timestamp":at_ms,"skillSlot":2,"levelUpType":"NORMAL"},
+                {"type":"ITEM_PURCHASED","participantId":1,"timestamp":60_000,"itemId":1055}
+            ]}]}
+        }));
+        acc.add(&g);
+    }
+    let report = acc.finish();
+    let skill = |rank: &str| {
+        report
+            .skill_levels
+            .iter()
+            .find(|s| s.key.rank == rank && s.key.champion_id == 1 && s.slot == 2)
+    };
+    let gold_plus = skill("GOLD_PLUS").unwrap();
+    assert_eq!(gold_plus.games, 2);
+    assert_eq!(gold_plus.mean_timestamp_ms, 2000.0);
+    let diamond_plus = skill("DIAMOND_PLUS").unwrap();
+    assert_eq!(
+        (diamond_plus.games, diamond_plus.mean_timestamp_ms),
+        (1, 3000.0)
+    );
+    assert!(skill("MASTER_PLUS").is_none());
+    let purchases = |rank: &str| -> u64 {
+        report
+            .item_events
+            .iter()
+            .filter(|e| e.key.rank == rank && e.key.champion_id == 1 && e.item_id == 1055)
+            .map(|e| e.events)
+            .sum()
+    };
+    assert_eq!(purchases("GOLD_PLUS"), 2);
+    assert_eq!(purchases("DIAMOND_PLUS"), 1);
+}
+
+#[test]
+fn aucun_palier_cumule_sans_palier_observe_ni_hors_files_classees() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&game("EUW1_sans_rang"));
+    let mut aram = game("EUW1_aram");
+    aram.queue_id = 450;
+    aram.detail["info"]["queueId"] = json!(450);
+    rank_player(&mut aram, 0, "GOLD");
+    acc.add(&aram);
+    let report = acc.finish();
+    assert!(report.groups.iter().all(|g| !g.key.rank.ends_with("_PLUS")));
+    assert!(report.bans.iter().all(|b| !b.rank.ends_with("_PLUS")));
+    assert!(report.builds.iter().all(|b| !b.key.rank.ends_with("_PLUS")));
+}
+
+#[test]
+fn les_paliers_cumules_sont_ordonnes_et_contiennent_chaque_palier_a_partir_de_leur_seuil() {
+    use super::cumulative::{containing, CUMULATIVE_RANKS};
+    assert_eq!(
+        CUMULATIVE_RANKS,
+        [
+            "IRON_PLUS",
+            "BRONZE_PLUS",
+            "SILVER_PLUS",
+            "GOLD_PLUS",
+            "PLATINUM_PLUS",
+            "EMERALD_PLUS",
+            "DIAMOND_PLUS",
+            "MASTER_PLUS"
+        ]
+    );
+    assert_eq!(containing("IRON"), ["IRON_PLUS"]);
+    assert_eq!(containing("GOLD").last(), Some(&"GOLD_PLUS"));
+    assert_eq!(containing("GOLD").len(), 4);
+    // Les paliers apex partagent MASTER_PLUS ; il n'existe ni GRANDMASTER_PLUS ni CHALLENGER_PLUS.
+    for apex in ["MASTER", "GRANDMASTER", "CHALLENGER"] {
+        assert_eq!(containing(apex), CUMULATIVE_RANKS, "{apex}");
+    }
+    for not_a_tier in [
+        "ALL",
+        "UNKNOWN",
+        "UNRANKED",
+        "UNRANKED_MODE",
+        "GOLD_PLUS",
+        "",
+    ] {
+        assert!(containing(not_a_tier).is_empty(), "{not_a_tier}");
+    }
+}
+
 #[test]
 fn la_duree_est_repartie_en_tranches_dont_la_borne_basse_est_incluse() {
     let mut acc = Accumulator::new(1).unwrap();

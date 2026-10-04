@@ -73,23 +73,24 @@ fn are_dimensions(platform: &str, queue: i32, role: &str, rank: &str) -> bool {
     olc_collector::config::PLATFORMS.contains(&platform)
         && (1..=100_000).contains(&queue)
         && ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY", "UNKNOWN"].contains(&role)
-        && [
-            "ALL",
-            "IRON",
-            "BRONZE",
-            "SILVER",
-            "GOLD",
-            "PLATINUM",
-            "EMERALD",
-            "DIAMOND",
-            "MASTER",
-            "GRANDMASTER",
-            "CHALLENGER",
-            "UNKNOWN",
-            "UNRANKED",
-            "UNRANKED_MODE",
-        ]
-        .contains(&rank)
+        && (olc_collector::aggregation::CUMULATIVE_RANKS.contains(&rank)
+            || [
+                "ALL",
+                "IRON",
+                "BRONZE",
+                "SILVER",
+                "GOLD",
+                "PLATINUM",
+                "EMERALD",
+                "DIAMOND",
+                "MASTER",
+                "GRANDMASTER",
+                "CHALLENGER",
+                "UNKNOWN",
+                "UNRANKED",
+                "UNRANKED_MODE",
+            ]
+            .contains(&rank))
 }
 impl StatsQuery {
     pub fn validate(&self) -> Result<(), &'static str> {
@@ -165,6 +166,44 @@ mod tests {
             json!({"patch":"16.19","platform":"EUW1","queue":420,"role":"MIDDLE","start_ms":1})
         )
         .is_err());
+    }
+
+    #[test]
+    fn les_paliers_cumules_sont_acceptes_et_les_autres_suffixes_refuses() {
+        let q: StatsQuery = serde_json::from_value(
+            json!({"patch":"16.19","platform":"EUW1","queue":420,"role":"MIDDLE"}),
+        )
+        .unwrap();
+        for rank in olc_collector::aggregation::CUMULATIVE_RANKS {
+            let stats = StatsQuery {
+                rank: rank.into(),
+                ..q.clone()
+            };
+            assert!(stats.validate().is_ok(), "{rank}");
+            let bans = BansQuery {
+                patch: q.patch.clone(),
+                platform: q.platform.clone(),
+                queue: q.queue,
+                rank: rank.into(),
+                limit: 10,
+            };
+            assert!(bans.validate().is_ok(), "{rank}");
+        }
+        for rank in [
+            "GRANDMASTER_PLUS",
+            "CHALLENGER_PLUS",
+            "ALL_PLUS",
+            "UNKNOWN_PLUS",
+            "emerald_plus",
+            "EMERALD+",
+            "PLUS",
+        ] {
+            let invalid = StatsQuery {
+                rank: rank.into(),
+                ..q.clone()
+            };
+            assert!(invalid.validate().is_err(), "{rank}");
+        }
     }
 
     #[test]

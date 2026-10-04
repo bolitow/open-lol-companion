@@ -8,7 +8,7 @@ pub(super) const MIN_KNOWN_PLAYERS: usize = 6;
 pub(super) const BAN_RANK_BASIS: &str = "match_median";
 
 /// Paliers classés, du plus bas au plus haut.
-const TIERS: [&str; 10] = [
+pub(super) const TIERS: [&str; 10] = [
     "IRON",
     "BRONZE",
     "SILVER",

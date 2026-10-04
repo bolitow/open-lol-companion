@@ -431,6 +431,32 @@ partie que les picks (`rank_max_age_hours`). Ce palier est observé, jamais un M
 - Les picks restent comptés au rang de chaque joueur, les bans au palier de la partie :
   les deux taux ne partagent pas exactement la même population, ce qui est publié ici.
 
+### Paliers cumulés (#83)
+
+Les paliers observés (`IRON` … `CHALLENGER`) partitionnent les participations classées :
+l'agrégation publie en plus des paliers « X et plus », sous la même clé `rank` que les
+autres populations (aucun nouvel appel Riot, aucune migration SQL) :
+`IRON_PLUS`, `BRONZE_PLUS`, `SILVER_PLUS`, `GOLD_PLUS`, `PLATINUM_PLUS`, `EMERALD_PLUS`,
+`DIAMOND_PLUS`, `MASTER_PLUS`. `MASTER_PLUS` réunit Master, Grand maître et Challenger ; il n'y
+a pas de `GRANDMASTER_PLUS` ni de `CHALLENGER_PLUS`.
+
+- Un palier cumulé ne contient que des participations au palier observé (donc ni `UNKNOWN`,
+  ni `UNRANKED`, ni `UNRANKED_MODE`) : `IRON_PLUS` n'est pas `ALL`. Hors files Solo/Flex
+  il n'y en a aucun.
+- Parties, victoires, populations, bans, drafts, builds, compétences et événements d'objets
+  s'additionnent entre paliers ; les builds sont cumulés **avant** la coupe à
+  `max_build_variants_per_category` (une variante rare dans chaque palier peut entrer dans
+  le haut du cumul), sans multiplier les clés de l'accumulateur pendant la lecture des parties.
+- `bucket_matches` et le `pick_rate` comptent des parties **distinctes** : une partie dont les
+  joueurs ont des paliers différents compte une fois dans « X et plus » (ce n'est donc pas
+  la somme des paliers). Les bans suivent le palier de la partie (#109).
+- Position, tier S/A/B/C/D, fiabilité et intervalles de Wilson sont calculés dans chaque palier
+  cumulé comme dans les autres populations. `most_picked_rank` ne désigne jamais un palier cumulé.
+- Ce sont des regroupements de paliers observés, jamais un MMR estimé ; ne jamais les
+  additionner à `ALL`, à un palier observé ni entre eux. Le volume du rapport augmente d'autant
+  de groupes, de bans et de variantes de build.
+- Un instantané publié avant #83 n'a pas ces rangs : il se relit tel quel, sans erreur.
+
 ## Builds et timelines
 
 Chaque catégorie possède son propre effectif disponible ; une donnée manquante ne

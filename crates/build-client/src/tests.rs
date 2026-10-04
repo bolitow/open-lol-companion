@@ -116,6 +116,36 @@ fn refuse_un_perimetre_invalide() {
     }
 }
 
+#[test]
+fn accepte_les_paliers_cumules_de_l_api_et_refuse_les_autres_suffixes() {
+    for rank in [
+        "IRON_PLUS",
+        "BRONZE_PLUS",
+        "SILVER_PLUS",
+        "GOLD_PLUS",
+        "PLATINUM_PLUS",
+        "EMERALD_PLUS",
+        "DIAMOND_PLUS",
+        "MASTER_PLUS",
+    ] {
+        let mut value = serde_json::to_value(request()).unwrap();
+        value["rank"] = json!(rank);
+        let req: BuildRequest = serde_json::from_value(value).unwrap();
+        assert_eq!(req.validate(), Ok(()), "{rank}");
+    }
+    for rank in [
+        "GRANDMASTER_PLUS",
+        "CHALLENGER_PLUS",
+        "ALL_PLUS",
+        "emerald_plus",
+    ] {
+        let mut value = serde_json::to_value(request()).unwrap();
+        value["rank"] = json!(rank);
+        let req: BuildRequest = serde_json::from_value(value).unwrap();
+        assert_eq!(req.validate(), Err(BuildError::InvalidRequest), "{rank}");
+    }
+}
+
 #[tokio::test]
 async fn charge_toutes_les_categories_sans_perdre_les_fragments_repetes() {
     let first = (0..200).map(|id| variant("item", vec![id + 1])).collect();
