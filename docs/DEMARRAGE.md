@@ -159,6 +159,7 @@ Règle d'or : ce qui touche au système (fichiers, processus, réseau local, sec
 1. Prenez un ticket du [sprint en cours](sprint-1.md) ou étiqueté `good first issue`.
 2. Branche `feat/…` ou `fix/…`, puis pull request vers `main`.
 3. La CI tourne sur la PR (pas au push ni après la fusion) : Linux à chaque fois, Windows et macOS quand l'app, le connecteur ou `@olc/shared` changent (et pas en brouillon). Elle doit être verte.
+   Un workflow planifié, [`patch-watch.yml`](../.github/workflows/patch-watch.yml), relance chaque jour la suite de tests sur Linux quand Data Dragon publie un nouveau patch LoL (aucun secret, aucun appel Riot authentifié). Il consigne le résultat dans une issue « Patch LoL X.Y : contrôle automatique » : ouverte si les tests échouent, fermée aussitôt s'ils passent. Pour retester un patch déjà tracé : Actions, « Contrôle à chaque patch LoL », *Run workflow*, option « force ». Les recettes LCU réelles sur Windows et macOS restent manuelles.
 
 Et avant tout : relisez la section 2 du [cahier des charges](cahier-des-charges.md) sur la conformité Riot.
 
