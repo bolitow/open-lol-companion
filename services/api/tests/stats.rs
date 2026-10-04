@@ -104,6 +104,7 @@ fn report() -> Value {
         "timeline_participations":800, "invalid_timeline_participations":5,
         "unidentified_item_undos":3, "draft_matches":100,
         "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0,
+        "first_game_start_ms":1_000_000, "last_game_start_ms":1_900_000,
         "item_stage_participations":700, "missing_item_catalog_participations":10,
         "unknown_placement_participations":0
     });
@@ -112,6 +113,10 @@ fn report() -> Value {
         let mut other = coverage.clone();
         other[field] = value;
         other["matches"] = json!(999);
+        // Bornes plus extrêmes que celles du périmètre demandé : si la fraîcheur lisait
+        // les couvertures voisines, elle ne vaudrait plus 1_000_000 / 1_900_000.
+        other["first_game_start_ms"] = json!(1);
+        other["last_game_start_ms"] = json!(9_999_999);
         coverage_entries.push(other);
     }
 
@@ -419,6 +424,15 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     );
     assert_ne!(meta["source_snapshot_at"], meta["published_at"]);
     assert!(!meta["source_snapshot_at"].as_str().unwrap().is_empty());
+    // Fraîcheur réelle (#103) : bornes des parties du périmètre demandé, pas des périmètres voisins.
+    assert_eq!(
+        meta["freshness"],
+        json!({
+            "computed_at": meta["source_snapshot_at"],
+            "first_game_start_ms": 1_000_000,
+            "last_game_start_ms": 1_900_000,
+        })
+    );
     db.cleanup().await;
 }
 
@@ -481,6 +495,8 @@ async fn un_instantane_publie_sans_les_indicateurs_de_rang_fige_reste_lisible_av
         "unknown_rank_rate",
         "rank_gap_median_hours",
         "rank_gap_max_hours",
+        "first_game_start_ms",
+        "last_game_start_ms",
     ] {
         assert!(coverage.remove(key).is_some());
     }
@@ -495,9 +511,14 @@ async fn un_instantane_publie_sans_les_indicateurs_de_rang_fige_reste_lisible_av
             "unknown_rank_rate",
             "rank_gap_median_hours",
             "rank_gap_max_hours",
+            "first_game_start_ms",
+            "last_game_start_ms",
         ] {
             assert_eq!(coverage[key], Value::Null, "{key} doit valoir null");
         }
+        // La date de calcul reste servie ; les dates de parties sont inconnues, pas inventées.
+        assert_eq!(meta["freshness"]["computed_at"], meta["source_snapshot_at"]);
+        assert_eq!(meta["freshness"]["last_game_start_ms"], Value::Null);
         // Les autres compteurs de la couverture sont relus tels quels.
         assert_eq!(coverage["unknown_rank_participations"], 500);
         assert_eq!(coverage["participations"], 1000);

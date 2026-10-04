@@ -15,7 +15,19 @@ pub struct SnapshotMeta {
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub filters: AggregationOptions,
+    pub freshness: Freshness,
     pub coverage: Vec<ScopeCoverage>,
+}
+/// Fraîcheur réelle des périmètres lus (#103), distincte de l'heure du calcul : les dates
+/// de parties viennent de la couverture publiée ; `null` pour un instantané antérieur.
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct Freshness {
+    /// Date du calcul (même instant que `source_snapshot_at`).
+    pub computed_at: String,
+    /// Début (ms Unix) de la plus ancienne partie incluse des périmètres lus.
+    pub first_game_start_ms: Option<i64>,
+    /// Début (ms Unix) de la plus récente partie incluse des périmètres lus.
+    pub last_game_start_ms: Option<i64>,
 }
 #[derive(Serialize)]
 pub struct TierlistResponse {
@@ -208,8 +220,19 @@ pub(crate) async fn load_selection(
     if report.schema_version != 2 || report.min_games == 0 {
         return Err(ApiError::Unavailable);
     }
+    let coverage: Vec<ScopeCoverage> = report
+        .coverage
+        .iter()
+        .filter(|c| selection.patch.is_none() || selection.patch == Some(c.scope.patch.as_str()))
+        .filter(|c| {
+            c.scope.platform_id == selection.platform && c.scope.queue_id == selection.queue
+        })
+        .cloned()
+        .collect();
+    let source_snapshot_at: String = row.try_get("source_snapshot_at")?;
     let meta = SnapshotMeta {
-        source_snapshot_at: row.try_get("source_snapshot_at")?,
+        freshness: freshness(&source_snapshot_at, &coverage),
+        source_snapshot_at,
         published_at: row.try_get("published_at")?,
         schema_version: report.schema_version,
         min_games: report.min_games,
@@ -218,19 +241,20 @@ pub(crate) async fn load_selection(
         pick_rate_definition: report.pick_rate_definition.clone(),
         tier_method: report.tier_method.clone(),
         filters: report.filters.clone(),
-        coverage: report
-            .coverage
-            .iter()
-            .filter(|c| {
-                selection.patch.is_none() || selection.patch == Some(c.scope.patch.as_str())
-            })
-            .filter(|c| {
-                c.scope.platform_id == selection.platform && c.scope.queue_id == selection.queue
-            })
-            .cloned()
-            .collect(),
+        coverage,
     };
     Ok((meta, report))
+}
+/// Bornes des parties incluses sur les périmètres lus ; une date absente d'un périmètre
+/// (instantané antérieur) ne masque pas celles des autres.
+fn freshness(computed_at: &str, coverage: &[ScopeCoverage]) -> Freshness {
+    let first = coverage.iter().filter_map(|c| c.counts.first_game_start_ms);
+    let last = coverage.iter().filter_map(|c| c.counts.last_game_start_ms);
+    Freshness {
+        computed_at: computed_at.to_owned(),
+        first_game_start_ms: first.min(),
+        last_game_start_ms: last.max(),
+    }
 }
 fn scope_matches(scope: &ScopeKey, query: &StatsQuery) -> bool {
     scope.patch == query.patch
@@ -251,4 +275,37 @@ fn matches(key: &GroupKey, query: &StatsQuery) -> bool {
         && key.queue_id == query.queue
         && key.rank == query.rank
         && role == query.role
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scope(patch: &str, first: Option<i64>, last: Option<i64>) -> ScopeCoverage {
+        let mut value = serde_json::to_value(Coverage::default()).unwrap();
+        value["patch"] = patch.into();
+        value["platform_id"] = "EUW1".into();
+        value["queue_id"] = 420.into();
+        value["first_game_start_ms"] = first.into();
+        value["last_game_start_ms"] = last.into();
+        serde_json::from_value(value).unwrap()
+    }
+
+    #[test]
+    fn la_fraicheur_borne_les_parties_de_tous_les_perimetres_lus() {
+        let coverage = [
+            scope("16.18", Some(100), Some(500)),
+            scope("16.19", Some(300), Some(900)),
+            scope("16.20", None, None),
+        ];
+        assert_eq!(
+            freshness("2026-10-04 10:00:00+00", &coverage),
+            Freshness {
+                computed_at: "2026-10-04 10:00:00+00".into(),
+                first_game_start_ms: Some(100),
+                last_game_start_ms: Some(900),
+            }
+        );
+        assert_eq!(freshness("x", &[]).last_game_start_ms, None);
+    }
 }

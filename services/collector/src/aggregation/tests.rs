@@ -14,6 +14,7 @@ fn game(id: &str) -> StoredMatch {
         detail: match_detail(id, "EUW1", 420, 1_000_000),
         timeline: None,
         ranks: Default::default(),
+        game_start_ms: 1_000_000,
     }
 }
 
@@ -1274,6 +1275,49 @@ fn un_ancien_instantane_sans_champs_de_placement_reste_lisible() {
         .remove("unknown_placement_participations");
     let decoded: super::ScopeCoverage = serde_json::from_value(coverage).unwrap();
     assert_eq!(decoded.counts.unknown_placement_participations, 0);
+}
+
+#[test]
+fn la_couverture_publie_la_premiere_et_la_derniere_partie_incluse_par_perimetre() {
+    let at = |id: &str, queue: i32, start_ms: i64| {
+        let mut g = game(id);
+        g.queue_id = queue;
+        g.detail["info"]["queueId"] = json!(queue);
+        g.game_start_ms = start_ms;
+        g
+    };
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&at("EUW1_1", 420, 5_000));
+    acc.add(&at("EUW1_2", 420, 9_000));
+    acc.add(&at("EUW1_3", 420, 7_000));
+    acc.add(&at("EUW1_4", 400, 2_000));
+    // Un remake est exclu : sa date ne doit pas faire avancer la fraîcheur.
+    let mut remake = at("EUW1_5", 420, 99_000);
+    remake.is_remake = true;
+    acc.add(&remake);
+    let r = acc.finish();
+    let dates = |q: i32| {
+        let c = &r
+            .coverage
+            .iter()
+            .find(|c| c.scope.queue_id == q)
+            .unwrap()
+            .counts;
+        (c.first_game_start_ms, c.last_game_start_ms)
+    };
+    assert_eq!(dates(420), (Some(5_000), Some(9_000)));
+    assert_eq!(dates(400), (Some(2_000), Some(2_000)));
+}
+
+#[test]
+fn une_couverture_publiee_avant_la_fraicheur_reste_lisible_avec_des_null() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    for field in ["first_game_start_ms", "last_game_start_ms"] {
+        legacy.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert_eq!(coverage.first_game_start_ms, None);
+    assert_eq!(coverage.last_game_start_ms, None);
 }
 
 /// Sorts d'invocateur et runes identiques pour tous les participants (hors identifiants

@@ -176,6 +176,14 @@ pub struct Coverage {
     /// Écart maximal retenu, en heures ; toujours inférieur ou égal à `rank_max_age_hours`.
     #[serde(default)]
     pub rank_gap_max_hours: Option<f64>,
+    /// Début (ms Unix) de la plus ancienne partie incluse du périmètre (#103) ; nul si
+    /// l'instantané est antérieur ou si aucune partie n'est incluse.
+    #[serde(default)]
+    pub first_game_start_ms: Option<i64>,
+    /// Début (ms Unix) de la plus récente partie incluse : la vraie fraîcheur des données,
+    /// distincte de l'heure du calcul (#103).
+    #[serde(default)]
+    pub last_game_start_ms: Option<i64>,
     /// Participations dont les étapes d'achat (#81) ont été dérivées du catalogue du patch.
     #[serde(default)]
     pub item_stage_participations: u64,
@@ -249,6 +257,8 @@ pub(super) struct StoredMatch {
     pub detail: Value,
     pub timeline: Option<Value>,
     pub ranks: BTreeMap<String, ObservedRank>,
+    /// Début de la partie (ms Unix), colonne `game_start` : même source que les filtres de fenêtre.
+    pub game_start_ms: i64,
 }
 
 type Population = (ScopeKey, Role, String);
@@ -354,6 +364,16 @@ impl Accumulator {
         }
         let coverage = self.coverage.entry(scope.clone()).or_default();
         coverage.matches += 1;
+        coverage.first_game_start_ms = Some(
+            coverage
+                .first_game_start_ms
+                .map_or(game.game_start_ms, |v| v.min(game.game_start_ms)),
+        );
+        coverage.last_game_start_ms = Some(
+            coverage
+                .last_game_start_ms
+                .map_or(game.game_start_ms, |v| v.max(game.game_start_ms)),
+        );
         if let Some(bans) = valid_bans(&game.detail) {
             coverage.draft_matches += 1;
             for champion in bans {
