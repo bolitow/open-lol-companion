@@ -51,7 +51,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/health` | Connectivité PostgreSQL, publique |
 | `/v1/tierlist` | Champions et bans de la page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
-| `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
+| `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés, avec victoires/défaites et drapeaux league-v4 |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
 | `/v1/static/{version}/{locale}/{resource}` | Document public, exemple `16.19.1/fr_FR/item.json` |
@@ -104,7 +104,14 @@ filtrage indexé qu'après un nouveau calcul du collecteur. Mesures et non-régr
 account-v1 résout l'identité actuelle ; aucun annuaire de pseudos historiques.
 summoner-v4 et league-v4 complètent le profil, cache 5 minutes/1 024 entrées.
 Classement vide réussi : non classé ; panne : erreur, aucun rang fabriqué.
-Peak elo et parties live ne sont pas encore fournis.
+Chaque rang Solo/Flex porte aussi, quand league-v4 les renvoie, `wins`, `losses`,
+`hot_streak`, `veteran`, `fresh_blood` et `inactive` (`null` si non classé ou absent ;
+jamais déduits). Le peak de saison et le rang de fin de saison précédente ne sont pas
+fournis pour un tiers : league-v4 ne les expose pas et ils ne sont pas reconstruits.
+Ils ne sont disponibles que pour le compte actif, depuis le client LoL (partie desktop).
+Les parties live ne sont pas encore fournies. Le contrat JSON `Profile` a une seule
+référence, `packages/shared/src/contracts/profile.json`, relue par les tests de
+l'API, du client Rust (`olc-build-client`) et de `@olc/shared`.
 
 Historique : `start=0`, `count=10`, maximum 20, début limité à 10 000.
 `next_start` est le prochain index Riot, `null` en fin de liste ou à la borne

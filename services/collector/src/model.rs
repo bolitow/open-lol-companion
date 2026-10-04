@@ -263,6 +263,25 @@ pub struct ParticipantRank {
     pub tier: String,
     pub division: String,
     pub league_points: i32,
+    /// Champs league-v4 facultatifs : `None` si Riot ne les envoie pas ou les envoie mal formés.
+    pub wins: Option<u32>,
+    pub losses: Option<u32>,
+    pub hot_streak: Option<bool>,
+    pub veteran: Option<bool>,
+    pub fresh_blood: Option<bool>,
+    pub inactive: Option<bool>,
+}
+
+/// Compteur league-v4 facultatif : un entier négatif ou hors plage n'est pas retenu.
+fn optional_count(value: &Value, key: &str) -> Option<u32> {
+    value
+        .get(key)
+        .and_then(Value::as_u64)
+        .and_then(|n| u32::try_from(n).ok())
+}
+
+fn optional_flag(value: &Value, key: &str) -> Option<bool> {
+    value.get(key).and_then(Value::as_bool)
 }
 
 pub fn parse_participant_ranks(body: &[u8]) -> Result<Vec<ParticipantRank>, String> {
@@ -306,6 +325,12 @@ pub fn parse_participant_ranks(body: &[u8]) -> Result<Vec<ParticipantRank>, Stri
             tier: tier.into(),
             division: division.into(),
             league_points: points as i32,
+            wins: optional_count(&value, "wins"),
+            losses: optional_count(&value, "losses"),
+            hot_streak: optional_flag(&value, "hotStreak"),
+            veteran: optional_flag(&value, "veteran"),
+            fresh_blood: optional_flag(&value, "freshBlood"),
+            inactive: optional_flag(&value, "inactive"),
         });
     }
     Ok(result)
@@ -427,6 +452,36 @@ mod tests {
         let mut value = match_detail("EUW1_1", "EUW1", 420, 1_500_000);
         value["info"]["participants"][0]["participantId"] = serde_json::json!(2);
         assert!(check_match(&body(&value), "EUW1_1", &scope()).is_err());
+    }
+
+    #[test]
+    fn lit_victoires_defaites_et_drapeaux_league_v4() {
+        let ranks = parse_participant_ranks(
+            br#"[{"queueType":"RANKED_SOLO_5x5","tier":"GOLD","rank":"II","leaguePoints":42,
+                 "wins":12,"losses":9,"hotStreak":true,"veteran":false,"freshBlood":true,"inactive":false}]"#,
+        )
+        .unwrap();
+        assert_eq!(ranks[0].wins, Some(12));
+        assert_eq!(ranks[0].losses, Some(9));
+        assert_eq!(ranks[0].hot_streak, Some(true));
+        assert_eq!(ranks[0].veteran, Some(false));
+        assert_eq!(ranks[0].fresh_blood, Some(true));
+        assert_eq!(ranks[0].inactive, Some(false));
+    }
+
+    #[test]
+    fn laisse_vides_les_champs_league_v4_absents_ou_invalides() {
+        let ranks = parse_participant_ranks(
+            br#"[{"queueType":"RANKED_FLEX_SR","tier":"GOLD","rank":"II","leaguePoints":1,
+                 "wins":-3,"losses":"beaucoup","hotStreak":"oui"}]"#,
+        )
+        .unwrap();
+        assert_eq!(ranks[0].wins, None);
+        assert_eq!(ranks[0].losses, None);
+        assert_eq!(ranks[0].hot_streak, None);
+        assert_eq!(ranks[0].veteran, None);
+        assert_eq!(ranks[0].fresh_blood, None);
+        assert_eq!(ranks[0].inactive, None);
     }
 
     #[test]
