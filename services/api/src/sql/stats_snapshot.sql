@@ -9,13 +9,15 @@ WITH filters AS (
         jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
             'patch', $1->'patch', 'platform_id', $1->'platform', 'queue_id', $1->'queue',
             'role', $1->'role', 'rank', $1->'rank', 'champion_id', $1->'champion'
-        ))) AS population
+        ))) AS population,
+        -- Sans rôle (route des bans), les morceaux de classement ne sont pas lus.
+        ($1->>'role') IS NOT NULL AS with_groups
 )
 SELECT s.source_snapshot_at::text, s.published_at::text, s.storage_version,
     CASE WHEN s.storage_version=1 THEN
         (s.report - ARRAY['groups','bans','builds','skill_levels','item_events','splits','coverage']) ||
         jsonb_build_object(
-            'groups', jsonb_path_query_array(s.report->'groups',$2::jsonpath,$1),
+            'groups', CASE WHEN f.with_groups THEN jsonb_path_query_array(s.report->'groups',$2::jsonpath,$1) ELSE '[]'::jsonb END,
             'bans', jsonb_path_query_array(s.report->'bans',$3::jsonpath,$1),
             'coverage', jsonb_path_query_array(s.report->'coverage',$3::jsonpath,$1),
             'builds', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'builds',$2::jsonpath,$1) ELSE '[]'::jsonb END,
@@ -37,9 +39,10 @@ LEFT JOIN champion_stats_snapshot_chunks c
     AND c.populations @> ANY (
         ARRAY[
             jsonb_build_object('coverage', f.scope),
-            jsonb_build_object('bans', f.scope),
-            jsonb_build_object('groups', f.population)
-        ] || CASE WHEN $4 THEN ARRAY[
+            jsonb_build_object('bans', f.scope)
+        ] || CASE WHEN f.with_groups THEN ARRAY[jsonb_build_object('groups', f.population)]
+            ELSE ARRAY[]::jsonb[] END
+        || CASE WHEN $4 THEN ARRAY[
             jsonb_build_object('builds', f.population),
             jsonb_build_object('skill_levels', f.population),
             jsonb_build_object('item_events', f.population),

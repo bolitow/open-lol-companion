@@ -156,6 +156,18 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
             "{section}"
         );
     }
+    // #109 : les bans portent leur rang (ALL et UNKNOWN, la partie n'a aucun rang observé).
+    let mut ban_ranks: Vec<_> = complete["bans"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|b| b["rank"].as_str().unwrap())
+        .collect();
+    ban_ranks.sort_unstable();
+    ban_ranks.dedup();
+    assert_eq!(ban_ranks, ["ALL", "UNKNOWN"]);
+    assert_eq!(complete["ban_rank_basis"], "match_median");
+    assert_eq!(complete["ban_rank_min_known_players"], 6);
     assert_eq!(published(&db).await, complete);
     // Le binaire historique ne sait pas désigner la version de stockage : il doit
     // échouer plutôt que d'associer de nouvelles métadonnées aux anciens morceaux.

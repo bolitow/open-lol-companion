@@ -3,8 +3,8 @@ mod common;
 
 use common::TestDb;
 use olc_api::error::ApiError;
-use olc_api::query::{StatsQuery, TrendsQuery};
-use olc_api::stats::{builds, tierlist};
+use olc_api::query::{BansQuery, StatsQuery, TrendsQuery};
+use olc_api::stats::{bans, builds, tierlist};
 use olc_api::trends::trends;
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
@@ -100,6 +100,20 @@ fn report() -> Value {
         other["banned_matches"] = json!(99);
         bans.push(other);
     }
+    // Bans par palier de partie (#109) ; les cinq précédents n'ont pas de `rank` : ancien format.
+    for (id, banned, rank) in [
+        (1, 5, "GOLD"),
+        (999, 8, "GOLD"),
+        (4, 1, "GOLD"),
+        (1, 3, "DIAMOND"),
+        (1, 2, "UNKNOWN"),
+    ] {
+        bans.push(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420, "rank":rank,
+            "champion_id":id, "banned_matches":banned, "draft_matches":10,
+            "ban_rate": if id == 4 { Value::Null } else { json!(banned as f64 * 10.0) }
+        }));
+    }
 
     let coverage = json!({
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
@@ -119,7 +133,8 @@ fn report() -> Value {
         "first_dragon":{"matches":80, "wins":50, "blue_matches":38, "blue_wins":22,
             "win_rate":62.5, "blue_win_rate":57.89},
         "first_tower":{"matches":95, "wins":70, "blue_matches":50, "blue_wins":37,
-            "win_rate":73.68, "blue_win_rate":74.0}
+            "win_rate":73.68, "blue_win_rate":74.0},
+        "match_tier_matches":60, "unknown_match_tier_matches":40
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
@@ -197,6 +212,7 @@ fn report() -> Value {
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
+        "ban_rank_basis":"match_median", "ban_rank_min_known_players":6,
         "pick_rate_definition":"champion_matches / bucket_matches * 100",
         "tier_method":"wilson_lower_bound", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
@@ -460,6 +476,8 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["min_played_percent"], 80);
     assert_eq!(meta["exclude_afk"], true);
     assert_eq!(meta["exclusions"], json!({"remake": 1}));
+    assert_eq!(meta["ban_rank_basis"], "match_median");
+    assert_eq!(meta["ban_rank_min_known_players"], 6);
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"
@@ -516,6 +534,16 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     assert_eq!(gold.total, 1);
     assert_eq!(gold.entries[0].games, 200);
     assert_eq!(gold.entries[0].key.rank, "GOLD");
+    // Les bans suivent le rang demandé : seul le ban GOLD du champion de la page est renvoyé.
+    assert_eq!(gold.bans.len(), 1);
+    assert_eq!(
+        (
+            gold.bans[0].rank.as_str(),
+            gold.bans[0].champion_id,
+            gold.bans[0].banned_matches
+        ),
+        ("GOLD", 1, 5)
+    );
     let beyond = tierlist(
         db.storage.pool(),
         StatsQuery {
@@ -719,6 +747,97 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
     db.cleanup().await;
 }
 
+fn bans_query() -> BansQuery {
+    BansQuery {
+        patch: "16.19".into(),
+        platform: "EUW1".into(),
+        queue: 420,
+        rank: "GOLD".into(),
+        limit: 50,
+    }
+}
+
+#[tokio::test]
+async fn les_bans_de_la_draft_suivent_le_palier_sans_pagination_ni_filtre_de_role() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let gold = bans(db.storage.pool(), bans_query()).await.unwrap();
+    assert_eq!(gold.query, bans_query());
+    // Champion 999 : absent de toute page de la tierlist, mais bien banni en GOLD.
+    let ids: Vec<_> = gold
+        .bans
+        .iter()
+        .map(|b| (b.champion_id, b.ban_rate))
+        .collect();
+    assert_eq!(ids, [(999, Some(80.0)), (1, Some(50.0)), (4, None)]);
+    assert_eq!(gold.total, 3);
+    assert!(gold
+        .bans
+        .iter()
+        .all(|b| b.rank == "GOLD" && b.draft_matches == 10));
+    let meta = serde_json::to_value(&gold.meta).unwrap();
+    assert_eq!(meta["ban_rank_basis"], "match_median");
+    assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
+
+    let limited = bans(
+        db.storage.pool(),
+        BansQuery {
+            limit: 2,
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(limited.total, 3);
+    assert_eq!(limited.bans.len(), 2);
+
+    // ALL : les bans publiés sans `rank` se relisent sous ALL, sans autre périmètre.
+    let all = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "ALL".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        all.bans.iter().map(|b| b.champion_id).collect::<Vec<_>>(),
+        [1, 2, 3, 4, 999]
+    );
+    assert!(all
+        .bans
+        .iter()
+        .all(|b| b.rank == "ALL" && b.banned_matches == 20));
+
+    for rank in ["DIAMOND", "UNKNOWN"] {
+        let other = bans(
+            db.storage.pool(),
+            BansQuery {
+                rank: rank.into(),
+                ..bans_query()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(other.bans.len(), 1, "{rank}");
+        assert_eq!(other.bans[0].rank, rank);
+    }
+    // Un palier sans ban publié : liste vide, jamais le ban d'un autre palier.
+    let empty = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "CHALLENGER".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert!(empty.bans.is_empty());
+    assert_eq!(empty.total, 0);
+    db.cleanup().await;
+}
+
 #[tokio::test]
 async fn builds_publie_les_tranches_de_duree_et_les_cotes_du_champion_en_v1_comme_en_v2() {
     let db = db_or_skip!();
@@ -767,6 +886,59 @@ async fn builds_publie_les_tranches_de_duree_et_les_cotes_du_champion_en_v1_comm
     // La tierlist et les tendances ne chargent pas les tranches.
     let tiers = serde_json::to_value(tierlist(db.storage.pool(), query()).await.unwrap()).unwrap();
     assert!(tiers.get("splits").is_none());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_requete_invalide() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let v1 = serde_json::to_value(bans(db.storage.pool(), bans_query()).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let v2 = serde_json::to_value(bans(db.storage.pool(), bans_query()).await.unwrap()).unwrap();
+    assert_eq!(v2, v1);
+    assert_eq!(v2["bans"].as_array().unwrap().len(), 3);
+    for invalid in [
+        BansQuery {
+            rank: "FAKE".into(),
+            ..bans_query()
+        },
+        BansQuery {
+            limit: 0,
+            ..bans_query()
+        },
+        BansQuery {
+            patch: "x".into(),
+            ..bans_query()
+        },
+    ] {
+        assert_eq!(
+            bans(db.storage.pool(), invalid).await.err(),
+            Some(ApiError::InvalidRequest)
+        );
+    }
     db.cleanup().await;
 }
 

@@ -2,6 +2,7 @@
 
 mod builds;
 mod context;
+mod match_tier;
 mod model;
 mod scheduler;
 mod snapshot;

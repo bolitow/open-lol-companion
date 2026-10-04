@@ -5,7 +5,7 @@ use crate::realtime::Publication;
 use crate::{
     error::ApiError,
     profiles::HistoryQuery,
-    query::{StatsQuery, TrendsQuery},
+    query::{BansQuery, StatsQuery, TrendsQuery},
 };
 use axum::{
     extract::{
@@ -58,6 +58,7 @@ impl AppState {
 pub fn router(state: AppState) -> Router {
     let private = Router::new()
         .route("/v1/tierlist", get(tierlist))
+        .route("/v1/bans", get(bans))
         .route("/v1/builds/{champion_id}", get(builds))
         .route("/v1/trends/{champion_id}", get(trends))
         .route("/v1/profiles/{platform}/{name}/{tag}", get(profile))
@@ -147,6 +148,14 @@ async fn tierlist(
 ) -> Result<Json<crate::stats::TierlistResponse>, ApiError> {
     Ok(Json(
         crate::stats::tierlist(&state.pool, query.map_err(|_| ApiError::InvalidRequest)?.0).await?,
+    ))
+}
+async fn bans(
+    State(state): State<AppState>,
+    query: Result<Query<BansQuery>, QueryRejection>,
+) -> Result<Json<crate::stats::BansResponse>, ApiError> {
+    Ok(Json(
+        crate::stats::bans(&state.pool, query.map_err(|_| ApiError::InvalidRequest)?.0).await?,
     ))
 }
 async fn builds(
@@ -278,6 +287,7 @@ mod tests {
         let app = router(state());
         for path in [
             "/v1/tierlist",
+            "/v1/bans",
             "/v1/builds/1",
             "/v1/trends/1",
             "/v1/profiles/EUW1/name/tag",
@@ -377,6 +387,10 @@ mod tests {
         let app = router(state);
         for (path, auth) in [
             ("/v1/tierlist?patch=invalid", true),
+            (
+                "/v1/bans?patch=16.19&platform=EUW1&queue=420&role=TOP",
+                true,
+            ),
             ("/v1/builds/not-an-id", true),
             ("/v1/trends/not-an-id", true),
             (

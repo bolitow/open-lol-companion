@@ -6,6 +6,7 @@ use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
 use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
+use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 
 /// Catégories de variantes publiées sur le placement moyen en Arena (#104). Liste
@@ -153,10 +154,19 @@ pub struct ScopeKey {
 pub struct BanStats {
     #[serde(flatten)]
     pub scope: ScopeKey,
+    /// `ALL` ou palier de la partie (#109, médiane des paliers observés de ses joueurs) ;
+    /// `UNKNOWN` sans palier calculable, `UNRANKED_MODE` hors Solo/Flex. `ALL` pour un ban
+    /// publié avant #109, qui ne distinguait aucun rang.
+    #[serde(default = "all_ranks")]
+    pub rank: String,
     pub champion_id: u32,
     pub banned_matches: u64,
     pub draft_matches: u64,
     pub ban_rate: Option<f64>,
+}
+
+fn all_ranks() -> String {
+    "ALL".into()
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -233,6 +243,12 @@ pub struct Coverage {
     /// Écart maximal retenu, en heures ; toujours inférieur ou égal à `rank_max_age_hours`.
     #[serde(default)]
     pub rank_gap_max_hours: Option<f64>,
+    /// Parties Solo/Flex retenues dont le palier de partie (#109) est calculable.
+    #[serde(default)]
+    pub match_tier_matches: u64,
+    /// Parties Solo/Flex retenues sans palier de partie : moins de joueurs connus que le minimum.
+    #[serde(default)]
+    pub unknown_match_tier_matches: u64,
     /// Début (ms Unix) de la plus ancienne partie incluse du périmètre (#103) ; nul si
     /// l'instantané est antérieur ou si aucune partie n'est incluse.
     #[serde(default)]
@@ -302,6 +318,12 @@ pub struct AggregationReport {
     /// Parties classées avec un participant `wasAfk` exclues (#111) ; `false` pour un rapport antérieur.
     #[serde(default)]
     pub exclude_afk: bool,
+    /// Origine du rang des bans (#109) : `match_median` ; vide pour un rapport antérieur.
+    #[serde(default)]
+    pub ban_rank_basis: String,
+    /// Joueurs connus minimaux (sur dix) pour qu'une partie reçoive un palier ; 0 antérieurement.
+    #[serde(default)]
+    pub ban_rank_min_known_players: u32,
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub min_games: u32,
@@ -371,7 +393,10 @@ pub(super) struct Accumulator {
     bucket_matches: BTreeMap<Population, u64>,
     champion_matches: BTreeMap<GroupKey, u64>,
     coverage: BTreeMap<ScopeKey, Coverage>,
-    bans: BTreeMap<(ScopeKey, u32), u64>,
+    /// Bans par périmètre, rang de la partie (`ALL` compris) et champion (#109).
+    bans: BTreeMap<(ScopeKey, String, u32), u64>,
+    /// Drafts complètes par périmètre et rang de la partie : dénominateur du ban rate.
+    ban_drafts: BTreeMap<(ScopeKey, String), u64>,
     builds: BTreeMap<BuildKey, Count>,
     /// Parties où la paire de sorts a été observée en ordre décroissant (case D > case F),
     /// par paire triée ; l'autre orientation se déduit de `games` (#124).
@@ -399,6 +424,8 @@ impl Accumulator {
                 min_game_duration_s: DEFAULT_MIN_GAME_DURATION_S,
                 min_played_percent: DEFAULT_MIN_PLAYED_PERCENT,
                 exclude_afk: true,
+                ban_rank_basis: BAN_RANK_BASIS.into(),
+                ban_rank_min_known_players: MIN_KNOWN_PLAYERS as u32,
                 pick_rate_definition: "champion_matches / bucket_matches * 100".into(),
                 tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
@@ -409,7 +436,7 @@ impl Accumulator {
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), bucket_matches:BTreeMap::new(),
             champion_matches:BTreeMap::new(), coverage:BTreeMap::new(),
-            bans:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
+            bans:BTreeMap::new(), ban_drafts:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
             skills:BTreeMap::new(), events:BTreeMap::new(), splits:BTreeMap::new(), rank_gaps:BTreeMap::new(),
             item_catalogs:BTreeMap::new(),
         })
@@ -510,10 +537,40 @@ impl Accumulator {
             }
         }
         let duration_bucket = SplitBucket::from_duration_s(game.game_duration_s);
+        // Rang des bans (#109) : médiane des paliers observés des joueurs de la partie.
+        let max_age_s = u64::from(self.report.rank_max_age_hours) * 3600;
+        let ban_rank = if QUALITY_QUEUES.contains(&game.queue_id) {
+            let ranks: Vec<String> = participants
+                .iter()
+                .map(|p| rank_for(game, &p.raw, max_age_s).0)
+                .collect();
+            match match_tier::median_tier(ranks.iter().map(String::as_str)) {
+                Some(tier) => {
+                    coverage.match_tier_matches += 1;
+                    tier
+                }
+                None => {
+                    coverage.unknown_match_tier_matches += 1;
+                    "UNKNOWN"
+                }
+            }
+        } else {
+            "UNRANKED_MODE"
+        };
         if let Some(bans) = valid_bans(&game.detail) {
             coverage.draft_matches += 1;
-            for champion in bans {
-                *self.bans.entry((scope.clone(), champion)).or_default() += 1;
+            // Chaque draft compte une fois sous ALL et une fois sous le rang de sa partie.
+            for rank in ["ALL", ban_rank] {
+                *self
+                    .ban_drafts
+                    .entry((scope.clone(), rank.to_owned()))
+                    .or_default() += 1;
+                for champion in &bans {
+                    *self
+                        .bans
+                        .entry((scope.clone(), rank.to_owned(), *champion))
+                        .or_default() += 1;
+                }
             }
         }
         let mut timeline_counted = false;
@@ -527,7 +584,6 @@ impl Accumulator {
                     .excluded_bot_participations += 1;
                 continue;
             }
-            let max_age_s = u64::from(self.report.rank_max_age_hours) * 3600;
             let (rank, gap) = rank_for(game, &p.raw, max_age_s);
             if let Some(gap) = gap {
                 self.rank_gaps.entry(scope.clone()).or_default().push(gap);
@@ -802,10 +858,11 @@ impl Accumulator {
         self.report.bans = self
             .bans
             .into_iter()
-            .map(|((scope, champion_id), banned_matches)| {
-                let draft_matches = self.coverage[&scope].draft_matches;
+            .map(|((scope, rank, champion_id), banned_matches)| {
+                let draft_matches = self.ban_drafts[&(scope.clone(), rank.clone())];
                 BanStats {
                     scope,
+                    rank,
                     champion_id,
                     banned_matches,
                     draft_matches,

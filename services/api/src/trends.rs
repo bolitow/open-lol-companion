@@ -58,7 +58,7 @@ pub async fn trends(
             patch: None,
             platform: &query.platform,
             queue: query.queue,
-            role: &query.role,
+            role: Some(&query.role),
             rank: &query.rank,
             champion_id: Some(champion_id),
             with_details: false,
@@ -102,7 +102,8 @@ pub(crate) fn series(
     let bans: BTreeMap<_, _> = report
         .bans
         .iter()
-        .filter(|b| b.champion_id == champion_id && in_scope(&b.scope))
+        // Bans du palier demandé (#109) : même règle que la tierlist et `/v1/bans`.
+        .filter(|b| b.champion_id == champion_id && b.rank == query.rank && in_scope(&b.scope))
         .filter_map(|b| Some((patch_order(&b.scope.patch)?, b)))
         .collect();
     let drafts: BTreeMap<_, _> = report

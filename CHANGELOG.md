@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).
 - Winrate selon la durée de partie, le côté et les premiers objectifs : par champion et par groupe, tranches de moins de 20, 20-25, 25-30, 30-35, 35-40 et 40 minutes ou plus (liste `splits`, route builds) ; par champion, winrate des côtés bleu et rouge pour le rang `ALL` ; en couverture, winrate du côté bleu et issue des parties selon l’équipe ayant pris le premier sang, le premier dragon ou la première tour. Rien n’est publié pour Arena ni la coop contre l’IA ; migration `0014` (section `splits`). Affichage desktop, comptage des redditions et des parties courtes et entrées du modèle de draft restent à livrer (#119).
 
 - Fraîcheur réelle des statistiques : la couverture de chaque périmètre publie le début de sa première et de sa dernière partie incluse, et la méta de l’API ajoute `freshness` (date du calcul et bornes des parties lues), car « Données au » n’était que l’heure du recalcul. Les écarts partie → rang (médian, maximal) restent servis par la couverture ; affichage desktop, alerte d’obsolescence et date de dernière collecte par plateforme restent à livrer (#103).

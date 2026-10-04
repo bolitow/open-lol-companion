@@ -1814,6 +1814,159 @@ fn le_controle_afk_ne_concerne_que_les_files_classees_et_se_desactive() {
     assert!(!report.exclude_afk);
 }
 
+/// Bans complets (5 par équipe) ; `-1` marque un emplacement sans ban.
+fn set_bans(game: &mut StoredMatch, blue: &[i64], red: &[i64]) {
+    let team = |id: u32, first_turn: usize, bans: &[i64]| {
+        let list: Vec<Value> = (0..5)
+            .map(|i| json!({"championId": bans.get(i).copied().unwrap_or(-1), "pickTurn": first_turn + i}))
+            .collect();
+        json!({"teamId": id, "bans": list})
+    };
+    game.detail["info"]["teams"] = json!([team(100, 1, blue), team(200, 6, red)]);
+}
+
+/// Rang observé et proche de la partie pour les joueurs `0..count`.
+fn rank_first_players(game: &mut StoredMatch, count: usize, tier: &str, gap_s: u64) {
+    for i in 0..count {
+        game.ranks.insert(
+            format!("fake-puuid-{i}"),
+            observed("ranked", Some(tier), gap_s),
+        );
+    }
+}
+
+fn find_ban<'a>(
+    report: &'a super::AggregationReport,
+    rank: &str,
+    champion_id: u32,
+) -> Option<&'a super::BanStats> {
+    report
+        .bans
+        .iter()
+        .find(|b| b.rank == rank && b.champion_id == champion_id)
+}
+
+#[test]
+fn les_bans_sont_publies_par_palier_de_partie_avec_leur_propre_denominateur() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut gold = game("EUW1_gold");
+    set_bans(&mut gold, &[99, 98], &[99]);
+    rank_first_players(&mut gold, 6, "GOLD", 3600);
+    acc.add(&gold);
+    let mut diamond = game("EUW1_diamond");
+    set_bans(&mut diamond, &[99], &[-1]);
+    rank_first_players(&mut diamond, 6, "DIAMOND", 3600);
+    acc.add(&diamond);
+    // Cinq joueurs seulement : pas de palier de partie, la partie ne compte que dans ALL.
+    let mut sparse = game("EUW1_sparse");
+    set_bans(&mut sparse, &[99], &[]);
+    rank_first_players(&mut sparse, 5, "GOLD", 3600);
+    acc.add(&sparse);
+    let report = acc.finish();
+
+    let all_99 = find_ban(&report, "ALL", 99).unwrap();
+    assert_eq!((all_99.banned_matches, all_99.draft_matches), (3, 3));
+    assert_eq!(all_99.ban_rate, Some(100.0));
+    let all_98 = find_ban(&report, "ALL", 98).unwrap();
+    assert_eq!((all_98.banned_matches, all_98.draft_matches), (1, 3));
+    let gold_99 = find_ban(&report, "GOLD", 99).unwrap();
+    assert_eq!((gold_99.banned_matches, gold_99.draft_matches), (1, 1));
+    assert_eq!(find_ban(&report, "GOLD", 98).unwrap().ban_rate, Some(100.0));
+    let diamond_99 = find_ban(&report, "DIAMOND", 99).unwrap();
+    assert_eq!(
+        (diamond_99.banned_matches, diamond_99.draft_matches),
+        (1, 1)
+    );
+    assert!(find_ban(&report, "DIAMOND", 98).is_none());
+    // La partie sans palier suffisant est rangée sous UNKNOWN, jamais attribuée à un palier.
+    let unknown_99 = find_ban(&report, "UNKNOWN", 99).unwrap();
+    assert_eq!(
+        (unknown_99.banned_matches, unknown_99.draft_matches),
+        (1, 1)
+    );
+    // Chaque partie avec draft compte exactement une fois hors ALL.
+    let per_rank_drafts: u64 = ["GOLD", "DIAMOND", "UNKNOWN"]
+        .iter()
+        .map(|rank| find_ban(&report, rank, 99).unwrap().draft_matches)
+        .sum();
+    assert_eq!(per_rank_drafts, report.coverage[0].counts.draft_matches);
+    let counts = &report.coverage[0].counts;
+    assert_eq!(counts.match_tier_matches, 2);
+    assert_eq!(counts.unknown_match_tier_matches, 1);
+}
+
+#[test]
+fn le_seuil_de_drafts_s_applique_a_chaque_palier() {
+    let mut acc = Accumulator::new(2).unwrap();
+    for (id, tier) in [
+        ("EUW1_a", "GOLD"),
+        ("EUW1_b", "GOLD"),
+        ("EUW1_c", "DIAMOND"),
+    ] {
+        let mut g = game(id);
+        set_bans(&mut g, &[99], &[]);
+        rank_first_players(&mut g, 6, tier, 3600);
+        acc.add(&g);
+    }
+    let report = acc.finish();
+    assert_eq!(find_ban(&report, "ALL", 99).unwrap().ban_rate, Some(100.0));
+    assert_eq!(find_ban(&report, "GOLD", 99).unwrap().ban_rate, Some(100.0));
+    let diamond = find_ban(&report, "DIAMOND", 99).unwrap();
+    assert_eq!((diamond.banned_matches, diamond.draft_matches), (1, 1));
+    assert_eq!(diamond.ban_rate, None);
+}
+
+#[test]
+fn un_rang_trop_eloigne_de_la_partie_ne_donne_pas_de_palier_de_partie() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_old");
+    set_bans(&mut g, &[99], &[]);
+    let too_old = u64::from(DEFAULT_RANK_MAX_AGE_HOURS) * 3600 + 1;
+    rank_first_players(&mut g, 10, "GOLD", too_old);
+    acc.add(&g);
+    let report = acc.finish();
+    assert!(find_ban(&report, "GOLD", 99).is_none());
+    assert!(find_ban(&report, "UNKNOWN", 99).is_some());
+}
+
+#[test]
+fn un_mode_sans_rang_publie_ses_bans_sous_all_et_unranked_mode() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut draft = game("EUW1_draft");
+    draft.queue_id = 400;
+    draft.detail["info"]["queueId"] = json!(400);
+    set_bans(&mut draft, &[99], &[]);
+    // Même avec des rangs connus : hors Solo/Flex, aucun palier de partie.
+    rank_first_players(&mut draft, 10, "GOLD", 3600);
+    acc.add(&draft);
+    let report = acc.finish();
+    assert!(find_ban(&report, "ALL", 99).is_some());
+    assert!(find_ban(&report, "UNRANKED_MODE", 99).is_some());
+    assert!(find_ban(&report, "GOLD", 99).is_none());
+    let counts = &report.coverage[0].counts;
+    assert_eq!(
+        (counts.match_tier_matches, counts.unknown_match_tier_matches),
+        (0, 0)
+    );
+}
+
+#[test]
+fn le_rapport_publie_la_base_du_rang_des_bans() {
+    let report = Accumulator::new(1).unwrap().finish();
+    assert_eq!(report.ban_rank_basis, "match_median");
+    assert_eq!(report.ban_rank_min_known_players, 6);
+}
+
+#[test]
+fn un_ban_publie_avant_109_se_relit_sous_all() {
+    let old: super::BanStats = serde_json::from_value(json!({
+        "patch":"15.19","platform_id":"EUW1","queue_id":420,
+        "champion_id":99,"banned_matches":1,"draft_matches":2,"ban_rate":50.0
+    }))
+    .unwrap();
+    assert_eq!(old.rank, "ALL");
+}
+
 #[test]
 fn la_duree_est_repartie_en_tranches_dont_la_borne_basse_est_incluse() {
     let mut acc = Accumulator::new(1).unwrap();
