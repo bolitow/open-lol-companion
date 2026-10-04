@@ -112,6 +112,10 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique
+    /// pour toutes ses variantes ; nul dans un rapport antérieur, où le compte est inconnu.
+    #[serde(default)]
+    pub omitted_variants: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -706,6 +710,7 @@ impl Accumulator {
                     },
                     win_rate_lower_bound: (performance_available && c.games >= minimum)
                         .then(|| wilson(c.wins, c.games)),
+                    omitted_variants: None,
                 }
             })
             .collect();
@@ -716,8 +721,19 @@ impl Accumulator {
                 .then_with(|| b.wins.cmp(&a.wins))
                 .then_with(|| a.selection.cmp(&b.selection))
         });
+        // Effectif de chaque (groupe, catégorie) avant plafond : le compteur global additionne
+        // des groupes sans rapport entre eux, il ne dit rien de ce que voit une fiche (#113).
+        let mut totals = BTreeMap::<(GroupKey, String), u32>::new();
+        for build in &builds {
+            *totals
+                .entry((build.key.clone(), build.category.clone()))
+                .or_default() += 1;
+        }
+        let cap = self.report.max_build_variants_per_category;
         let mut variants = BTreeMap::<(GroupKey, String), u32>::new();
         for mut build in builds {
+            let total = totals[&(build.key.clone(), build.category.clone())];
+            build.omitted_variants = Some(total.saturating_sub(cap));
             // La variante est comptée sur la paire triée, sans changer population ni
             // classement ; seul l'ordre publié suit l'orientation D/F majoritaire.
             // Égalité : ordre numérique, pas de préférence inventée.

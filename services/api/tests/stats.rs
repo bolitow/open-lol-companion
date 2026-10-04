@@ -591,7 +591,12 @@ async fn builds_garde_le_champion_la_population_et_les_effectifs_avant_paginatio
     assert_eq!(page.item_events, complete.item_events);
     assert_eq!(page.summary, complete.summary);
     assert_eq!(page.max_build_variants_per_category, 20);
-    assert_eq!(page.omitted_build_variants, 7);
+    // Le compteur global (7) du snapshot n'est pas servi : sans compteur par catégorie
+    // (instantané antérieur), le compte du groupe est inconnu et non repris du global.
+    assert_eq!(page.omitted_build_variants, None);
+    assert!(page.omitted_build_variants_by_category.is_empty());
+    assert_eq!(page.max_item_events, 2000);
+    assert_eq!(page.omitted_item_events, 0);
     let meta = serde_json::to_value(page.meta).unwrap();
     assert_eq!(meta["filters"], source["filters"]);
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
@@ -1003,5 +1008,52 @@ async fn une_serie_ne_parcourt_pas_les_morceaux_des_autres_champions_ni_les_buil
     );
     let response = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
     assert_eq!(response.points.len(), 2);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_variantes_omises_sont_celles_du_groupe_demande_et_les_achats_sont_plafonnes() {
+    let db = db_or_skip!();
+    let mut source = report();
+    // Compteurs par (groupe, catégorie) : le champion 2 et les autres populations portent
+    // des valeurs différentes qui ne doivent jamais entrer dans la réponse du champion 1.
+    for build in source["builds"].as_array_mut().unwrap() {
+        let own = build["champion_id"] == 1
+            && build["rank"] == "ALL"
+            && build["role"] == "TOP"
+            && build["patch"] == "16.19"
+            && build["platform_id"] == "EUW1"
+            && build["queue_id"] == 420;
+        build["omitted_variants"] = json!(if own { 4 } else { 900 });
+    }
+    // Plus de lignes d'achats que le plafond pour le champion 1, dont deux très fréquentes.
+    let template = source["item_events"][0].clone();
+    for n in 0..2100 {
+        let mut row = template.clone();
+        row["item_id"] = json!(2000 + n);
+        row["minute"] = json!(n % 40);
+        row["events"] = json!(if n < 2 { 1000 } else { 1 });
+        source["item_events"].as_array_mut().unwrap().push(row);
+    }
+    publish(db.storage.pool(), source).await;
+    let page = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(page.omitted_build_variants, Some(4));
+    let by_category = serde_json::to_value(&page.omitted_build_variants_by_category).unwrap();
+    assert_eq!(by_category, json!([{"category":"final_items","omitted":4}]));
+    // 2101 lignes pour le champion 1 (1 de la fixture + 2100) : 101 retirées, les plus
+    // fréquentes conservées.
+    assert_eq!(page.max_item_events, 2000);
+    assert_eq!(page.item_events.len(), 2000);
+    assert_eq!(page.omitted_item_events, 101);
+    assert_eq!(
+        page.item_events.iter().filter(|e| e.events == 1000).count(),
+        2
+    );
+    assert!(page.item_events.iter().any(|e| e.events == 42));
+    assert!(page.item_events.iter().all(|e| e.key.champion_id == 1));
+    // Un autre champion ne reçoit ni ces compteurs ni ces lignes.
+    let other = builds(db.storage.pool(), query(), 2).await.unwrap();
+    assert_eq!(other.omitted_build_variants, Some(900));
+    assert_eq!(other.omitted_item_events, 0);
     db.cleanup().await;
 }

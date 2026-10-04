@@ -3,6 +3,7 @@ use crate::{error::ApiError, query::StatsQuery};
 use olc_collector::aggregation::*;
 use serde::Serialize;
 use sqlx::{PgPool, Row};
+use std::collections::BTreeMap;
 
 #[derive(Serialize)]
 pub struct SnapshotMeta {
@@ -51,12 +52,30 @@ pub struct BuildsResponse {
     /// que pour le rang `ALL`. Vide pour un instantané antérieur ou pour Arena.
     pub splits: Vec<SplitStats>,
     pub max_build_variants_per_category: u32,
-    pub omitted_build_variants: u64,
+    /// Variantes non publiées pour le seul groupe demandé (#113), somme de
+    /// `omitted_build_variants_by_category` ; le compteur global du snapshot n'est pas servi.
+    /// Nul pour un instantané antérieur, où ce compte est inconnu.
+    pub omitted_build_variants: Option<u64>,
+    /// Variantes non publiées par catégorie du groupe demandé ; liste vide si inconnu.
+    pub omitted_build_variants_by_category: Vec<OmittedBuildVariants>,
+    /// Plafond d'`item_events` servis pour le groupe demandé.
+    pub max_item_events: u32,
+    /// Lignes d'`item_events` du groupe retirées par ce plafond (les moins fréquentes).
+    pub omitted_item_events: u64,
     /// Règles des étapes d'achat (#81) ; vide pour un instantané antérieur.
     pub build_stage_method: String,
     /// Version du catalogue d'objets jointe au patch demandé ; nulle sans étapes.
     pub item_catalog_version: Option<String>,
 }
+/// Variantes de builds coupées par le plafond de publication dans une catégorie (#113).
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct OmittedBuildVariants {
+    pub category: String,
+    pub omitted: u32,
+}
+/// Nombre maximal de lignes `item_events` servies pour un groupe : l'effectif par groupe
+/// croît avec le volume collecté (objets × minutes) et la réponse n'est pas paginée.
+pub const MAX_ITEM_EVENTS: u32 = 2000;
 /// Tierlist filtrée sur une population explicite, triée selon le rang publié.
 pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
     query.validate().map_err(|_| ApiError::InvalidRequest)?;
@@ -114,6 +133,8 @@ pub async fn builds(
             .then(a.selection.cmp(&b.selection))
     });
     let total = variants.len();
+    // Avant pagination : le compte décrit tout le groupe, pas la page demandée.
+    let (omitted_build_variants, omitted_build_variants_by_category) = omitted_variants(&variants);
     let builds = variants
         .into_iter()
         .skip(query.offset)
@@ -124,11 +145,12 @@ pub async fn builds(
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
-    let item_events = report
+    let item_events: Vec<_> = report
         .item_events
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
+    let (item_events, omitted_item_events) = cap_item_events(item_events, MAX_ITEM_EVENTS);
     let mut splits: Vec<_> = report
         .splits
         .into_iter()
@@ -151,10 +173,55 @@ pub async fn builds(
         item_events,
         splits,
         max_build_variants_per_category: report.max_build_variants_per_category,
-        omitted_build_variants: report.omitted_build_variants,
+        omitted_build_variants,
+        omitted_build_variants_by_category,
+        max_item_events: MAX_ITEM_EVENTS,
+        omitted_item_events,
         build_stage_method: report.build_stage_method,
         item_catalog_version,
     })
+}
+
+/// Variantes omises par catégorie du groupe, lues sur les variantes publiées (le compteur est
+/// identique pour toutes celles d'une catégorie). Une catégorie sans compteur (instantané
+/// antérieur) est absente de la liste et rend le total inconnu, jamais nul.
+fn omitted_variants(variants: &[BuildStats]) -> (Option<u64>, Vec<OmittedBuildVariants>) {
+    let mut known = BTreeMap::<&str, Option<u32>>::new();
+    for variant in variants {
+        known
+            .entry(&variant.category)
+            .or_insert(variant.omitted_variants);
+    }
+    let complete = known.values().all(Option::is_some);
+    let by_category: Vec<_> = known
+        .into_iter()
+        .filter_map(|(category, omitted)| {
+            omitted.map(|omitted| OmittedBuildVariants {
+                category: category.to_owned(),
+                omitted,
+            })
+        })
+        .collect();
+    let total = complete.then(|| by_category.iter().map(|c| u64::from(c.omitted)).sum());
+    (total, by_category)
+}
+
+/// Garde les `max` lignes les plus fréquentes (égalité : événement, objet, minute) et rend
+/// le nombre de lignes retirées ; la liste reste dans l'ordre naturel de lecture.
+fn cap_item_events(mut events: Vec<ItemEventStats>, max: u32) -> (Vec<ItemEventStats>, u64) {
+    let max = max as usize;
+    if events.len() <= max {
+        return (events, 0);
+    }
+    let omitted = (events.len() - max) as u64;
+    events.sort_by(|a, b| {
+        b.events
+            .cmp(&a.events)
+            .then_with(|| (&a.event, a.item_id, a.minute).cmp(&(&b.event, b.item_id, b.minute)))
+    });
+    events.truncate(max);
+    events.sort_by(|a, b| (&a.event, a.item_id, a.minute).cmp(&(&b.event, b.item_id, b.minute)));
+    (events, omitted)
 }
 
 /// Population lue dans l'instantané ; `patch` absent sélectionne tous les patchs publiés.
@@ -290,6 +357,7 @@ fn matches(key: &GroupKey, query: &StatsQuery) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::json;
 
     fn scope(patch: &str, first: Option<i64>, last: Option<i64>) -> ScopeCoverage {
         let mut value = serde_json::to_value(Coverage::default()).unwrap();
@@ -317,5 +385,76 @@ mod tests {
             }
         );
         assert_eq!(freshness("x", &[]).last_game_start_ms, None);
+    }
+
+    fn build(category: &str, selection: u32, omitted: Option<u32>) -> BuildStats {
+        serde_json::from_value(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "category":category, "selection":[selection], "games":10,
+            "wins":5, "performance_available":true, "population":10,
+            "pick_rate":null, "win_rate":null, "omitted_variants":omitted
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn les_variantes_omises_se_lisent_par_categorie_puis_se_totalisent() {
+        let builds = [
+            build("summoner_spells", 1, Some(5)),
+            build("summoner_spells", 2, Some(5)),
+            build("runes", 1, Some(0)),
+            build("final_items", 1, Some(12)),
+        ];
+        let (total, by_category) = omitted_variants(&builds);
+        assert_eq!(total, Some(17));
+        let read: Vec<_> = by_category
+            .iter()
+            .map(|c| (c.category.as_str(), c.omitted))
+            .collect();
+        assert_eq!(
+            read,
+            [("final_items", 12), ("runes", 0), ("summoner_spells", 5)]
+        );
+    }
+
+    #[test]
+    fn des_variantes_omises_inconnues_ne_sont_jamais_presentees_comme_zero() {
+        // Instantané antérieur : aucune variante ne porte le compteur.
+        let (total, by_category) = omitted_variants(&[build("runes", 1, None)]);
+        assert_eq!((total, by_category.len()), (None, 0));
+        // Mélange : seule la catégorie inconnue manque, le total reste inconnu.
+        let (total, by_category) =
+            omitted_variants(&[build("runes", 1, None), build("final_items", 1, Some(2))]);
+        assert_eq!((total, by_category.len()), (None, 1));
+        // Aucune variante observée : rien n'a pu être omis.
+        assert_eq!(omitted_variants(&[]).0, Some(0));
+    }
+
+    fn event(item_id: u32, minute: u32, events: u64) -> ItemEventStats {
+        serde_json::from_value(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "event":"ITEM_PURCHASED", "item_id":item_id, "minute":minute, "events":events
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn les_achats_servis_sont_plafonnes_sur_les_plus_frequents() {
+        let all = vec![
+            event(3, 2, 5),
+            event(1, 1, 9),
+            event(2, 1, 5),
+            event(4, 3, 1),
+        ];
+        let (kept, omitted) = cap_item_events(all.clone(), 2);
+        assert_eq!(omitted, 2);
+        // Les deux plus fréquents ; l'égalité se départage par (objet, minute), le résultat
+        // est rendu dans l'ordre naturel de lecture.
+        let read: Vec<_> = kept.iter().map(|e| (e.item_id, e.minute)).collect();
+        assert_eq!(read, [(1, 1), (2, 1)]);
+        let (kept, omitted) = cap_item_events(all.clone(), 4);
+        assert_eq!((kept, omitted), (all, 0));
     }
 }

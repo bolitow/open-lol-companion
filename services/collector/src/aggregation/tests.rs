@@ -503,6 +503,59 @@ fn les_variantes_builds_sont_bornees_sans_modifier_leur_population() {
     assert_eq!(r.omitted_build_variants, 10); // cinq variantes dans ALL, cinq dans UNKNOWN.
 }
 
+#[test]
+fn les_variantes_omises_sont_comptees_par_groupe_et_categorie() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for n in 0..25 {
+        let mut g = game(&format!("EUW1_omitted{n}"));
+        let p = &mut g.detail["info"]["participants"][0];
+        p["summoner1Id"] = json!(4);
+        p["summoner2Id"] = json!(100 + n);
+        // Inventaire final complet : seconde catégorie, bien sous le plafond de variantes.
+        for slot in 0..6 {
+            p[format!("item{slot}")] = json!(if slot == 0 { 3006 } else { 0 });
+        }
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    let in_group = |rank: &str, category: &str| -> Vec<Option<u32>> {
+        r.builds
+            .iter()
+            .filter(|b| b.key.rank == rank && b.category == category)
+            .map(|b| b.omitted_variants)
+            .collect()
+    };
+    // Cinq variantes de sorts coupées dans ALL et cinq dans UNKNOWN : le compteur propre à
+    // chaque (groupe, catégorie) est porté par toutes ses variantes publiées.
+    assert_eq!(in_group("ALL", "summoner_spells"), vec![Some(5); 20]);
+    assert_eq!(in_group("UNKNOWN", "summoner_spells"), vec![Some(5); 20]);
+    // Une catégorie qui tient sous le plafond ne perd rien ; le compteur global reste cumulé.
+    let final_items = in_group("ALL", "final_items");
+    assert!(
+        !final_items.is_empty(),
+        "la catégorie sous le plafond doit exister"
+    );
+    assert!(final_items.iter().all(|o| *o == Some(0)));
+    assert_eq!(r.omitted_build_variants, 10);
+}
+
+#[test]
+fn un_rapport_anterieur_sans_compteur_par_categorie_reste_lisible() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_legacy");
+    let p = &mut g.detail["info"]["participants"][0];
+    p["summoner1Id"] = json!(4);
+    p["summoner2Id"] = json!(100);
+    acc.add(&g);
+    let mut value = serde_json::to_value(acc.finish()).unwrap();
+    for build in value["builds"].as_array_mut().unwrap() {
+        build.as_object_mut().unwrap().remove("omitted_variants");
+    }
+    let r: super::AggregationReport = serde_json::from_value(value).unwrap();
+    assert!(!r.builds.is_empty());
+    assert!(r.builds.iter().all(|b| b.omitted_variants.is_none()));
+}
+
 fn spell_games(acc: &mut Accumulator, prefix: &str, first: u32, second: u32, count: u32) {
     for n in 0..count {
         let mut g = game(&format!("{prefix}{n}"));

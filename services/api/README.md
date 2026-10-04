@@ -102,8 +102,16 @@ ordre ; liste vide pour un instantané antérieur ou en Arena. La couverture, pr
 dans le [README du collecteur](../collector/README.md)), à `0`/`null` pour un instantané
 antérieur. Couverture et bans ne sont pas ventilés par
 rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
-liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
-le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
+liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` (#113) ne
+compte que les variantes coupées par le plafond pour le **groupe demandé** (champion,
+rôle, rang, patch, plateforme, file), somme de `omitted_build_variants_by_category`
+(`[{category, omitted}]`, avant pagination) ; le compteur global du snapshot, qui
+additionne tous les groupes, n'est plus servi (il reste dans le rapport pour le
+diagnostic). Les deux valent `null` / liste vide pour un instantané antérieur au
+compteur par catégorie : le compte est inconnu, jamais présenté comme zéro. Chaque variante
+publiée porte aussi `omitted_variants`, le compte de sa catégorie. `item_events` est
+plafonné à `max_item_events` (2000) lignes par groupe : les plus fréquentes sont
+gardées, `omitted_item_events` donne le nombre de lignes retirées. Pas de filtre temporel arbitraire : demander
 un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées. Les groupes Arena (#104) portent
 `placement_games`, `average_placement`, `top1_rate` et `top2_rate` (`null`/`0` hors Arena ou
 pour un instantané antérieur), leurs `win_rate` et `win_rate_lower_bound` sont `null` ; la
