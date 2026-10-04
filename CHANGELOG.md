@@ -104,6 +104,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Builds : les sorts d’invocateur publient l’orientation D/F la plus fréquente observée pour chaque paire, avec ou sans Flash (ordre numérique à égalité), sans changer les effectifs ni le classement des variantes ; l’import sans Flash en profite (#124).
 - Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
 - Cahier des charges et règles de conformité Riot recoupés sur les textes d'origine (Developer API Policy, Game Policy et politiques générales du Developer Portal) : suppression du bouton Lock, des premades en sélection, des tiers et taux d'augments et d'objets Arena ; refus explicite des cooldowns adverses, camps non vus, or adverse exact, conseils tactiques en temps réel et MMR estimé ; cas non tranchés suspendus jusqu'à décision écrite de Riot (#79).
 

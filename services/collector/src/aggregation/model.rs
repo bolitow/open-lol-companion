@@ -231,6 +231,9 @@ pub(super) struct Accumulator {
     coverage: BTreeMap<ScopeKey, Coverage>,
     bans: BTreeMap<(ScopeKey, u32), u64>,
     builds: BTreeMap<BuildKey, Count>,
+    /// Parties où la paire de sorts a été observée en ordre décroissant (case D > case F),
+    /// par paire triée ; l'autre orientation se déduit de `games` (#124).
+    inverted_spells: BTreeMap<(GroupKey, Vec<u32>), u64>,
     build_populations: BTreeMap<(GroupKey, String), u64>,
     skills: BTreeMap<(GroupKey, u32, u32), (u64, u128)>,
     events: BTreeMap<(GroupKey, String, u32, u32), u64>,
@@ -258,7 +261,7 @@ impl Accumulator {
                 build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
-            bans:BTreeMap::new(), builds:BTreeMap::new(), build_populations:BTreeMap::new(),
+            bans:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
             skills:BTreeMap::new(), events:BTreeMap::new(), rank_gaps:BTreeMap::new(),
             item_catalogs:BTreeMap::new(),
         })
@@ -407,6 +410,14 @@ impl Accumulator {
                 .or_default();
             c.games += 1;
             c.wins += u64::from(win);
+            if category == "summoner_spells"
+                && matches!(observations.spell_slots, Some([d, f]) if d > f)
+            {
+                *self
+                    .inverted_spells
+                    .entry((key.clone(), selection.clone()))
+                    .or_default() += 1;
+            }
             if category == "final_items" {
                 *self
                     .build_populations
@@ -570,7 +581,20 @@ impl Accumulator {
                 .then_with(|| a.selection.cmp(&b.selection))
         });
         let mut variants = BTreeMap::<(GroupKey, String), u32>::new();
-        for build in builds {
+        for mut build in builds {
+            // La variante est comptée sur la paire triée, sans changer population ni
+            // classement ; seul l'ordre publié suit l'orientation D/F majoritaire.
+            // Égalité : ordre numérique, pas de préférence inventée.
+            if build.category == "summoner_spells" {
+                let inverted = self
+                    .inverted_spells
+                    .get(&(build.key.clone(), build.selection.clone()))
+                    .copied()
+                    .unwrap_or(0);
+                if inverted * 2 > build.games {
+                    build.selection.reverse();
+                }
+            }
             let n = variants
                 .entry((build.key.clone(), build.category.clone()))
                 .or_default();
