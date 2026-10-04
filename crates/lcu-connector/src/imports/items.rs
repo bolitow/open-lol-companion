@@ -30,6 +30,7 @@ pub struct ItemStack {
 
 impl LcuClient {
     /// Importe le set choisi sans supprimer les ensembles personnels du joueur.
+    /// Les objets du set doivent déjà être achetables (voir `build_item_set`).
     /// Source du GET/PUT et du schéma (client 26.16, vérifié le 01/10/2026) :
     /// https://raw.githubusercontent.com/KebsCS/lcu-and-riotclient-api/main/lcu/swagger.json
     pub async fn import_items(&self, request: &ImportItemsRequest) -> Result<(), ImportError> {
@@ -91,18 +92,9 @@ fn valid_label(value: &str) -> bool {
     !value.trim().is_empty() && !value.chars().any(char::is_control)
 }
 
-/// Les évolutions de la Larme ne sont pas achetables et n'ont pas de lien `from`.
-/// Identifiants et `gold.purchasable` vérifiés dans les données officielles :
-/// https://ddragon.leagueoflegends.com/cdn/16.19.1/data/en_US/item.json
-fn purchasable_item_id(id: u32) -> u32 {
-    match id {
-        3042 => 3004, // Muramana → Manamune.
-        3040 => 3003, // Étreinte du Séraphin → Bâton de l'archange.
-        3121 => 3119, // Fimbulvetr → Approche de l'hiver.
-        _ => id,
-    }
-}
-
+/// Les identifiants arrivent déjà sous forme achetable : l'interface les résout avec le
+/// catalogue du patch (`purchasable`, `in_store`, `special_recipe`, `builds_from`) et retire
+/// les objets sans ancêtre achetable (#88). Le cœur ne réécrit donc aucun identifiant.
 fn build_item_set(request: &ImportItemsRequest) -> Result<Value, ImportError> {
     if !valid_number(request.champion_id)
         || !valid_number(request.map_id)
@@ -126,9 +118,7 @@ fn build_item_set(request: &ImportItemsRequest) -> Result<Value, ImportError> {
             let items: Vec<_> = block
                 .items
                 .iter()
-                .map(|item| {
-                    json!({"id": purchasable_item_id(item.id).to_string(), "count": item.count})
-                })
+                .map(|item| json!({"id": item.id.to_string(), "count": item.count}))
                 .collect();
             json!({
                 "type": block.label.trim(),
@@ -216,9 +206,9 @@ mod tests {
             blocks: vec![ItemBlock {
                 label: "Objets principaux".into(),
                 items: vec![
-                    ItemStack { id: 3042, count: 1 },
-                    ItemStack { id: 3040, count: 1 },
-                    ItemStack { id: 3121, count: 1 },
+                    ItemStack { id: 3004, count: 1 },
+                    ItemStack { id: 3003, count: 1 },
+                    ItemStack { id: 3119, count: 1 },
                     ItemStack { id: 3070, count: 2 },
                 ],
             }],
@@ -248,13 +238,14 @@ mod tests {
         assert_eq!(value["mapId"], 11);
         assert_eq!(
             value["blocks"][0]["items"][0],
-            json!({"id": 3042, "count": 1})
+            json!({"id": 3004, "count": 1})
         );
         assert!(value.get("champion_id").is_none());
     }
 
     #[test]
-    fn convertit_les_trois_objets_larme_vers_leur_forme_achetable() {
+    fn transmet_les_objets_tels_quels_la_resolution_achetable_est_faite_en_amont() {
+        // #88 : le catalogue du patch est résolu côté interface, plus de table codée ici.
         let set = build_item_set(&request()).unwrap();
         assert_eq!(
             set["blocks"][0]["items"],
@@ -277,6 +268,37 @@ mod tests {
         assert_eq!(set["blocks"][0]["type"], "Objets principaux");
         assert_eq!(set["blocks"][0]["showIfSummonerSpell"], "");
         assert_eq!(set["blocks"][0]["hideIfSummonerSpell"], "");
+    }
+
+    #[test]
+    fn ne_reecrit_aucun_identifiant_et_conserve_l_ordre_de_plusieurs_blocs() {
+        // Ancienne table codée en dur : 3042 devenait 3004. Désormais l'interface fournit
+        // des identifiants déjà achetables ; le cœur n'en réécrit aucun (#88).
+        let mut input = request();
+        input.blocks = vec![
+            ItemBlock {
+                label: "Départ".into(),
+                items: vec![
+                    ItemStack { id: 1055, count: 1 },
+                    ItemStack { id: 2003, count: 2 },
+                ],
+            },
+            ItemBlock {
+                label: "Principaux".into(),
+                items: vec![ItemStack { id: 3042, count: 1 }],
+            },
+        ];
+        let set = build_item_set(&input).unwrap();
+        assert_eq!(set["blocks"][0]["type"], "Départ");
+        assert_eq!(
+            set["blocks"][0]["items"],
+            json!([{"id": "1055", "count": 1}, {"id": "2003", "count": 2}])
+        );
+        assert_eq!(set["blocks"][1]["type"], "Principaux");
+        assert_eq!(
+            set["blocks"][1]["items"],
+            json!([{"id": "3042", "count": 1}])
+        );
     }
 
     #[test]

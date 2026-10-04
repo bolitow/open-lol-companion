@@ -78,11 +78,18 @@ Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
 
 Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
-`campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`
-vérifie les statiques et recalcule chaque heure. La campagne respecte les quotas,
-une échéance persistée et des tranches de 15 minutes par plateforme. Une clé de
-développement peut expirer avant la fin. Aucun superviseur ni service permanent
-n'est installé. Voir [le contrat et les options](../services/collector/README.md).
+`campaign-resume <id>`. La campagne collecte Solo/Duo et Flex par défaut ; les autres files
+(ARAM, Swiftplay, Arena…) s'ajoutent avec `--queues`, par exemple `--queues 420,440,450`. Dans un autre terminal, `aggregate --sync-static --watch`
+vérifie les statiques et recalcule chaque heure (par lots modifiés ; `--full` force
+le recalcul complet). La campagne respecte les quotas, une échéance persistée et des
+tranches de 15 minutes par plateforme. Une clé de développement peut expirer avant
+la fin. Aucun superviseur ni service permanent n'est installé. Voir
+[le contrat et les options](../services/collector/README.md).
+
+Rétention des données personnelles (#99) : `cargo run -p olc-collector --release -- purge --watch`
+supprime les parties brutes (et le cache des parties exclues) après 90 jours et retire PUUID, Riot ID, icône et niveau de compte après 30 jours
+(valeurs proposées, réglables par `OLC_RETENTION_*`). Détails dans le
+[README du collecteur](../services/collector/README.md#rétention-des-données-personnelles-99).
 
 ## 3 ter. API interne (backend, facultatif)
 
@@ -98,12 +105,25 @@ Routes, variables, cache, WebSocket et PowerShell : [contrat API](../services/ap
 
 ### Relier la préparation desktop aux builds (#13)
 
-Le cœur Rust lit `OLC_API_URL` (origine du serveur, sans chemin) et
-`OLC_API_TOKEN` (jeton de lecture émis par le serveur) dans **l’environnement du
-processus qui lance `pnpm dev`**. Le front ne reçoit aucun jeton ; ne pas utiliser
-un préfixe `VITE_`, ne pas embarquer de jeton dans le bundle et ne pas transmettre
-le secret JWT du serveur ni une clé Riot au desktop. Ces variables ne sont pas
-chargées automatiquement depuis le `.env` du backend.
+Le cœur Rust a besoin d’une URL (origine du serveur, sans chemin) et d’un jeton de
+lecture émis par le serveur. Deux sources, dans cet ordre (#98) :
+
+1. `OLC_API_URL` et `OLC_API_TOKEN`, **toutes deux** présentes dans l’environnement du
+   processus qui lance `pnpm dev` (raccordement développeur, prioritaire) ;
+2. sinon **Réglages → Accès à l’API** : l’URL et le jeton saisis y sont validés par le
+   cœur Rust puis gardés dans le trousseau du système (Keychain sous macOS,
+   Gestionnaire d’identifiants sous Windows ; service
+   `io.github.bolitow.openlolcompanion`, compte `api-access`). Le changement
+   s’applique sans redémarrage (builds, profils, canal des publications) ; « Retirer
+   le jeton » supprime l’entrée. Le jeton n’est ni journalisé, ni renvoyé à
+   l’interface, ni réaffiché après saisie ; seule l’URL est relue.
+
+Le front ne garde aucun jeton ; ne pas utiliser un préfixe `VITE_`, ne pas embarquer
+de jeton dans le bundle et ne pas transmettre le secret JWT du serveur ni une clé
+Riot au desktop. Les variables ne sont pas chargées automatiquement depuis le `.env`
+du backend. Sous macOS, une version recompilée ou non signée peut déclencher une
+demande d’accès au trousseau au démarrage : la fenêtre reste utilisable, les builds
+et profils attendent la réponse.
 
 - Développement local : `OLC_API_URL=http://127.0.0.1:3030` ; définir le jeton
   temporaire dans le terminal de lancement, puis `pnpm dev`. Sous PowerShell,
@@ -119,11 +139,23 @@ chargées automatiquement depuis le `.env` du backend.
   affiche la cause ou l’état vide. Le catalogue local et les runes équipées
   restent accessibles. L’aperçu navigateur ne dispose pas de ce transport natif.
 
-Il s’agit d’un raccordement développeur : distribution des accès utilisateurs,
-connexion publique et déploiement ne sont pas encore fournis par ce lot. Les
+La saisie dans les réglages permet d’utiliser une app installée lancée depuis le
+Finder ou le menu Démarrer, mais la distribution des jetons reste manuelle : aucun
+endpoint public d’émission ni rafraîchissement n’existe encore, et un jeton
+`olc-api token` expire au plus tard après 24 h (#98). Les
 catégories sont indépendantes, triées par fréquence, et ne constituent ni un
 build conjoint gagnant ni une recommandation matchup/pro. Voir
 [le suivi de validation](integration-front.md).
+
+**Annonce des publications (#125).** Avec les mêmes `OLC_API_URL` et `OLC_API_TOKEN`,
+le cœur Rust ouvre aussi `/v1/ws` (`wss` pour HTTPS, `ws` pour le loopback), envoie le
+jeton dans le premier message (jamais dans l’URL) et reçoit les dates de publication
+des statistiques et des données statiques. Une coupure déclenche une reconnexion avec
+attente doublée de 1 s à 60 s ; un jeton refusé ou expiré (fermeture `1008`, ou 401/403 d’un proxy
+d’authentification) arrête les tentatives
+(état `unauthorized` : enregistrer un nouveau jeton dans les réglages relance
+l’écoute sans redémarrage, ou relancer l’app avec de nouvelles variables). L’état est lu par la
+commande `publication_state` et émis avec l’événement `publication-state`.
 
 ## 4. Où coder quoi
 
@@ -150,6 +182,7 @@ Règle d'or : ce qui touche au système (fichiers, processus, réseau local, sec
 1. Prenez un ticket du [sprint en cours](sprint-1.md) ou étiqueté `good first issue`.
 2. Branche `feat/…` ou `fix/…`, puis pull request vers `main`.
 3. La CI tourne sur la PR (pas au push ni après la fusion) : Linux à chaque fois, Windows et macOS quand l'app, le connecteur ou `@olc/shared` changent (et pas en brouillon). Elle doit être verte.
+   Un workflow planifié, [`patch-watch.yml`](../.github/workflows/patch-watch.yml), relance chaque jour la suite de tests sur Linux quand Data Dragon publie un nouveau patch LoL (aucun secret, aucun appel Riot authentifié). Il consigne le résultat dans une issue « Patch LoL X.Y : contrôle automatique » : ouverte si les tests échouent, fermée aussitôt s'ils passent. Pour retester un patch déjà tracé : Actions, « Contrôle à chaque patch LoL », *Run workflow*, option « force ». Les recettes LCU réelles sur Windows et macOS restent manuelles.
 
 Et avant tout : relisez la section 2 du [cahier des charges](cahier-des-charges.md) sur la conformité Riot.
 
@@ -220,7 +253,7 @@ requête / 65 s au total, quatre appels simultanés partagés avec les builds.
 Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.
 
 Les [réglages recherchables](reglages.md) regroupent thème, langue, animations et Flash D/F. Les préférences antérieures sont reprises ; les fonctions système du ticket #11 restent séparées.
-La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont exécutés sur Linux avec `cargo test -p olc-collector --example export_desktop_catalog`.
+La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont déclarés dans `services/collector/Cargo.toml` (`[[example]] test = true`) : ils tournent avec `cargo test -p olc-collector`, donc avec `pnpm test` et sur les trois OS de la CI.
 
 ### Réglages système (#11)
 

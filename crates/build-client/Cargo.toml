@@ -13,6 +13,17 @@ reqwest.workspace = true
 rustls.workspace = true
 webpki-roots = "1"
 tokio = { workspace = true, features = ["sync", "time"] }
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util"] }
+
+# Trousseau natif du système pour le jeton d'accès desktop : Keychain sous macOS,
+# Gestionnaire d'identifiants sous Windows. Sans ces fonctionnalités, keyring
+# utiliserait un stockage en mémoire non persistant.
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "3.6.3", features = ["apple-native"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+keyring = { version = "3.6.3", features = ["windows-native"] }

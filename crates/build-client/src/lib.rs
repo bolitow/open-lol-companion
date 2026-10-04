@@ -1,6 +1,8 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
+pub mod credentials;
 pub mod profiles;
+pub mod publications;
 
 use reqwest::{header::HeaderValue, Url};
 use serde::{Deserialize, Serialize};
@@ -54,6 +56,15 @@ impl BuildRequest {
                 "UNKNOWN",
                 "UNRANKED",
                 "UNRANKED_MODE",
+                // Paliers cumulés (#83), miroir de `CUMULATIVE_RANKS` côté collecteur.
+                "IRON_PLUS",
+                "BRONZE_PLUS",
+                "SILVER_PLUS",
+                "GOLD_PLUS",
+                "PLATINUM_PLUS",
+                "EMERALD_PLUS",
+                "DIAMOND_PLUS",
+                "MASTER_PLUS",
             ]
             .contains(&self.rank.as_str())
         {
@@ -85,6 +96,14 @@ pub struct BuildMeta {
     pub min_games: u32,
 }
 
+/// Fiabilité d'un taux au regard de son effectif (#91), miroir de `Reliability` (@olc/shared).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Reliability {
+    Low,
+    Sufficient,
+}
+
 /// Variante observée par catégorie, miroir exact de `BuildStats` (#19).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildVariant {
@@ -105,15 +124,25 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
-    /// Borne supérieure de Wilson à 95 % (#112) ; absente des instantanés antérieurs.
-    #[serde(default)]
-    pub win_rate_upper_bound: Option<f64>,
     /// Écart signé (points) au winrate du groupe champion (#112) ; absent des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_delta: Option<f64>,
     /// Taux conditionnel des runes (#86), en pourcentage (0 à 100, comme `pick_rate`) ; absent des instantanés antérieurs.
     #[serde(default)]
     pub conditional_rate: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#91) ; absente des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// `low` sous le plancher de fiabilité du serveur (#91), indépendant de `min_games`.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
+    /// Arena, variantes hors objets : participations au placement valide (#104) ; 0 sinon.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena, variantes hors objets : placement moyen (1 = première) ; absent des
+    /// instantanés antérieurs, nul sous le seuil.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -136,6 +165,10 @@ impl BuildVariant {
             .into_iter()
             .flatten()
             .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || self.placement_games > self.games
+            || self
+                .average_placement
+                .is_some_and(|v| !v.is_finite() || v < 1.0)
             || self
                 .win_rate_delta
                 .is_some_and(|v| !v.is_finite() || !(-100.0..=100.0).contains(&v))
@@ -146,12 +179,18 @@ impl BuildVariant {
             return Err(BuildError::InvalidResponse);
         }
         if self.games < u64::from(min_games) {
+            self.average_placement = None;
             self.pick_rate = None;
             self.win_rate = None;
             self.win_rate_lower_bound = None;
             self.win_rate_upper_bound = None;
             self.win_rate_delta = None;
             self.conditional_rate = None;
+        }
+        // Même seuil que le collecteur : le placement moyen n'est publié qu'à partir de
+        // `min_games` parties avec placement, pas seulement `min_games` parties jouées.
+        if self.placement_games < u64::from(min_games) {
+            self.average_placement = None;
         }
         if !self.performance_available {
             self.win_rate = None;
@@ -186,18 +225,13 @@ struct Page {
 pub struct BuildClient {
     http: reqwest::Client,
     base: Url,
+    /// Jeton de lecture, réservé au premier message du WebSocket ; jamais journalisé.
+    token: String,
+    tls: Arc<rustls::ClientConfig>,
     slots: tokio::sync::Semaphore,
 }
 
 impl BuildClient {
-    /// Charge uniquement les variables desktop ; ni clé Riot ni secret serveur JWT.
-    pub fn from_env() -> Result<Self, BuildError> {
-        Self::new(
-            std::env::var("OLC_API_URL").ok(),
-            std::env::var("OLC_API_TOKEN").ok(),
-        )
-    }
-
     /// URL d'origine HTTPS ou HTTP sur IP loopback. Redirections interdites.
     pub fn new(url: Option<String>, token: Option<String>) -> Result<Self, BuildError> {
         let (Some(url), Some(token)) = (url, token) else {
@@ -236,7 +270,7 @@ impl BuildClient {
         .with_root_certificates(roots)
         .with_no_client_auth();
         let http = reqwest::Client::builder()
-            .use_preconfigured_tls(tls)
+            .use_preconfigured_tls(tls.clone())
             .default_headers(headers)
             .redirect(reqwest::redirect::Policy::none())
             .connect_timeout(Duration::from_secs(5))
@@ -246,6 +280,8 @@ impl BuildClient {
         Ok(Self {
             http,
             base,
+            token,
+            tls: Arc::new(tls),
             slots: tokio::sync::Semaphore::new(4),
         })
     }

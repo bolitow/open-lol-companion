@@ -5,7 +5,7 @@ import {OverlayView} from './OverlayView';
 import {defaultOverlayPreferences} from './preferences';
 
 const state: OverlayState = {material: 'solid', revision: 1, preferences: {...defaultOverlayPreferences, enabled: true}, available: true, visible: true, preview: false, error: null};
-const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: null, game: {gameTime: 123, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 3, kills: 1, deaths: 0, assists: 2, creepScore: 7, items: []}, events: []}};
+const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: null, game: {gameTime: 123, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 3, kills: 1, deaths: 0, assists: 2, creepScore: 7, items: [], currentGold: null, wardScore: null, isDead: null, respawnTimer: null, abilityLevels: null, team: null, position: null}, teams: null, events: []}, postgame: null};
 
 it('applique l’opacité en CSS seulement au fond solide, les matériaux Mac ont une opacité native', () => {
     for (const material of ['solid', 'vibrancy', 'liquidGlass'] as const) {

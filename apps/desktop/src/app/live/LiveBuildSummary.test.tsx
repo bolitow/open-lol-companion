@@ -9,7 +9,7 @@ const report: BuildReport = {
 };
 function variant(category: string, selection: number[], games: number, wins: number): BuildStats {
   return {patch: '16.19', platform_id: 'EUW1', queue_id: 420, role: 'UTILITY', rank: 'ALL', champion_id: 432,
-    category, selection, games, wins, population: 500, performance_available: true, pick_rate: games / 5, win_rate: wins / games * 100, win_rate_lower_bound: null, win_rate_upper_bound: null, win_rate_delta: null, conditional_rate: null};
+    category, selection, games, wins, population: 500, performance_available: true, pick_rate: games / 5, win_rate: wins / games * 100, win_rate_lower_bound: null, conditional_rate: null, win_rate_upper_bound: null, win_rate_delta: null, reliability: null, placement_games: 0, average_placement: null};
 }
 function record(id: number, kind: string, name: string, locale = 'en_US'): CatalogRecord {
   return {id: String(id), kind, name, locale, namespace: 'standard', description: null, icon: null, fields: {}, stats: {}, effects: [], coverage: {source_fields: 0, normalized_fields: 0, unmapped_fields: [], issues: []}};
@@ -63,7 +63,7 @@ it('annonce une catégorie absente au lieu de montrer des objets d’une autre c
 });
 
 it('ne charge pas les builds pour un rôle inconnu même avec un champion live', () => {
-  const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: {championId: 432, role: null, platform: 'EUW1', queue: 420, customGame: false}, game: {gameTime: 1, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 1, kills: 0, deaths: 0, assists: 0, creepScore: 0, items: []}, events: []}};
+  const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: {championId: 432, role: null, platform: 'EUW1', queue: 420, customGame: false}, game: {gameTime: 1, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 1, kills: 0, deaths: 0, assists: 0, creepScore: 0, items: [], currentGold: null, wardScore: null, isDead: null, respawnTimer: null, abilityLevels: null, team: null, position: null}, teams: null, events: []}, postgame: null};
   const html = renderToStaticMarkup(<LiveBuildSummary session={session} locale="en"/>);
   expect(html).toContain('Statistics unavailable');
   expect(html).not.toContain('Loading');
