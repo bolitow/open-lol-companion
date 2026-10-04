@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Revue de conformité Riot de tous les overlays et projections (panneau en partie, projection Live Client, sélection des champions, bilan, prototype) : rapport daté ligne à ligne, cas à soumettre à Riot et fonctions refusées complétés dans `rules/conformite-riot.md`, test de non-fuite des identités de la projection de sélection et filtre défensif des bans adverses (seuls les bans annoncés par une action terminée d'une cellule adverse sont projetés). Décisions du 4 octobre : objets, sorts, niveau et score de vision adverses refusés ; différence d'or par équipe seulement à soumettre à Riot, affichage prévu ; % de victoire estimé de la draft affiché dès maintenant, désactivable, conservé dans la liste soumise à Riot (#30, suites d'interface : #187).
+
 - Projection Live Client élargie par liste blanche : or courant, vision, mort/réapparition, niveaux de compétences, côté et poste du joueur local, totaux K/D/A et CS des équipes comme au tableau des scores, événements publics (objectifs, kills) sans nom de joueur ; aucune donnée adverse cachée. La dernière lecture est conservée en mémoire jusqu'au bilan d'après-partie puis purgée (#102).
 
 - Collecteur : `olc-collector close-unserved-ranks` ferme les demandes de rang encore en attente pour des parties non classées (créées avant le filtrage par file), en simulation par défaut et avec `--apply` pour agir ; `campaign --queues` choisit les files d'une campagne (une exécution par plateforme et par file, budget et cible réparties) : Solo (420) et Flex (440) par défaut, les autres files (ARAM, Swiftplay, Arena…) sur demande en les listant, rangs coupés hors 0/420/440 (#90).
