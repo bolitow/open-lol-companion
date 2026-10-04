@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
@@ -55,13 +56,27 @@ pub struct ChampionStats {
     pub losses: u64,
     /// Participations de tous les champions du même patch/plateforme/file/rôle/rang.
     pub population: u64,
+    /// Nul en Arena : le booléen `win` n'y désigne pas une première place (#104).
     pub win_rate: Option<f64>,
     pub pick_rate: Option<f64>,
+    /// Nul en Arena, comme `win_rate`.
     pub win_rate_lower_bound: Option<f64>,
     pub position: Option<u32>,
     pub tier: Option<String>,
     /// Rang connu comptant le plus de sélections ; ce n'est pas un taux de popularité corrigé.
     pub most_picked_rank: Option<String>,
+    /// Arena : participations dont le placement de sous-équipe est valide ; 0 hors Arena.
+    #[serde(default)]
+    pub placement_games: u64,
+    /// Arena : placement moyen de la sous-équipe (1 = première), nul sous le seuil.
+    #[serde(default)]
+    pub average_placement: Option<f64>,
+    /// Arena : part (%) des participations classées première, nulle sous le seuil.
+    #[serde(default)]
+    pub top1_rate: Option<f64>,
+    /// Arena : part (%) des participations classées première ou deuxième, nulle sous le seuil.
+    #[serde(default)]
+    pub top2_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -149,6 +164,10 @@ pub struct Coverage {
     /// Participations à achats nets connus, sans catalogue d'objets publié pour leur patch.
     #[serde(default)]
     pub missing_item_catalog_participations: u64,
+    /// Participations Arena sans placement de sous-équipe valide (#104) ; comptées dans
+    /// `games` mais absentes des métriques de placement.
+    #[serde(default)]
+    pub unknown_placement_participations: u64,
 }
 
 /// Version du catalogue normalisé (#61) jointe à un patch agrégé.
@@ -220,6 +239,10 @@ type BuildKey = (GroupKey, String, Vec<u32>);
 struct Count {
     games: u64,
     wins: u64,
+    placement_games: u64,
+    placement_sum: u64,
+    top1: u64,
+    top2: u64,
 }
 
 pub(super) struct Accumulator {
@@ -252,7 +275,7 @@ impl Accumulator {
                 schema_version: 2, rank_scope: "observed_rank_nearest_to_game_start_of_same_ranked_queue".into(),
                 rank_max_age_hours: DEFAULT_RANK_MAX_AGE_HOURS,
                 pick_rate_definition: "champion_participations / bucket_participations * 100".into(),
-                tier_method: "Wilson95 lower bound; S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
+                tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
                 bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![],
@@ -307,9 +330,8 @@ impl Accumulator {
         };
         // Politique Riot : aucun winrate d'item Arena dans le rapport publiable.
         // https://developer.riotgames.com/docs/lol#game-policy
-        if game.detail["info"]["gameMode"] == "CHERRY"
-            || [1700, 1710, 1740, 1750].contains(&game.queue_id)
-        {
+        let arena_game = is_arena(game);
+        if arena_game {
             self.arena_scopes.insert(scope.clone());
         }
         let coverage = self.coverage.entry(scope.clone()).or_default();
@@ -344,6 +366,9 @@ impl Accumulator {
             }
             if p.role == Role::Unknown {
                 coverage.unknown_role_participations += 1;
+            }
+            if arena_game && p.placement.is_none() {
+                coverage.unknown_placement_participations += 1;
             }
             let mut observations = builds::extract_detail(&p.raw);
             if let Some(timeline) = &game.timeline {
@@ -390,6 +415,12 @@ impl Accumulator {
                 let c = self.counts.entry(key.clone()).or_default();
                 c.games += 1;
                 c.wins += u64::from(p.win);
+                if let Some(placement) = p.placement {
+                    c.placement_games += 1;
+                    c.placement_sum += u64::from(placement);
+                    c.top1 += u64::from(placement == 1);
+                    c.top2 += u64::from(placement <= 2);
+                }
                 *self
                     .populations
                     .entry((scope.clone(), p.role, rank))
@@ -472,18 +503,32 @@ impl Accumulator {
                 let most_picked_rank = popular
                     .get(&(scope_of(&key), key.role, key.champion_id))
                     .map(|(_, r)| r.clone());
+                // Arena : le booléen `win` n'est pas une première place (#104). Aucun taux
+                // de victoire ni borne de Wilson ; le classement repose sur le placement.
+                let arena = self.arena_scopes.contains(&scope_of(&key));
+                let placement_rate = |n: u64| rate(n, c.placement_games, minimum);
                 ChampionStats {
                     key,
                     games: c.games,
                     wins: c.wins,
                     losses: c.games - c.wins,
                     population,
-                    win_rate: rate(c.wins, c.games, minimum),
+                    win_rate: if arena {
+                        None
+                    } else {
+                        rate(c.wins, c.games, minimum)
+                    },
                     pick_rate: rate(c.games, population, minimum).filter(|_| c.games >= minimum),
-                    win_rate_lower_bound: (c.games >= minimum).then(|| wilson(c.wins, c.games)),
+                    win_rate_lower_bound: (!arena && c.games >= minimum)
+                        .then(|| wilson(c.wins, c.games)),
                     position: None,
                     tier: None,
                     most_picked_rank,
+                    placement_games: c.placement_games,
+                    average_placement: (c.placement_games >= minimum && c.placement_games > 0)
+                        .then(|| c.placement_sum as f64 / c.placement_games as f64),
+                    top1_rate: placement_rate(c.top1),
+                    top2_rate: placement_rate(c.top2),
                 }
             })
             .collect();
@@ -491,27 +536,41 @@ impl Accumulator {
         self.report.groups.sort_by(|a, b| {
             bucket(&a.key)
                 .cmp(&bucket(&b.key))
+                // Arena : placement moyen croissant (les non éligibles en dernier).
+                .then_with(|| {
+                    a.average_placement
+                        .unwrap_or(f64::INFINITY)
+                        .total_cmp(&b.average_placement.unwrap_or(f64::INFINITY))
+                })
                 .then_with(|| {
                     b.win_rate_lower_bound
                         .unwrap_or(-1.0)
                         .total_cmp(&a.win_rate_lower_bound.unwrap_or(-1.0))
                 })
                 .then_with(|| {
-                    (u128::from(b.wins) * u128::from(a.games))
-                        .cmp(&(u128::from(a.wins) * u128::from(b.games)))
+                    // Arena : le booléen `win` n'est pas une première place, son ratio brut
+                    // ne départage donc jamais deux champions (effectif, puis id).
+                    if self.arena_scopes.contains(&scope_of(&a.key)) {
+                        Ordering::Equal
+                    } else {
+                        (u128::from(b.wins) * u128::from(a.games))
+                            .cmp(&(u128::from(a.wins) * u128::from(b.games)))
+                    }
                 })
                 .then_with(|| b.games.cmp(&a.games))
                 .then_with(|| a.key.champion_id.cmp(&b.key.champion_id))
         });
         let mut eligible = BTreeMap::<Population, u32>::new();
+        // Un groupe Arena est classé sur son placement moyen, les autres sur leur taux.
+        let rankable = |g: &ChampionStats| g.win_rate.is_some() || g.average_placement.is_some();
         for g in &self.report.groups {
-            if g.win_rate.is_some() {
+            if rankable(g) {
                 *eligible.entry(bucket(&g.key)).or_default() += 1;
             }
         }
         let mut positions = BTreeMap::<Population, u32>::new();
         for g in &mut self.report.groups {
-            if g.win_rate.is_some() {
+            if rankable(g) {
                 let b = bucket(&g.key);
                 let position = positions.entry(b.clone()).or_default();
                 *position += 1;
@@ -718,6 +777,42 @@ struct Participant {
     champion: u32,
     role: Role,
     win: bool,
+    /// Sous-équipe Arena (ou équipe), pour contrôler la cohérence des placements.
+    team: u32,
+    /// Placement de la sous-équipe en Arena (1 = première) ; nul si absent ou incohérent.
+    placement: Option<u32>,
+}
+fn is_arena(game: &StoredMatch) -> bool {
+    game.detail["info"]["gameMode"].as_str() == Some("CHERRY")
+        || [1700, 1710, 1740, 1750].contains(&game.queue_id)
+}
+/// Placement de sous-équipe : `subteamPlacement`, à défaut `placement` ; 0 signifie absent.
+fn placement_of(raw: &Value) -> Option<u32> {
+    ["subteamPlacement", "placement"]
+        .iter()
+        .find_map(|key| number(raw, key).filter(|v| *v > 0))
+}
+/// Les placements ne servent que si chaque sous-équipe a une valeur unique et que les
+/// sous-équipes occupent des places distinctes de 1 au nombre de sous-équipes ; sinon
+/// aucune n'est conservée (la partie reste comptée, sans classement inventé).
+fn placements_are_consistent(participants: &[Participant]) -> bool {
+    let mut by_team = BTreeMap::<u32, u32>::new();
+    for p in participants {
+        let Some(placement) = p.placement else {
+            return false;
+        };
+        if by_team
+            .insert(p.team, placement)
+            .is_some_and(|old| old != placement)
+        {
+            return false;
+        }
+    }
+    let distinct: BTreeSet<_> = by_team.values().collect();
+    distinct.len() == by_team.len()
+        && by_team
+            .values()
+            .all(|v| (1..=by_team.len() as u32).contains(v))
 }
 fn number(raw: &Value, key: &str) -> Option<u32> {
     raw[key].as_u64().and_then(|v| u32::try_from(v).ok())
@@ -754,8 +849,7 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
         1400, 1900, 2300, 2400,
     ]
     .contains(&game.queue_id);
-    let arena = info["gameMode"].as_str() == Some("CHERRY")
-        || [1700, 1710, 1740, 1750].contains(&game.queue_id);
+    let arena = is_arena(game);
     let swarm = [1810, 1820, 1830, 1840].contains(&game.queue_id);
     if !(1..=64).contains(&raw.len()) || (standard && raw.len() != 10) {
         return Err("invalid_match");
@@ -833,6 +927,8 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
             champion,
             role,
             win,
+            team,
+            placement: arena.then(|| placement_of(p)).flatten(),
         });
     }
     if standard
@@ -850,6 +946,11 @@ fn validate(game: &StoredMatch) -> Result<Vec<Participant>, &'static str> {
         };
         if team_sizes.len() < 2 || team_sizes.values().any(|n| *n != size) {
             return Err("invalid_match");
+        }
+    }
+    if arena && !placements_are_consistent(&participants) {
+        for p in &mut participants {
+            p.placement = None;
         }
     }
     if !arena && outcomes.len() == 2 && outcomes.values().all(|v| *v) {

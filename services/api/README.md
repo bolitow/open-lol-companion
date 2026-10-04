@@ -90,7 +90,10 @@ couverture ajoute `item_stage_participations` et `missing_item_catalog_participa
 rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
-un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées.
+un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées. Les groupes Arena (#104) portent
+`placement_games`, `average_placement`, `top1_rate` et `top2_rate` (`null`/`0` hors Arena ou
+pour un instantané antérieur), leurs `win_rate` et `win_rate_lower_bound` sont `null` ; la
+couverture ajoute `unknown_placement_participations`.
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
 du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le

@@ -103,7 +103,8 @@ fn report() -> Value {
         "timeline_participations":800, "invalid_timeline_participations":5,
         "unidentified_item_undos":3, "draft_matches":100,
         "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0,
-        "item_stage_participations":700, "missing_item_catalog_participations":10
+        "item_stage_participations":700, "missing_item_catalog_participations":10,
+        "unknown_placement_participations":0
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {

@@ -231,18 +231,29 @@ inventé à partir des objets ou du rang.
 | --- | --- |
 | `games`, `wins`, `losses` | Participations, pas toujours matchs distincts : les modes autorisant plusieurs exemplaires d'un champion peuvent contribuer plusieurs fois par match |
 | `population` | Toutes les participations du même patch/plateforme/file/rôle/rang |
-| `win_rate` | Victoires / participations du champion × 100 |
+| `win_rate` | Victoires / participations du champion × 100 ; nul en Arena (voir ci-dessous) |
 | `pick_rate` | Participations du champion / population × 100 ; part des sélections dans ce groupe |
-| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
-| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
+| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) ; nulle en Arena |
+| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe. En Arena : placement moyen croissant, puis effectif décroissant et ID ; le ratio brut de victoires n'intervient jamais |
+| `placement_games`, `average_placement`, `top1_rate`, `top2_rate` | Arena seulement (#104) : participations au placement valide, placement moyen de la sous-équipe (1 = première), part (%) des participations classées première, puis première ou deuxième. Nuls hors Arena et sous le seuil (`placement_games` reste visible) |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file : matchs bannissant le champion / drafts complètes ; un double ban ne compte qu'une fois |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
 visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
 Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances
-entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
-une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
+entre parties d'un même joueur. Le booléen `win` d'Arena ne désigne pas une première
+place (sur les files 1740/1750 observées, il vaut vrai pour les trois meilleures des six
+sous-équipes) : les groupes Arena ne publient donc ni `win_rate` ni borne de Wilson, et
+leurs `wins`/`losses` bruts ne servent à aucun classement. Le placement est lu dans
+`subteamPlacement`, à défaut `placement` (0 = absent). Il n'est retenu que si chaque
+sous-équipe porte une valeur unique et que les sous-équipes occupent des places distinctes de
+1 à leur nombre ; sinon la partie reste comptée dans `games` mais sans placement
+(`unknown_placement_participations` dans la couverture). Le placement moyen par champion
+n'est ni un winrate d'objet ni un taux d'augment ; aucune statistique d'augment n'est
+calculée. Les variantes de builds hors objets (runes, sorts, ordre de compétences)
+gardent leur taux de victoire en Arena (voir plus bas). Les parties normales/PvE et Arena
+ne sont jamais mélangées à SoloQ.
 
 Les remakes et parties incohérentes sont exclus avant toute contribution. Les formats
 classiques contrôlent 5 participants par équipe et un vainqueur ; Arena contrôle les

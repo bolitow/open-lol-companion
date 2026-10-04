@@ -1012,3 +1012,265 @@ fn une_variante_sans_victoire_publie_une_borne_wilson_nulle_et_non_negative() {
         .unwrap();
     assert_eq!(champion.win_rate_lower_bound, Some(0.0));
 }
+
+/// Partie Arena synthétique : un champion distinct par participant, sous-équipes de
+/// 3 (files 1740/1750) ou 2 joueurs, `placements[k]` pour la sous-équipe k + 1.
+/// La moitié haute du classement est déclarée gagnante, comme dans les données Riot.
+fn arena_game(id: &str, queue: i32, placements: &[u32], field: &str) -> StoredMatch {
+    let size = if [1740, 1750].contains(&queue) { 3 } else { 2 };
+    let players = placements.len() * size;
+    let mut g = game(id);
+    g.queue_id = queue;
+    g.detail["info"]["queueId"] = json!(queue);
+    g.detail["info"]["gameMode"] = json!("CHERRY");
+    g.detail["metadata"]["participants"] = json!((0..players)
+        .map(|i| format!("synthetic-{i}"))
+        .collect::<Vec<_>>());
+    g.detail["info"]["participants"] = json!((0..players)
+        .map(|i| {
+            let placement = placements[i / size];
+            json!({
+                "participantId": i + 1, "teamId": 100, "playerSubteamId": 1 + i / size,
+                "championId": i + 1, "win": placement as usize <= placements.len() / 2,
+                field: placement,
+            })
+        })
+        .collect::<Vec<_>>());
+    g
+}
+
+fn all_group(r: &super::AggregationReport, champion: u32) -> &super::ChampionStats {
+    r.groups
+        .iter()
+        .find(|g| g.key.rank == "ALL" && g.key.champion_id == champion)
+        .unwrap()
+}
+
+#[test]
+fn arena_classe_les_champions_sur_le_placement_et_masque_le_taux_de_victoire() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&arena_game(
+        "EUW1_a1",
+        1740,
+        &[1, 2, 3, 4, 5, 6],
+        "subteamPlacement",
+    ));
+    acc.add(&arena_game(
+        "EUW1_a2",
+        1740,
+        &[2, 1, 3, 4, 5, 6],
+        "subteamPlacement",
+    ));
+    let r = acc.finish();
+    assert_eq!(r.included_matches, 2);
+    // Sous-équipe 1 (champions 1 à 3) : placements 1 puis 2.
+    let first = all_group(&r, 1);
+    assert_eq!((first.games, first.placement_games), (2, 2));
+    assert_eq!(first.average_placement, Some(1.5));
+    assert_eq!(
+        (first.top1_rate, first.top2_rate),
+        (Some(50.0), Some(100.0))
+    );
+    // Sous-équipe 6 (champions 16 à 18) : toujours dernière.
+    let last = all_group(&r, 16);
+    assert_eq!(last.average_placement, Some(6.0));
+    assert_eq!((last.top1_rate, last.top2_rate), (Some(0.0), Some(0.0)));
+    // Le booléen `win` ne produit ni taux, ni borne de Wilson, ni tri.
+    for g in &r.groups {
+        assert_eq!((g.win_rate, g.win_rate_lower_bound), (None, None));
+    }
+    // Position et tier suivent le placement moyen croissant (égalité : effectif, puis id).
+    assert_eq!(
+        (first.position, first.tier.as_deref()),
+        (Some(1), Some("S"))
+    );
+    assert_eq!(all_group(&r, 4).position, Some(4));
+    assert_eq!((last.position, last.tier.as_deref()), (Some(16), Some("C")));
+    let worst = all_group(&r, 18);
+    assert_eq!(
+        (worst.position, worst.tier.as_deref()),
+        (Some(18), Some("D"))
+    );
+    assert!(r.tier_method.contains("placement"));
+}
+
+#[test]
+fn arena_depart_a_placement_moyen_egal_suit_l_effectif_puis_l_id_et_non_les_victoires() {
+    // Champions 1 à 3 (sous-équipe 1) : placements {3, 4}, 2 parties, 1 booléen `win`.
+    // Champions 4 à 6 (sous-équipe 2) : placements {1, 4, 4, 5}, 4 parties, 1 `win`.
+    // Même moyenne (3,5) : le ratio brut de victoires (1/2 contre 1/4) ne doit rien trancher.
+    let parties: [(u32, u32, u32); 4] = [(3, 4, 0), (4, 1, 0), (6, 4, 1), (6, 5, 1)];
+    let mut acc = Accumulator::new(1).unwrap();
+    for (n, (sub1, sub2, hors_a)) in parties.into_iter().enumerate() {
+        let mut rest = (1..=6).filter(|p| ![sub1, sub2].contains(p));
+        let mut placements = vec![sub1, sub2];
+        placements.extend(rest.by_ref());
+        let mut g = arena_game(
+            &format!("EUW1_tie{n}"),
+            1740,
+            &placements,
+            "subteamPlacement",
+        );
+        if hors_a == 1 {
+            // Sous-équipe 1 remplacée par d'autres champions : A ne compte pas cette partie.
+            for (i, p) in g.detail["info"]["participants"]
+                .as_array_mut()
+                .unwrap()
+                .iter_mut()
+                .take(3)
+                .enumerate()
+            {
+                p["championId"] = json!(100 + i);
+            }
+        }
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    let a = all_group(&r, 1);
+    let b = all_group(&r, 4);
+    assert_eq!((a.games, a.wins, a.average_placement), (2, 1, Some(3.5)));
+    assert_eq!((b.games, b.wins, b.average_placement), (4, 1, Some(3.5)));
+    // L'effectif plus grand passe devant, puis l'ID croissant, malgré 1/4 < 1/2 de victoires.
+    let ordre: Vec<u32> = [4, 5, 6, 1, 2, 3]
+        .iter()
+        .map(|c| all_group(&r, *c).position.unwrap())
+        .collect();
+    assert_eq!(
+        ordre,
+        (ordre[0]..ordre[0] + 6).collect::<Vec<_>>(),
+        "positions consécutives dans l'ordre effectif puis id"
+    );
+    let rang = |g: &super::ChampionStats| "SABCD".find(g.tier.as_deref().unwrap()).unwrap();
+    assert!(rang(b) <= rang(a));
+}
+
+#[test]
+fn arena_repli_sur_placement_et_file_en_duos() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&arena_game("EUW1_duo", 1700, &[3, 1, 2, 4], "placement"));
+    let r = acc.finish();
+    assert_eq!(r.included_matches, 1);
+    assert_eq!(all_group(&r, 1).average_placement, Some(3.0));
+    assert_eq!(all_group(&r, 3).average_placement, Some(1.0));
+    assert_eq!(all_group(&r, 3).top1_rate, Some(100.0));
+    assert_eq!(r.coverage[0].counts.unknown_placement_participations, 0);
+}
+
+#[test]
+fn arena_sans_placement_valide_reste_comptee_sans_inventer_de_classement() {
+    let doublon = arena_game("EUW1_dup", 1740, &[1, 1, 3, 4, 5, 6], "subteamPlacement");
+    let mut incoherent = arena_game("EUW1_mixed", 1740, &[1, 2, 3, 4, 5, 6], "subteamPlacement");
+    incoherent.detail["info"]["participants"][1]["subteamPlacement"] = json!(2);
+    let mut hors_borne = arena_game("EUW1_range", 1740, &[1, 2, 3, 4, 5, 7], "subteamPlacement");
+    hors_borne.detail["info"]["participants"][17]["subteamPlacement"] = json!(7);
+    let mut absent = arena_game("EUW1_none", 1740, &[1, 2, 3, 4, 5, 6], "subteamPlacement");
+    for p in absent.detail["info"]["participants"]
+        .as_array_mut()
+        .unwrap()
+    {
+        p.as_object_mut().unwrap().remove("subteamPlacement");
+    }
+    let mut zero = arena_game("EUW1_zero", 1740, &[1, 2, 3, 4, 5, 6], "subteamPlacement");
+    for p in zero.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["subteamPlacement"] = json!(0);
+    }
+    for g in [doublon, incoherent, hors_borne, absent, zero] {
+        let id = g.match_id.clone();
+        let mut acc = Accumulator::new(1).unwrap();
+        acc.add(&g);
+        let r = acc.finish();
+        assert_eq!(r.included_matches, 1, "{id}");
+        assert_eq!(
+            r.coverage[0].counts.unknown_placement_participations, 18,
+            "{id}"
+        );
+        for g in &r.groups {
+            assert_eq!(g.placement_games, 0, "{id}");
+            assert_eq!(
+                (
+                    g.average_placement,
+                    g.top1_rate,
+                    g.top2_rate,
+                    g.position,
+                    g.win_rate
+                ),
+                (None, None, None, None, None),
+                "{id}"
+            );
+        }
+    }
+}
+
+#[test]
+fn le_seuil_masque_aussi_les_metriques_de_placement() {
+    let mut acc = Accumulator::new(2).unwrap();
+    acc.add(&arena_game(
+        "EUW1_min1",
+        1740,
+        &[1, 2, 3, 4, 5, 6],
+        "subteamPlacement",
+    ));
+    let r = acc.finish();
+    for g in &r.groups {
+        assert_eq!(g.games, 1);
+        assert_eq!(
+            (
+                g.average_placement,
+                g.top1_rate,
+                g.top2_rate,
+                g.position,
+                g.tier.as_deref()
+            ),
+            (None, None, None, None, None)
+        );
+    }
+    // Le compte de participations reste visible sous le seuil.
+    assert!(r.groups.iter().all(|g| g.placement_games == 1));
+}
+
+#[test]
+fn hors_arena_aucune_metrique_de_placement_et_le_taux_de_victoire_reste() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_solo");
+    for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["placement"] = json!(1);
+        p["subteamPlacement"] = json!(1);
+    }
+    acc.add(&g);
+    let r = acc.finish();
+    for g in &r.groups {
+        assert_eq!(g.placement_games, 0);
+        assert_eq!(
+            (g.average_placement, g.top1_rate, g.top2_rate),
+            (None, None, None)
+        );
+        assert!(g.win_rate.is_some() && g.win_rate_lower_bound.is_some());
+    }
+    assert_eq!(r.coverage[0].counts.unknown_placement_participations, 0);
+}
+
+#[test]
+fn un_ancien_instantane_sans_champs_de_placement_reste_lisible() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&game("EUW1_old"));
+    let r = acc.finish();
+    let mut group = serde_json::to_value(&r.groups[0]).unwrap();
+    for field in [
+        "placement_games",
+        "average_placement",
+        "top1_rate",
+        "top2_rate",
+    ] {
+        group.as_object_mut().unwrap().remove(field);
+    }
+    let decoded: super::ChampionStats = serde_json::from_value(group).unwrap();
+    assert_eq!(decoded.placement_games, 0);
+    assert_eq!(decoded.average_placement, None);
+    let mut coverage = serde_json::to_value(&r.coverage[0]).unwrap();
+    coverage
+        .as_object_mut()
+        .unwrap()
+        .remove("unknown_placement_participations");
+    let decoded: super::ScopeCoverage = serde_json::from_value(coverage).unwrap();
+    assert_eq!(decoded.counts.unknown_placement_participations, 0);
+}
