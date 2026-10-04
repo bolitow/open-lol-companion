@@ -95,6 +95,23 @@ enum Command {
             value_parser = clap::value_parser!(u32).range(1..=i64::from(aggregation::MAX_RANK_MAX_AGE_HOURS))
         )]
         rank_max_age_hours: u32,
+        /// Durée minimale, en secondes, d'une partie classée (420/440) ; 0 désactive le contrôle (#111).
+        #[arg(
+            long,
+            default_value_t = aggregation::DEFAULT_MIN_GAME_DURATION_S,
+            value_parser = clap::value_parser!(u32).range(0..=i64::from(aggregation::MAX_MIN_GAME_DURATION_S))
+        )]
+        min_game_duration_s: u32,
+        /// Part minimale (%) de la durée jouée par chaque participant d'une partie classée ; 0 désactive (#111).
+        #[arg(
+            long,
+            default_value_t = aggregation::DEFAULT_MIN_PLAYED_PERCENT,
+            value_parser = clap::value_parser!(u32).range(0..=100)
+        )]
+        min_played_percent: u32,
+        /// Conserve les parties classées avec un participant `wasAfk` (exclues par défaut) (#111).
+        #[arg(long)]
+        keep_afk: bool,
         /// Recalcule immédiatement puis chaque heure (Ctrl+C pour arrêter).
         #[arg(long)]
         watch: bool,
@@ -385,6 +402,9 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
         Command::Aggregate {
             min_games,
             rank_max_age_hours,
+            min_game_duration_s,
+            min_played_percent,
+            keep_afk,
             watch,
             json,
             patches,
@@ -399,6 +419,11 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 &db_url,
                 min_games,
                 rank_max_age_hours,
+                aggregation::QualityThresholds {
+                    min_game_duration_s,
+                    min_played_percent,
+                    exclude_afk: !keep_afk,
+                },
                 watch,
                 json,
                 AggregationOptions {
@@ -708,6 +733,7 @@ async fn aggregate(
     db_url: &str,
     min_games: u32,
     rank_max_age_hours: u32,
+    quality: aggregation::QualityThresholds,
     watch: bool,
     json: bool,
     filters: AggregationOptions,
@@ -725,9 +751,14 @@ async fn aggregate(
         if selected.patches.is_empty() && !all_stored {
             selected.patches = static_data::cached_patches(&storage, 2).await?;
         }
-        let report =
-            aggregation::recalculate_filtered(&storage, min_games, rank_max_age_hours, &selected)
-                .await?;
+        let report = aggregation::recalculate_with_quality(
+            &storage,
+            min_games,
+            rank_max_age_hours,
+            &selected,
+            &quality,
+        )
+        .await?;
         if json {
             println!("{}", serde_json::to_string(&report)?);
         } else {

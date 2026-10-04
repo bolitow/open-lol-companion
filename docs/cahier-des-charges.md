@@ -365,6 +365,12 @@ représentatif ; les seeds restent issus du classement. Les modes non classés n
 reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
 Voir [le contrat complet](../services/collector/README.md) et
 [la recette étendue](recettes/2026-10-01-agregation-complete.md).
+Contrôle de qualité #111 : en classé (420/440), les parties très courtes (`short_game`,
+300 s par défaut), celles où un participant est AFK (`afk`, champ `wasAfk` de match-v5) et
+celles où un participant a joué moins de 80 % de la durée (`early_departure`) sont exclues
+avec leurs compteurs ; seuils configurables et publiés, filtre AFK désactivable, reddition
+normale conservée. Sur la copie de recette (17 112 parties) : 37 `short_game`, 602 `afk`
+supplémentaires, 0 `early_departure`.
 Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
 proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
 l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.

@@ -239,6 +239,14 @@ export interface SnapshotMeta {
   min_games: number;
   rank_scope: string;
   rank_max_age_hours: number;
+  /** Durée minimale (s) d'une partie classée ; 0 pour un instantané antérieur à #111. */
+  min_game_duration_s: number;
+  /** Part minimale (%) de la durée jouée par chaque participant ; 0 avant #111. */
+  min_played_percent: number;
+  /** Parties classées avec un participant `wasAfk` écartées (`afk`) ; `false` avant #111. */
+  exclude_afk: boolean;
+  /** Parties sources écartées par motif (`remake`, `short_game`, `afk`, `early_departure`, `invalid_match`). */
+  exclusions: Record<string, number>;
   pick_rate_definition: string;
   tier_method: string;
   filters: AggregationOptions;

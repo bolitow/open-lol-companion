@@ -350,7 +350,35 @@ mélangées à SoloQ.
 Les remakes et parties incohérentes sont exclus avant toute contribution. Une partie dont
 la file n'est pas identifiée (ni formats à deux camps, ni Arena, ni Swarm : par exemple 710
 ou 3130, dont le sens n'est pas vérifiable hors ligne) l'est aussi, sous la raison
-`unknown_queue` visible dans `exclusions` ; ses données brutes restent en base (#97). Les formats
+`unknown_queue` visible dans `exclusions` ; ses données brutes restent en base (#97).
+Pour les files classées 420/440 (Solo/Duo et Flex), trois contrôles de qualité supplémentaires écartent
+la partie entière (#111), chacun avec son compteur dans `exclusions` (visible dans le
+rapport, la sortie texte de `aggregate` et `meta.exclusions` de l'API) :
+
+| Motif (`exclusions`) | Règle | Réglage |
+| --- | --- | --- |
+| `short_game` | durée stockée de la partie < `--min-game-duration-s` (300 s par défaut, 0 à 900 ; 0 désactive) | `min_game_duration_s` publié dans le rapport |
+| `afk` | au moins un participant a `wasAfk = true` (champ match-v5 des participants, déjà stocké) | actif par défaut ; `--keep-afk` le désactive ; `exclude_afk` publié dans le rapport |
+| `early_departure` | un participant a un `timePlayed` < `--min-played-percent` % de la durée (80 par défaut, 0 à 100 ; 0 désactive) | `min_played_percent` publié dans le rapport |
+
+Ordre d'évaluation : `remake`, `invalid_match`, puis `short_game`, puis `afk`, puis
+`early_departure` ; une partie n'est comptée qu'une fois, sous son premier motif. Une partie
+très courte avec un AFK est donc comptée `short_game`, pas `afk`. Une reddition normale
+(`gameEndedInSurrender`) n'est jamais un motif : seuls la durée, `wasAfk` et le temps joué
+comptent. Une clé absente (`wasAfk`, `timePlayed`) n'est pas jugée : rien n'est deviné. Une
+valeur de mauvais type (`wasAfk` non booléen, `timePlayed` qui n'est pas un entier positif)
+rend la partie `invalid_match`, seulement si le contrôle correspondant est actif. La
+comparaison du temps joué est faite en entiers : exactement 80 % joués est conservé. Les
+autres files ne sont pas concernées. Un rapport publié avant #111 relit `min_game_duration_s`
+et `min_played_percent` à 0 et `exclude_afk` à `false` (contrôles non appliqués).
+Chiffres de la copie de recette (17 112 parties 420/440 hors remake) : 37 parties de moins
+de 300 s (`short_game`, dont 35 portaient aussi un AFK), 602 parties `afk` supplémentaires
+(637 parties contiennent au moins un `wasAfk = true`, soit ≈ 3,7 %), 0 `early_departure`
+(le plus petit rapport `timePlayed` / durée est 0,989 : `wasAfk` est le vrai signal, le
+temps joué est conservé comme garde-fou pour des données atypiques) et 265 parties sans clé
+`wasAfk`, non jugées. Il reste 16 473 parties conservées. Les parties entre 300 et 900 s
+(≈ 150) restent conservées : le seuil par défaut ne coupe que les cas manifestement
+anormaux. Les formats
 classiques contrôlent 5 participants par équipe et un vainqueur ; Arena contrôle les
 sous-équipes (duos, ou trios pour les files 1740/1750 observées). Swarm solo est supporté par
 une fixture synthétique, sans recette réelle revendiquée. En coop contre IA, les

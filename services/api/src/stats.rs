@@ -13,6 +13,14 @@ pub struct SnapshotMeta {
     pub min_games: u32,
     pub rank_scope: String,
     pub rank_max_age_hours: u32,
+    /// Durée minimale (s) d'une partie classée (#111) ; 0 pour un instantané antérieur.
+    pub min_game_duration_s: u32,
+    /// Part minimale (%) de la durée jouée par chaque participant (#111) ; 0 antérieurement.
+    pub min_played_percent: u32,
+    /// Parties classées avec un participant `wasAfk` écartées (`afk`) (#111) ; `false` antérieurement.
+    pub exclude_afk: bool,
+    /// Parties sources écartées par motif (`remake`, `short_game`, `afk`, `early_departure`…).
+    pub exclusions: BTreeMap<String, u64>,
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub filters: AggregationOptions,
@@ -315,6 +323,10 @@ pub(crate) async fn load_selection(
         min_games: report.min_games,
         rank_scope: report.rank_scope.clone(),
         rank_max_age_hours: report.rank_max_age_hours,
+        min_game_duration_s: report.min_game_duration_s,
+        min_played_percent: report.min_played_percent,
+        exclude_afk: report.exclude_afk,
+        exclusions: report.exclusions.clone(),
         pick_rate_definition: report.pick_rate_definition.clone(),
         tier_method: report.tier_method.clone(),
         filters: report.filters.clone(),

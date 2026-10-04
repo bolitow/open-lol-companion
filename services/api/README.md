@@ -109,8 +109,12 @@ d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque 
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
-(`0` pour un instantané antérieur). La réponse builds ajoute `splits` (#119) : winrate du champion
-par tranche de durée (`lt_20`, `20_25`, `25_30`, `30_35`, `35_40`, `gte_40`, borne basse
+(`0` pour un instantané antérieur). Les contrôles de qualité des files classées (#111) sont publiés dans les métadonnées :
+`min_game_duration_s` et `min_played_percent` (0 pour un instantané antérieur),
+`exclude_afk` (`false` pour un instantané antérieur) et `exclusions`, nombre de parties
+sources écartées par motif (`remake`, `invalid_match`, `unknown_queue`, `short_game`, `afk`,
+`early_departure`). La réponse builds ajoute `splits` (#119) : winrate du
+champion par tranche de durée (`lt_20`, `20_25`, `25_30`, `30_35`, `35_40`, `gte_40`, borne basse
 incluse) puis par côté (`blue`, `red`, publié pour le rang `ALL` seulement), triés dans cet
 ordre ; liste vide pour un instantané antérieur ou en Arena. La couverture, présente dans
 `meta` de toutes les réponses, ajoute `blue_side_*` et `first_blood`, `first_dragon`,

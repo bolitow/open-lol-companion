@@ -1,7 +1,10 @@
 use serde_json::{json, Value};
 
 use super::model::{Accumulator, ObservedRank, StoredMatch};
-use super::{AggregationError, Role, DEFAULT_RANK_MAX_AGE_HOURS};
+use super::{
+    AggregationError, QualityThresholds, Role, DEFAULT_MIN_GAME_DURATION_S,
+    DEFAULT_MIN_PLAYED_PERCENT, DEFAULT_RANK_MAX_AGE_HOURS, MAX_MIN_GAME_DURATION_S,
+};
 use crate::model::fixtures::match_detail;
 
 fn game(id: &str) -> StoredMatch {
@@ -11,11 +14,11 @@ fn game(id: &str) -> StoredMatch {
         queue_id: 420,
         patch: "15.19".into(),
         is_remake: false,
+        game_duration_s: 1800,
         detail: match_detail(id, "EUW1", 420, 1_000_000),
         timeline: None,
         ranks: Default::default(),
         game_start_ms: 1_000_000,
-        game_duration_s: 1800,
     }
 }
 
@@ -1069,6 +1072,186 @@ fn une_variante_sans_victoire_publie_une_borne_wilson_nulle_et_non_negative() {
     assert_eq!(champion.win_rate_lower_bound, Some(0.0));
 }
 
+/// Partie classée dont tous les participants ont joué `played_s` secondes, durée `duration_s`.
+fn timed(id: &str, duration_s: i32, played_s: u64) -> StoredMatch {
+    let mut g = game(id);
+    g.game_duration_s = duration_s;
+    for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["timePlayed"] = json!(played_s);
+    }
+    g
+}
+
+fn aggregate_one(game: &StoredMatch) -> super::AggregationReport {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(game);
+    acc.finish()
+}
+
+#[test]
+fn exclut_les_parties_classees_tres_courtes_avec_leur_propre_compteur() {
+    let report = aggregate_one(&timed("EUW1_1", 200, 200));
+    assert_eq!(report.included_matches, 0);
+    assert_eq!(report.source_matches, 1);
+    assert_eq!(report.exclusions.get("short_game"), Some(&1));
+    assert!(report.groups.is_empty(), "aucune contribution partielle");
+    // Seuil inclus : exactement la durée minimale reste une partie valide.
+    let at_threshold = timed("EUW1_2", DEFAULT_MIN_GAME_DURATION_S as i32, 300);
+    assert_eq!(aggregate_one(&at_threshold).included_matches, 1);
+    // Une reddition normale à 15 minutes n'est jamais écartée.
+    let mut surrender = timed("EUW1_3", 900, 900);
+    surrender.detail["info"]["participants"][0]["gameEndedInSurrender"] = json!(true);
+    assert_eq!(aggregate_one(&surrender).included_matches, 1);
+}
+
+#[test]
+fn exclut_les_parties_classees_avec_un_depart_precoce() {
+    // 1440 s joués sur 1800 : exactement 80 %, conservé ; 1439 s : exclu.
+    let mut at_limit = timed("EUW1_1", 1800, 1800);
+    at_limit.detail["info"]["participants"][3]["timePlayed"] = json!(1440);
+    assert_eq!(aggregate_one(&at_limit).included_matches, 1);
+    let mut left = timed("EUW1_2", 1800, 1800);
+    left.detail["info"]["participants"][3]["timePlayed"] = json!(1439);
+    let report = aggregate_one(&left);
+    assert_eq!(report.included_matches, 0);
+    assert_eq!(report.exclusions.get("early_departure"), Some(&1));
+    assert!(report.groups.is_empty());
+}
+
+#[test]
+fn compte_une_partie_courte_avec_depart_une_seule_fois_sous_la_duree() {
+    let mut both = timed("EUW1_1", 200, 200);
+    both.detail["info"]["participants"][0]["timePlayed"] = json!(10);
+    let report = aggregate_one(&both);
+    assert_eq!(report.exclusions.get("short_game"), Some(&1));
+    assert_eq!(report.exclusions.get("early_departure"), None);
+    assert_eq!(report.exclusions.values().sum::<u64>(), 1);
+}
+
+#[test]
+fn les_controles_de_qualite_ne_concernent_que_les_files_classees() {
+    let mut short = timed("EUW1_1", 200, 200);
+    short.queue_id = 400;
+    short.detail["info"]["queueId"] = json!(400);
+    short.detail["info"]["participants"][0]["timePlayed"] = json!(10);
+    let report = aggregate_one(&short);
+    assert_eq!(report.included_matches, 1);
+    assert!(report.exclusions.is_empty());
+    // Flex (440) est classée comme Solo/Duo.
+    let mut flex = timed("EUW1_2", 200, 200);
+    flex.queue_id = 440;
+    flex.detail["info"]["queueId"] = json!(440);
+    assert_eq!(aggregate_one(&flex).exclusions.get("short_game"), Some(&1));
+}
+
+#[test]
+fn le_remake_et_l_invalidite_precedent_les_controles_de_qualite() {
+    let mut remake = timed("EUW1_1", 200, 200);
+    remake.is_remake = true;
+    let report = aggregate_one(&remake);
+    assert_eq!(report.exclusions.get("remake"), Some(&1));
+    assert_eq!(report.exclusions.get("short_game"), None);
+    let mut invalid = timed("EUW1_2", 200, 200);
+    invalid.detail["info"]["participants"][0]["championId"] = json!(0);
+    let report = aggregate_one(&invalid);
+    assert_eq!(report.exclusions.get("invalid_match"), Some(&1));
+    assert_eq!(report.exclusions.get("short_game"), None);
+}
+
+#[test]
+fn un_temps_de_jeu_absent_n_est_pas_juge_et_un_type_invalide_est_refuse() {
+    // Le fixture n'a pas de `timePlayed` : rien n'est deviné, la partie reste valide.
+    assert_eq!(aggregate_one(&game("EUW1_1")).included_matches, 1);
+    for bad in [json!("1800"), json!(-5), json!(1800.5), Value::Null] {
+        let mut invalid = timed("EUW1_2", 1800, 1800);
+        invalid.detail["info"]["participants"][2]["timePlayed"] = bad.clone();
+        let report = aggregate_one(&invalid);
+        assert_eq!(report.included_matches, 0, "{bad}");
+        assert_eq!(report.exclusions.get("invalid_match"), Some(&1), "{bad}");
+    }
+}
+
+#[test]
+fn les_seuils_sont_configurables_publies_et_desactivables() {
+    let report = Accumulator::new(1).unwrap().finish();
+    assert_eq!(report.min_game_duration_s, DEFAULT_MIN_GAME_DURATION_S);
+    assert_eq!(report.min_played_percent, DEFAULT_MIN_PLAYED_PERCENT);
+    assert!(report.exclude_afk);
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_quality_thresholds(&QualityThresholds {
+        min_game_duration_s: 600,
+        min_played_percent: 95,
+        exclude_afk: true,
+    })
+    .unwrap();
+    acc.add(&timed("EUW1_1", 500, 500));
+    let mut left = timed("EUW1_2", 1800, 1800);
+    left.detail["info"]["participants"][1]["timePlayed"] = json!(1700);
+    acc.add(&left);
+    let report = acc.finish();
+    assert_eq!(
+        (report.min_game_duration_s, report.min_played_percent),
+        (600, 95)
+    );
+    assert_eq!(report.exclusions.get("short_game"), Some(&1));
+    assert_eq!(report.exclusions.get("early_departure"), Some(&1));
+    // Zéro désactive chaque contrôle indépendamment.
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_quality_thresholds(&QualityThresholds {
+        min_game_duration_s: 0,
+        min_played_percent: 0,
+        exclude_afk: false,
+    })
+    .unwrap();
+    let mut left = timed("EUW1_3", 200, 200);
+    left.detail["info"]["participants"][1]["timePlayed"] = json!(1);
+    acc.add(&left);
+    let report = acc.finish();
+    assert_eq!(report.included_matches, 1);
+    assert!(report.exclusions.is_empty());
+    assert!(!report.exclude_afk);
+}
+
+#[test]
+fn refuse_les_seuils_de_qualite_hors_bornes() {
+    let mut acc = Accumulator::new(1).unwrap();
+    assert!(matches!(
+        acc.set_quality_thresholds(&QualityThresholds {
+            min_game_duration_s: MAX_MIN_GAME_DURATION_S + 1,
+            min_played_percent: 80,
+            exclude_afk: true,
+        }),
+        Err(AggregationError::InvalidMinGameDuration)
+    ));
+    assert!(matches!(
+        acc.set_quality_thresholds(&QualityThresholds {
+            min_game_duration_s: 300,
+            min_played_percent: 101,
+            exclude_afk: true,
+        }),
+        Err(AggregationError::InvalidMinPlayedPercent)
+    ));
+    assert!(QualityThresholds::default().validate().is_ok());
+}
+
+#[test]
+fn un_ancien_rapport_sans_seuils_se_relit_avec_des_controles_desactives() {
+    let mut value = serde_json::to_value(Accumulator::new(1).unwrap().finish()).unwrap();
+    value.as_object_mut().unwrap().remove("min_game_duration_s");
+    value.as_object_mut().unwrap().remove("min_played_percent");
+    value.as_object_mut().unwrap().remove("exclude_afk");
+    let old: super::AggregationReport = serde_json::from_value(value).unwrap();
+    assert_eq!((old.min_game_duration_s, old.min_played_percent), (0, 0));
+    assert!(!old.exclude_afk);
+}
+
+/// Partie classée de durée normale dont le participant `index` porte `wasAfk = value`.
+fn with_afk(id: &str, index: usize, value: Value) -> StoredMatch {
+    let mut g = timed(id, 1800, 1800);
+    g.detail["info"]["participants"][index]["wasAfk"] = value;
+    g
+}
+
 /// Partie Arena synthétique : un champion distinct par participant, sous-équipes de
 /// 3 (files 1740/1750) ou 2 joueurs, `placements[k]` pour la sous-équipe k + 1.
 /// La moitié haute du classement est déclarée gagnante, comme dans les données Riot.
@@ -1417,8 +1600,98 @@ fn with_first(mut g: StoredMatch, blood: u32, dragon: Option<u32>, tower: u32) -
 }
 
 #[test]
+fn exclut_les_parties_classees_avec_un_participant_afk() {
+    let report = aggregate_one(&with_afk("EUW1_1", 4, json!(true)));
+    assert_eq!(report.included_matches, 0);
+    assert_eq!(report.source_matches, 1);
+    assert_eq!(report.exclusions.get("afk"), Some(&1));
+    assert!(report.groups.is_empty(), "aucune contribution partielle");
+    // Flex (440) est concernée comme Solo/Duo.
+    let mut flex = with_afk("EUW1_2", 0, json!(true));
+    flex.queue_id = 440;
+    flex.detail["info"]["queueId"] = json!(440);
+    assert_eq!(aggregate_one(&flex).exclusions.get("afk"), Some(&1));
+    // `wasAfk = false` partout, ou clé absente : rien n'est écarté.
+    assert_eq!(
+        aggregate_one(&with_afk("EUW1_3", 4, json!(false))).included_matches,
+        1
+    );
+    assert_eq!(
+        aggregate_one(&timed("EUW1_4", 1800, 1800)).included_matches,
+        1
+    );
+}
+
+#[test]
+fn un_indicateur_afk_non_booleen_rend_la_partie_incoherente() {
+    for bad in [json!("true"), json!(1), Value::Null] {
+        let report = aggregate_one(&with_afk("EUW1_1", 2, bad.clone()));
+        assert_eq!(report.included_matches, 0, "{bad}");
+        assert_eq!(report.exclusions.get("invalid_match"), Some(&1), "{bad}");
+        assert_eq!(report.exclusions.get("afk"), None, "{bad}");
+    }
+    // Un type invalide l'emporte sur un AFK avéré d'un autre participant.
+    let mut mixed = with_afk("EUW1_2", 0, json!(true));
+    mixed.detail["info"]["participants"][1]["wasAfk"] = json!("oui");
+    let report = aggregate_one(&mixed);
+    assert_eq!(report.exclusions.get("invalid_match"), Some(&1));
+    assert_eq!(report.exclusions.get("afk"), None);
+}
+
+#[test]
+fn l_ordre_des_motifs_est_remake_invalide_courte_afk_depart_precoce() {
+    // Courte et AFK : comptée `short_game` seulement.
+    let mut short = with_afk("EUW1_1", 0, json!(true));
+    short.game_duration_s = 200;
+    let report = aggregate_one(&short);
+    assert_eq!(report.exclusions.get("short_game"), Some(&1));
+    assert_eq!(report.exclusions.get("afk"), None);
+    // AFK et départ précoce : comptée `afk` seulement.
+    let mut both = with_afk("EUW1_2", 0, json!(true));
+    both.detail["info"]["participants"][1]["timePlayed"] = json!(10);
+    let report = aggregate_one(&both);
+    assert_eq!(report.exclusions.get("afk"), Some(&1));
+    assert_eq!(report.exclusions.get("early_departure"), None);
+    assert_eq!(report.exclusions.values().sum::<u64>(), 1);
+    // Un remake reste un remake même avec un AFK.
+    let mut remake = with_afk("EUW1_3", 0, json!(true));
+    remake.is_remake = true;
+    assert_eq!(aggregate_one(&remake).exclusions.get("remake"), Some(&1));
+}
+
+#[test]
+fn le_controle_afk_ne_concerne_que_les_files_classees_et_se_desactive() {
+    let mut normal = with_afk("EUW1_1", 0, json!(true));
+    normal.queue_id = 400;
+    normal.detail["info"]["queueId"] = json!(400);
+    let report = aggregate_one(&normal);
+    assert_eq!(report.included_matches, 1);
+    assert!(report.exclusions.is_empty());
+    // Désactivé : l'AFK est conservé et un type invalide n'est même pas lu.
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_quality_thresholds(&QualityThresholds {
+        exclude_afk: false,
+        ..QualityThresholds::default()
+    })
+    .unwrap();
+    acc.add(&with_afk("EUW1_2", 0, json!(true)));
+    acc.add(&with_afk("EUW1_3", 1, json!("oui")));
+    let report = acc.finish();
+    assert_eq!(report.included_matches, 2);
+    assert!(report.exclusions.is_empty());
+    assert!(!report.exclude_afk);
+}
+
+#[test]
 fn la_duree_est_repartie_en_tranches_dont_la_borne_basse_est_incluse() {
     let mut acc = Accumulator::new(1).unwrap();
+    // Contrôle de durée (#111) désactivé : ce test porte sur les tranches, pas sur
+    // l'exclusion `short_game` d'une partie classée trop courte (couverte plus haut).
+    acc.set_quality_thresholds(&QualityThresholds {
+        min_game_duration_s: 0,
+        ..QualityThresholds::default()
+    })
+    .unwrap();
     for (n, seconds) in [1199, 1200, 1499, 1500, 1799, 1800, 2100, 2399, 2400, 3600]
         .into_iter()
         .enumerate()
