@@ -223,7 +223,10 @@ Sources : [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon),
 
 Après `sync-static`, `cargo run -p olc-collector --release -- catalog --json`
 publie les deux patches du cache : objets enrichis, champions/compétences,
-runes/fragments, sorts et catalogues. Aucune clé Riot requise.
+runes/fragments, sorts, augments Arena et Mayhem (catalogue statique : noms FR/EN, description quand
+l'export `cdragon/arena` la publie, rareté, icône, modes qui les listent, #118) et catalogues. Aucune clé Riot requise. Une version déjà publiée
+n'a pas d'augments tant que `--refresh` n'a pas relu CommunityDragon ; `--rebuild` rejoue les
+archives antérieures sans augments. Aucune statistique d'augment n'est produite.
 `--community required|optional|off` fixe la politique du complément ;
 `--refresh` le revérifie, `--rebuild <publication_id>` reconstruit sans réseau.
 Les sources exactes sont archivées par empreinte et les fiches publiées atomiquement.

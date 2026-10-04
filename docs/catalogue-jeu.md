@@ -40,6 +40,7 @@ n’est installé : lancer `catalog` après la synchronisation voulue.
 | `champion` | ID numérique/technique, titre, ressource, attributs de base et croissance, classes | Standard et Classic ont des espaces distincts ; attributs hors dictionnaire restent bruts |
 | `ability` | Passif/Q/W/E/R, coût, portée, délai et valeurs structurées par rang | Identifiant `<champion_id>:Q`… ; placeholders, `effect`, `vars`, `leveltip` ne deviennent pas des formules vérifiées |
 | `rune` | Arbres, emplacements, textes et icônes, identifiants supplémentaires CommunityDragon | `rune_kind` distingue arbre/rune Data Dragon ; présence dans les styles exposée ; effets textuels non convertis en ratios |
+| `augment` | Augments Arena et Mayhem (#118) : ID numérique, `technical_id` (`ARAM_ADAPt`), noms FR/EN, description, rareté source (`kSilver`, `kGold`, `kPrismatic`, `kEventChoice`), icône, `modes` (listes du jeu qui les contiennent) | Description (`desc` de `cdragon/arena`, texte brut) pour 225 augments sur 16.19, placeholders `@…@` / `{{ … }}` et jetons d'icône `%i:…%` non résolus et signalés (`unresolved_placeholder:description`) ; les autres, Mayhem, n'en ont pas publiée : `description` reste `null` et `missing:description` est signalé ; aucune statistique, popularité ni tier ; clés de mode brutes (`CHERRY`, `KIWI`, `KIWI_JADE`), non reliées à une file ; `modes: []` = absent des listes (par exemple choix d'événement) |
 | `rune_shard` | Fragments identifiés par `kStatMod` ou chemin officiel `StatMods`, emplacements et descriptions FR/EN | Anciens fragments conservés ; paramètres numériques structurés manquants signalés |
 | `summoner_spell` | IDs, descriptions, délais, portée/coût, modes et niveau requis disponibles | Valeurs absentes non imputées |
 | `map`, `queue`, `mode`, `game_type` | Identifiants et libellés publiés | Catalogues globaux `namespace=global`, `locale=und`, `version_scope=unversioned` : observés à une date, sans fausse attribution historique au patch |
@@ -66,6 +67,46 @@ telle quelle avec le signalement `unresolved_mode_key:{clé}` dans `coverage.iss
 numérique reste `unsupported`, une valeur dupliquée devient un conflit ; une forme inattendue garde le
 champ brut `mode_parameter_overrides` en `unsupported`. Ces valeurs décrivent les paramètres d’un objet
 dans un mode, pas un ajustement d’équilibrage par champion, dont aucune source n’est collectée.
+
+## Augments Arena et Mayhem (#118)
+
+Cinq ressources CommunityDragon du patch s'ajoutent au complément, avec la même validation de
+patch, de build et d'URL exacte : `fr_FR/cherry-augments.json`, `en_US/cherry-augments.json` (une entrée
+par augment : `id`, `augmentNameId`, `nameTRA`, `simpleNameTRA`, `augmentSmallIconPath`, `rarity`),
+`augment-lists.json`, identique dans toutes les langues (vérifié en FR/EN sur 16.19), qui donne pour
+chaque `modeName` la liste `Maps/ModeSpecificData/Augments/{augmentNameId}`, et les textes de
+`cdragon/arena/fr_fr.json` et `en_us.json`. Relevé du 4 octobre 2026 sur 16.19 : 554 augments, 57 dans
+`CHERRY`, 223 dans `KIWI`, 188 dans `KIWI_JADE`, 284 dans aucune liste ; les 468 entrées de liste se
+résolvent toutes vers une fiche.
+
+**Descriptions.** `cherry-augments.json` n'en porte pas. L'export généré `cdragon/arena/{fr_fr,en_us}.json`
+(HTTP 200 relevé le 4 octobre 2026) publie `{augments: [{id, apiName, name, desc, tooltip, rarity,
+iconSmall, iconLarge, dataValues, calculations}]}` pour 225 augments, localisé en FR et EN. Ses `id` et
+`apiName` correspondent tous à `id` et `augmentNameId` de `cherry-augments.json` ; la normalisation le
+vérifie (FR et EN doivent contenir les mêmes `id` et `apiName`, chacun rattaché à une fiche de même
+identité technique) et refuse la publication sinon. Seule `desc` est reprise, via `plain_text`
+(`community_description`, statut `descriptive`, provenance `/augments/{i}/desc`) ; comme pour les
+compétences, les placeholders (`@MaxStacks@`, `{{ Item_Keyword_OnHit }}`) restent non résolus et sont
+signalés ; il en va de même des jetons d'icône du client (`%i:Augment%`, `%i:StatAnvil%`,
+`%i:AugmentLevel%`, présents dans 39 des 225 `desc` sur 16.19, dont 7 sans autre placeholder) : ils
+restent dans le texte, ne sont ni résolus ni remplacés, et déclenchent `unresolved_placeholder:description`.
+`description` et `community_description` portent le même texte. Nom, rareté et icône restent ceux de `cherry-augments.json` ; `tooltip`, `dataValues`,
+`calculations` et `iconLarge` restent listés comme champs non mappés. Les 329 autres augments (Mayhem)
+n'ont aucune description publiée : `description` reste `null` avec `missing:description`, jamais déduite
+du nom. Question ouverte pour la revue (ticket #118) : ce fichier vit sous `/cdragon/`, hors du schéma
+`plugins/rcp-be-lol-game-data` des autres ressources ; il est épinglé au patch, au build et à l'URL
+exacte comme elles, mais sa stabilité de format n'est pas garantie par le jeu.
+
+Les augments sont tout ou rien : les cinq documents ensemble, ou aucun pour une archive antérieure
+(elle se rejoue sans augments). Un jeu partiel, des identifiants FR/EN différents, un identifiant ou
+une identité technique dupliqués, un nom absent ou une liste qui cite un augment inconnu font refuser
+la publication. Une rareté inconnue reste `unsupported` avec sa valeur brute. L'icône est l'URL
+publique du PNG du même patch (`global/default/assets/ux/...`), jamais construite hors du schéma
+`/lol-game-data/assets/` ; sans icône sûre, `icon` reste `null`.
+
+Les clés de mode sont celles de la source : aucune correspondance avec une file ou une carte n'est
+inventée (`CHERRY` est le nom de code interne d'Arena dans les files, `KIWI` n'est pas confirmé par une
+source collectée). `NORMALIZER_VERSION` passe à 2 : une reconstruction produit une nouvelle publication.
 
 ## Contrat, provenance et couverture
 
@@ -182,7 +223,8 @@ Aucune fiche descriptive n’est recopiée dans les groupes statistiques.
 | Historique joueur, rang et LP | #19 : lecture des parties/rangs observés | #20 : suivi temporel ; aucun passé inventé |
 | Live, collection, pros, leaderboards, esports | Référentiel réutilisable | #23, #47–50 : sources/contrats et fonctionnalités propres |
 
-Les taux d’objets Arena et d’augments ne sont pas produits. Les données statiques
+Les taux d’objets Arena et d’augments ne sont pas produits ; la famille `augment` (#118) est un
+catalogue statique, sans `playerAugment`, taux, popularité ni tier. Les données statiques
 restent séparées de ces mesures interdites par la politique Riot. Aucun accès au
 processus du jeu, donnée cachée en partie, automatisation de décision ou contenu
 DPM copié. Mention légale Riot dans le README du collecteur.
