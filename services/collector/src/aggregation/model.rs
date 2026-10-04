@@ -33,6 +33,9 @@ pub const DEFAULT_MIN_GAME_DURATION_S: u32 = 300;
 pub const MAX_MIN_GAME_DURATION_S: u32 = 900;
 /// Part minimale (%) de la durée d'une partie classée que chaque participant doit avoir jouée.
 pub const DEFAULT_MIN_PLAYED_PERCENT: u32 = 80;
+/// Plancher de fiabilité (#91) : sous cet effectif, un taux est signalé `low`. Constant et
+/// indépendant de `min_games`, qui ne décide que de la publication des taux.
+pub const RELIABILITY_FLOOR: u32 = 30;
 /// Files concernées par les contrôles de qualité : Solo/Duo et Flex.
 const QUALITY_QUEUES: [i32; 2] = [420, 440];
 
@@ -125,6 +128,18 @@ pub struct ChampionStats {
     pub selection_share: Option<f64>,
     /// Nul en Arena, comme `win_rate`.
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % du winrate (#91), publiée avec le taux.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// Bornes de Wilson à 95 % du pick rate (#91), publiées avec le taux.
+    #[serde(default)]
+    pub pick_rate_lower_bound: Option<f64>,
+    #[serde(default)]
+    pub pick_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` parties du champion, quel que soit `min_games` ;
+    /// absent d'un instantané antérieur à #91.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
     pub position: Option<u32>,
     pub tier: Option<String>,
     /// Rang connu comptant le plus de sélections ; ce n'est pas un taux de popularité corrigé.
@@ -163,6 +178,33 @@ pub struct BanStats {
     pub banned_matches: u64,
     pub draft_matches: u64,
     pub ban_rate: Option<f64>,
+    /// Bornes de Wilson à 95 % du ban rate (#91), publiées avec le taux.
+    #[serde(default)]
+    pub ban_rate_lower_bound: Option<f64>,
+    #[serde(default)]
+    pub ban_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` drafts du palier, quel que soit `min_games`.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
+}
+
+/// Fiabilité d'un taux au regard de son effectif (#91), jamais d'un MMR ni d'une valeur cachée.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Reliability {
+    /// Effectif inférieur à `RELIABILITY_FLOOR` : le taux est publié mais fragile.
+    Low,
+    Sufficient,
+}
+
+impl Reliability {
+    fn of(sample: u64) -> Self {
+        if sample < u64::from(RELIABILITY_FLOOR) {
+            Self::Low
+        } else {
+            Self::Sufficient
+        }
+    }
 }
 
 fn all_ranks() -> String {
@@ -184,6 +226,12 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#91), nulle comme la borne basse.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// `low` sous `RELIABILITY_FLOOR` parties de la variante, y compris sans performance publiable.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
     /// Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique
     /// pour toutes ses variantes ; nul dans un rapport antérieur, où le compte est inconnu.
     #[serde(default)]
@@ -327,6 +375,9 @@ pub struct AggregationReport {
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub min_games: u32,
+    /// Plancher de fiabilité (#91), indépendant de `min_games` ; 0 pour un rapport antérieur.
+    #[serde(default)]
+    pub reliability_floor: u32,
     pub filters: AggregationOptions,
     pub source_matches: u64,
     pub included_matches: u64,
@@ -428,7 +479,7 @@ impl Accumulator {
                 ban_rank_min_known_players: MIN_KNOWN_PLAYERS as u32,
                 pick_rate_definition: "champion_matches / bucket_matches * 100".into(),
                 tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
-                min_games, filters: AggregationOptions::default(), source_matches: 0,
+                min_games, reliability_floor: RELIABILITY_FLOOR, filters: AggregationOptions::default(), source_matches: 0,
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
                 bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![], splits: vec![],
                 max_build_variants_per_category: 20, omitted_build_variants: 0,
@@ -768,6 +819,10 @@ impl Accumulator {
                 // de victoire ni borne de Wilson ; le classement repose sur le placement.
                 let arena = self.arena_scopes.contains(&scope_of(&key));
                 let placement_rate = |n: u64| rate(n, c.placement_games, minimum);
+                let win = (!arena && c.games >= minimum).then(|| wilson_interval(c.wins, c.games));
+                let pick = rate(champion_matches, bucket_matches, minimum)
+                    .filter(|_| c.games >= minimum)
+                    .map(|_| wilson_interval(champion_matches, bucket_matches));
                 ChampionStats {
                     key,
                     games: c.games,
@@ -784,8 +839,11 @@ impl Accumulator {
                         .filter(|_| c.games >= minimum),
                     selection_share: rate(c.games, population, minimum)
                         .filter(|_| c.games >= minimum),
-                    win_rate_lower_bound: (!arena && c.games >= minimum)
-                        .then(|| wilson(c.wins, c.games)),
+                    win_rate_lower_bound: win.map(|(lower, _)| lower),
+                    win_rate_upper_bound: win.map(|(_, upper)| upper),
+                    pick_rate_lower_bound: pick.map(|(lower, _)| lower),
+                    pick_rate_upper_bound: pick.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(c.games)),
                     position: None,
                     tier: None,
                     most_picked_rank,
@@ -860,13 +918,18 @@ impl Accumulator {
             .into_iter()
             .map(|((scope, rank, champion_id), banned_matches)| {
                 let draft_matches = self.ban_drafts[&(scope.clone(), rank.clone())];
+                let ban_rate = rate(banned_matches, draft_matches, minimum);
+                let interval = ban_rate.map(|_| wilson_interval(banned_matches, draft_matches));
                 BanStats {
                     scope,
                     rank,
                     champion_id,
                     banned_matches,
                     draft_matches,
-                    ban_rate: rate(banned_matches, draft_matches, minimum),
+                    ban_rate,
+                    ban_rate_lower_bound: interval.map(|(lower, _)| lower),
+                    ban_rate_upper_bound: interval.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(draft_matches)),
                 }
             })
             .collect();
@@ -892,6 +955,8 @@ impl Accumulator {
                 let performance_available = !arena;
                 let placement_published =
                     arena && ARENA_PLACEMENT_CATEGORIES.contains(&category.as_str());
+                let win = (performance_available && c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games));
                 BuildStats {
                     key,
                     category,
@@ -906,8 +971,9 @@ impl Accumulator {
                     } else {
                         None
                     },
-                    win_rate_lower_bound: (performance_available && c.games >= minimum)
-                        .then(|| wilson(c.wins, c.games)),
+                    win_rate_lower_bound: win.map(|(lower, _)| lower),
+                    win_rate_upper_bound: win.map(|(_, upper)| upper),
+                    reliability: Some(Reliability::of(c.games)),
                     omitted_variants: None,
                     placement_games: if placement_published {
                         c.placement_games
@@ -1003,7 +1069,8 @@ impl Accumulator {
                 games: c.games,
                 wins: c.wins,
                 win_rate: rate(c.wins, c.games, minimum),
-                win_rate_lower_bound: (c.games >= minimum).then(|| wilson(c.wins, c.games)),
+                win_rate_lower_bound: (c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games).0),
             })
             .collect();
         let mut rank_gaps = self.rank_gaps;
@@ -1046,17 +1113,30 @@ fn median(sorted: &[u64]) -> Option<f64> {
         _ => Some((sorted[mid - 1] as f64 + sorted[mid] as f64) / 2.0),
     }
 }
-/// Borne inférieure de Wilson à 95 %, en pourcentage. Bornée à 0..=100 : pour 0 victoire,
-/// l'arrondi flottant donne parfois une valeur infime négative (≈ -1e-16), que le client
-/// desktop rejette avec toute la page.
-fn wilson(wins: u64, games: u64) -> f64 {
-    let n = games as f64;
-    let p = wins as f64 / n;
+/// Intervalle de Wilson à 95 % `(borne basse, borne haute)`, en pourcentage. Bornes dans
+/// 0..=100 : pour 0 victoire, l'arrondi flottant donne parfois une borne basse infime négative
+/// (≈ -1e-16), que le client desktop rejette avec toute la page ; symétriquement, 100 % peut
+/// dépasser 100 d'un résidu.
+fn wilson_interval(successes: u64, total: u64) -> (f64, f64) {
+    let n = total as f64;
+    let p = successes as f64 / n;
     let z = 1.959963984540054_f64;
     let z2 = z * z;
-    let bound = 100.0 * (p + z2 / (2.0 * n) - z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt())
-        / (1.0 + z2 / n);
-    bound.clamp(0.0, 100.0)
+    let center = p + z2 / (2.0 * n);
+    let margin = z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt();
+    let scale = 1.0 + z2 / n;
+    // Bornes exactes aux extrêmes : 0 succès → borne basse 0, tous succès → borne haute 100.
+    let lower = if successes == 0 {
+        0.0
+    } else {
+        100.0 * (center - margin) / scale
+    };
+    let upper = if successes == total {
+        100.0
+    } else {
+        100.0 * (center + margin) / scale
+    };
+    (lower.clamp(0.0, 100.0), upper.clamp(0.0, 100.0))
 }
 fn scope_of(key: &GroupKey) -> ScopeKey {
     ScopeKey {

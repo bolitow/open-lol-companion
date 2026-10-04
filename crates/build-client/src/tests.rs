@@ -253,6 +253,57 @@ async fn accepte_une_variante_sans_victoire_dont_la_borne_wilson_est_nulle() {
 }
 
 #[tokio::test]
+async fn transmet_borne_haute_et_fiabilite_et_masque_la_borne_sous_le_seuil() {
+    // #91 : la fiabilité reste publiée sous min_games, la borne haute suit le taux.
+    let mut core = variant("core", vec![6672, 3031, 3089]);
+    core["win_rate_lower_bound"] = json!(41.2);
+    core["win_rate_upper_bound"] = json!(58.8);
+    core["reliability"] = json!("sufficient");
+    let mut low = variant("starter", vec![1055, 2003]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["win_rate_lower_bound"] = json!(10.0);
+    low["win_rate_upper_bound"] = json!(90.0);
+    low["reliability"] = json!("low");
+    // Arena : aucune performance publiable, la borne haute est écartée mais la fiabilité reste.
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_upper_bound"] = json!(70.0);
+    arena["reliability"] = json!("low");
+    let legacy = variant("item", vec![1055]);
+    let mut invalid = variant("core", vec![1, 2, 3]);
+    invalid["win_rate_upper_bound"] = json!(120.0);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![core, low, arena, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let upper: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| b.win_rate_upper_bound)
+        .collect();
+    assert_eq!(upper, vec![Some(58.8), None, None, None]);
+    let reliability: Vec<_> = report.builds.iter().map(|b| b.reliability).collect();
+    assert_eq!(
+        reliability,
+        vec![
+            Some(Reliability::Sufficient),
+            Some(Reliability::Low),
+            Some(Reliability::Low),
+            None
+        ]
+    );
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
 async fn transmet_le_placement_moyen_des_variantes_arena_hors_objets() {
     // Contrat avec le collecteur (#104) : en Arena, runes et sorts publient le placement
     // moyen et aucun taux de victoire ; sous le seuil, le placement est masqué.

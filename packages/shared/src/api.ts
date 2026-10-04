@@ -38,6 +38,12 @@ export interface GroupKey extends ScopeKey {
   champion_id: number;
 }
 
+/**
+ * Fiabilité d'un taux au regard de son effectif (#91) : `low` sous `meta.reliability_floor`
+ * observations, quel que soit `meta.min_games`. Jamais un MMR ni une valeur cachée.
+ */
+export type Reliability = "low" | "sufficient";
+
 /** Les taux et le classement restent nuls lorsque l'échantillon est insuffisant. */
 export interface ChampionStats extends GroupKey {
   games: number;
@@ -55,6 +61,13 @@ export interface ChampionStats extends GroupKey {
   selection_share: number | null;
   /** Nul en Arena, comme `win_rate`. */
   win_rate_lower_bound: number | null;
+  /** Borne supérieure de Wilson à 95 % du winrate ; nulle comme la borne basse (#91). */
+  win_rate_upper_bound: number | null;
+  /** Bornes de Wilson à 95 % du pick rate, nulles quand le pick rate l'est (#91). */
+  pick_rate_lower_bound: number | null;
+  pick_rate_upper_bound: number | null;
+  /** `low` sous `meta.reliability_floor` parties du champion ; null avant #91. */
+  reliability: Reliability | null;
   position: number | null;
   tier: string | null;
   most_picked_rank: string | null;
@@ -83,6 +96,11 @@ export interface BanStats extends ScopeKey {
   banned_matches: number;
   draft_matches: number;
   ban_rate: number | null;
+  /** Bornes de Wilson à 95 % du ban rate, nulles quand le taux l'est (#91). */
+  ban_rate_lower_bound: number | null;
+  ban_rate_upper_bound: number | null;
+  /** `low` sous `meta.reliability_floor` drafts du palier ; null avant #91. */
+  reliability: Reliability | null;
 }
 
 /**
@@ -111,6 +129,10 @@ export interface BuildStats extends GroupKey {
   win_rate: number | null;
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
+  /** Borne supérieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable (#91). */
+  win_rate_upper_bound: number | null;
+  /** `low` sous `meta.reliability_floor` parties de la variante ; null avant #91. */
+  reliability: Reliability | null;
   /**
    * Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique pour
    * toutes ses variantes ; nul pour un instantané antérieur, où le compte est inconnu. Absent
@@ -256,6 +278,8 @@ export interface SnapshotMeta {
   published_at: string;
   schema_version: number;
   min_games: number;
+  /** Plancher de fiabilité, indépendant de `min_games` ; 0 pour un instantané antérieur à #91. */
+  reliability_floor: number;
   rank_scope: string;
   rank_max_age_hours: number;
   /** Durée minimale (s) d'une partie classée ; 0 pour un instantané antérieur à #111. */

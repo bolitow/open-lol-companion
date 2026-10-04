@@ -99,7 +99,13 @@ Les métadonnées conservent les dates source/publication, seuil, méthode, couv
 du périmètre et fenêtre calculée. `rank_scope` et `rank_max_age_hours` décrivent le
 rang figé à la partie (#80) ; la couverture ajoute la part `UNKNOWN`
 (`unknown_rank_rate`) et les écarts partie → observation (`rank_gap_median_hours`,
-`rank_gap_max_hours`), `null` pour un instantané antérieur. La fraîcheur réelle (#103) est
+`rank_gap_max_hours`), `null` pour un instantané antérieur. Plancher de fiabilité et intervalles (#91) : `meta.reliability_floor` (30, indépendant de
+`meta.min_games` ; 0 pour un instantané antérieur) ; chaque champion, ban et variante de
+build porte `reliability` (`low` / `sufficient`, `null` avant #91) et les bornes de Wilson
+95 % de ses taux (`win_rate_lower_bound`/`win_rate_upper_bound`, `pick_rate_*` et
+`ban_rate_*` ; nulles quand le taux est masqué sous `min_games`). L'API les relaie telles que
+publiées, sans recalcul, et ne refuse aucun instantané sous le plancher.
+La fraîcheur réelle (#103) est
 dans `meta.freshness` : `computed_at` (date du calcul, même instant que
 `source_snapshot_at`) et les bornes `first_game_start_ms` / `last_game_start_ms` (ms Unix)
 des parties incluses dans les périmètres lus ; chaque couverture porte les mêmes dates pour

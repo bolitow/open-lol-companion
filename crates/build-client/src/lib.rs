@@ -87,6 +87,14 @@ pub struct BuildMeta {
     pub min_games: u32,
 }
 
+/// Fiabilité d'un taux au regard de son effectif (#91), miroir de `Reliability` (@olc/shared).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Reliability {
+    Low,
+    Sufficient,
+}
+
 /// Variante observée par catégorie, miroir exact de `BuildStats` (#19).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildVariant {
@@ -107,6 +115,12 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#91) ; absente des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// `low` sous le plancher de fiabilité du serveur (#91), indépendant de `min_games`.
+    #[serde(default)]
+    pub reliability: Option<Reliability>,
     /// Arena, variantes hors objets : participations au placement valide (#104) ; 0 sinon.
     #[serde(default)]
     pub placement_games: u64,
@@ -127,10 +141,15 @@ impl BuildVariant {
             || self.selection.len() > 4096
             || self.games > self.population
             || self.wins.is_some_and(|wins| wins > self.games)
-            || [self.pick_rate, self.win_rate, self.win_rate_lower_bound]
-                .into_iter()
-                .flatten()
-                .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || [
+                self.pick_rate,
+                self.win_rate,
+                self.win_rate_lower_bound,
+                self.win_rate_upper_bound,
+            ]
+            .into_iter()
+            .flatten()
+            .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
             || self.placement_games > self.games
             || self
                 .average_placement
@@ -143,6 +162,7 @@ impl BuildVariant {
             self.pick_rate = None;
             self.win_rate = None;
             self.win_rate_lower_bound = None;
+            self.win_rate_upper_bound = None;
         }
         // Même seuil que le collecteur : le placement moyen n'est publié qu'à partir de
         // `min_games` parties avec placement, pas seulement `min_games` parties jouées.
@@ -153,6 +173,7 @@ impl BuildVariant {
             self.win_rate = None;
             self.wins = None;
             self.win_rate_lower_bound = None;
+            self.win_rate_upper_bound = None;
         }
         Ok(())
     }

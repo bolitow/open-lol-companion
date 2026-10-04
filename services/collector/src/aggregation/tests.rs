@@ -814,6 +814,9 @@ fn les_items_arena_ne_publient_aucune_victoire_ni_winrate_ni_tri_par_victoire() 
         assert_eq!(b["win_rate"], Value::Null);
         assert_eq!(b["wins"], Value::Null);
         assert_eq!(b["performance_available"], false);
+        // #91 : pas de borne haute de performance pour Arena, mais la fiabilité reste publiée.
+        assert_eq!(b["win_rate_upper_bound"], Value::Null);
+        assert_eq!(b["reliability"], "low");
         assert!(b["pick_rate"].as_f64().unwrap() > 0.0);
     }
     let items: Vec<_> = builds
@@ -1153,8 +1156,14 @@ fn les_etapes_d_achat_arena_ne_publient_aucune_performance() {
         assert_eq!(rows.len(), 1, "{category}");
         assert!(!rows[0].performance_available);
         assert_eq!(
-            (rows[0].wins, rows[0].win_rate, rows[0].win_rate_lower_bound),
-            (None, None, None)
+            (
+                rows[0].wins,
+                rows[0].win_rate,
+                rows[0].win_rate_lower_bound,
+                rows[0].win_rate_upper_bound,
+                rows[0].reliability
+            ),
+            (None, None, None, None, Some(super::Reliability::Low))
         );
     }
 }
@@ -1965,6 +1974,210 @@ fn un_ban_publie_avant_109_se_relit_sous_all() {
     }))
     .unwrap();
     assert_eq!(old.rank, "ALL");
+}
+
+fn aggregate_many(minimum: u32, matches: usize, wins: usize) -> super::AggregationReport {
+    let mut acc = Accumulator::new(minimum).unwrap();
+    for i in 0..matches {
+        let mut g = game(&format!("EUW1_fiab{i}"));
+        if i >= wins {
+            reverse_winner(&mut g);
+        }
+        acc.add(&g);
+    }
+    acc.finish()
+}
+
+#[test]
+fn le_plancher_de_fiabilite_est_publie_et_independant_du_seuil_min_games() {
+    for minimum in [1, 5, 100] {
+        let report = Accumulator::new(minimum).unwrap().finish();
+        assert_eq!(report.reliability_floor, 30, "min_games = {minimum}");
+        assert_eq!(super::RELIABILITY_FLOOR, 30);
+    }
+}
+
+#[test]
+fn un_champion_sous_le_plancher_est_signale_low_meme_quand_le_seuil_publie_son_taux() {
+    // min_games = 1 : le taux est publié sur 10 parties, mais l'échantillon reste sous 30.
+    let report = aggregate_many(1, 10, 6);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.games, 10);
+    assert!(top.win_rate.is_some());
+    assert_eq!(top.reliability, Some(super::Reliability::Low));
+    let (lower, upper) = (
+        top.win_rate_lower_bound.unwrap(),
+        top.win_rate_upper_bound.unwrap(),
+    );
+    assert!(lower < top.win_rate.unwrap() && top.win_rate.unwrap() < upper);
+    assert!((0.0..=100.0).contains(&lower) && (0.0..=100.0).contains(&upper));
+    // Wilson 95 % pour 6/10 : environ [31,3 ; 83,2].
+    assert!((lower - 31.27).abs() < 0.1, "borne basse {lower}");
+    assert!((upper - 83.18).abs() < 0.1, "borne haute {upper}");
+}
+
+#[test]
+fn un_champion_au_plancher_est_juge_suffisant() {
+    let report = aggregate_many(1, 30, 18);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.games, 30);
+    assert_eq!(top.reliability, Some(super::Reliability::Sufficient));
+    let report = aggregate_many(1, 29, 18);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.reliability, Some(super::Reliability::Low));
+}
+
+#[test]
+fn le_seuil_masque_les_intervalles_avec_le_taux_mais_pas_la_fiabilite() {
+    let report = aggregate_many(50, 10, 6);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.win_rate, None);
+    assert_eq!(top.pick_rate, None);
+    assert_eq!(top.win_rate_lower_bound, None);
+    assert_eq!(top.win_rate_upper_bound, None);
+    assert_eq!(top.pick_rate_lower_bound, None);
+    assert_eq!(top.pick_rate_upper_bound, None);
+    assert_eq!(top.reliability, Some(super::Reliability::Low));
+}
+
+#[test]
+fn le_pickrate_publie_un_intervalle_de_wilson_sur_les_parties_du_compartiment() {
+    // Champion présent dans 10 parties sur 10 : taux de 100 %, borne haute exacte.
+    let mut acc = Accumulator::new(1).unwrap();
+    for i in 0..10 {
+        acc.add(&game(&format!("EUW1_pick{i}")));
+    }
+    let report = acc.finish();
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!((top.bucket_matches, top.pick_rate), (10, Some(100.0)));
+    assert_eq!(top.pick_rate_upper_bound, Some(100.0));
+    // Wilson 95 % pour 10/10 : borne basse environ 72,2 %.
+    assert!((top.pick_rate_lower_bound.unwrap() - 72.25).abs() < 0.1);
+    // Un champion présent dans 3 parties sur 10 : intervalle autour de 30 %.
+    let mut acc = Accumulator::new(1).unwrap();
+    for i in 0..10 {
+        let mut g = game(&format!("EUW1_pickb{i}"));
+        if i >= 3 {
+            g.detail["info"]["participants"][0]["championId"] = json!(99);
+        }
+        acc.add(&g);
+    }
+    let report = acc.finish();
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.pick_rate, Some(30.0));
+    let (lower, upper) = (
+        top.pick_rate_lower_bound.unwrap(),
+        top.pick_rate_upper_bound.unwrap(),
+    );
+    assert!(lower < 30.0 && 30.0 < upper);
+    assert!((lower - 10.78).abs() < 0.1 && (upper - 60.32).abs() < 0.1);
+}
+
+#[test]
+fn le_ban_rate_publie_son_intervalle_et_sa_fiabilite_sur_les_drafts() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for i in 0..40 {
+        let mut g = game(&format!("EUW1_ban{i}"));
+        set_bans(&mut g, if i < 10 { &[99] } else { &[] }, &[]);
+        acc.add(&g);
+    }
+    let report = acc.finish();
+    let all = find_ban(&report, "ALL", 99).unwrap();
+    assert_eq!((all.banned_matches, all.draft_matches), (10, 40));
+    assert_eq!(all.ban_rate, Some(25.0));
+    assert_eq!(all.reliability, Some(super::Reliability::Sufficient));
+    let (lower, upper) = (
+        all.ban_rate_lower_bound.unwrap(),
+        all.ban_rate_upper_bound.unwrap(),
+    );
+    assert!((lower - 14.2).abs() < 0.2 && (upper - 40.2).abs() < 0.2);
+    // Moins de 30 drafts : taux publié (min_games = 1) mais signalé fragile.
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_ban_seul");
+    set_bans(&mut g, &[99], &[]);
+    acc.add(&g);
+    let report = acc.finish();
+    let one = find_ban(&report, "ALL", 99).unwrap();
+    assert_eq!(one.reliability, Some(super::Reliability::Low));
+    assert!(one.ban_rate_upper_bound.unwrap() <= 100.0);
+    // Sous le seuil publié, l'intervalle est masqué comme le taux.
+    let mut acc = Accumulator::new(5).unwrap();
+    let mut g = game("EUW1_ban_masque");
+    set_bans(&mut g, &[99], &[]);
+    acc.add(&g);
+    let report = acc.finish();
+    let hidden = find_ban(&report, "ALL", 99).unwrap();
+    assert_eq!(hidden.ban_rate, None);
+    assert_eq!(
+        (hidden.ban_rate_lower_bound, hidden.ban_rate_upper_bound),
+        (None, None)
+    );
+    assert_eq!(hidden.reliability, Some(super::Reliability::Low));
+}
+
+#[test]
+fn les_variantes_de_build_publient_borne_haute_et_fiabilite() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    for i in 0..4 {
+        acc.add(&with_purchases(
+            game(&format!("EUW1_bld{i}")),
+            &[(1055, 1_000), (3006, 300_000)],
+        ));
+    }
+    let r = acc.finish();
+    let starter = stage(&r, "starter");
+    assert_eq!(starter[0].games, 4);
+    assert_eq!(starter[0].reliability, Some(super::Reliability::Low));
+    let (lower, upper) = (
+        starter[0].win_rate_lower_bound.unwrap(),
+        starter[0].win_rate_upper_bound.unwrap(),
+    );
+    assert!(lower < 100.0 && upper == 100.0, "{lower} {upper}");
+}
+
+#[test]
+fn les_intervalles_de_wilson_restent_dans_0_100_aux_extremes() {
+    // 0 victoire : la borne haute reste strictement positive ; 100 % : la borne basse < 100.
+    let report = aggregate_many(1, 40, 0);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.win_rate_lower_bound, Some(0.0));
+    assert!(top.win_rate_upper_bound.unwrap() > 0.0);
+    let report = aggregate_many(1, 40, 40);
+    let top = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!(top.win_rate_upper_bound, Some(100.0));
+    assert!(top.win_rate_lower_bound.unwrap() < 100.0);
+}
+
+#[test]
+fn un_instantane_publie_avant_91_se_relit_sans_fiabilite_ni_intervalle() {
+    let report = aggregate_many(1, 3, 2);
+    let mut group = serde_json::to_value(find_group(&report, 1, Role::Top, "ALL")).unwrap();
+    for field in [
+        "win_rate_upper_bound",
+        "pick_rate_lower_bound",
+        "pick_rate_upper_bound",
+        "reliability",
+    ] {
+        group.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let old: super::ChampionStats = serde_json::from_value(group).unwrap();
+    assert_eq!(
+        (
+            old.win_rate_upper_bound,
+            old.pick_rate_lower_bound,
+            old.reliability
+        ),
+        (None, None, None)
+    );
+    let ban = json!({"patch":"15.19","platform_id":"EUW1","queue_id":420,"rank":"ALL",
+        "champion_id":1,"banned_matches":1,"draft_matches":1,"ban_rate":100.0});
+    let old: super::BanStats = serde_json::from_value(ban).unwrap();
+    assert_eq!((old.ban_rate_upper_bound, old.reliability), (None, None));
+    let mut report = serde_json::to_value(&report).unwrap();
+    report.as_object_mut().unwrap().remove("reliability_floor");
+    let old: super::AggregationReport = serde_json::from_value(report).unwrap();
+    assert_eq!(old.reliability_floor, 0);
 }
 
 #[test]
