@@ -483,10 +483,11 @@ impl Accumulator {
                     .populations
                     .entry((scope.clone(), p.role, rank))
                     .or_default() += 1;
-                self.performance
-                    .entry(key.clone())
-                    .or_default()
-                    .add(end_of_game.as_ref(), &frames);
+                self.performance.entry(key.clone()).or_default().add(
+                    game.game_duration_s,
+                    end_of_game.as_ref(),
+                    &frames,
+                );
                 self.add_builds(&key, p.win, &observations);
             }
         }

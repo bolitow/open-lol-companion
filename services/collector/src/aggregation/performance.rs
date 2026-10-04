@@ -11,18 +11,26 @@ use super::model::GroupKey;
 
 /// Minutes de la timeline publiées ; d'autres repères pourront s'ajouter sans changer le format.
 pub(super) const FRAME_MINUTES: [u32; 2] = [10, 15];
+/// Durée minimale d'une partie pour entrer dans les moyennes de performance (15 minutes).
+/// Décision produit du 4 octobre : en dessous, la partie reste comptée dans les autres
+/// sections (winrate, pick rate, builds) mais pas ici.
+pub(super) const MIN_DURATION_S: i32 = 900;
 /// Intervalle Riot des frames quand `info.frameInterval` est absent (match-v5 : 60 000 ms).
 const DEFAULT_FRAME_INTERVAL_MS: u64 = 60_000;
 
 /// Définitions publiées avec le rapport : elles précèdent tout calcul (#100).
-pub(super) const PERFORMANCE_METHOD: &str = "games = participations with kills, deaths, assists, \
+pub(super) const PERFORMANCE_METHOD: &str =
+    "games = participations of games lasting at least 900 s (shorter ones are counted in \
+short_games_excluded) with kills, deaths, assists, \
 totalDamageDealtToChampions, totalMinionsKilled, neutralMinionsKilled, goldEarned and visionScore \
 as non-negative integers and a stored game duration > 0; kills/deaths/assists/damage_to_champions/\
 vision_score = sum / games; kda = (sum kills + sum assists) / max(sum deaths, 1); \
 cs = totalMinionsKilled + neutralMinionsKilled; cs_per_min and gold_per_min = sum / (sum game \
 duration in s / 60); frames: first timeline frame with minute*60000 <= timestamp < \
 minute*60000 + frameInterval, gold = totalGold, cs = minionsKilled + jungleMinionsKilled, \
-xp = xp, mean over the participations having that frame; means are null below min_games";
+xp = xp, mean over the participations having that frame, counting only games lasting at least \
+900 s (those counted in short_games_excluded contribute no frame); means are null below \
+min_games";
 
 /// Moyennes d'une population (patch × plateforme × file × rôle × rang × champion).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,8 +39,12 @@ pub struct PerformanceStats {
     pub key: GroupKey,
     /// Toutes les participations de la population, complètes ou non (dénominateur de couverture).
     pub participations: u64,
-    /// Participations dont toutes les valeurs de fin de partie sont exploitables.
+    /// Participations d'une partie d'au moins `MIN_DURATION_S` (900 s) dont toutes les valeurs
+    /// de fin de partie sont exploitables.
     pub games: u64,
+    /// Participations écartées des moyennes car la partie dure moins de `MIN_DURATION_S`.
+    #[serde(default)]
+    pub short_games_excluded: u64,
     pub kills: Option<f64>,
     pub deaths: Option<f64>,
     pub assists: Option<f64>,
@@ -144,6 +156,7 @@ struct FrameSums {
 #[derive(Default)]
 pub(super) struct PerformanceSums {
     participations: u64,
+    short_games_excluded: u64,
     games: u64,
     kills: u128,
     deaths: u128,
@@ -157,8 +170,17 @@ pub(super) struct PerformanceSums {
 }
 
 impl PerformanceSums {
-    pub fn add(&mut self, end: Option<&EndOfGame>, frames: &BTreeMap<u32, FrameValues>) {
+    pub fn add(
+        &mut self,
+        duration_s: i32,
+        end: Option<&EndOfGame>,
+        frames: &BTreeMap<u32, FrameValues>,
+    ) {
         self.participations += 1;
+        if duration_s < MIN_DURATION_S {
+            self.short_games_excluded += 1;
+            return;
+        }
         if let Some(end) = end {
             self.games += 1;
             self.kills += u128::from(end.kills);
@@ -206,6 +228,7 @@ impl PerformanceSums {
             key,
             participations: self.participations,
             games: self.games,
+            short_games_excluded: self.short_games_excluded,
             kills: mean(self.kills),
             deaths: mean(self.deaths),
             assists: mean(self.assists),

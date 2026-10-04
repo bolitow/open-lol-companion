@@ -62,7 +62,8 @@ fn performance_entry(champion: u32) -> Value {
     json!({
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
         "role":"TOP", "rank":"ALL", "champion_id":champion,
-        "participations":120, "games":110, "kills":5.5, "deaths":4.0, "assists":6.5,
+        "participations":120, "games":110, "short_games_excluded":10,
+        "kills":5.5, "deaths":4.0, "assists":6.5,
         "kda":3.0, "damage_to_champions":21_000.0, "cs_per_min":7.4, "gold_per_min":410.0,
         "vision_score":22.0,
         "frames":[

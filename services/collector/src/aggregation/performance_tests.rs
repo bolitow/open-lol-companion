@@ -259,3 +259,113 @@ fn une_participation_incomplete_reste_dans_le_denominateur_de_couverture() {
         "une ligne par population de la tierlist"
     );
 }
+
+fn group_of<'a>(
+    report: &'a crate::aggregation::AggregationReport,
+    rank: &str,
+) -> &'a crate::aggregation::ChampionStats {
+    report
+        .groups
+        .iter()
+        .find(|g| g.key.champion_id == 1 && g.key.rank == rank)
+        .unwrap()
+}
+
+#[test]
+fn une_partie_de_899_s_est_ecartee_des_moyennes_et_une_de_900_s_est_comptee() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut long = ranked_game("EUW1_1", 4, 2, 6);
+    long.game_duration_s = 900;
+    long.timeline = Some(timeline(
+        "EUW1_1",
+        vec![
+            frame(600_278, 3_600, 80, 0, 4_800),
+            frame(900_365, 5_800, 130, 0, 8_000),
+        ],
+    ));
+    let mut short = ranked_game("EUW1_2", 30, 20, 10);
+    short.game_duration_s = 899;
+    short.timeline = Some(timeline(
+        "EUW1_2",
+        vec![
+            frame(600_100, 9_000, 200, 0, 9_000),
+            frame(899_000, 9_500, 250, 0, 9_500),
+        ],
+    ));
+    acc.add(&long);
+    acc.add(&short);
+    let report = acc.finish();
+    for rank in ["ALL", "GOLD"] {
+        let stats = top_one(&report, rank);
+        // La durée de 900 s est comptée, celle de 899 s est écartée de toutes les moyennes.
+        assert_eq!((stats.participations, stats.games), (2, 1));
+        assert_eq!(stats.short_games_excluded, 1);
+        assert_eq!(stats.kills, Some(4.0));
+        assert_eq!(stats.kda, Some(10.0 / 2.0));
+        assert_eq!(stats.damage_to_champions, Some(20_000.0));
+        // CS/min et or/min restent pondérés par la durée : somme / somme des durées.
+        assert!((stats.cs_per_min.unwrap() - 210.0 / 15.0).abs() < 1e-12);
+        assert!((stats.gold_per_min.unwrap() - 12_000.0 / 15.0).abs() < 1e-12);
+        let at = |minute: u32| stats.frames.iter().find(|f| f.minute == minute).unwrap();
+        assert_eq!((at(10).games, at(10).gold), (1, Some(3_600.0)));
+        assert_eq!((at(15).games, at(15).gold), (1, Some(5_800.0)));
+    }
+}
+
+#[test]
+fn les_autres_sections_comptent_toujours_la_partie_courte() {
+    let mut with_short = Accumulator::new(1).unwrap();
+    let mut short = ranked_game("EUW1_2", 30, 20, 10);
+    short.game_duration_s = 600;
+    with_short.add(&ranked_game("EUW1_1", 4, 2, 6));
+    with_short.add(&short);
+    let with_short = with_short.finish();
+    let mut same_length = Accumulator::new(1).unwrap();
+    same_length.add(&ranked_game("EUW1_1", 4, 2, 6));
+    same_length.add(&ranked_game("EUW1_2", 30, 20, 10));
+    let same_length = same_length.finish();
+    // Winrate, pick rate et builds ne dépendent pas de la durée : mêmes valeurs.
+    assert_eq!(
+        serde_json::to_value(&with_short.groups).unwrap(),
+        serde_json::to_value(&same_length.groups).unwrap()
+    );
+    assert_eq!(group_of(&with_short, "ALL").games, 2);
+    assert_eq!(
+        serde_json::to_value(&with_short.builds).unwrap(),
+        serde_json::to_value(&same_length.builds).unwrap()
+    );
+    assert_eq!(top_one(&with_short, "ALL").short_games_excluded, 1);
+    assert_eq!(top_one(&same_length, "ALL").short_games_excluded, 0);
+}
+
+#[test]
+fn des_parties_courtes_seules_ne_publient_aucune_moyenne_mais_leur_compteur() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut short = ranked_game("EUW1_1", 4, 2, 6);
+    short.game_duration_s = 600;
+    acc.add(&short);
+    let report = acc.finish();
+    let stats = top_one(&report, "ALL");
+    assert_eq!((stats.participations, stats.games), (1, 0));
+    assert_eq!(stats.short_games_excluded, 1);
+    assert_eq!(
+        (stats.kills, stats.kda, stats.cs_per_min),
+        (None, None, None)
+    );
+}
+
+#[test]
+fn un_ancien_instantane_sans_short_games_excluded_se_relit_avec_zero() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&ranked_game("EUW1_1", 4, 2, 6));
+    let report = acc.finish();
+    let mut legacy = serde_json::to_value(top_one(&report, "ALL")).unwrap();
+    // Le champ est publié aujourd'hui ; on le retire pour simuler un instantané antérieur.
+    let fields = legacy.as_object_mut().unwrap();
+    assert!(fields.remove("short_games_excluded").is_some());
+    let old: PerformanceStats = serde_json::from_value(legacy).unwrap();
+    assert_eq!(old.short_games_excluded, 0);
+    // Le reste de l'entrée est relu à l'identique.
+    assert_eq!((old.participations, old.games), (1, 1));
+    assert_eq!(old.kills, Some(4.0));
+}

@@ -99,10 +99,11 @@ un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conser
 
 `/v1/performance/{champion_id}` (#100) prend les mêmes paramètres et renvoie `summary`
 (ligne de tierlist du champion), `performance` (moyennes KDA, dégâts aux champions,
-CS/min, or/min, vision et frames à 10 et 15 min, avec `participations` et `games`) et
-`performance_method` (définitions exactes). `performance` est `null` sans participation
-dans la population ou pour un instantané antérieur ; les moyennes sous seuil sont `null`.
-Agrégats seulement : aucune note, aucun benchmark. Définitions détaillées :
+CS/min, or/min, vision et frames à 10 et 15 min, avec `participations`, `games` et
+`short_games_excluded`, le nombre de participations écartées car la partie dure moins de
+15 minutes) et `performance_method` (définitions exactes). `performance` est `null` sans
+participation dans la population ou pour un instantané antérieur ; les moyennes sous seuil
+sont `null`. Agrégats seulement : aucune note, aucun benchmark. Définitions détaillées :
 [README du collecteur](../collector/README.md#moyennes-de-performance-100).
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux

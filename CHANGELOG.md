@@ -6,7 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
-- Moyennes de performance par patch, rôle, champion et rang dans les agrégats et l’API (`/v1/performance/{champion_id}`) : KDA, dégâts aux champions, CS/min, or/min, score de vision, et or, CS et XP à 10 et 15 minutes depuis la timeline, avec effectifs et définitions publiées ; aucune note ni comparaison (#100).
+- Moyennes de performance par patch, rôle, champion et rang dans les agrégats et l’API (`/v1/performance/{champion_id}`) : KDA, dégâts aux champions, CS/min, or/min, score de vision, et or, CS et XP à 10 et 15 minutes depuis la timeline, avec effectifs et définitions publiées ; les parties de moins de 15 minutes sont écartées de ces moyennes (et comptées dans `short_games_excluded`) mais restent dans le winrate, le pick rate et les builds ; aucune note ni comparaison (#100).
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
 
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
