@@ -1,0 +1,15 @@
+/* L’identité et l’historique restent prioritaires sur le bloc de préparation. */
+@media(min-width:760px){
+ .desktop-app .dashboard-main{grid-template-rows:minmax(185px,.65fr) minmax(200px,1.35fr)}
+ .desktop-app .dashboard-summary{grid-template-columns:minmax(0,1.3fr) minmax(0,.85fr)}
+ .desktop-app .dashboard-summary .welcome-copy{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:12px;padding:20px}
+ .desktop-app .dashboard-summary .welcome h1{font-size:clamp(21px,2.2vw,30px);line-height:1.12;margin:0;max-width:12ch}
+ .desktop-app .dashboard-summary .welcome .eyebrow{font-size:9px;margin:0;letter-spacing:.12em}
+ .desktop-app .dashboard-summary .welcome .button{margin:0;padding:8px 12px;font-size:12px}
+ .desktop-app .dashboard-aside{grid-template-rows:minmax(0,1fr) minmax(0,1fr)}
+}
+@media(min-width:760px) and (max-height:700px){
+ .desktop-app .dashboard-main{grid-template-rows:minmax(185px,.8fr) minmax(190px,1.2fr)}
+ .desktop-app .dashboard-summary .welcome-copy{padding:14px;gap:10px}
+ .desktop-app .dashboard-summary .welcome h1{font-size:21px}
+}

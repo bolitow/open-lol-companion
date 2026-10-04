@@ -1,3 +1,4 @@
+import './dashboard.css';
 import {BurnScars} from '../prototype/BurnScars';
 import {InGameScreen} from './live/InGameScreen';
 import type {ReactNode} from 'react';
@@ -24,7 +25,7 @@ export function Dashboard({ t, onDraft, profile, history, friends }: {
       <div className="dashboard-main">
         <div className="dashboard-summary">
           {profile}
-          <section className="welcome surface"><BurnScars/><div className="welcome-copy"><span className="eyebrow">{t.home.eyebrow}</span><h1>{t.home.title}</h1><p>{t.home.description}</p><button className="button primary" onClick={onDraft}>{t.home.openDraft}<Icon name="arrow" size={18}/></button></div></section>
+          <section className="welcome surface"><BurnScars/><div className="welcome-copy"><span className="eyebrow">{t.home.eyebrow}</span><h1>{t.home.title}</h1><button className="button primary" onClick={onDraft}>{t.home.openDraft}<Icon name="arrow" size={18}/></button></div></section>
         </div>
         {history}
       </div>

@@ -18,7 +18,9 @@ it('affiche le nom réel, la présence et le compteur dans les deux langues', ()
         expect(html).toContain(locale === 'fr' ? 'Hors ligne' : 'Offline');
         expect(html).toContain('role="region"');
         expect(html).toContain('tabindex="0"');
-        expect(html).not.toContain('https://');
+        expect(html).toContain('/profileicon/1234.png');
+        expect(html).not.toContain('class="friend-identity"');
+        expect(html).not.toContain('class="friend-presence"');
     }
 });
 
@@ -72,10 +74,20 @@ it('rend les cent amis sans troncature et garde les identités incomplètes sans
     expect(html).toContain('50 online · 100 friends');
     expect(html).not.toContain('<button');
     expect(html).toContain('Profile unavailable');
+    expect(html.match(/role="group"/g)).toHaveLength(100);
 });
 
 it('affiche un statut inconnu sans prétendre que l’ami est en ligne', () => {
     const html = renderToStaticMarkup(<FriendsPanel locale="fr" state={{...ready, items: [{...friend, presence: 'unknown'}]}} onPlayer={() => {}}/>);
     expect(html).toContain('Statut inconnu');
     expect(html).toContain('0 connecté · 1 ami');
+});
+
+
+it('place la présence sur l’avatar et garde les identités détaillées au survol',()=>{
+ const html=renderToStaticMarkup(<FriendRow locale="fr" friend={friend} onPlayer={()=>{}}/>);
+ expect(html).toMatch(/class="friend-avatar"[^>]*>.*<img.*friend-presence-dot/);
+ expect(html).toContain('title="Local Friend · Riot Player#EUW · EUW1 · En ligne"');
+ const fallback=renderToStaticMarkup(<FriendRow locale="fr" friend={{...friend,icon_id:null}} onPlayer={()=>{}}/>);
+ expect(fallback).not.toContain('<img');expect(fallback).toContain('LO');
 });

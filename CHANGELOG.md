@@ -6,6 +6,12 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Recette native autonome macOS/Windows avec versions identifiées, diagnostics, reconnexion, navigation, seconde session en entraînement et limites explicites avant clôture des tickets (#8, #11, #22, #23, #63, #64, #65, #71).
+
+- Accueil : amis sur une ligne avec avatar et pastille de présence, emblèmes officiels Riot pour les rangs et actions regroupées dans l’identité ; suppression du bandeau de compte actif et du retrait inutilisable en connexion (#4).
+
+- Accueil et profil joueur plus compacts : avatar public, rangs rapprochés, davantage de place pour les parties et repère V/D limité à la liste affichée ; états d’historique en chargement/indisponible explicites, PL inconnus conservés comme tels (#4, #65).
+
 - Éditeur du panneau d’overlay : déplacement et redimensionnement relatifs, session Alt+B / Ctrl+Alt+², validation ou annulation, styles Dark/Plein et opacité 0–100 %. Les clics redeviennent traversants hors édition ; recette native en jeu et flou Windows à compléter (#28).
 
 - Collection : cartes agrandies et légendes amincies, informations de fiche regroupées ; lecture directement dans la fiche, agrandissement/réduction sans recréer le lecteur, passages visuels et commande Recharger ; masquage sous les menus et protection contre une ouverture tardive après fermeture (#47).

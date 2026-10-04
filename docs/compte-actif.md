@@ -49,3 +49,24 @@ Recette réelle macOS : profil local avec niveau et deux rangs ; dix parties loc
 Amis : voir [contrat #71](amis-client.md). Les données client restent séparées du collecteur Riot et des agrégats de builds.
 
 Recette finale du bundle macOS : profil actif, niveau, rangs Solo/Flex et source client LoL visibles, dix parties (dont les personnalisées récentes) dans l'accueil. Les amis sont chargés simultanément, sans appel à l'API publique pour ces lectures. La pagination au-delà de cette première page reste dépendante du service/cache LCU ; ne pas annoncer cinquante parties validées.
+
+
+### Finition Accueil / Joueurs — 3 octobre 2026 (#4)
+
+Le bloc de préparation de l’accueil est raccourci pour donner davantage de hauteur aux dernières parties. La fiche partagée Accueil/Joueurs affiche l’avatar public (initiales en repli si l’image manque), un Riot ID compact et les deux rangs. Une valeur de PL absente reste « — », jamais zéro par défaut.
+
+L’historique distingue le chargement du profil, son indisponibilité et une page effectivement vide. Les matchs déjà reçus restent visibles pendant un échec d’actualisation. Le repère V/D et sa barre à deux segments représentent uniquement les parties affichées, sans extrapolation de niveau ou de saison, et restent bornés après pagination. Les données gardent leur source client/API et leur horodatage.
+
+Contrôle de présentation avec fixtures explicitement signalées : 1000 × 650 en sombre, 1280 × 800 en clair ; défilement interne, aucun dropdown natif. Parcours profil → champion Ahri → retour : même Riot ID, défilement conservé à 300 px. Cette recette visuelle ne prouve pas une lecture LCU réelle. Le module Amis et les transports existants sont conservés ; aucune nouvelle recommandation implémentée.
+
+Bundle Tauri macOS reconstruit et relancé : avatar du compte conservé, état déconnecté et historique indisponible vérifiés sur Accueil puis Joueurs, avec retour fonctionnel. League fermé et service public non configuré pendant ce contrôle : rangs et parties remplis vérifiés uniquement avec les fixtures. `pnpm test` : 854 tests réussis, deux tests Rust ignorés ; `pnpm lint` et revue stricte OK. Test manuel Windows non exécuté.
+
+### Ajustements de l’accueil après retour visuel (#4)
+
+Les amis occupent une ligne : avatar Data Dragon issu de `icon_id`, nom et pastille de présence sur l’avatar. Le Riot ID, la région et le statut restent dans le titre au survol et le nom accessible ; les identités incomplètes restent sans action. Une icône absente ou en erreur revient aux initiales. La liste continue de défiler à l’intérieur de sa carte.
+
+Les dix emblèmes officiels Riot sont embarqués dans `apps/desktop/public/game-data/ranks` (provenance documentée dans ce dossier), affichés sur l’accueil et le profil. Aucun emblème de rang n’est attribué aux données absentes ou non classées.
+
+Le texte « Compte actif dans League » est retiré de l’accueil. Les états déconnecté/compte indisponible restent explicites. Actualiser et Voir le profil sont regroupés près de l’identité avec libellés accessibles ; Retirer de l’accueil n’apparaît que hors connexion. Les actions n’occupent plus un pied de carte susceptible de déborder sous les rangs.
+
+Recette de cette passe : 857 tests réussis (deux tests Rust ignorés), lint et build macOS OK ; revue stricte OK après ajout du rôle accessible aux amis sans profil. En 1000 × 650, sombre et clair, la carte et les actions restent contenues, les lignes d’amis mesurent 46 px. Sur le bundle natif connecté à League, avatars réels des amis et deux emblèmes Or visibles. Une réponse d’historique refusée comme incohérente a été observée après reconnexion, puis après Réessayer/Actualiser ; ce parcours de données n’a pas été modifié dans cette passe et nécessite une investigation distincte. Aucun test Windows exécuté.
