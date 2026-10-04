@@ -309,7 +309,17 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
   publié étant le taux conjoint) et `rune_shard_offense|flex|defense` (`[fragment]`).
   Ces catégories ne sont pas des recommandations : aucun assemblage de page n'est fait ici.
 - `skill_order` : points Q/W/E/R normaux dans l'ordre temporel ; `special_skill_order`
-  sépare les évolutions. `skill_levels` expose l'ordre du point investi et son temps
+  sépare les évolutions. Séquence intégrale quasi unique par partie : elle reste publiée
+  comme preuve, les choix de montée ci-dessous portent les effectifs exploitables.
+- Choix de montée (#87), dérivés de `skill_order` sans nouvelle collecte, chacun avec sa
+  propre population, son effectif, son winrate et sa borne Wilson : `skill_start` (les
+  3 premiers points, dans l'ordre ; parties avec au moins 3 points) et `skill_priority`
+  (ordre dans lequel Q, W, E atteignent le rang 5, `[1|2|3, 1|2|3, 1|2|3]`). Deux sorts
+  au rang 5 fixent l'ordre, le troisième étant dernier ; avec moins, la catégorie est
+  absente pour la partie plutôt que devinée, la population de `skill_priority` est donc
+  celle des parties où deux sorts au moins sont maximisés (parties longues). L'ultime
+  est ignoré. Les champions à mécanique particulière (rang maximal ou sorts spéciaux
+  différents) ne sont pas traités à part : validation sur timelines à faire. `skill_levels` expose l'ordre du point investi et son temps
   moyen, pas le niveau du champion (les points peuvent être gardés).
 - `purchase_order` : achats incluant composants et consommables, avec retrait des
   achats annulés ; ce n'est pas un inventaire final reconstruit.

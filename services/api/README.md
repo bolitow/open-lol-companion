@@ -84,7 +84,9 @@ rang figé à la partie (#80) ; la couverture ajoute la part `UNKNOWN`
 `rank_gap_max_hours`), `null` pour un instantané antérieur. Les builds incluent les étapes
 d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`), les choix de runes
 (#86 : `rune_keystone`, `rune_primary_style`, `rune_secondary_style`, `rune_secondary_pair`,
-`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`) et chaque variante
+`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`), les choix de montée
+(#87 : `skill_start` des trois premiers points, `skill_priority` de l'ordre de
+maximisation Q/W/E) et chaque variante
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
