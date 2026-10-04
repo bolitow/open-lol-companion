@@ -213,6 +213,13 @@ une période UTC `[début, fin)` en millisecondes Unix. Sans `--sync-static`, au
 réseau n'est utilisé. Avec cette option, les statiques sont vérifiées avant chaque
 calcul ; un échec conserve l'ancien instantané et arrête le processus.
 
+`--json` écrit une ligne par publication en mode continu. Son contenu dépend du mode de
+recalcul : rapport complet pour le recalcul complet (défaut d'un `aggregate` ponctuel,
+ou `--full`), bilan des lots et en-tête publié, listes vides, pour le recalcul
+incrémental (défaut de `--watch`, voir [Recalcul par lots](#recalcul-par-lots-89)).
+Un script qui lisait les listes d'un `aggregate --watch --json` doit donc passer
+`--full` ou lire l'instantané publié.
+
 Le rapport JSON `schema_version: 2` sépare patch, plateforme, file, rôle et rang.
 Chaque participation entre dans `ALL` et dans son rang observé : ne pas additionner
 ces populations. Les files 420/440 utilisent le classement de la même file, figé à la
@@ -417,16 +424,22 @@ Aucun superviseur système n'est installé par le binaire.
 ### Recalcul par lots (#89)
 
 ```sh
-cargo run -p olc-collector --release -- aggregate --incremental --sync-static --watch
+cargo run -p olc-collector --release -- aggregate --sync-static --watch
 ```
 
-`--incremental` (optionnel, le recalcul complet reste le défaut) découpe le calcul en
-lots patch/plateforme/file. Chaque section du rapport est indexée et triée d'abord par
-ce périmètre et aucune règle (tiers, rang le plus joué, coupe à 20 variantes, médiane
-des écarts de rang) ne mélange deux périmètres : concaténer les lots redonne
-exactement le recalcul complet. Chaque lot est calculé seul, ses morceaux écrits, puis
-sa mémoire libérée : la mémoire est bornée par le **plus gros lot**, pas par la base
-(sur la copie de recette, EUW1 Solo du patch courant porte encore la moitié des parties).
+Décision du 4 octobre 2026 : le recalcul horaire `aggregate --watch` est **incrémental par
+défaut**. `--full` force le recalcul complet à chaque heure (`--watch --full`) ; il est
+exclusif avec `--incremental`. `--incremental` reste accepté : sans effet avec `--watch`
+(déjà le défaut), il active le mode par lots pour un `aggregate` ponctuel, dont le
+défaut reste le recalcul complet (`--full` y est explicite et équivaut au défaut).
+
+Le mode incrémental découpe le calcul en lots patch/plateforme/file. Chaque section du
+rapport est indexée et triée d'abord par ce périmètre et aucune règle (tiers, rang le
+plus joué, coupe à 20 variantes, médiane des écarts de rang) ne mélange deux
+périmètres : concaténer les lots redonne exactement le recalcul complet. Chaque lot est
+calculé seul, ses morceaux écrits, puis sa mémoire libérée : la mémoire est bornée par
+le **plus gros lot**, pas par la base (sur la copie de recette, EUW1 Solo du patch
+courant porte encore la moitié des parties).
 
 Un lot n'est relu que si son empreinte change depuis la dernière publication. Elle
 couvre : les parties du lot sous les filtres et leurs timelines (identifiants, état et
@@ -480,7 +493,8 @@ observations de rang gardent leur historique daté.
 
 Les pages de 25 parties bornent les données brutes simultanément lues, **pas toute la
 mémoire** : en recalcul complet, les compteurs de variantes et événements restent en
-RAM jusqu'à la publication ; `--incremental` les borne au plus gros lot (#89).
+RAM jusqu'à la publication ; le mode incrémental (défaut de `--watch`) les borne au
+plus gros lot (#89).
 La recette mesure temps et mémoire ; un passage à très grande échelle nécessitera
 une stratégie de calcul/pagination supplémentaire. Les groupes trop petits restent
 hors classement, même après une longue collecte.

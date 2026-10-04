@@ -350,10 +350,12 @@ supplémentaires, 0 `early_departure`.
 Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
 proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
 l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.
-Ticket #89 : recalcul optionnel par lots patch/plateforme/file ; un lot n'est relu que
+Ticket #89 : recalcul par lots patch/plateforme/file ; un lot n'est relu que
 si ses parties, timelines, rangs observés proches, classement du catalogue d'objets
 ou paramètres changent, et la publication reste identique au recalcul complet. La
-mémoire est bornée par le plus gros lot ; le passage par défaut du recalcul horaire reste à décider.
+mémoire est bornée par le plus gros lot. Décidé le 4 octobre 2026 : incrémental par
+défaut pour le recalcul horaire (`aggregate --watch`), `--full` force le recalcul
+complet ; l'`aggregate` ponctuel reste complet par défaut (`--incremental` pour les lots).
 
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
 CommunityDragon versionné des objets et fragments, sources immuables et

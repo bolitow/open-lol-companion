@@ -79,10 +79,11 @@ Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
 Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
 `campaign-resume <id>`. Dans un autre terminal, `aggregate --sync-static --watch`
-vérifie les statiques et recalcule chaque heure. La campagne respecte les quotas,
-une échéance persistée et des tranches de 15 minutes par plateforme. Une clé de
-développement peut expirer avant la fin. Aucun superviseur ni service permanent
-n'est installé. Voir [le contrat et les options](../services/collector/README.md).
+vérifie les statiques et recalcule chaque heure (par lots modifiés ; `--full` force
+le recalcul complet). La campagne respecte les quotas, une échéance persistée et des
+tranches de 15 minutes par plateforme. Une clé de développement peut expirer avant
+la fin. Aucun superviseur ni service permanent n'est installé. Voir
+[le contrat et les options](../services/collector/README.md).
 
 ## 3 ter. API interne (backend, facultatif)
 

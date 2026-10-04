@@ -7,8 +7,10 @@ avec l'instantané publié par #109. Aucun appel Riot.
 
 Le lancement du nouveau binaire applique la migration `0018` à cette copie. Les quatre
 calculs utilisent les mêmes paramètres que l'instantané existant :
-`aggregate --all-stored --min-games 30`, avec ou sans `--incremental`. Mesures de
-`/usr/bin/time -l` (temps écoulé, mémoire résidente maximale).
+`aggregate --all-stored --min-games 30`, avec ou sans `--incremental` (en ponctuel le
+complet est le défaut ; en `--watch`, c'est l'inverse depuis la décision du 4 octobre
+2026, `--full` forçant le complet). Mesures de `/usr/bin/time -l` (temps écoulé,
+mémoire résidente maximale).
 
 | Calcul | Lots relus | Temps écoulé | Mémoire max |
 | --- | --- | --- | --- |
