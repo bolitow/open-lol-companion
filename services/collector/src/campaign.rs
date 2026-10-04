@@ -393,67 +393,75 @@ pub async fn execute<T: Transport>(
         return Err(CampaignError::Invalid("tranche nulle"));
     }
     runtime.max_duration = Some(slice);
-    let _lock = storage.lock_collector().await?;
-    let row = sqlx::query(
-        "SELECT status, next_ordinal,
-        round(extract(epoch FROM deadline_at) * 1000)::bigint AS deadline_ms
-        FROM collection_campaigns WHERE id=$1",
-    )
-    .bind(campaign_id)
-    .fetch_optional(storage.pool())
-    .await?
-    .ok_or(CampaignError::NotFound(campaign_id))?;
-    let runs: Vec<i64> = sqlx::query_scalar(
-        "SELECT run_id FROM campaign_runs WHERE campaign_id=$1 ORDER BY ordinal",
-    )
-    .bind(campaign_id)
-    .fetch_all(storage.pool())
-    .await?;
-    if runs.is_empty() {
-        return Err(CampaignError::Invalid("campagne sans exécution"));
-    }
-    let status: String = row.try_get("status")?;
-    if status == "finished" {
-        return finish(
+    let lock = storage.lock_collector().await?;
+    // Une fermeture de socket seule ne garantit pas que PostgreSQL a déjà libéré
+    // le verrou avant une reprise immédiate. Attendre l’unlock sur chaque retour,
+    // y compris les échéances dépassées et les erreurs de lecture.
+    let outcome = async {
+        let row = sqlx::query(
+            "SELECT status, next_ordinal,
+            round(extract(epoch FROM deadline_at) * 1000)::bigint AS deadline_ms
+            FROM collection_campaigns WHERE id=$1",
+        )
+        .bind(campaign_id)
+        .fetch_optional(storage.pool())
+        .await?
+        .ok_or(CampaignError::NotFound(campaign_id))?;
+        let runs: Vec<i64> = sqlx::query_scalar(
+            "SELECT run_id FROM campaign_runs WHERE campaign_id=$1 ORDER BY ordinal",
+        )
+        .bind(campaign_id)
+        .fetch_all(storage.pool())
+        .await?;
+        if runs.is_empty() {
+            return Err(CampaignError::Invalid("campagne sans exécution"));
+        }
+        let status: String = row.try_get("status")?;
+        if status == "finished" {
+            return finish(
+                storage,
+                campaign_id,
+                &runs,
+                CampaignStatus::Finished,
+                "finished",
+            )
+            .await;
+        }
+        let deadline_ms: i64 = row.try_get("deadline_ms")?;
+        if deadline_ms <= now_ms() {
+            return finish(
+                storage,
+                campaign_id,
+                &runs,
+                CampaignStatus::Paused,
+                "deadline_reached",
+            )
+            .await;
+        }
+        let deadline = Instant::now() + Duration::from_millis((deadline_ms - now_ms()).max(0) as u64);
+        let ordinal: i32 = row.try_get("next_ordinal")?;
+        sqlx::query("UPDATE collection_campaigns SET status='running', status_reason=NULL, updated_at=now() WHERE id=$1")
+            .bind(campaign_id).execute(storage.pool()).await?;
+        let collector = Collector::new(storage.clone(), transport, runtime);
+        let result = drive(
             storage,
+            &collector,
             campaign_id,
             &runs,
-            CampaignStatus::Finished,
-            "finished",
+            ordinal as usize,
+            deadline,
+            shutdown,
         )
         .await;
+        if result.is_err() {
+            let _ = sqlx::query("UPDATE collection_campaigns SET status='paused', status_reason='error', updated_at=now() WHERE id=$1")
+                .bind(campaign_id).execute(storage.pool()).await;
+        }
+        result
     }
-    let deadline_ms: i64 = row.try_get("deadline_ms")?;
-    if deadline_ms <= now_ms() {
-        return finish(
-            storage,
-            campaign_id,
-            &runs,
-            CampaignStatus::Paused,
-            "deadline_reached",
-        )
-        .await;
-    }
-    let deadline = Instant::now() + Duration::from_millis((deadline_ms - now_ms()).max(0) as u64);
-    let ordinal: i32 = row.try_get("next_ordinal")?;
-    sqlx::query("UPDATE collection_campaigns SET status='running', status_reason=NULL, updated_at=now() WHERE id=$1")
-        .bind(campaign_id).execute(storage.pool()).await?;
-    let collector = Collector::new(storage.clone(), transport, runtime);
-    let result = drive(
-        storage,
-        &collector,
-        campaign_id,
-        &runs,
-        ordinal as usize,
-        deadline,
-        shutdown,
-    )
     .await;
-    if result.is_err() {
-        let _ = sqlx::query("UPDATE collection_campaigns SET status='paused', status_reason='error', updated_at=now() WHERE id=$1")
-            .bind(campaign_id).execute(storage.pool()).await;
-    }
-    result
+    lock.release().await;
+    outcome
 }
 
 async fn drive<T: Transport>(

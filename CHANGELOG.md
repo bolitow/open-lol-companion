@@ -4,6 +4,10 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ## [Non publié]
 
+### Corrigé
+
+- Livraison desktop : attente correcte d’un verrou de cache cosmétique occupé sous Windows ; libération explicite du verrou PostgreSQL entre deux exécutions de campagne, révélées par la CI multi-OS (#93, #181, #187).
+
 ### Ajouté
 
 - Draft classée : estimation descriptive des deux camps et couverture, recalcul local depuis une tierlist complète et cohérente des six rôles ; transport Rust borné, réglage masquant aussi calcul/chargement, aucune estimation de remplacement sans données (#181).

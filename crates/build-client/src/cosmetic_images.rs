@@ -270,7 +270,8 @@ fn acquire(root: &Path) -> Result<File> {
     loop {
         match fs2::FileExt::try_lock_exclusive(&file) {
             Ok(()) => return Ok(file),
-            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+            // fs2 renvoie ERROR_LOCK_VIOLATION sous Windows, pas nécessairement WouldBlock.
+            Err(error) if error.raw_os_error() == fs2::lock_contended_error().raw_os_error() => {
                 if start.elapsed() >= TIMEOUT {
                     return Err(CosmeticImageError::Unavailable);
                 }
