@@ -105,6 +105,12 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#112) ; absente des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// Écart signé (points) au winrate du groupe champion (#112) ; absent des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_delta: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -118,10 +124,18 @@ impl BuildVariant {
             || self.selection.len() > 4096
             || self.games > self.population
             || self.wins.is_some_and(|wins| wins > self.games)
-            || [self.pick_rate, self.win_rate, self.win_rate_lower_bound]
-                .into_iter()
-                .flatten()
-                .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || [
+                self.pick_rate,
+                self.win_rate,
+                self.win_rate_lower_bound,
+                self.win_rate_upper_bound,
+            ]
+            .into_iter()
+            .flatten()
+            .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || self
+                .win_rate_delta
+                .is_some_and(|v| !v.is_finite() || !(-100.0..=100.0).contains(&v))
         {
             return Err(BuildError::InvalidResponse);
         }
@@ -129,11 +143,15 @@ impl BuildVariant {
             self.pick_rate = None;
             self.win_rate = None;
             self.win_rate_lower_bound = None;
+            self.win_rate_upper_bound = None;
+            self.win_rate_delta = None;
         }
         if !self.performance_available {
             self.win_rate = None;
             self.wins = None;
             self.win_rate_lower_bound = None;
+            self.win_rate_upper_bound = None;
+            self.win_rate_delta = None;
         }
         Ok(())
     }

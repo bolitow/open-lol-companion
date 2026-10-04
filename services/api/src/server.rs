@@ -2,7 +2,11 @@
 use crate::auth::Auth;
 use crate::profiles::Profiles;
 use crate::realtime::Publication;
-use crate::{error::ApiError, profiles::HistoryQuery, query::StatsQuery};
+use crate::{
+    error::ApiError,
+    profiles::HistoryQuery,
+    query::{BuildsQuery, StatsQuery},
+};
 use axum::{
     extract::{
         rejection::{PathRejection, QueryRejection},
@@ -140,13 +144,15 @@ async fn tierlist(
 async fn builds(
     State(state): State<AppState>,
     path: Result<Path<u32>, PathRejection>,
-    query: Result<Query<StatsQuery>, QueryRejection>,
+    query: Result<Query<BuildsQuery>, QueryRejection>,
 ) -> Result<Json<crate::stats::BuildsResponse>, ApiError> {
+    let query = query.map_err(|_| ApiError::InvalidRequest)?.0;
     Ok(Json(
-        crate::stats::builds(
+        crate::stats::builds_sorted(
             &state.pool,
-            query.map_err(|_| ApiError::InvalidRequest)?.0,
+            query.stats(),
             path.map_err(|_| ApiError::InvalidRequest)?.0,
+            query.sort,
         )
         .await?,
     ))
@@ -280,6 +286,15 @@ mod tests {
         for (path, auth) in [
             ("/v1/tierlist?patch=invalid", true),
             ("/v1/builds/not-an-id", true),
+            // Tri inconnu sur les builds, tri refusé sur la tierlist : rejet avant tout SQL.
+            (
+                "/v1/builds/1?patch=16.19&platform=EUW1&queue=420&role=TOP&sort=winrate",
+                true,
+            ),
+            (
+                "/v1/tierlist?patch=16.19&platform=EUW1&queue=420&role=TOP&sort=performance",
+                true,
+            ),
             ("/v1/static/no-version/fr_FR/item.json", false),
         ] {
             let mut builder = Request::builder().uri(path);
@@ -298,5 +313,23 @@ mod tests {
                 "invalid_request"
             );
         }
+    }
+    #[test]
+    fn la_chaine_de_requete_des_builds_lit_les_nombres_et_le_tri() {
+        let uri =
+            "/v1/builds/1?patch=16.19&platform=EUW1&queue=420&role=TOP&sort=performance&limit=5"
+                .parse()
+                .unwrap();
+        let Query(query) = Query::<BuildsQuery>::try_from_uri(&uri).unwrap();
+        assert_eq!(query.sort, crate::query::BuildSort::Performance);
+        assert_eq!(
+            (query.queue, query.limit, query.rank.as_str()),
+            (420, 5, "ALL")
+        );
+        let uri = "/v1/builds/1?patch=16.19&platform=EUW1&queue=420&role=TOP"
+            .parse()
+            .unwrap();
+        let Query(query) = Query::<BuildsQuery>::try_from_uri(&uri).unwrap();
+        assert_eq!(query.sort, crate::query::BuildSort::Games);
     }
 }

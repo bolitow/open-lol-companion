@@ -707,6 +707,9 @@ fn les_items_arena_ne_publient_aucune_victoire_ni_winrate_ni_tri_par_victoire() 
     assert!(!builds.is_empty());
     for b in builds {
         assert_eq!(b["win_rate"], Value::Null);
+        assert_eq!(b["win_rate_lower_bound"], Value::Null);
+        assert_eq!(b["win_rate_upper_bound"], Value::Null);
+        assert_eq!(b["win_rate_delta"], Value::Null);
         assert_eq!(b["wins"], Value::Null);
         assert_eq!(b["performance_available"], false);
         assert!(b["pick_rate"].as_f64().unwrap() > 0.0);
@@ -1048,8 +1051,14 @@ fn les_etapes_d_achat_arena_ne_publient_aucune_performance() {
         assert_eq!(rows.len(), 1, "{category}");
         assert!(!rows[0].performance_available);
         assert_eq!(
-            (rows[0].wins, rows[0].win_rate, rows[0].win_rate_lower_bound),
-            (None, None, None)
+            (
+                rows[0].wins,
+                rows[0].win_rate,
+                rows[0].win_rate_lower_bound,
+                rows[0].win_rate_upper_bound,
+                rows[0].win_rate_delta
+            ),
+            (None, None, None, None, None)
         );
     }
 }
@@ -1096,6 +1105,74 @@ fn une_variante_sans_victoire_publie_une_borne_wilson_nulle_et_non_negative() {
         .find(|g| g.key.rank == "ALL" && g.key.champion_id == 1)
         .unwrap();
     assert_eq!(champion.win_rate_lower_bound, Some(0.0));
+}
+
+#[test]
+fn chaque_variante_publie_son_intervalle_de_wilson_et_son_ecart_au_champion() {
+    // Champion 1 : 4 parties, 3 victoires (75 %). Départ [1055] : 2/2 ; départ [2003] : 1/2.
+    let mut acc = Accumulator::new(2).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    for (id, starter, won) in [
+        ("EUW1_a", 1055, true),
+        ("EUW1_b", 1055, true),
+        ("EUW1_c", 2003, true),
+        ("EUW1_d", 2003, false),
+    ] {
+        let mut g = with_purchases(game(id), &[(starter, 1_000), (3006, 300_000)]);
+        if !won {
+            reverse_winner(&mut g);
+        }
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    let starter = stage(&r, "starter");
+    let sure = starter.iter().find(|b| b.selection == [1055]).unwrap();
+    let mixed = starter.iter().find(|b| b.selection == [2003]).unwrap();
+    // 100 % - 75 % ; l'écart est calculé sur les taux non arrondis, en points de pourcentage.
+    assert!((sure.win_rate_delta.unwrap() - 25.0).abs() < 1e-9);
+    assert!((mixed.win_rate_delta.unwrap() + 25.0).abs() < 1e-9);
+    // Wilson 95 % pour 1 victoire sur 2 : environ 9,45 % à 90,55 %, symétrique autour de 50.
+    let (low, high) = (
+        mixed.win_rate_lower_bound.unwrap(),
+        mixed.win_rate_upper_bound.unwrap(),
+    );
+    assert!((low - 9.45).abs() < 0.01 && (high - 90.55).abs() < 0.01);
+    assert!((low + high - 100.0).abs() < 1e-9);
+    // 2 victoires sur 2 : la borne haute reste bornée à 100 sans résidu flottant.
+    assert_eq!(sure.win_rate_upper_bound, Some(100.0));
+    assert!(sure.win_rate_lower_bound.unwrap() < 100.0);
+    for build in &starter {
+        assert!(build.win_rate_lower_bound <= build.win_rate_upper_bound);
+    }
+}
+
+#[test]
+fn borne_haute_et_ecart_sont_masques_sous_le_seuil_et_lisibles_dans_un_ancien_instantane() {
+    // Seuil à 3 : les variantes à 2 parties ne publient ni intervalle ni écart.
+    let mut acc = Accumulator::new(3).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    for (id, starter) in [("EUW1_a", 1055), ("EUW1_b", 1055), ("EUW1_c", 2003)] {
+        acc.add(&with_purchases(game(id), &[(starter, 1_000)]));
+    }
+    let r = acc.finish();
+    let starter = stage(&r, "starter");
+    let rare = starter.iter().find(|b| b.selection == [1055]).unwrap();
+    assert_eq!(
+        (
+            rare.win_rate_lower_bound,
+            rare.win_rate_upper_bound,
+            rare.win_rate_delta
+        ),
+        (None, None, None)
+    );
+    // Un instantané antérieur reste lisible : les nouveaux champs valent `None`.
+    let legacy = json!({"patch":"15.19","platform_id":"EUW1","queue_id":420,"role":"TOP","rank":"ALL","champion_id":1,
+        "category":"final_items","selection":[3031],"games":3,"wins":2,"performance_available":true,"population":3,"pick_rate":100.0,"win_rate":66.6,"win_rate_lower_bound":20.0});
+    let build: super::BuildStats = serde_json::from_value(legacy).unwrap();
+    assert_eq!(
+        (build.win_rate_upper_bound, build.win_rate_delta),
+        (None, None)
+    );
 }
 
 /// Partie classée dont tous les participants ont joué `played_s` secondes, durée `duration_s`.

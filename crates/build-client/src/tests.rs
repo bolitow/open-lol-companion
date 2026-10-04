@@ -251,3 +251,58 @@ async fn accepte_une_variante_sans_victoire_dont_la_borne_wilson_est_nulle() {
     assert_eq!(report.builds[0].win_rate_lower_bound, Some(0.0));
     job.await.unwrap();
 }
+
+#[tokio::test]
+async fn transmet_l_intervalle_et_l_ecart_au_champion_avec_les_memes_masques() {
+    let mut sure = variant("core", vec![6672, 3031, 3089]);
+    sure["win_rate_lower_bound"] = json!(41.2);
+    sure["win_rate_upper_bound"] = json!(58.9);
+    sure["win_rate_delta"] = json!(-2.5);
+    let mut rare = variant("starter", vec![1055]);
+    rare["games"] = json!(2);
+    rare["wins"] = json!(1);
+    rare["win_rate_upper_bound"] = json!(90.0);
+    rare["win_rate_delta"] = json!(4.0);
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_upper_bound"] = json!(70.0);
+    arena["win_rate_delta"] = json!(1.0);
+    let legacy = variant("item", vec![1055]);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![sure, rare, arena, legacy])),
+        // Valeurs hors intervalle : toute la page est refusée, comme pour la borne basse.
+        (200, page(0, 1, vec![with("win_rate_upper_bound", 120.0)])),
+        (200, page(0, 1, vec![with("win_rate_delta", 101.0)])),
+        (200, page(0, 1, vec![with("win_rate_delta", -100.5)])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let published: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| (b.win_rate_upper_bound, b.win_rate_delta))
+        .collect();
+    assert_eq!(
+        published,
+        vec![
+            (Some(58.9), Some(-2.5)),
+            (None, None),
+            (None, None),
+            (None, None)
+        ]
+    );
+    for _ in 0..3 {
+        assert_eq!(
+            client.builds(request()).await.unwrap_err(),
+            BuildError::InvalidResponse
+        );
+    }
+    job.await.unwrap();
+}
+
+fn with(field: &str, value: f64) -> Value {
+    let mut row = variant("core", vec![6672, 3031, 3089]);
+    row[field] = json!(value);
+    row
+}

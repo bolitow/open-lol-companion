@@ -139,6 +139,14 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Borne supérieure de Wilson à 95 % (#112), mêmes conditions de publication que la borne basse.
+    #[serde(default)]
+    pub win_rate_upper_bound: Option<f64>,
+    /// Écart (points de pourcentage, signé) entre le winrate de la variante et celui du groupe
+    /// champion (même patch, plateforme, file, rôle et rang) ; nul sous le seuil de l'une des
+    /// deux populations ou sans performance publiable (#112).
+    #[serde(default)]
+    pub win_rate_delta: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -517,6 +525,12 @@ impl Accumulator {
 
     pub fn finish(mut self) -> AggregationReport {
         let minimum = u64::from(self.report.min_games);
+        // Winrate non arrondi de chaque groupe champion, référence de l'écart des variantes (#112).
+        let group_rates: BTreeMap<GroupKey, f64> = self
+            .counts
+            .iter()
+            .filter_map(|(key, c)| Some((key.clone(), rate(c.wins, c.games, minimum)?)))
+            .collect();
         let mut popular: BTreeMap<(ScopeKey, Role, u32), (u64, String)> = BTreeMap::new();
         for (key, c) in &self.counts {
             if is_ranked_tier(&key.rank) {
@@ -619,6 +633,16 @@ impl Accumulator {
                         category.as_str(),
                         "item" | "final_items" | "trinket" | "purchase_order"
                     ) || STAGE_CATEGORIES.contains(&category.as_str())));
+                let interval = (performance_available && c.games >= minimum)
+                    .then(|| wilson_interval(c.wins, c.games));
+                let win_rate = if performance_available {
+                    rate(c.wins, c.games, minimum)
+                } else {
+                    None
+                };
+                let win_rate_delta = win_rate
+                    .zip(group_rates.get(&key))
+                    .map(|(variant, group)| variant - group);
                 BuildStats {
                     key,
                     category,
@@ -628,13 +652,10 @@ impl Accumulator {
                     performance_available,
                     population,
                     pick_rate: rate(c.games, population, minimum).filter(|_| c.games >= minimum),
-                    win_rate: if performance_available {
-                        rate(c.wins, c.games, minimum)
-                    } else {
-                        None
-                    },
-                    win_rate_lower_bound: (performance_available && c.games >= minimum)
-                        .then(|| wilson(c.wins, c.games)),
+                    win_rate,
+                    win_rate_lower_bound: interval.map(|(low, _)| low),
+                    win_rate_upper_bound: interval.map(|(_, high)| high),
+                    win_rate_delta,
                 }
             })
             .collect();
@@ -710,17 +731,25 @@ fn median(sorted: &[u64]) -> Option<f64> {
         _ => Some((sorted[mid - 1] as f64 + sorted[mid] as f64) / 2.0),
     }
 }
-/// Borne inférieure de Wilson à 95 %, en pourcentage. Bornée à 0..=100 : pour 0 victoire,
-/// l'arrondi flottant donne parfois une valeur infime négative (≈ -1e-16), que le client
-/// desktop rejette avec toute la page.
+/// Borne inférieure de Wilson à 95 %, en pourcentage.
 fn wilson(wins: u64, games: u64) -> f64 {
+    wilson_interval(wins, games).0
+}
+/// Intervalle de Wilson à 95 % (bornes basse et haute), en pourcentage. Bornées à 0..=100 :
+/// pour 0 victoire (ou toutes), l'arrondi flottant donne parfois une valeur infime hors de
+/// l'intervalle (≈ -1e-16), que le client desktop rejette avec toute la page.
+fn wilson_interval(wins: u64, games: u64) -> (f64, f64) {
     let n = games as f64;
     let p = wins as f64 / n;
     let z = 1.959963984540054_f64;
     let z2 = z * z;
-    let bound = 100.0 * (p + z2 / (2.0 * n) - z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt())
-        / (1.0 + z2 / n);
-    bound.clamp(0.0, 100.0)
+    let center = p + z2 / (2.0 * n);
+    let margin = z * ((p * (1.0 - p) + z2 / (4.0 * n)) / n).sqrt();
+    let scale = 100.0 / (1.0 + z2 / n);
+    (
+        (scale * (center - margin)).clamp(0.0, 100.0),
+        (scale * (center + margin)).clamp(0.0, 100.0),
+    )
 }
 fn scope_of(key: &GroupKey) -> ScopeKey {
     ScopeKey {

@@ -328,6 +328,16 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 Chaque variante publie aussi `win_rate_lower_bound`, borne inférieure de Wilson à 95 %
 bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena).
 
+Depuis #112, chaque variante publie aussi `win_rate_upper_bound` (borne supérieure de
+Wilson à 95 %, mêmes bornage 0–100 et conditions de publication) et `win_rate_delta`,
+écart signé en points de pourcentage entre son winrate et celui du groupe champion (même
+patch, plateforme, file, rôle et rang), calculé sur les taux non arrondis. L'écart est
+nul sous le seuil de la variante ou du groupe, et sans performance publiable. La
+référence est le groupe entier, y compris pour une catégorie à population plus étroite
+(pages de runes complètes, parties avec deux sorts au rang 5) : l'écart mesure la
+variante contre le champion, pas contre sa propre catégorie. Intervalle et écart sont
+descriptifs ; ils ne corrigent ni la durée ni la survie des parties.
+
 ### Étapes d'achat (#81)
 
 Les empreintes exactes ci-dessus fragmentent la population (aucune variante
