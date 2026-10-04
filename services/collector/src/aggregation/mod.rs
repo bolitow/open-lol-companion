@@ -1,6 +1,7 @@
 //! Agrégats par champion, rôle, patch, plateforme, file et rang observé (#18).
 
 mod builds;
+mod incremental;
 mod match_tier;
 mod model;
 mod scheduler;
@@ -8,6 +9,7 @@ mod snapshot;
 mod stages;
 mod storage;
 
+pub use incremental::{recalculate_incremental, IncrementalReport};
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
     ItemCatalogRef, ItemEventStats, QualityThresholds, Role, ScopeCoverage, ScopeKey, SkillStats,

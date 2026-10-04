@@ -112,7 +112,12 @@ enum Command {
         /// Recalcule immédiatement puis chaque heure (Ctrl+C pour arrêter).
         #[arg(long)]
         watch: bool,
-        /// Rapport JSON complet ; une ligne par publication en mode continu.
+        /// Recalcul par lots patch/plateforme/file (#89) : seuls les lots modifiés depuis la
+        /// dernière publication sont relus ; même instantané publié que le recalcul complet.
+        #[arg(long)]
+        incremental: bool,
+        /// Rapport JSON complet ; une ligne par publication en mode continu. Avec
+        /// --incremental : bilan des lots et en-tête publié, sans les listes.
         #[arg(long)]
         json: bool,
     },
@@ -332,6 +337,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             min_played_percent,
             keep_afk,
             watch,
+            incremental,
             json,
             patches,
             all_stored,
@@ -364,6 +370,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 },
                 all_stored,
                 sync_static,
+                incremental,
             )
             .await
         }
@@ -543,6 +550,7 @@ async fn aggregate(
     filters: AggregationOptions,
     all_stored: bool,
     sync_static: bool,
+    incremental: bool,
 ) -> Result<ExitCode, String> {
     let storage = connect(db_url, 2)
         .await
@@ -554,6 +562,27 @@ async fn aggregate(
         let mut selected = filters.clone();
         if selected.patches.is_empty() && !all_stored {
             selected.patches = static_data::cached_patches(&storage, 2).await?;
+        }
+        if incremental {
+            let result = aggregation::recalculate_incremental(
+                &storage,
+                min_games,
+                rank_max_age_hours,
+                &selected,
+                &quality,
+            )
+            .await?;
+            if json {
+                println!("{}", serde_json::to_string(&result)?);
+            } else {
+                let report = &result.report;
+                println!("Agrégats publiés par lots : {} / {} parties retenues, {} lots (recalculés : {}, réutilisés : {}) (seuil {}).",
+                    report.included_matches, report.source_matches, result.lots, result.recomputed_lots, result.reused_lots, report.min_games);
+                for (reason, count) in &report.exclusions {
+                    println!("  Exclusions {reason} : {count}");
+                }
+            }
+            return Ok(());
         }
         let report = aggregation::recalculate_with_quality(
             &storage,

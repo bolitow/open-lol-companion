@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Recalcul des agrégats par lots patch/plateforme/file (`aggregate --incremental`) : seuls les lots dont les parties, timelines, rangs observés proches, classement du catalogue d’objets (y compris une republication de la même version) ou paramètres ont changé depuis la dernière publication sont relus, la mémoire est bornée par le plus gros lot et l’instantané publié reste identique au recalcul complet, dans la même transaction atomique (#89).
+
 - Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).
 
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).

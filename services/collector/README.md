@@ -414,14 +414,73 @@ un seul rattrapage immédiat est exécuté puis les échéances manquées sont s
 Ctrl+C annule le calcul ou l'attente (0 en mode continu, 3 en ponctuel).
 Aucun superviseur système n'est installé par le binaire.
 
+### Recalcul par lots (#89)
+
+```sh
+cargo run -p olc-collector --release -- aggregate --incremental --sync-static --watch
+```
+
+`--incremental` (optionnel, le recalcul complet reste le défaut) découpe le calcul en
+lots patch/plateforme/file. Chaque section du rapport est indexée et triée d'abord par
+ce périmètre et aucune règle (tiers, rang le plus joué, coupe à 20 variantes, médiane
+des écarts de rang) ne mélange deux périmètres : concaténer les lots redonne
+exactement le recalcul complet. Chaque lot est calculé seul, ses morceaux écrits, puis
+sa mémoire libérée : la mémoire est bornée par le **plus gros lot**, pas par la base
+(sur la copie de recette, EUW1 Solo du patch courant porte encore la moitié des parties).
+
+Un lot n'est relu que si son empreinte change depuis la dernière publication. Elle
+couvre : les parties du lot sous les filtres et leurs timelines (identifiants, état et
+`xmin`, donc toute modification de ligne) ; les observations de rang de sa file dont la
+date est à moins de l'écart maximal (+1 h d'arrondi) d'une de ses parties, seules
+capables de changer un rang figé (#80) ; le contenu du catalogue d'objets retenu pour
+son patch (version et classement : objets complets, bottes, trinkets, transformations),
+pour qu'une même version republiée avec d'autres fiches (`catalog --refresh` ou
+`--rebuild`, nouveau normaliseur, complément CommunityDragon obtenu après coup) relise le
+patch dès qu'une étape de build peut changer, sans relecture si le classement est
+inchangé ; les
+paramètres publiés dans l'en-tête ; l'identité du binaire (chemin, taille, date), pour
+qu'une nouvelle version recalcule tout une fois sans numéro à incrémenter. Tant
+que la collecte observe des rangs dans une région, ses lots classés récents sont donc
+relus à chaque heure ; le gain porte sur les anciens patches et les lots inactifs.
+
+La migration `0018` ajoute `champion_stats_snapshot_lots` (empreinte, compteurs
+additifs et nombre de morceaux de chaque lot) et rattache chaque morceau à son lot
+(`lot_patch`, `lot_platform_id`, `lot_queue_id`, `NULL` en recalcul complet). Un lot
+recalculé ou disparu est supprimé avec ses morceaux (cascade) ; un lot dont les
+morceaux ne correspondent plus au nombre enregistré est recalculé. Le recalcul complet
+supprime tous les lots. La migration crée aussi les index des pages d'un lot et de la
+fenêtre des observations ; sur une grosse base, l'index de `matches` bloque les
+écritures de la collecte le temps de sa construction.
+
+Tout reste dans une seule transaction `REPEATABLE READ` sous le même verrou de calcul :
+l'en-tête est écrit en premier (un instantané plus récent fait échouer le calcul), puis
+réécrit avec les compteurs cumulés ; un échec conserve la publication et les lots
+précédents. L'en-tête est identique à celui du recalcul complet. Seul l'ordre des lots
+entre eux suit l'ordre d'écriture ; l'API, qui filtre toujours un patch, une plateforme
+et une file, n'en dépend pas. `--json` affiche `lots`, `recomputed_lots`,
+`reused_lots` et l'en-tête publié (`report`, listes vides : elles se lisent dans
+l'instantané).
+
+Pour une nouvelle section : l'indexer par périmètre (sinon elle ne peut pas être
+calculée par lots), l'écrire dans `snapshot::write_sections` (commun aux deux modes)
+et la classer dans `LotCounts::of` (compteur additif) ou la marquer ignorée ; la
+déstructuration exhaustive de `incremental.rs` refuse de compiler sinon. Le test
+`le_cumul_des_lots_reproduit_exactement_le_recalcul_complet` compare les deux modes.
+Une section qui lit une nouvelle source doit aussi la faire entrer dans l'empreinte
+(`current_lots`) ; un champ ajouté à `ItemCatalog` ne compile pas tant qu'il n'est pas
+repris par `ItemCatalog::fingerprint`.
+Mesures et vérification sur la copie de recette :
+[recette du recalcul par lots](../../docs/recettes/2026-10-04-agregation-par-lots.md).
+
 Tables : `collection_runs`, `collection_jobs`, `seed_players`, `run_discoveries`,
 `run_matches`, `matches`, `match_timelines`, `participant_rank_observations`,
 `collection_campaigns`, `campaign_runs`, `static_data_releases`, `static_data_manifest`,
-`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB ; les
+`champion_stats_snapshot`, `champion_stats_snapshot_chunks`, `champion_stats_snapshot_lots`. Les détails et timelines restent complets en JSONB ; les
 observations de rang gardent leur historique daté.
 
-Les lots bornent les données brutes simultanément lues, **pas toute la mémoire** :
-les compteurs de variantes et événements restent en RAM jusqu'à la publication.
+Les pages de 25 parties bornent les données brutes simultanément lues, **pas toute la
+mémoire** : en recalcul complet, les compteurs de variantes et événements restent en
+RAM jusqu'à la publication ; `--incremental` les borne au plus gros lot (#89).
 La recette mesure temps et mémoire ; un passage à très grande échelle nécessitera
 une stratégie de calcul/pagination supplémentaire. Les groupes trop petits restent
 hors classement, même après une longue collecte.
