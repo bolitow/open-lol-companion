@@ -275,6 +275,7 @@ fn les_compteurs_relus_d_un_lot_reconstituent_l_en_tete_du_recalcul_complet() {
     expected.skill_levels.clear();
     expected.item_events.clear();
     expected.splits.clear();
+    expected.performance.clear();
     // Chemin publié : seuls les compteurs de chaque lot, stockés en JSON, rejoignent l'en-tête.
     let mut head = settings.accumulator(catalogs.clone()).unwrap().finish();
     for (scope, lot) in &lots {

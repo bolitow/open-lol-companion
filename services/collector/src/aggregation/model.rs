@@ -8,6 +8,7 @@ use super::builds::{self, BuildObservation};
 use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
 use super::cumulative;
 use super::match_tier::{self, BAN_RANK_BASIS, MIN_KNOWN_PLAYERS};
+use super::performance::{self, PerformanceStats, PerformanceSums, PERFORMANCE_METHOD};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 use super::tier;
 
@@ -443,6 +444,12 @@ pub struct AggregationReport {
     pub build_stage_method: String,
     #[serde(default)]
     pub item_catalogs: Vec<ItemCatalogRef>,
+    /// Définitions des moyennes de performance (#100) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub performance_method: String,
+    /// Moyennes de performance par population (#100) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub performance: Vec<PerformanceStats>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -506,6 +513,8 @@ pub(super) struct Accumulator {
     rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
     /// Catalogue d'objets par patch (« 16.19 »), joint pour dériver les étapes (#81).
     item_catalogs: BTreeMap<String, ItemCatalog>,
+    /// Sommes des valeurs de performance (#100), mêmes clés que `counts`.
+    performance: BTreeMap<GroupKey, PerformanceSums>,
 }
 
 impl Accumulator {
@@ -542,6 +551,8 @@ impl Accumulator {
                 omitted_build_variants: 0,
                 build_stage_method: STAGE_METHOD.into(),
                 item_catalogs: vec![],
+                performance_method: PERFORMANCE_METHOD.into(),
+                performance: vec![],
             },
             counts: BTreeMap::new(),
             arena_scopes: BTreeSet::new(),
@@ -559,6 +570,7 @@ impl Accumulator {
             splits: BTreeMap::new(),
             rank_gaps: BTreeMap::new(),
             item_catalogs: BTreeMap::new(),
+            performance: BTreeMap::new(),
         })
     }
 
@@ -729,14 +741,21 @@ impl Accumulator {
                 coverage.unknown_placement_participations += 1;
             }
             let mut observations = builds::extract_detail(&p.raw);
+            let end_of_game = performance::extract_end_of_game(&p.raw, game.game_duration_s);
+            let mut frames = BTreeMap::new();
             if let Some(timeline) = &game.timeline {
-                let result = p.raw["participantId"]
+                let participant_id = p.raw["participantId"]
                     .as_u64()
-                    .and_then(|id| u32::try_from(id).ok())
+                    .and_then(|id| u32::try_from(id).ok());
+                let result = participant_id
                     .ok_or("missing_participant_id")
                     .and_then(|id| builds::extract_timeline(timeline, &game.match_id, id));
                 match result {
                     Ok(t) => {
+                        // Timeline déjà validée (partie, participant) : mêmes règles de couverture.
+                        if let Some(id) = participant_id {
+                            frames = performance::extract_frames(timeline, id);
+                        }
                         coverage.unidentified_item_undos += t.unidentified_item_undos;
                         coverage.timeline_participations += 1;
                         if !timeline_counted {
@@ -793,6 +812,11 @@ impl Accumulator {
                 *self.populations.entry(bucket.clone()).or_default() += 1;
                 seen_buckets.insert(bucket);
                 seen_champions.insert(key.clone());
+                self.performance.entry(key.clone()).or_default().add(
+                    game.game_duration_s,
+                    end_of_game.as_ref(),
+                    &frames,
+                );
                 self.add_builds(&key, p.win, p.placement, &observations);
             }
             // Paliers cumulés (#83) : seules les parties distinctes se comptent ici, car une
@@ -1203,6 +1227,11 @@ impl Accumulator {
                 minute,
                 events,
             })
+            .collect();
+        self.report.performance = self
+            .performance
+            .into_iter()
+            .map(|(key, sums)| sums.finish(key, minimum))
             .collect();
         self.report.splits = self
             .splits

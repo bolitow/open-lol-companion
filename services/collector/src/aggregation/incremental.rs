@@ -350,6 +350,8 @@ impl LotCounts {
             skill_levels: _,
             item_events: _,
             splits: _,
+            performance: _,
+            performance_method: _,
         } = report;
         Self {
             source_matches: *source_matches,
@@ -385,6 +387,8 @@ impl AggregationReport {
             skill_levels,
             item_events,
             splits,
+            performance,
+            performance_method: _,
             source_matches: _,
             included_matches: _,
             exclusions: _,
@@ -413,6 +417,7 @@ impl AggregationReport {
         self.skill_levels.extend(skill_levels);
         self.item_events.extend(item_events);
         self.splits.extend(splits);
+        self.performance.extend(performance);
     }
 }
 

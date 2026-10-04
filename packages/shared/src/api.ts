@@ -431,6 +431,53 @@ export interface BuildsResponse {
   item_catalog_version: string | null;
 }
 
+/** Moyennes à une minute de la timeline (#100), avec leur propre effectif. */
+export interface PerformanceFrameStats {
+  minute: number;
+  games: number;
+  gold: number | null;
+  cs: number | null;
+  xp: number | null;
+}
+
+/**
+ * Moyennes de performance post-partie d'une population (#100). Les moyennes sont
+ * nulles sous le seuil `min_games` ; définitions exactes dans `performance_method`.
+ */
+export interface PerformanceStats extends GroupKey {
+  /** Toutes les participations de la population (dénominateur de couverture). */
+  participations: number;
+  /**
+   * Participations d'une partie d'au moins 15 minutes (900 s) dont toutes les valeurs de fin
+   * de partie sont exploitables.
+   */
+  games: number;
+  /** Participations écartées des moyennes car la partie dure moins de 15 minutes (900 s). */
+  short_games_excluded: number;
+  kills: number | null;
+  deaths: number | null;
+  assists: number | null;
+  /** `(ΣK + ΣA) / max(ΣD, 1)` sur les sommes de la population. */
+  kda: number | null;
+  damage_to_champions: number | null;
+  cs_per_min: number | null;
+  gold_per_min: number | null;
+  vision_score: number | null;
+  /** Minutes 10 et 15, dans l'ordre croissant. */
+  frames: PerformanceFrameStats[];
+}
+
+export interface PerformanceResponse {
+  meta: SnapshotMeta;
+  query: StatsQuery;
+  champion_id: number;
+  summary: ChampionStats | null;
+  /** Null sans participation dans la population ou pour un instantané antérieur à #100. */
+  performance: PerformanceStats | null;
+  /** Définitions des moyennes ; vide pour un instantané antérieur à #100. */
+  performance_method: string;
+}
+
 /** Population d'une série entre patchs : le patch n'en fait pas partie, il est l'axe. */
 export interface TrendsQuery {
   platform: string;

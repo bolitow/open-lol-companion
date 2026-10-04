@@ -53,6 +53,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/v1/tierlist` | Champions et bans de la page, au palier demandé |
 | `/v1/bans` | Bans les plus fréquents d'un palier de partie (draft), sans rôle ni page |
 | `/v1/builds/{champion_id}` | Variantes, compétences, achats, winrate par tranche de durée et par côté |
+| `/v1/performance/{champion_id}` | Moyennes de performance du champion dans la population (#100) |
 | `/v1/trends/{champion_id}` | Série patch par patch : winrate, pick, ban, effectif et écarts |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés, avec victoires/défaites et drapeaux league-v4 |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
@@ -178,6 +179,15 @@ objets (runes, sorts, ordre de compétences) publient `placement_games` et `aver
 au lieu des victoires (`wins`, `win_rate`, `win_rate_lower_bound` nuls,
 `performance_available: false`) ; les objets Arena ne publient ni victoires ni placement ;
 hors Arena, rien ne change (`placement_games` à 0, `average_placement` nul, ancien instantané compris).
+
+`/v1/performance/{champion_id}` (#100) prend les mêmes paramètres et renvoie `summary`
+(ligne de tierlist du champion), `performance` (moyennes KDA, dégâts aux champions,
+CS/min, or/min, vision et frames à 10 et 15 min, avec `participations`, `games` et
+`short_games_excluded`, le nombre de participations écartées car la partie dure moins de
+15 minutes) et `performance_method` (définitions exactes). `performance` est `null` sans
+participation dans la population ou pour un instantané antérieur ; les moyennes sous seuil
+sont `null`. Agrégats seulement : aucune note, aucun benchmark. Définitions détaillées :
+[README du collecteur](../collector/README.md#moyennes-de-performance-100).
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
 du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le

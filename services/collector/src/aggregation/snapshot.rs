@@ -32,6 +32,7 @@ struct Metadata<'a> {
     omitted_build_variants: u64,
     build_stage_method: &'a str,
     item_catalogs: &'a [super::ItemCatalogRef],
+    performance_method: &'a str,
 }
 
 /// La transaction du calcul possède déjà le verrou et l'instantané REPEATABLE READ.
@@ -74,6 +75,7 @@ fn metadata(report: &AggregationReport) -> Metadata<'_> {
         omitted_build_variants: report.omitted_build_variants,
         build_stage_method: &report.build_stage_method,
         item_catalogs: &report.item_catalogs,
+        performance_method: &report.performance_method,
     }
 }
 
@@ -138,6 +140,7 @@ pub(super) async fn write_sections(
     write_section(tx, writer, "skill_levels", &report.skill_levels).await?;
     write_section(tx, writer, "item_events", &report.item_events).await?;
     write_section(tx, writer, "splits", &report.splits).await?;
+    write_section(tx, writer, "performance", &report.performance).await?;
     Ok(())
 }
 

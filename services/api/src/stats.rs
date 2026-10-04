@@ -130,6 +130,18 @@ pub struct BuildsResponse {
     /// Version du catalogue d'objets jointe au patch demandé ; nulle sans étapes.
     pub item_catalog_version: Option<String>,
 }
+/// Moyennes de performance d'un champion (#100), sans note ni comparaison.
+#[derive(Serialize)]
+pub struct PerformanceResponse {
+    pub meta: SnapshotMeta,
+    pub query: StatsQuery,
+    pub champion_id: u32,
+    pub summary: Option<ChampionStats>,
+    /// Nulle si la population n'a aucune participation ou si l'instantané précède #100.
+    pub performance: Option<PerformanceStats>,
+    /// Définitions publiées avec l'instantané ; vide pour un instantané antérieur.
+    pub performance_method: String,
+}
 /// Variantes de builds coupées par le plafond de publication dans une catégorie (#113).
 #[derive(Serialize, Debug, PartialEq, Eq)]
 pub struct OmittedBuildVariants {
@@ -270,6 +282,30 @@ pub async fn builds(
         omitted_item_events,
         build_stage_method: report.build_stage_method,
         item_catalog_version,
+    })
+}
+
+/// Moyennes publiées du champion dans la population demandée, lues sans recalcul.
+pub async fn performance(
+    pool: &PgPool,
+    query: StatsQuery,
+    champion_id: u32,
+) -> Result<PerformanceResponse, ApiError> {
+    query.validate().map_err(|_| ApiError::InvalidRequest)?;
+    if champion_id == 0 {
+        return Err(ApiError::InvalidRequest);
+    }
+    let (meta, report) = load(pool, &query, Some(champion_id), true).await?;
+    let selected = |key: &GroupKey| key.champion_id == champion_id && matches(key, &query);
+    let summary = report.groups.into_iter().find(|g| selected(&g.key));
+    let performance = report.performance.into_iter().find(|p| selected(&p.key));
+    Ok(PerformanceResponse {
+        meta,
+        query,
+        champion_id,
+        summary,
+        performance,
+        performance_method: report.performance_method,
     })
 }
 
