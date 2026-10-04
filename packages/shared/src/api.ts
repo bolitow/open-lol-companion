@@ -43,9 +43,15 @@ export interface ChampionStats extends GroupKey {
   games: number;
   wins: number;
   losses: number;
+  /** Participations de tous les champions du même compartiment (patch, plateforme, file, rôle, rang). */
   population: number;
+  /** Parties distinctes du compartiment ; 0 pour un instantané antérieur à #84. */
+  bucket_matches: number;
   win_rate: number | null;
+  /** Parties où le champion apparaît / `bucket_matches` × 100, comparable au ban rate. */
   pick_rate: number | null;
+  /** Part des sélections : participations du champion / `population` × 100 ; nulle avant #84. */
+  selection_share: number | null;
   win_rate_lower_bound: number | null;
   position: number | null;
   tier: string | null;

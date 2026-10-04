@@ -265,10 +265,142 @@ fn calcule_pickrate_et_bans_sur_des_populations_explicites() {
     let report = serde_json::to_value(acc.finish()).unwrap();
     assert_eq!(report["schema_version"], 2);
     assert_eq!(report["groups"][0]["population"], 2);
-    assert_eq!(report["groups"][0]["pick_rate"], 50.0);
+    assert_eq!(report["groups"][0]["bucket_matches"], 1);
+    assert_eq!(report["groups"][0]["pick_rate"], 100.0);
+    assert_eq!(report["groups"][0]["selection_share"], 50.0);
     assert_eq!(report["bans"][0]["banned_matches"], 1);
     assert_eq!(report["bans"][0]["draft_matches"], 1);
     assert_eq!(report["bans"][0]["ban_rate"], 100.0);
+}
+
+fn find_group<'a>(
+    report: &'a super::AggregationReport,
+    champion_id: u32,
+    role: Role,
+    rank: &str,
+) -> &'a super::ChampionStats {
+    report
+        .groups
+        .iter()
+        .find(|g| g.key.champion_id == champion_id && g.key.role == role && g.key.rank == rank)
+        .unwrap()
+}
+
+#[test]
+fn le_pickrate_compte_les_parties_ou_le_champion_apparait_pas_les_participations() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&game("EUW1_1"));
+    // Le champion 1 (TOP) laisse sa place au champion 99 dans la seconde partie.
+    let mut other = game("EUW1_2");
+    other.detail["info"]["participants"][0]["championId"] = json!(99);
+    acc.add(&other);
+    let report = acc.finish();
+    let one = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!((one.games, one.population, one.bucket_matches), (1, 4, 2));
+    assert_eq!(one.pick_rate, Some(50.0));
+    // Part des sélections : 1 participation sur les 4 du compartiment TOP.
+    assert_eq!(one.selection_share, Some(25.0));
+    let other_top = find_group(&report, 99, Role::Top, "ALL");
+    assert_eq!(other_top.pick_rate, Some(50.0));
+    // Champion présent dans toutes les parties : 100 %, contre 50 % par participation.
+    let ally = find_group(&report, 6, Role::Top, "ALL");
+    assert_eq!(
+        (ally.pick_rate, ally.selection_share),
+        (Some(100.0), Some(50.0))
+    );
+}
+
+#[test]
+fn le_pickrate_par_partie_est_comparable_au_ban_rate_dans_un_mode_sans_role() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for id in ["EUW1_a", "EUW1_b"] {
+        let mut aram = game(id);
+        aram.queue_id = 450;
+        aram.detail["info"]["queueId"] = json!(450);
+        for p in aram.detail["info"]["participants"].as_array_mut().unwrap() {
+            p["teamPosition"] = json!("");
+        }
+        if id == "EUW1_b" {
+            aram.detail["info"]["participants"][0]["championId"] = json!(99);
+        }
+        acc.add(&aram);
+    }
+    let report = acc.finish();
+    let one = find_group(&report, 1, Role::Unknown, "ALL");
+    // 10 participations par partie : l'ancienne part valait 1/20 = 5 %.
+    assert_eq!((one.bucket_matches, one.population), (2, 20));
+    assert_eq!(one.pick_rate, Some(50.0));
+    assert_eq!(one.selection_share, Some(5.0));
+    let always = find_group(&report, 2, Role::Unknown, "ALL");
+    assert_eq!(always.pick_rate, Some(100.0));
+    assert_eq!(always.selection_share, Some(10.0));
+}
+
+#[test]
+fn un_champion_en_double_dans_une_partie_ne_depasse_pas_cent_pour_cent() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut urf = game("EUW1_dup");
+    urf.queue_id = 1020;
+    urf.detail["info"]["queueId"] = json!(1020);
+    for p in urf.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["teamPosition"] = json!("");
+    }
+    urf.detail["info"]["participants"][1]["championId"] = json!(1);
+    acc.add(&urf);
+    let report = acc.finish();
+    let doubled = find_group(&report, 1, Role::Unknown, "ALL");
+    assert_eq!((doubled.games, doubled.bucket_matches), (2, 1));
+    assert_eq!(doubled.pick_rate, Some(100.0));
+    assert_eq!(doubled.selection_share, Some(20.0));
+}
+
+#[test]
+fn le_denominateur_du_pickrate_est_propre_au_rang_observe() {
+    let mut a = game("EUW1_r1");
+    a.ranks.insert(
+        "fake-puuid-0".into(),
+        observed("ranked", Some("GOLD"), 3600),
+    );
+    let mut b = game("EUW1_r2");
+    // Seule la seconde partie a un top GOLD, sous un autre champion.
+    b.detail["info"]["participants"][0]["championId"] = json!(99);
+    b.ranks.insert(
+        "fake-puuid-0".into(),
+        observed("ranked", Some("GOLD"), 3600),
+    );
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&a);
+    acc.add(&b);
+    let report = acc.finish();
+    let gold = find_group(&report, 1, Role::Top, "GOLD");
+    assert_eq!(
+        (gold.bucket_matches, gold.population, gold.pick_rate),
+        (2, 2, Some(50.0))
+    );
+    assert_eq!(gold.selection_share, Some(50.0));
+}
+
+#[test]
+fn le_pickrate_reste_masque_sous_le_seuil_et_lit_les_anciens_instantanes() {
+    let mut acc = Accumulator::new(3).unwrap();
+    acc.add(&game("EUW1_1"));
+    acc.add(&game("EUW1_2"));
+    let report = acc.finish();
+    assert!(report
+        .groups
+        .iter()
+        .all(|g| g.pick_rate.is_none() && g.selection_share.is_none()));
+    assert!(report.groups.iter().all(|g| g.bucket_matches == 2));
+    assert_eq!(
+        report.pick_rate_definition,
+        "champion_matches / bucket_matches * 100"
+    );
+    // Instantané publié avant #84 : les champs absents prennent leur valeur neutre.
+    let mut old = serde_json::to_value(&report.groups[0]).unwrap();
+    old.as_object_mut().unwrap().remove("bucket_matches");
+    old.as_object_mut().unwrap().remove("selection_share");
+    let read: super::ChampionStats = serde_json::from_value(old).unwrap();
+    assert_eq!((read.bucket_matches, read.selection_share), (0, None));
 }
 
 #[test]
