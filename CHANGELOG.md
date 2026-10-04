@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Collecteur : commande `campaign-queues` (ARAM, Swiftplay et Arena par défaut) avec une cible et un budget d'appels par plateforme et par file, et `campaign-report` pour suivre les parties retenues face à ces cibles ; les files inconnues sont refusées au lancement (#97).
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).
@@ -83,6 +84,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Agrégats : une partie dont la file n'est pas identifiée (710, 3130, identifiants inconnus) est exclue sous la raison `unknown_queue` au lieu d'être agrégée sans contrôle de format ; ses données brutes restent en base (#97).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 
 - Documents de planification `docs/superpowers/` exclus du suivi Git (#18).
