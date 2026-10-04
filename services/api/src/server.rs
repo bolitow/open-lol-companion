@@ -2,7 +2,11 @@
 use crate::auth::Auth;
 use crate::profiles::Profiles;
 use crate::realtime::Publication;
-use crate::{error::ApiError, profiles::HistoryQuery, query::StatsQuery};
+use crate::{
+    error::ApiError,
+    profiles::HistoryQuery,
+    query::{StatsQuery, TrendsQuery},
+};
 use axum::{
     extract::{
         rejection::{PathRejection, QueryRejection},
@@ -52,6 +56,7 @@ pub fn router(state: AppState) -> Router {
     let private = Router::new()
         .route("/v1/tierlist", get(tierlist))
         .route("/v1/builds/{champion_id}", get(builds))
+        .route("/v1/trends/{champion_id}", get(trends))
         .route("/v1/profiles/{platform}/{name}/{tag}", get(profile))
         .route("/v1/profiles/{platform}/{name}/{tag}/matches", get(history))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
@@ -144,6 +149,20 @@ async fn builds(
 ) -> Result<Json<crate::stats::BuildsResponse>, ApiError> {
     Ok(Json(
         crate::stats::builds(
+            &state.pool,
+            query.map_err(|_| ApiError::InvalidRequest)?.0,
+            path.map_err(|_| ApiError::InvalidRequest)?.0,
+        )
+        .await?,
+    ))
+}
+async fn trends(
+    State(state): State<AppState>,
+    path: Result<Path<u32>, PathRejection>,
+    query: Result<Query<TrendsQuery>, QueryRejection>,
+) -> Result<Json<crate::trends::TrendsResponse>, ApiError> {
+    Ok(Json(
+        crate::trends::trends(
             &state.pool,
             query.map_err(|_| ApiError::InvalidRequest)?.0,
             path.map_err(|_| ApiError::InvalidRequest)?.0,
@@ -252,6 +271,7 @@ mod tests {
         for path in [
             "/v1/tierlist",
             "/v1/builds/1",
+            "/v1/trends/1",
             "/v1/profiles/EUW1/name/tag",
             "/v1/profiles/EUW1/name/tag/matches",
         ] {
@@ -280,6 +300,11 @@ mod tests {
         for (path, auth) in [
             ("/v1/tierlist?patch=invalid", true),
             ("/v1/builds/not-an-id", true),
+            ("/v1/trends/not-an-id", true),
+            (
+                "/v1/trends/1?platform=EUW1&queue=420&role=TOP&patch=16.19",
+                true,
+            ),
             ("/v1/static/no-version/fr_FR/item.json", false),
         ] {
             let mut builder = Request::builder().uri(path);

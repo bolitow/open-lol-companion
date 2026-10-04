@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Tendances entre patchs : route `/v1/trends/{champion_id}` donnant, pour un champion, un rôle et un rang, la série winrate, pick, ban et effectif de chaque patch de l’instantané publié, avec les écarts au patch précédent ; patch vide ou taux sous le seuil laissés explicites (#110).
+
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
 
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).

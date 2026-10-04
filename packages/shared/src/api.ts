@@ -193,6 +193,44 @@ export interface BuildsResponse {
   item_catalog_version: string | null;
 }
 
+/** Population d'une série entre patchs : le patch n'en fait pas partie, il est l'axe. */
+export interface TrendsQuery {
+  platform: string;
+  queue: number;
+  role: string;
+  rank: string;
+}
+
+/**
+ * Un patch publié de la série d'un champion. Pourcentages nuls sous le seuil de
+ * l'instantané ; un patch observé sans ligne du champion est un point à 0 partie.
+ */
+export interface TrendPoint {
+  patch: string;
+  games: number;
+  wins: number;
+  /** Participations de tous les champions du même patch, rôle et rang. */
+  population: number;
+  /** Nul en Arena, comme dans la tierlist. */
+  win_rate: number | null;
+  pick_rate: number | null;
+  banned_matches: number;
+  draft_matches: number;
+  ban_rate: number | null;
+  /** Écart en points de pourcentage avec le patch publié précédent ; nul si une valeur est inconnue. */
+  delta_win_rate: number | null;
+  delta_pick_rate: number | null;
+  delta_ban_rate: number | null;
+}
+
+/** Du plus ancien au plus récent patch de l'instantané ; couverture de tous ces patchs. */
+export interface TrendsResponse {
+  meta: SnapshotMeta;
+  query: TrendsQuery;
+  champion_id: number;
+  points: TrendPoint[];
+}
+
 export interface ProfileRank {
   queue_id: number;
   status: "ranked" | "unranked";

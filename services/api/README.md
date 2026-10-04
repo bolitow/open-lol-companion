@@ -51,6 +51,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/health` | Connectivité PostgreSQL, publique |
 | `/v1/tierlist` | Champions et bans de la page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
+| `/v1/trends/{champion_id}` | Série patch par patch : winrate, pick, ban, effectif et écarts |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
@@ -109,6 +110,28 @@ cette opération avant de remettre le service en trafic sur une base volumineuse
 Les rapports historiques en stockage v1 restent lisibles mais ne bénéficient du
 filtrage indexé qu'après un nouveau calcul du collecteur. Mesures et non-régressions :
 [recette du filtrage des builds](../../docs/recettes/2026-10-02-filtrage-builds.md).
+
+### Tendances entre patchs (#110)
+
+`GET /v1/trends/{champion_id}?platform=…&queue=…&role=…[&rank=ALL]` (JWT comme la
+tierlist). Mêmes dimensions et mêmes bornes que les statistiques, **sans** `patch`
+(c'est l'axe) ni pagination ; tout autre paramètre est refusé. La réponse porte `meta`
+(couverture de tous les patchs de la plateforme et de la file), `query`, `champion_id`
+et `points` : un point par patch publié, du plus ancien au plus récent (ordre numérique,
+`16.9` avant `16.10`). Chaque point donne `games`, `wins`, `population`, `win_rate`,
+`pick_rate`, `banned_matches`, `draft_matches` et `ban_rate`, plus les écarts en points de
+pourcentage `delta_win_rate`, `delta_pick_rate` et `delta_ban_rate` avec le patch publié
+précédent.
+
+La série est relue dans l'instantané courant : elle ne couvre que les patchs qu'il
+contient (par défaut les deux patchs du cache Data Dragon) et aucun historique n'est
+conservé au-delà d'un recalcul. Un patch observé sans ligne du champion est un point
+à 0 partie aux taux `null` ; les écarts restent `null` dès qu'une des deux valeurs est
+inconnue (sous le seuil, Arena, patch vide) et ne sont jamais interpolés. Un patch
+absent de l'instantané n'apparaît pas. Un champion sans donnée donne des points vides ;
+snapshot absent ou incompatible : 503. Le `ban_rate` d'un champion sans ligne de ban est
+`0` si les drafts du patch atteignent le seuil, `null` sinon. Hors périmètre : filtre de
+période, historisation durable et fenêtre glissante (suite du ticket).
 
 ### Profils, historique et quotas
 
