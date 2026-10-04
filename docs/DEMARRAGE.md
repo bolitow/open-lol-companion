@@ -230,7 +230,7 @@ requête / 65 s au total, quatre appels simultanés partagés avec les builds.
 Le [suivi du compte League actif](compte-actif.md) alimente automatiquement l’accueil. Le service de profils reste nécessaire pour ses statistiques, mais pas pour détecter son Riot ID local.
 
 Les [réglages recherchables](reglages.md) regroupent thème, langue, animations et Flash D/F. Les préférences antérieures sont reprises ; les fonctions système du ticket #11 restent séparées.
-La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont exécutés sur Linux avec `cargo test -p olc-collector --example export_desktop_catalog`.
+La CI exécute aussi les tests desktop TypeScript et du client de builds Rust sur Linux/Windows/macOS. Les tests de l’exemple d’export du catalogue sont déclarés dans `services/collector/Cargo.toml` (`[[example]] test = true`) : ils tournent avec `cargo test -p olc-collector`, donc avec `pnpm test` et sur les trois OS de la CI.
 
 ### Réglages système (#11)
 

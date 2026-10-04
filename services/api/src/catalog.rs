@@ -420,6 +420,7 @@ fn validate_dimensions(locale: &str, kind: &str, namespace: &str) -> Result<(), 
             "rune",
             "rune_shard",
             "summoner_spell",
+            "augment",
             "map",
             "queue",
             "mode",
@@ -594,6 +595,17 @@ fn cached_response(value: &impl Serialize, headers: &HeaderMap) -> Result<Respon
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn les_augments_sont_une_famille_standard_localisee_jamais_globale() {
+        // #118 : catalogue statique des augments Arena et Mayhem, sans taux ni tier.
+        for locale in ["fr_FR", "en_US"] {
+            assert!(validate_dimensions(locale, "augment", "standard").is_ok());
+        }
+        assert!(validate_dimensions("und", "augment", "global").is_err());
+        assert!(validate_dimensions("fr_FR", "augment", "global").is_err());
+        assert!(validate_dimensions("fr_FR", "augment_tier", "standard").is_err());
+    }
 
     #[test]
     fn une_nouvelle_valeur_sans_provenance_ne_signale_pas_un_changement_de_source() {

@@ -92,8 +92,6 @@ jobs:
         run: node --test scripts/patch-watch.test.mjs
       - run: pnpm --filter @olc/desktop build
       - run: cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client
-      - name: Tests de l’exporteur du catalogue desktop
-        run: cargo test -p olc-collector --example export_desktop_catalog
       - name: Tests du backend (PostgreSQL)
         run: cargo test -p olc-collector -p olc-api
         env:
