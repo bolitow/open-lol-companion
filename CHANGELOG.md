@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Projection Live Client élargie par liste blanche : or courant, vision, mort/réapparition, niveaux de compétences, côté et poste du joueur local, totaux K/D/A et CS des équipes comme au tableau des scores, événements publics (objectifs, kills) sans nom de joueur ; aucune donnée adverse cachée. La dernière lecture est conservée en mémoire jusqu'au bilan d'après-partie puis purgée (#102).
+
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).

@@ -61,10 +61,31 @@ contexte : aucun poste par défaut n’est inventé.
 - Le producteur mémorise la dernière draft et les transitions de partie avant
   regroupement des événements. Sortie de partie ou recul significatif de l’horloge
   invalident l’ancien contexte. Les instantanés ont une révision et une génération.
-- Projection Rust : seulement le joueur local identifié sans ambiguïté ; aucune
-  identité ou donnée adverse transmise. Événements retenus : GameStart,
-  MinionsSpawning, GameEnd, sans acteur, dédupliqués par ID dans l’instantané et
-  bornés à 32. Il ne s’agit pas encore d’un bus de notifications de #27.
+- Projection Rust par liste blanche (#102) : seul le joueur local est identifié sans
+  ambiguïté ; son identité sert uniquement à le retrouver et ne sort jamais.
+  - Joueur local : champion, niveau, K/D/A, CS, `itemID`, plus, en optionnel
+    (`null` si la source l'omet ou le fournit invalide) : or courant, score de
+    vision, mort/délai de réapparition, niveaux Q/W/E/R appris, côté (`order` ou
+    `chaos`) et poste.
+  - Équipes : totaux K/D/A et CS des alliés et des adversaires, tels que le tableau
+    des scores les montre, calculés en Rust ; `null` si un score ou le côté local
+    manque. Ni or, ni sorts d'invocateur, ni vision, ni position adverse. Aucun total
+    d'or (cas limite de #30).
+  - Événements publics : GameStart, MinionsSpawning, GameEnd, ChampionKill, FirstBlood,
+    DragonKill, HeraldKill, BaronKill, TurretKilled, InhibKilled, Ace ; les autres
+    (Multikill, FirstBrick, Horde, Atakhan…) sont ignorés. Aucun nom : chacun porte
+    `ally` (camp de l'auteur relatif au joueur local, `null` si sbire, inconnu ou
+    ambigu) et `involvesLocalPlayer` (auteur, assistant ou victime). Dédupliqués par ID,
+    bornés aux 256 plus récents.
+  - Bilan : la dernière lecture valide est conservée en mémoire dans `postgame`
+    quand la partie se termine (le jeu s'arrête souvent avant la phase LCU). Elle est
+    purgée au début d'une nouvelle partie ou dès que le client quitte les écrans
+    d'après-partie (WaitingForStats, PreEndOfGame, EndOfGame). Rien n'est écrit sur
+    disque ; la déconnexion du client LCU ne la purge pas à elle seule.
+  - Le test `un_champ_hors_liste_blanche_n_est_jamais_projete` compare l'ensemble des
+    clés sérialisées à la liste blanche : ajouter un champ exige de modifier ce test,
+    donc de relire la conformité (`rules/conformite-riot.md`). Types miroirs dans
+    `packages/shared/src/live.ts`. Ce n'est pas un bus de notifications (#27).
 - Le front écoute avant de lire l’état initial et rejette les révisions périmées.
   Changer de partie/contexte/langue démonte les anciennes requêtes de catalogue et
   de builds. Les réponses tardives ne réaffichent pas l’ancien champion.
