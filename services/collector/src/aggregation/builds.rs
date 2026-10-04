@@ -15,6 +15,11 @@ pub(super) struct BuildObservation {
     /// Projection interne des étapes (#81) : jamais sérialisée.
     #[serde(skip)]
     pub net_purchases: Option<Vec<Purchase>>,
+    /// Sorts observés en case D puis F (`summoner1Id`, `summoner2Id`). La variante
+    /// `summoner_spells` reste une paire triée ; l'orientation est comptée à part (#124).
+    /// Projection interne : jamais sérialisée.
+    #[serde(skip)]
+    pub spell_slots: Option<[u32; 2]>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -62,6 +67,7 @@ pub(super) fn extract_detail(participant: &Value) -> BuildObservation {
         positive(&participant["summoner2Id"]),
     ) {
         let mut spells = vec![first, second];
+        result.spell_slots = Some([first, second]);
         spells.sort_unstable();
         result.variants.insert("summoner_spells".into(), spells);
     }

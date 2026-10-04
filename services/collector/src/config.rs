@@ -7,6 +7,8 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+use crate::model::RANKED_QUEUE_IDS;
+
 /// Plateforme et file du prototype : EUW, Ranked Solo/Duo.
 pub const PLATFORM_ID: &str = "EUW1";
 pub const RANKED_SOLO_QUEUE_ID: i32 = 420;
@@ -18,6 +20,17 @@ pub const PLATFORMS: &[&str] = &[
     "BR1", "EUN1", "EUW1", "JP1", "KR", "LA1", "LA2", "ME1", "NA1", "OC1", "RU", "SG2", "TR1",
     "TW2", "VN2",
 ];
+
+/// Files collectées par défaut par une campagne : Solo/Duo et Flex (décision du 4 octobre
+/// 2026, #90). ARAM, Swiftplay, Arena et les autres files restent possibles en les listant
+/// explicitement (`campaign --queues`).
+pub const DEFAULT_CAMPAIGN_QUEUES: [i32; 2] = RANKED_QUEUE_IDS;
+
+/// `true` si les rangs des participants servent pour cette file : 0 (toutes les files, dont
+/// les classées), Solo/Duo ou Flex. Ailleurs, les demander gaspillerait du budget (#90).
+pub fn queue_needs_ranks(queue_id: i32) -> bool {
+    queue_id == 0 || RANKED_QUEUE_IDS.contains(&queue_id)
+}
 
 pub fn valid_patch(value: &str) -> bool {
     let parts: Vec<_> = value.split('.').collect();
@@ -358,6 +371,17 @@ mod tests {
         assert!(legacy.patches.is_empty());
         assert!(!legacy.collect_ranks);
         assert!(serde_json::from_str::<RunParams>("{}").is_err());
+    }
+
+    #[test]
+    fn les_rangs_ne_sont_demandes_que_pour_les_files_qui_les_exploitent() {
+        // 0 mélange toutes les files, dont les classées ; 420 et 440 les exploitent.
+        for queue in [0, 420, 440] {
+            assert!(queue_needs_ranks(queue), "file {queue}");
+        }
+        for queue in [400, 450, 1700] {
+            assert!(!queue_needs_ranks(queue), "file {queue}");
+        }
     }
 
     #[test]

@@ -95,6 +95,22 @@ fn une_page_de_runes_incomplete_ne_produit_aucune_categorie_derivee() {
 }
 
 #[test]
+fn conserve_l_orientation_d_f_observee_sans_changer_la_cle_de_la_paire() {
+    // summoner1Id est la case D et summoner2Id la case F : la paire reste triée
+    // (clé de regroupement), l'orientation observée est portée à part.
+    let result = extract_detail(&participant());
+    assert_eq!(result.variants["summoner_spells"], vec![4, 14]);
+    assert_eq!(result.spell_slots, Some([14, 4]));
+    // Jamais sérialisée : projection interne de l'agrégation.
+    assert!(!serde_json::to_string(&result)
+        .unwrap()
+        .contains("spell_slots"));
+    let mut source = participant();
+    source["summoner2Id"] = json!(0);
+    assert_eq!(extract_detail(&source).spell_slots, None);
+}
+
+#[test]
 fn une_categorie_incomplete_ne_contamine_pas_les_autres() {
     let mut source = participant();
     source.as_object_mut().unwrap().remove("item2");

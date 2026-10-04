@@ -1,0 +1,217 @@
+//! Accès à l'API desktop : URL et jeton saisis dans les réglages, gardés dans le trousseau du système.
+//!
+//! Le client actif est remplaçable à chaud : un enregistrement ou un effacement relit le trousseau,
+//! remplace le client et relance l'écoute des publications. Le jeton n'est jamais renvoyé à l'interface.
+use olc_build_client::{
+    credentials::{self, ApiAccessStatus, CredentialError, KeyringStore, LoadedAccess},
+    BuildClient, BuildError,
+};
+use serde::Deserialize;
+use std::sync::{Arc, Mutex, RwLock};
+use tauri::{AppHandle, Manager};
+
+struct Current {
+    client: Result<Arc<BuildClient>, BuildError>,
+    status: ApiAccessStatus,
+}
+
+/// État partagé des commandes builds, profils et publications.
+pub struct ApiState {
+    current: RwLock<Current>,
+    /// Passe à `true` après la première lecture du trousseau ; les lectures l'attendent.
+    loaded: tokio::sync::watch::Sender<bool>,
+    /// Sérialise chargement initial, enregistrement et effacement.
+    writes: tokio::sync::Mutex<()>,
+    watcher: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
+}
+
+impl Default for ApiState {
+    fn default() -> Self {
+        Self {
+            current: RwLock::new(Current {
+                client: Err(BuildError::NotConfigured),
+                status: ApiAccessStatus {
+                    source: None,
+                    url: None,
+                    error: None,
+                },
+            }),
+            loaded: tokio::sync::watch::Sender::new(false),
+            writes: tokio::sync::Mutex::new(()),
+            watcher: Mutex::new(None),
+        }
+    }
+}
+
+impl ApiState {
+    async fn wait_loaded(&self) {
+        let mut loaded = self.loaded.subscribe();
+        // L'émetteur vit aussi longtemps que l'état : l'attente ne peut pas échouer.
+        let _ = loaded.wait_for(|loaded| *loaded).await;
+    }
+
+    /// Client actif, une fois le trousseau lu au démarrage.
+    pub async fn client(&self) -> Result<Arc<BuildClient>, BuildError> {
+        self.wait_loaded().await;
+        let current = self.current.read().unwrap_or_else(|e| e.into_inner());
+        current.client.clone()
+    }
+
+    async fn status(&self) -> ApiAccessStatus {
+        self.wait_loaded().await;
+        let current = self.current.read().unwrap_or_else(|e| e.into_inner());
+        current.status.clone()
+    }
+
+    /// Remplace la configuration ; renvoie le client à écouter et l'état affichable.
+    fn replace(&self, loaded: LoadedAccess) -> (Option<Arc<BuildClient>>, ApiAccessStatus) {
+        let client = loaded.client.map(Arc::new);
+        let listen = client.as_ref().ok().cloned();
+        *self.current.write().unwrap_or_else(|e| e.into_inner()) = Current {
+            client,
+            status: loaded.status.clone(),
+        };
+        self.loaded.send_replace(true);
+        (listen, loaded.status)
+    }
+}
+
+/// Variables d'environnement complètes (développement) d'abord, sinon trousseau du système.
+fn load_from_system() -> LoadedAccess {
+    credentials::load_access(
+        std::env::var("OLC_API_URL").ok(),
+        std::env::var("OLC_API_TOKEN").ok(),
+        &KeyringStore,
+    )
+}
+
+/// À appeler sous le verrou `writes` : client et flux de publications changent ensemble.
+fn apply(app: &AppHandle, loaded: LoadedAccess) -> ApiAccessStatus {
+    let state = app.state::<ApiState>();
+    let (client, status) = state.replace(loaded);
+    let mut watcher = state.watcher.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(previous) = watcher.take() {
+        previous.abort();
+    }
+    *watcher = crate::publications::restart(app, client);
+    status
+}
+
+/// Lit le trousseau hors du fil principal : macOS peut demander une autorisation.
+pub fn setup(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let state = app.state::<ApiState>();
+        let _guard = state.writes.lock().await;
+        let loaded = tauri::async_runtime::spawn_blocking(load_from_system)
+            .await
+            .unwrap_or_else(|_| LoadedAccess {
+                client: Err(BuildError::NotConfigured),
+                status: ApiAccessStatus {
+                    source: None,
+                    url: None,
+                    error: Some(CredentialError::ReadFailed),
+                },
+            });
+        apply(&app, loaded);
+    });
+}
+
+/// Saisie des réglages. Pas de `Debug` : le jeton ne doit jamais être journalisé.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ApiAccessInput {
+    url: String,
+    token: String,
+}
+
+#[tauri::command]
+pub async fn api_access_status(
+    state: tauri::State<'_, ApiState>,
+) -> Result<ApiAccessStatus, CredentialError> {
+    Ok(state.status().await)
+}
+
+/// Valide, écrit dans le trousseau puis applique sans redémarrage.
+#[tauri::command]
+pub async fn save_api_access(
+    app: AppHandle,
+    access: ApiAccessInput,
+) -> Result<ApiAccessStatus, CredentialError> {
+    let state = app.state::<ApiState>();
+    let _guard = state.writes.lock().await;
+    let loaded = tauri::async_runtime::spawn_blocking(move || {
+        credentials::save_access(&KeyringStore, access.url, access.token)?;
+        Ok(load_from_system())
+    })
+    .await
+    .map_err(|_| CredentialError::WriteFailed)??;
+    Ok(apply(&app, loaded))
+}
+
+/// Retire le jeton du trousseau ; les variables d'environnement éventuelles restent actives.
+#[tauri::command]
+pub async fn clear_api_access(app: AppHandle) -> Result<ApiAccessStatus, CredentialError> {
+    let state = app.state::<ApiState>();
+    let _guard = state.writes.lock().await;
+    let loaded = tauri::async_runtime::spawn_blocking(|| {
+        credentials::clear_access(&KeyringStore)?;
+        Ok(load_from_system())
+    })
+    .await
+    .map_err(|_| CredentialError::WriteFailed)??;
+    Ok(apply(&app, loaded))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use olc_build_client::credentials::ApiAccessSource;
+
+    fn configured() -> LoadedAccess {
+        LoadedAccess {
+            client: BuildClient::new(
+                Some("https://api.example.com".into()),
+                Some("test-token".into()),
+            ),
+            status: ApiAccessStatus {
+                source: Some(ApiAccessSource::Keychain),
+                url: Some("https://api.example.com".into()),
+                error: None,
+            },
+        }
+    }
+
+    #[test]
+    fn les_lectures_attendent_le_premier_chargement_du_trousseau() {
+        let state = Arc::new(ApiState::default());
+        let reader = state.clone();
+        let pending = tauri::async_runtime::spawn(async move { reader.client().await.is_ok() });
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        assert!(!pending.inner().is_finished());
+        let (listen, status) = state.replace(configured());
+        assert!(listen.is_some());
+        assert_eq!(status.source, Some(ApiAccessSource::Keychain));
+        assert!(tauri::async_runtime::block_on(pending).unwrap());
+    }
+
+    #[test]
+    fn un_effacement_remplace_le_client_actif() {
+        let state = ApiState::default();
+        state.replace(configured());
+        let (listen, status) = state.replace(LoadedAccess {
+            client: Err(BuildError::NotConfigured),
+            status: ApiAccessStatus {
+                source: None,
+                url: None,
+                error: None,
+            },
+        });
+        assert!(listen.is_none());
+        assert_eq!(status.source, None);
+        assert!(matches!(
+            tauri::async_runtime::block_on(state.client()),
+            Err(BuildError::NotConfigured)
+        ));
+    }
+}
