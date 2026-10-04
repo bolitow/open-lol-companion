@@ -247,6 +247,7 @@ Aucune fiche descriptive n’est recopiée dans les groupes statistiques.
 | Banrate | #18 : drafts bannissant le champion / drafts complètes ×100 | Pas de faux rang/rôle du ban ; seuil de drafts |
 | Builds, objets, runes, sorts | #18 : effectif, population éligible de chaque catégorie, taux de sélection/victoire | Variantes limitées aux20 plus populaires ; seuil ; achats tardifs et durée créent des biais ; pas de causalité |
 | Compétences/achats | #18 : ordre des points Q/W/E/R, temps moyen ; achats nets hors annulations ambiguës | Timeline absente signalée, inventaire final distinct de l’ordre d’achat |
+| Étapes d’achat | #81 : départ, bottes, core ordonné, objets 4–6, joints aux objets du catalogue du patch (prix, achat, boutique, recettes, `special_recipe`) | Catalogue du patch requis ; fenêtre de départ 1 min 30 approximative ; core/emplacements biaisés par la durée |
 | Stats descriptives d’objet | #61 : valeurs explicites, recettes, paramètres, provenance par version | Des formules complexes restent non interprétées ; puissance théorique ≠ winrate |
 | Dégâts/minute, CS/minute, vision, objectifs, écarts or/XP | Données Match-v5/timeline déjà archivables ; indicateurs supplémentaires à produire | #41/#26 : définitions, dénominateurs et couverture à fixer avant calcul ; APM exhaustif non promis |
 | Matchups, synergies, maîtrise et suggestions | Référentiel prêt pour les jointures | #39/#42 : agrégations/modèles supplémentaires à construire |

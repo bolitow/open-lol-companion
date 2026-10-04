@@ -60,7 +60,22 @@ export interface BanStats extends ScopeKey {
   ban_rate: number | null;
 }
 
+/**
+ * Étapes d'achat (#81), chacune agrégée séparément avec sa propre population :
+ * départ (achats nets avant 1 min 30, multiensemble trié), bottes (première paire,
+ * vide si aucune), core (3 premiers objets complets, dans l'ordre d'achat) et
+ * objets complets suivants (4e, 5e, 6e). Absentes sans catalogue d'objets du patch.
+ */
+export type BuildStageCategory =
+  | "starter"
+  | "boots"
+  | "core"
+  | "item_slot_4"
+  | "item_slot_5"
+  | "item_slot_6";
+
 export interface BuildStats extends GroupKey {
+  /** Empreintes exactes (`final_items`, `purchase_order`…) ou `BuildStageCategory`. */
   category: string;
   selection: number[];
   games: number;
@@ -69,6 +84,8 @@ export interface BuildStats extends GroupKey {
   population: number;
   pick_rate: number | null;
   win_rate: number | null;
+  /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
+  win_rate_lower_bound: number | null;
 }
 
 export interface SkillStats extends GroupKey {
@@ -106,6 +123,10 @@ export interface Coverage {
   rank_gap_median_hours: number | null;
   /** Écart maximal retenu (heures), au plus `rank_max_age_hours`. */
   rank_gap_max_hours: number | null;
+  /** Participations dont les étapes d'achat ont été dérivées du catalogue du patch. */
+  item_stage_participations: number;
+  /** Participations à achats nets connus mais sans catalogue d'objets pour leur patch. */
+  missing_item_catalog_participations: number;
 }
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}
@@ -154,6 +175,10 @@ export interface BuildsResponse {
   item_events: ItemEventStats[];
   max_build_variants_per_category: number;
   omitted_build_variants: number;
+  /** Règles des étapes d'achat ; vide pour un instantané antérieur à #81. */
+  build_stage_method: string;
+  /** Version du catalogue d'objets jointe au patch demandé ; null sans étapes. */
+  item_catalog_version: string | null;
 }
 
 export interface ProfileRank {

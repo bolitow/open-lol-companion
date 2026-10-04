@@ -266,3 +266,39 @@ fn un_remboursement_sans_objet_preserve_les_sorts_sans_inventer_un_ordre_achats(
         1
     );
 }
+
+#[test]
+fn les_achats_nets_gardent_leur_horodatage_pour_les_etapes() {
+    let result = extract(vec![
+        item("ITEM_PURCHASED", 1_000, 2003),
+        item("ITEM_PURCHASED", 2_000, 1055),
+        item("ITEM_PURCHASED", 3_000, 2003),
+        json!({"type":"ITEM_UNDO","participantId":1,"timestamp":4_000,"beforeId":2003,"afterId":0,"goldGain":50}),
+        item("ITEM_SOLD", 500_000, 1055),
+    ]);
+    // L'empreinte existante reste inchangée ; les étapes lisent la même séquence nette.
+    assert_eq!(result.variants["purchase_order"], vec![2003, 1055]);
+    let purchases = result.net_purchases.as_ref().unwrap();
+    assert_eq!(
+        purchases
+            .iter()
+            .map(|p| (p.item_id, p.timestamp_ms))
+            .collect::<Vec<_>>(),
+        vec![(2003, 1_000), (1055, 2_000)]
+    );
+    // Projection interne : jamais sérialisée avec la variante publiable.
+    assert!(serde_json::to_value(&result)
+        .unwrap()
+        .get("net_purchases")
+        .is_none());
+}
+
+#[test]
+fn sans_ordre_net_fiable_aucune_etape_n_est_derivee() {
+    let undo = extract(vec![
+        item("ITEM_PURCHASED", 2, 1055),
+        json!({"type":"ITEM_UNDO","participantId":1,"timestamp":3,"beforeId":0,"afterId":0,"goldGain":300}),
+    ]);
+    assert!(undo.net_purchases.is_none());
+    assert!(extract(vec![skill(1, 1)]).net_purchases.is_none());
+}

@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
+
 - Revue de conformité Riot de tous les overlays et projections (panneau en partie, projection Live Client, sélection des champions, bilan, prototype) : rapport daté ligne à ligne, cas à soumettre à Riot et fonctions refusées complétés dans `rules/conformite-riot.md`, test de non-fuite des identités de la projection de sélection et filtre défensif des bans adverses (seuls les bans annoncés par une action terminée d'une cellule adverse sont projetés). Décisions du 4 octobre : objets, sorts, niveau et score de vision adverses refusés ; différence d'or par équipe seulement à soumettre à Riot, affichage prévu ; % de victoire estimé de la draft affiché dès maintenant, désactivable, conservé dans la liste soumise à Riot (#30, suites d'interface : #187).
 
 - Projection Live Client élargie par liste blanche : or courant, vision, mort/réapparition, niveaux de compétences, côté et poste du joueur local, totaux K/D/A et CS des équipes comme au tableau des scores, événements publics (objectifs, kills) sans nom de joueur ; aucune donnée adverse cachée. La dernière lecture est conservée en mémoire jusqu'au bilan d'après-partie puis purgée (#102).
@@ -131,6 +133,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Borne Wilson publiée bornée à 0–100 dans la tierlist et les builds : une variante ou un champion sans victoire n'affiche plus un résidu flottant négatif, qui faisait rejeter toute la page de builds par le client desktop (#81).
 - Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).
 - Set d’objets importé : uniquement des objets achetables du catalogue (`purchasable` et `in_store`) ; les formes évoluées, bottes de niveau 3 et objets de quête sont remplacés par l’objet achetable dont ils découlent, les autres sont retirés et signalés, et la variante entière est rejetée si le statut boutique d’un objet ou d’un maillon n’est pas lisible (#88).
 

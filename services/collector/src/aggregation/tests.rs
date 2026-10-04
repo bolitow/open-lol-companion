@@ -734,6 +734,221 @@ fn une_couverture_publiee_avant_le_rang_fige_reste_lisible() {
     assert_eq!(coverage.rank_gap_max_hours, None);
 }
 
+fn stage_catalog(version: &str) -> super::stages::ItemCatalog {
+    let item = |price: u32, tags: Value, from: Value| {
+        let mut fields =
+            json!({"price_total":price,"purchasable":true,"categories":tags,"builds_from":from});
+        for (_, value) in fields.as_object_mut().unwrap() {
+            *value = json!({"value": value.take(), "status": "verified", "sources": []});
+        }
+        fields
+    };
+    let records = [
+        ("1055", item(450, json!(["Lane"]), json!([]))),
+        ("2003", item(50, json!(["Consumable"]), json!([]))),
+        ("3006", item(1100, json!(["Boots"]), json!(["1001"]))),
+        ("3031", item(3500, json!(["Damage"]), json!([]))),
+        ("3089", item(3500, json!(["SpellDamage"]), json!([]))),
+        ("6672", item(3000, json!(["Damage"]), json!([]))),
+        ("3072", item(3400, json!(["Damage"]), json!([]))),
+    ];
+    super::stages::ItemCatalog::from_records(version, records.iter().map(|(id, f)| (*id, f)))
+}
+
+fn with_purchases(mut g: StoredMatch, items: &[(u32, u64)]) -> StoredMatch {
+    let events: Vec<_> = items
+        .iter()
+        .map(|(id, at)| json!({"type":"ITEM_PURCHASED","participantId":1,"timestamp":at,"itemId":id}))
+        .collect();
+    g.timeline = Some(
+        json!({"metadata":{"matchId":g.match_id},"info":{"participants":[{"participantId":1}],"frames":[{"events":events}]}}),
+    );
+    g
+}
+
+fn stage<'a>(r: &'a super::AggregationReport, category: &str) -> Vec<&'a super::BuildStats> {
+    r.builds
+        .iter()
+        .filter(|b| b.key.rank == "ALL" && b.key.champion_id == 1 && b.category == category)
+        .collect()
+}
+
+#[test]
+fn les_etapes_d_achat_sont_agregees_separement_avec_le_catalogue_du_patch() {
+    let mut acc = Accumulator::new(2).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    let full = [
+        (1055, 1_000),
+        (2003, 1_500),
+        (3006, 300_000),
+        (3031, 600_000),
+        (3089, 900_000),
+        (6672, 1_200_000),
+        (3072, 1_500_000),
+    ];
+    acc.add(&with_purchases(game("EUW1_stage1"), &full));
+    acc.add(&with_purchases(game("EUW1_stage2"), &full));
+    let mut lost = with_purchases(
+        game("EUW1_stage3"),
+        &[(1055, 1_000), (3089, 600_000), (3031, 900_000)],
+    );
+    reverse_winner(&mut lost);
+    acc.add(&lost);
+    let r = acc.finish();
+    let starter = stage(&r, "starter");
+    assert_eq!(starter.len(), 2);
+    assert_eq!(starter[0].selection, vec![1055, 2003]);
+    assert_eq!(
+        (starter[0].games, starter[0].wins, starter[0].population),
+        (2, Some(2), 3)
+    );
+    assert!((starter[0].win_rate_lower_bound.unwrap() - 34.23802275066532).abs() < 1e-9);
+    // Sous le seuil : comptes visibles, aucune borne publiée.
+    assert_eq!(
+        (
+            starter[1].selection.clone(),
+            starter[1].win_rate_lower_bound
+        ),
+        (vec![1055], None)
+    );
+    let boots = stage(&r, "boots");
+    assert_eq!(
+        boots
+            .iter()
+            .map(|b| (b.selection.clone(), b.games))
+            .collect::<Vec<_>>(),
+        vec![(vec![3006], 2), (vec![], 1)]
+    );
+    // Le core n'a pour population que les parties ayant terminé trois objets.
+    let core = stage(&r, "core");
+    assert_eq!(core.len(), 1);
+    assert_eq!(
+        (core[0].selection.clone(), core[0].population),
+        (vec![3031, 3089, 6672], 2)
+    );
+    assert_eq!(stage(&r, "item_slot_4")[0].selection, vec![3072]);
+    assert!(stage(&r, "item_slot_5").is_empty());
+    // Les empreintes exactes existantes restent publiées à l'identique.
+    assert_eq!(stage(&r, "purchase_order").len(), 2);
+    let coverage = &r.coverage[0].counts;
+    assert_eq!(
+        (
+            coverage.item_stage_participations,
+            coverage.missing_item_catalog_participations
+        ),
+        (3, 0)
+    );
+    assert_eq!(
+        serde_json::to_value(&r.item_catalogs).unwrap(),
+        json!([{"patch":"15.19","version":"15.19.1"}])
+    );
+    assert!(r.build_stage_method.contains("90000"));
+}
+
+#[test]
+fn sans_catalogue_du_patch_aucune_etape_n_est_inventee() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_item_catalogs([("15.18".to_owned(), stage_catalog("15.18.1"))].into());
+    acc.add(&with_purchases(
+        game("EUW1_nocatalog"),
+        &[(1055, 1_000), (3031, 600_000)],
+    ));
+    let r = acc.finish();
+    for category in ["starter", "boots", "core", "item_slot_4"] {
+        assert!(stage(&r, category).is_empty());
+    }
+    assert_eq!(stage(&r, "purchase_order").len(), 1);
+    let coverage = &r.coverage[0].counts;
+    assert_eq!(
+        (
+            coverage.item_stage_participations,
+            coverage.missing_item_catalog_participations
+        ),
+        (0, 1)
+    );
+}
+
+#[test]
+fn les_etapes_d_achat_arena_ne_publient_aucune_performance() {
+    let mut g = game("EUW1_arena_stage");
+    g.queue_id = 1740;
+    g.detail["info"]["queueId"] = json!(1740);
+    g.detail["info"]["gameMode"] = json!("CHERRY");
+    g.detail["metadata"]["participants"] = json!((0..18)
+        .map(|i| format!("synthetic-{i}"))
+        .collect::<Vec<_>>());
+    g.detail["info"]["participants"] = json!((0..18).map(|i| json!({"participantId":i+1,"teamId":if i<9 {100}else{200},"playerSubteamId":1+i/3,"championId":i+1,"win":i<9})).collect::<Vec<_>>());
+    let g = with_purchases(
+        g,
+        &[
+            (1055, 1_000),
+            (3006, 2_000),
+            (3031, 3_000),
+            (3089, 4_000),
+            (6672, 5_000),
+            (3072, 6_000),
+        ],
+    );
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    acc.add(&g);
+    let r = acc.finish();
+    for category in ["starter", "boots", "core", "item_slot_4"] {
+        let rows = stage(&r, category);
+        assert_eq!(rows.len(), 1, "{category}");
+        assert!(!rows[0].performance_available);
+        assert_eq!(
+            (rows[0].wins, rows[0].win_rate, rows[0].win_rate_lower_bound),
+            (None, None, None)
+        );
+    }
+}
+
+#[test]
+fn une_variante_publiee_avant_les_etapes_reste_lisible() {
+    let legacy = json!({"patch":"15.19","platform_id":"EUW1","queue_id":420,"role":"TOP","rank":"ALL","champion_id":1,
+        "category":"final_items","selection":[3031],"games":3,"wins":2,"performance_available":true,"population":3,"pick_rate":100.0,"win_rate":66.6});
+    let build: super::BuildStats = serde_json::from_value(legacy).unwrap();
+    assert_eq!(build.win_rate_lower_bound, None);
+    let mut coverage = serde_json::to_value(super::Coverage::default()).unwrap();
+    for field in [
+        "item_stage_participations",
+        "missing_item_catalog_participations",
+    ] {
+        coverage.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let coverage: super::Coverage = serde_json::from_value(coverage).unwrap();
+    assert_eq!(coverage.item_stage_participations, 0);
+}
+
+#[test]
+fn une_variante_sans_victoire_publie_une_borne_wilson_nulle_et_non_negative() {
+    // Pour 0 victoire sur 118 parties, la formule de Wilson donne environ -1e-15 en
+    // flottant : la borne publiée doit rester dans 0..=100 pour ne pas faire rejeter
+    // toute la page de builds par le client desktop.
+    let mut acc = Accumulator::new(118).unwrap();
+    acc.set_item_catalogs([("15.19".to_owned(), stage_catalog("15.19.1"))].into());
+    for i in 0..118 {
+        let mut lost = with_purchases(
+            game(&format!("EUW1_afk{i}")),
+            &[(1055, 1_000), (3006, 300_000)],
+        );
+        reverse_winner(&mut lost);
+        acc.add(&lost);
+    }
+    let r = acc.finish();
+    let starter = stage(&r, "starter");
+    assert_eq!((starter[0].games, starter[0].wins), (118, Some(0)));
+    assert_eq!(starter[0].win_rate_lower_bound, Some(0.0));
+    let champion = r
+        .groups
+        .iter()
+        .find(|g| g.key.rank == "ALL" && g.key.champion_id == 1)
+        .unwrap();
+    assert_eq!(champion.win_rate_lower_bound, Some(0.0));
+}
+
+#[test]
 fn une_file_inconnue_est_isolee_par_une_exclusion_explicite() {
     // 710 et 3130 sont observées en recette sans que leur sens soit vérifiable hors ligne :
     // elles ne contribuent à aucun groupe, mais leur nombre reste visible.

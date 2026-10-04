@@ -316,7 +316,7 @@ inventé à partir des objets ou du rang.
 | `population` | Toutes les participations du même patch/plateforme/file/rôle/rang |
 | `win_rate` | Victoires / participations du champion × 100 |
 | `pick_rate` | Participations du champion / population × 100 ; part des sélections dans ce groupe |
-| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale |
+| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
 | `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file : matchs bannissant le champion / drafts complètes ; un double ban ne compte qu'une fois |
@@ -345,8 +345,9 @@ Chaque catégorie possède son propre effectif disponible ; une donnée manquant
 compte jamais comme un choix vide. `builds` donne participations, victoires, population,
 pickrate et winrate de chaque variante. Exception imposée par la
 [politique Riot](https://developer.riotgames.com/docs/lol#game-policy) : les catégories
-d'items Arena (`item`, `final_items`, `trinket`, `purchase_order`) ne publient ni
-victoires ni winrates (`wins`/`win_rate` nuls, `performance_available: false`) ; leur
+d'items Arena (`item`, `final_items`, `trinket`, `purchase_order` et les étapes
+`starter`, `boots`, `core`, `item_slot_4..6`) ne publient ni victoires, ni winrates, ni
+borne Wilson (`wins`/`win_rate`/`win_rate_lower_bound` nuls, `performance_available: false`) ; leur
 tri ne dépend pas des victoires. Aucun taux d'augment n'est produit. Au plus 20 variantes par catégorie/groupe sont
 publiées, par popularité, sans modifier leur dénominateur ; `omitted_build_variants`
 annonce les variantes supplémentaires conservées seulement dans les sources brutes.
@@ -362,6 +363,41 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 - `purchase_order` : achats incluant composants et consommables, avec retrait des
   achats annulés ; ce n'est pas un inventaire final reconstruit.
 - `item_events` : achats, ventes, destructions et annulations regroupés par minute.
+
+Chaque variante publie aussi `win_rate_lower_bound`, borne inférieure de Wilson à 95 %
+bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena).
+
+### Étapes d'achat (#81)
+
+Les empreintes exactes ci-dessus fragmentent la population (aucune variante
+`final_items`/`purchase_order` à 100 parties sur la recette). Les étapes sont des
+catégories supplémentaires, chacune avec sa propre population, dérivées de la séquence
+nette d'achats (`purchase_order`) jointe au catalogue normalisé #61 du patch de la
+partie (`game_catalog_current`, version `16.19.x` la plus récente pour le patch `16.19`) :
+
+| Catégorie | Règle | Population |
+| --- | --- | --- |
+| `starter` | Achats nets strictement avant 1 min 30 (90 000 ms), balises exclues ; multiensemble trié (deux potions restent deux) | Participations à achats nets connus |
+| `boots` | Premier achat de bottes : étiquette `Boots` ou chaîne `builds_from` remontant à 1001/2422 (Gunmetal Greaves n'a pas l'étiquette) ; `[]` si aucune paire achetée | Idem |
+| `core` | Trois premiers objets complets distincts, **dans l'ordre d'achat** (non trié) | Participations ayant terminé au moins 3 objets |
+| `item_slot_4`, `_5`, `_6` | 4e, 5e, 6e objet complet distinct | Participations ayant terminé au moins N objets |
+
+Objet complet : `purchasable`, en boutique, sans `builds_into`, `price_total` ≥ 2000, ni
+`Consumable`/`Trinket`/`Boots` ni bottes par chaîne ; la profondeur n'est pas utilisée
+(Infinity Edge est de profondeur 2). Les transformations sont ramenées à l'objet acheté
+via `special_recipe` (Muramana → Manamune, Séraphin → Archange, Fimbulvetr → Approche de
+l'hiver) et un objet revendu puis racheté ne compte qu'une fois. Seules les valeurs
+`verified`/`derived` du catalogue sont lues. La timeline match-v5 ne signale aucun retour
+ni sortie de base : la fenêtre de 1 min 30 est une approximation documentée.
+
+Sans catalogue publié pour le patch, aucune étape n'est produite et
+`missing_item_catalog_participations` compte ces participations ;
+`item_stage_participations` compte celles qui ont des étapes. Un remboursement sans
+objet identifiable supprime `purchase_order` et donc les étapes. Le rapport publie
+`build_stage_method` (règles) et `item_catalogs` (patch → version jointe). Prérequis
+d'exploitation : publier le catalogue (`catalog`, ci-dessus) après `sync-static` ;
+`aggregate --sync-static` ne le publie pas. Biais : le core et les emplacements ne
+décrivent que les parties assez longues pour les atteindre (survie et durée).
 
 Les événements système `participantId=0` sont ignorés. Une timeline absente ou
 incohérente ne devient pas une séquence vide : les compteurs de couverture l'indiquent.

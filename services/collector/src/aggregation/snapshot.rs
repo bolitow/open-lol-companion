@@ -24,6 +24,8 @@ struct Metadata<'a> {
     exclusions: &'a BTreeMap<String, u64>,
     max_build_variants_per_category: u32,
     omitted_build_variants: u64,
+    build_stage_method: &'a str,
+    item_catalogs: &'a [super::ItemCatalogRef],
 }
 
 /// La transaction du calcul possède déjà le verrou et l'instantané REPEATABLE READ.
@@ -45,6 +47,8 @@ pub(super) async fn publish(
         exclusions: &report.exclusions,
         max_build_variants_per_category: report.max_build_variants_per_category,
         omitted_build_variants: report.omitted_build_variants,
+        build_stage_method: &report.build_stage_method,
+        item_catalogs: &report.item_catalogs,
     };
     // Premier verrou d'écriture : un instantané devenu ancien échoue avant de toucher
     // aux morceaux. Tête, suppression et nouveaux morceaux sont validés ensemble.
