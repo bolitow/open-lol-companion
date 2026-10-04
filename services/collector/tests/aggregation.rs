@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use common::TestDb;
 use olc_collector::aggregation::{
-    recalculate, recalculate_filtered, AggregationError, AggregationOptions,
+    recalculate, recalculate_filtered, AggregationError, AggregationOptions, AggregationReport,
     DEFAULT_RANK_MAX_AGE_HOURS,
 };
 use olc_collector::config::RunParams;
@@ -607,6 +607,92 @@ async fn le_rang_reste_fige_a_la_partie_quel_que_soit_l_heure_du_calcul() {
         recalculate_filtered(&db.storage, 1, 0, &AggregationOptions::default()).await,
         Err(AggregationError::InvalidRankMaxAge)
     ));
+    db.cleanup().await;
+}
+
+/// Rang attribué au champion `champion_id` (participant `fake-puuid-{champion_id-1}`) :
+/// hors rang agrégé « ALL », la partie de test n'a qu'un rang par champion.
+fn rank_of(report: &AggregationReport, champion_id: u32) -> Option<String> {
+    let mut ranks: Vec<_> = report
+        .groups
+        .iter()
+        .filter(|g| g.key.champion_id == champion_id && g.key.rank != "ALL")
+        .map(|g| g.key.rank.clone())
+        .collect();
+    ranks.dedup();
+    assert!(ranks.len() <= 1, "rangs multiples : {ranks:?}");
+    ranks.pop()
+}
+
+#[tokio::test]
+async fn la_borne_d_ecart_est_incluse_exactement_et_l_arrondi_ne_la_depasse_pas() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_bound").await;
+    // Borne fixée à 48 h. Pile 48 h : retenue. 48 h + 400 ms : refusée (un arrondi au plus
+    // proche la ramènerait à 48 h et la ferait passer).
+    sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES
+        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '48 hours'),
+        ('EUW1','fake-puuid-1',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)-interval '48 hours 400 milliseconds');")
+        .execute(db.storage.pool()).await.unwrap();
+    let r = recalculate_filtered(&db.storage, 1, 48, &AggregationOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(rank_of(&r, 1).as_deref(), Some("GOLD"));
+    assert_eq!(rank_of(&r, 2).as_deref(), Some("UNKNOWN"));
+    assert!(!r.groups.iter().any(|g| g.key.rank == "DIAMOND"));
+    assert_eq!(r.coverage[0].counts.rank_gap_max_hours, Some(48.0));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_recherche_de_l_observation_la_plus_proche_choisit_entre_avant_et_apres() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_nearest").await;
+    // game_start = to_timestamp(1000). Chaque participant isole un cas de départage.
+    sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES
+        -- 0 : l'après est plus proche que l'avant
+        ('EUW1','fake-puuid-0',420,'SILVER','I',10,'ranked',to_timestamp(1000)-interval '3 hours'),
+        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '2 hours'),
+        -- 1 : égalité d'écart, la plus ancienne l'emporte
+        ('EUW1','fake-puuid-1',420,'EMERALD','I',10,'ranked',to_timestamp(1000)+interval '2 hours'),
+        ('EUW1','fake-puuid-1',420,'PLATINUM','I',10,'ranked',to_timestamp(1000)-interval '2 hours'),
+        -- 2 : seulement avant
+        ('EUW1','fake-puuid-2',420,'BRONZE','I',10,'ranked',to_timestamp(1000)-interval '10 hours'),
+        ('EUW1','fake-puuid-2',420,'IRON','I',10,'ranked',to_timestamp(1000)-interval '20 hours'),
+        -- 3 : seulement après
+        ('EUW1','fake-puuid-3',420,'IRON','I',10,'ranked',to_timestamp(1000)+interval '6 hours'),
+        ('EUW1','fake-puuid-3',420,'MASTER','I',10,'ranked',to_timestamp(1000)+interval '40 hours'),
+        -- 4 : observation exactement à l'heure de la partie
+        ('EUW1','fake-puuid-4',420,'CHALLENGER','I',10,'ranked',to_timestamp(1000)),
+        ('EUW1','fake-puuid-4',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        -- 5 : même instant, deux lignes : la plus récemment insérée (id le plus grand) l'emporte
+        ('EUW1','fake-puuid-5',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        ('EUW1','fake-puuid-5',420,'SILVER','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        -- 6 : la seule observation dépasse la borne par défaut (168 h) : inconnu
+        ('EUW1','fake-puuid-6',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '170 hours'),
+        -- 7 : autre file (440) et autre plateforme ne comptent pas
+        ('EUW1','fake-puuid-7',440,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        ('KR','fake-puuid-7',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '1 hour');")
+        .execute(db.storage.pool()).await.unwrap();
+    let r = recalculate(&db.storage, 1).await.unwrap();
+    let ranks: Vec<_> = (1..=10).map(|c| rank_of(&r, c).unwrap()).collect();
+    assert_eq!(
+        ranks,
+        [
+            "GOLD",
+            "PLATINUM",
+            "BRONZE",
+            "IRON",
+            "CHALLENGER",
+            "SILVER",
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN"
+        ]
+    );
     db.cleanup().await;
 }
 

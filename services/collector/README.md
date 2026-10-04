@@ -218,7 +218,10 @@ Chaque participation entre dans `ALL` et dans son rang observé : ne pas additio
 ces populations. Les files 420/440 utilisent le classement de la même file, figé à la
 partie (#80) : l'observation la plus proche du début de partie, si l'écart ne dépasse
 pas `--rank-max-age-hours` (168 h par défaut, 1 à 8 760). L'heure du calcul
-n'intervient pas : recalculer des données inchangées redonne les mêmes rangs. Ce palier
+n'intervient pas : recalculer des données inchangées redonne les mêmes rangs. L'écart est
+arrondi à la seconde supérieure (la borne est incluse exactement) et l'observation est
+cherchée par deux lectures d'index bornées (la dernière avant le début, la première
+après) ; chiffres dans [`docs/recettes/2026-10-04-rang-fige.md`](../../docs/recettes/2026-10-04-rang-fige.md). Ce palier
 observé n'est ni un MMR ni le rang exact au lancement de la partie. Les autres files
 ont `UNRANKED_MODE`. `UNKNOWN` (aucune observation assez proche) et `UNRANKED` restent
 distincts. `rank_scope` vaut `observed_rank_nearest_to_game_start_of_same_ranked_queue` ;

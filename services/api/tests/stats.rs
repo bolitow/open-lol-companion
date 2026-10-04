@@ -472,6 +472,40 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
 }
 
 #[tokio::test]
+async fn un_instantane_publie_sans_les_indicateurs_de_rang_fige_reste_lisible_avec_des_null() {
+    let db = db_or_skip!();
+    let mut source = report();
+    // Instantané antérieur au rang figé (#80) : ces trois clés n'existent pas dans le JSON stocké.
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    for key in [
+        "unknown_rank_rate",
+        "rank_gap_median_hours",
+        "rank_gap_max_hours",
+    ] {
+        assert!(coverage.remove(key).is_some());
+    }
+    publish(db.storage.pool(), source).await;
+    for response in [
+        tierlist(db.storage.pool(), query()).await.unwrap().meta,
+        builds(db.storage.pool(), query(), 1).await.unwrap().meta,
+    ] {
+        let meta = serde_json::to_value(response).unwrap();
+        let coverage = &meta["coverage"][0];
+        for key in [
+            "unknown_rank_rate",
+            "rank_gap_median_hours",
+            "rank_gap_max_hours",
+        ] {
+            assert_eq!(coverage[key], Value::Null, "{key} doit valoir null");
+        }
+        // Les autres compteurs de la couverture sont relus tels quels.
+        assert_eq!(coverage["unknown_rank_participations"], 500);
+        assert_eq!(coverage["participations"], 1000);
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn builds_garde_le_champion_la_population_et_les_effectifs_avant_pagination() {
     let db = db_or_skip!();
     let source = report();

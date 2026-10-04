@@ -110,6 +110,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Rang figé à la partie : la borne d'écart est exacte (arrondi à la seconde supérieure, 48 h + 400 ms n'est plus retenue pour 48 h) et la recherche de l'observation la plus proche s'appuie sur l'index, avec deux lectures bornées au lieu d'un tri de tout l'historique du joueur ; recette chiffrée avant/après et relecture d'un instantané ancien sans les indicateurs de rang (#80).
 - Borne Wilson publiée bornée à 0–100 dans la tierlist et les builds : une variante ou un champion sans victoire n'affiche plus un résidu flottant négatif, qui faisait rejeter toute la page de builds par le client desktop (#81).
 - Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
