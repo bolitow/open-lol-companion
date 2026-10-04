@@ -71,6 +71,11 @@ export interface DesktopCatalogItemFilter {
   reason: string | null;
   maps: CatalogItemMapId[];
   by_map: Record<CatalogItemMapId, number>;
+  /**
+   * Objets dont la disponibilité sur la carte n'a pas pu être lue, par carte. N'apparaît qu'en
+   * repli `all_items` ; omis (jamais `{}` ni `null`) quand le filtre par carte a pu s'appliquer.
+   */
+  unreadable_by_map?: Partial<Record<CatalogItemMapId, number>>;
 }
 
 /** Famille des augments Arena et Mayhem (#118) : catalogue statique, jamais une statistique. */

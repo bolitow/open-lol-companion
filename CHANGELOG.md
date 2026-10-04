@@ -89,7 +89,9 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 ### Modifié
 
 - Export du catalogue desktop : conserve aussi les objets propres à l'ARAM (carte 12) et à l'Arena (carte 30), avec le décompte par carte dans le manifeste ; la publication versionnée n'est pas encore régénérée (#116).
-
+- Export du catalogue desktop : les tests de l'exemple `export_desktop_catalog` sont déclarés testables (`[[example]] test = true`) et tournent donc avec `pnpm test` et sur les trois OS de la CI ; l'étape dédiée Linux disparaît (#116).
+- Export du catalogue desktop : quand le repli `all_items` se déclenche (carte illisible), l'export journalise la raison et, par carte, le nombre d'objets à disponibilité illisible, aussi consigné dans le manifeste (champ optionnel `unreadable_by_map`, reflété dans `@olc/shared`) ; le seuil de déclenchement ne change pas (#116).
+- Catalogue : la lecture des paramètres `mDataValues` d'un objet et de ses surcharges de mode partage une seule fonction, sans changement de comportement (#116).
 - Agrégats : une partie dont la file n'est pas identifiée (710, 3130, identifiants inconnus) est exclue sous la raison `unknown_queue` au lieu d'être agrégée sans contrôle de format ; ses données brutes restent en base (#97).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 

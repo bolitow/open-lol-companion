@@ -46,6 +46,17 @@ describe("contrats JSON du catalogue", () => {
     };
     expect(JSON.parse(JSON.stringify(filter)).by_map["12"]).toBe(404);
     expectTypeOf<DesktopCatalogItemFilter["maps"][number]>().toEqualTypeOf<CatalogItemMapId>();
+    // Repli `all_items` : `reason` et `unreadable_by_map` (omis quand il est vide) apparaissent.
+    const fallback: DesktopCatalogItemFilter = {
+      mode: "all_items", reason: "unknown_map",
+      maps: ["11", "12", "30"], by_map: { "11": 316, "12": 404, "30": 232 },
+      unreadable_by_map: { "11": 1, "12": 3, "30": 2 },
+    };
+    expect(JSON.parse(JSON.stringify(fallback)).unreadable_by_map["12"]).toBe(3);
+    expect(filter.unreadable_by_map).toBeUndefined();
+    expectTypeOf<DesktopCatalogItemFilter["unreadable_by_map"]>().toEqualTypeOf<
+      Partial<Record<CatalogItemMapId, number>> | undefined
+    >();
     expectTypeOf<CatalogItemMapId>().toEqualTypeOf<"11" | "12" | "30">();
     const aram: CatalogModeEffectId = `${CATALOG_MODE_EFFECT_PREFIX}ARAM`;
     expect(aram).toBe("cdragon_parameters:ARAM");
