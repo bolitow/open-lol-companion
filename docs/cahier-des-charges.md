@@ -209,7 +209,7 @@ Dès le début des bans, l'app propose le meilleur pick pour la composition et i
 | --- | --- | --- |
 | Page de runes | `/lol-perks/v1/pages` | Nommée « [Marque] : Champion », remplace l'ancienne page de l'app, pas deux secondaires de la même ligne |
 | Sorts d'invocateur | `/lol-champ-select/v1/session/my-selection` | Respect de la position Flash (D/F) choisie par l'utilisateur |
-| Set d'items | `/lol-item-sets/v1/item-sets/{summonerId}/sets` | Affiché en premier dans la boutique, items « larme » importés sous forme achetable |
+| Set d'items | `/lol-item-sets/v1/item-sets/{summonerId}/sets` | Affiché en premier dans la boutique, items non achetables (« larme », bottes de niveau 3, quêtes) importés sous forme achetable, ou retirés et signalés (#88) |
 
 - Import automatique ou manuel, activable séparément pour runes, sorts et items.
 - Parcours minimal #63 : une tentative par draft/champion/poste/catégorie ; le
