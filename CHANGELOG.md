@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Annonce automatique des publications : le cœur Rust du desktop se connecte au canal WebSocket `/v1/ws` de l'API (jeton dans le premier message, jamais dans l'URL), se reconnecte avec un repli de 1 s à 60 s et s'arrête si le jeton est refusé ou expiré (fermeture `1008` du serveur, ou réponse 401/403 d'un proxy d'authentification au handshake). L'état (`revision`, connexion, dernière publication) est lisible par la commande `publication_state` et émis avec l'événement `publication-state`, typé dans `@olc/shared` ; l'interface n'est pas encore branchée dessus (#125).
 - Quota Riot partagé : l'API des profils garde 20 % de chaque fenêtre (4 appels/s, 20 par 2 min) que le collecteur ne consomme plus, pour qu'une recherche de profil ne dorme plus pendant une rafale de collecte ; le plafond global de la clé reste intact. Nouveau code d'erreur `riot_busy` (503) quand aucun créneau n'est obtenu en 20 s, distinct de `unavailable` et du refus immédiat `rate_limited` (#122).
 
 - Desktop : commande `client_patch` qui lit la version du jeu installée dans le client LoL (`/lol-patch/v1/game-version`) et en tire le patch `majeur.mineur`, avec son type partagé ; l'interface ne l'utilise pas encore (#93, partie cœur Rust).

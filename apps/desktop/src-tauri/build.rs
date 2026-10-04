@@ -11,6 +11,7 @@ fn main() {
             "client_patch",
             "friends_state",
             "community_builds",
+            "publication_state",
             "player_profile",
             "player_matches",
             "import_runes",

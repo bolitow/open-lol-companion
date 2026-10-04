@@ -13,6 +13,8 @@ reqwest.workspace = true
 rustls.workspace = true
 webpki-roots = "1"
 tokio = { workspace = true, features = ["sync", "time"] }
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util"] }

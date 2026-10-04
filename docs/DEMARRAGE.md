@@ -125,6 +125,15 @@ catégories sont indépendantes, triées par fréquence, et ne constituent ni un
 build conjoint gagnant ni une recommandation matchup/pro. Voir
 [le suivi de validation](integration-front.md).
 
+**Annonce des publications (#125).** Avec les mêmes `OLC_API_URL` et `OLC_API_TOKEN`,
+le cœur Rust ouvre aussi `/v1/ws` (`wss` pour HTTPS, `ws` pour le loopback), envoie le
+jeton dans le premier message (jamais dans l’URL) et reçoit les dates de publication
+des statistiques et des données statiques. Une coupure déclenche une reconnexion avec
+attente doublée de 1 s à 60 s ; un jeton refusé ou expiré (fermeture `1008`, ou 401/403 d’un proxy
+d’authentification) arrête les tentatives
+(état `unauthorized`, relancer l’app avec un nouveau jeton). L’état est lu par la
+commande `publication_state` et émis avec l’événement `publication-state`.
+
 ## 4. Où coder quoi
 
 Les commandes Tauri `import_runes`, `import_spells` et `import_items` sont décrites

@@ -11,6 +11,7 @@
     "allow-client-patch",
     "allow-friends-state",
     "allow-community-builds",
+    "allow-publication-state",
     "allow-player-profile",
     "allow-player-matches",
     "allow-import-runes",
