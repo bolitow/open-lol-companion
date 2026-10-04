@@ -6,6 +6,9 @@
 # Node
 node_modules/
 .next/
+# Fichiers générés par Next.js et tsc dans apps/web
+apps/web/next-env.d.ts
+apps/web/tsconfig.tsbuildinfo
 dist/
 build/
 *.log

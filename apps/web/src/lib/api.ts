@@ -17,7 +17,15 @@ export interface ApiClientOptions {
 // `next.revalidate` est lu par le `fetch` de Next.js et ignoré ailleurs.
 type FetchInit = RequestInit & { next?: { revalidate: number } };
 
-const API_ERRORS: readonly ApiErrorCode[] = ["invalid_request", "unauthorized", "not_found", "unavailable", "rate_limited"];
+const API_ERRORS: readonly ApiErrorCode[] = [
+  "invalid_request",
+  "unauthorized",
+  "forbidden",
+  "not_found",
+  "unavailable",
+  "rate_limited",
+  "riot_busy",
+];
 /** Les documents statiques changent au plus à chaque version ; l'API les sert avec un cache d'une heure. */
 const STATIC_REVALIDATE_S = 3600;
 const MATCHES_PER_PAGE = 10;

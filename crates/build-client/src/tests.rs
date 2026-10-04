@@ -116,6 +116,36 @@ fn refuse_un_perimetre_invalide() {
     }
 }
 
+#[test]
+fn accepte_les_paliers_cumules_de_l_api_et_refuse_les_autres_suffixes() {
+    for rank in [
+        "IRON_PLUS",
+        "BRONZE_PLUS",
+        "SILVER_PLUS",
+        "GOLD_PLUS",
+        "PLATINUM_PLUS",
+        "EMERALD_PLUS",
+        "DIAMOND_PLUS",
+        "MASTER_PLUS",
+    ] {
+        let mut value = serde_json::to_value(request()).unwrap();
+        value["rank"] = json!(rank);
+        let req: BuildRequest = serde_json::from_value(value).unwrap();
+        assert_eq!(req.validate(), Ok(()), "{rank}");
+    }
+    for rank in [
+        "GRANDMASTER_PLUS",
+        "CHALLENGER_PLUS",
+        "ALL_PLUS",
+        "emerald_plus",
+    ] {
+        let mut value = serde_json::to_value(request()).unwrap();
+        value["rank"] = json!(rank);
+        let req: BuildRequest = serde_json::from_value(value).unwrap();
+        assert_eq!(req.validate(), Err(BuildError::InvalidRequest), "{rank}");
+    }
+}
+
 #[tokio::test]
 async fn charge_toutes_les_categories_sans_perdre_les_fragments_repetes() {
     let first = (0..200).map(|id| variant("item", vec![id + 1])).collect();
@@ -195,4 +225,247 @@ async fn ne_transmet_ni_corps_d_erreur_ni_statistiques_sous_seuil() {
     assert!(report.builds[0].win_rate.is_none());
     assert!(report.builds[0].pick_rate.is_none());
     job.await.unwrap();
+}
+
+#[tokio::test]
+async fn transmet_le_taux_conditionnel_des_runes_et_le_masque_sous_le_seuil() {
+    let mut slot = variant("rune_slot_1", vec![8005, 9111]);
+    slot["conditional_rate"] = json!(72.0);
+    let mut low = variant("rune_slot_2", vec![8005, 9104]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["conditional_rate"] = json!(4.0);
+    let legacy = variant("rune_keystone", vec![8005]);
+    let mut invalid = variant("rune_slot_3", vec![8005, 8014]);
+    invalid["conditional_rate"] = json!(172.0);
+    let (url, job) = server(vec![
+        (200, page(0, 3, vec![slot, low, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let rates: Vec<_> = report.builds.iter().map(|b| b.conditional_rate).collect();
+    assert_eq!(rates, vec![Some(72.0), None, None]);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn transmet_la_borne_wilson_des_etapes_et_la_masque_comme_le_winrate() {
+    let mut core = variant("core", vec![6672, 3031, 3089]);
+    core["win_rate_lower_bound"] = json!(41.2);
+    let mut low = variant("starter", vec![1055, 2003]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["win_rate_lower_bound"] = json!(10.0);
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_lower_bound"] = json!(30.0);
+    let legacy = variant("item", vec![1055]);
+    let mut invalid = variant("core", vec![1, 2, 3]);
+    invalid["win_rate_lower_bound"] = json!(120.0);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![core, low, arena, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let bounds: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| b.win_rate_lower_bound)
+        .collect();
+    assert_eq!(bounds, vec![Some(41.2), None, None, None]);
+    // Le core garde son ordre d'achat, sans tri.
+    assert_eq!(report.builds[0].selection, vec![6672, 3031, 3089]);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn accepte_une_variante_sans_victoire_dont_la_borne_wilson_est_nulle() {
+    // Contrat avec le collecteur : 0 victoire sur 118 parties publie une borne de 0,
+    // jamais une valeur flottante infime négative qui ferait rejeter toute la page.
+    let mut afk = variant("starter", vec![]);
+    afk["games"] = json!(118);
+    afk["wins"] = json!(0);
+    afk["win_rate"] = json!(0.0);
+    afk["win_rate_lower_bound"] = json!(0.0);
+    let core = variant("core", vec![6672, 3031, 3089]);
+    let (url, job) = server(vec![(200, page(0, 2, vec![afk, core]))]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    assert_eq!(report.builds.len(), 2);
+    assert_eq!(report.builds[0].wins, Some(0));
+    assert_eq!(report.builds[0].win_rate_lower_bound, Some(0.0));
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn transmet_l_intervalle_et_l_ecart_au_champion_avec_les_memes_masques() {
+    let mut sure = variant("core", vec![6672, 3031, 3089]);
+    sure["win_rate_lower_bound"] = json!(41.2);
+    sure["win_rate_upper_bound"] = json!(58.9);
+    sure["win_rate_delta"] = json!(-2.5);
+    let mut rare = variant("starter", vec![1055]);
+    rare["games"] = json!(2);
+    rare["wins"] = json!(1);
+    rare["win_rate_upper_bound"] = json!(90.0);
+    rare["win_rate_delta"] = json!(4.0);
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_upper_bound"] = json!(70.0);
+    arena["win_rate_delta"] = json!(1.0);
+    let legacy = variant("item", vec![1055]);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![sure, rare, arena, legacy])),
+        // Valeurs hors intervalle : toute la page est refusée, comme pour la borne basse.
+        (200, page(0, 1, vec![with("win_rate_upper_bound", 120.0)])),
+        (200, page(0, 1, vec![with("win_rate_delta", 101.0)])),
+        (200, page(0, 1, vec![with("win_rate_delta", -100.5)])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let published: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| (b.win_rate_upper_bound, b.win_rate_delta))
+        .collect();
+    assert_eq!(
+        published,
+        vec![
+            (Some(58.9), Some(-2.5)),
+            (None, None),
+            (None, None),
+            (None, None)
+        ]
+    );
+    for _ in 0..3 {
+        assert_eq!(
+            client.builds(request()).await.unwrap_err(),
+            BuildError::InvalidResponse
+        );
+    }
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn transmet_borne_haute_et_fiabilite_et_masque_la_borne_sous_le_seuil() {
+    // #91 : la fiabilité reste publiée sous min_games, la borne haute suit le taux.
+    let mut core = variant("core", vec![6672, 3031, 3089]);
+    core["win_rate_lower_bound"] = json!(41.2);
+    core["win_rate_upper_bound"] = json!(58.8);
+    core["reliability"] = json!("sufficient");
+    let mut low = variant("starter", vec![1055, 2003]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["win_rate_lower_bound"] = json!(10.0);
+    low["win_rate_upper_bound"] = json!(90.0);
+    low["reliability"] = json!("low");
+    // Arena : aucune performance publiable, la borne haute est écartée mais la fiabilité reste.
+    let mut arena = variant("boots", vec![3006]);
+    arena["performance_available"] = json!(false);
+    arena["win_rate_upper_bound"] = json!(70.0);
+    arena["reliability"] = json!("low");
+    let legacy = variant("item", vec![1055]);
+    let mut invalid = variant("core", vec![1, 2, 3]);
+    invalid["win_rate_upper_bound"] = json!(120.0);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![core, low, arena, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let upper: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| b.win_rate_upper_bound)
+        .collect();
+    assert_eq!(upper, vec![Some(58.8), None, None, None]);
+    let reliability: Vec<_> = report.builds.iter().map(|b| b.reliability).collect();
+    assert_eq!(
+        reliability,
+        vec![
+            Some(Reliability::Sufficient),
+            Some(Reliability::Low),
+            Some(Reliability::Low),
+            None
+        ]
+    );
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn transmet_le_placement_moyen_des_variantes_arena_hors_objets() {
+    // Contrat avec le collecteur (#104) : en Arena, runes et sorts publient le placement
+    // moyen et aucun taux de victoire ; sous le seuil, le placement est masqué.
+    let mut arena = variant("runes", vec![8000, 8005]);
+    arena["performance_available"] = json!(false);
+    arena["wins"] = json!(null);
+    arena["win_rate"] = json!(null);
+    arena["placement_games"] = json!(120);
+    arena["average_placement"] = json!(3.5);
+    let mut low = arena.clone();
+    low["selection"] = json!([8100, 8105]);
+    low["games"] = json!(2);
+    low["placement_games"] = json!(2);
+    // Assez de parties jouées mais pas assez avec placement : masqué, comme au collecteur.
+    let mut partial = arena.clone();
+    partial["selection"] = json!([8200, 8205]);
+    partial["placement_games"] = json!(2);
+    partial["average_placement"] = json!(3.0);
+    let legacy = variant("summoner_spells", vec![4, 14]);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![arena, low, partial, legacy])),
+        (
+            200,
+            page(
+                0,
+                1,
+                vec![{
+                    let mut invalid = variant("runes", vec![1]);
+                    invalid["average_placement"] = json!(0.5);
+                    invalid
+                }],
+            ),
+        ),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let placements: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| (b.placement_games, b.average_placement))
+        .collect();
+    assert_eq!(
+        placements,
+        vec![(120, Some(3.5)), (2, None), (2, None), (0, None)]
+    );
+    assert_eq!(report.builds[0].win_rate, None);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+fn with(field: &str, value: f64) -> Value {
+    let mut row = variant("core", vec![6672, 3031, 3089]);
+    row[field] = json!(value);
+    row
 }

@@ -11,6 +11,21 @@ pub(super) struct BuildObservation {
     pub skill_steps: Vec<SkillStep>,
     pub item_events: Vec<ItemEvent>,
     pub unidentified_item_undos: u64,
+    /// Achats nets horodatés, présents seulement si `purchase_order` est publiable.
+    /// Projection interne des étapes (#81) : jamais sérialisée.
+    #[serde(skip)]
+    pub net_purchases: Option<Vec<Purchase>>,
+    /// Sorts observés en case D puis F (`summoner1Id`, `summoner2Id`). La variante
+    /// `summoner_spells` reste une paire triée ; l'orientation est comptée à part (#124).
+    /// Projection interne : jamais sérialisée.
+    #[serde(skip)]
+    pub spell_slots: Option<[u32; 2]>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct Purchase {
+    pub item_id: u32,
+    pub timestamp_ms: u64,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -52,13 +67,91 @@ pub(super) fn extract_detail(participant: &Value) -> BuildObservation {
         positive(&participant["summoner2Id"]),
     ) {
         let mut spells = vec![first, second];
+        result.spell_slots = Some([first, second]);
         spells.sort_unstable();
         result.variants.insert("summoner_spells".into(), spells);
     }
     if let Some(runes) = extract_runes(&participant["perks"]) {
+        result.variants.extend(derive_rune_choices(&runes));
         result.variants.insert("runes".into(), runes);
     }
     result
+}
+
+/// Choix de runes (#86) dérivés de la page exacte de 11 identifiants, sans nouvelle
+/// collecte : la page exacte fragmente la population dès qu'un fragment diffère, ces
+/// catégories donnent à chaque choix son propre effectif. Les runes d'emplacement
+/// portent leur clé de voûte pour rester conditionnelles ; la paire secondaire est triée,
+/// l'ordre transmis par Riot n'étant pas un choix du joueur.
+fn derive_rune_choices(page: &[u32]) -> BTreeMap<String, Vec<u32>> {
+    // Ordre de `extract_runes` : arbre principal, 4 runes, arbre secondaire, 2 runes, 3 fragments.
+    let [primary, keystone, slot_1, slot_2, slot_3, secondary, first, second, offense, flex, defense] =
+        *page
+    else {
+        return BTreeMap::new();
+    };
+    let mut pair = [first, second];
+    pair.sort_unstable();
+    BTreeMap::from([
+        ("rune_keystone".into(), vec![keystone]),
+        ("rune_primary_style".into(), vec![primary]),
+        ("rune_secondary_style".into(), vec![secondary]),
+        (
+            "rune_secondary_pair".into(),
+            vec![secondary, pair[0], pair[1]],
+        ),
+        ("rune_slot_1".into(), vec![keystone, slot_1]),
+        ("rune_slot_2".into(), vec![keystone, slot_2]),
+        ("rune_slot_3".into(), vec![keystone, slot_3]),
+        ("rune_shard_offense".into(), vec![offense]),
+        ("rune_shard_flex".into(), vec![flex]),
+        ("rune_shard_defense".into(), vec![defense]),
+    ])
+}
+
+/// Rang maximal d'un sort de base (Q, W, E) ; l'ultime (4) a sa propre montée.
+const BASIC_SKILL_MAX_RANK: usize = 5;
+/// Nombre de premiers points publiés comme départ de montée.
+const SKILL_START_POINTS: usize = 3;
+
+/// Choix de montée (#87) dérivés de la séquence intégrale des points normaux, sans
+/// nouvelle collecte : la séquence complète est quasi unique par partie et dépend de
+/// sa durée, ces catégories lui donnent un effectif exploitable.
+/// - `skill_start` : les trois premiers points, dans l'ordre ;
+/// - `skill_priority` : ordre dans lequel Q, W, E atteignent le rang 5. Deux sorts au
+///   rang 5 fixent déjà l'ordre (le troisième est dernier, maximisé ou non) ; avec
+///   moins, l'ordre serait deviné et la catégorie est omise plutôt que biaisée.
+fn derive_skill_choices(skills: &[u32]) -> BTreeMap<String, Vec<u32>> {
+    let mut choices = BTreeMap::new();
+    if skills.len() >= SKILL_START_POINTS {
+        choices.insert("skill_start".into(), skills[..SKILL_START_POINTS].to_vec());
+    }
+    let mut ranks = [0usize; 3];
+    // Point (1-indexé) auquel chaque sort de base atteint son rang maximal.
+    let mut maxed_at = [None; 3];
+    for (point, slot) in skills.iter().enumerate() {
+        let Some(index) = usize::try_from(*slot)
+            .ok()
+            .and_then(|slot| slot.checked_sub(1))
+            .filter(|index| *index < ranks.len())
+        else {
+            continue;
+        };
+        ranks[index] += 1;
+        if ranks[index] == BASIC_SKILL_MAX_RANK {
+            maxed_at[index] = Some(point + 1);
+        }
+    }
+    if maxed_at.iter().flatten().count() >= 2 {
+        // `None` trie après `Some` : le sort non maximisé ferme la priorité.
+        let mut order = [1u32, 2, 3];
+        order.sort_by_key(|slot| {
+            let at = maxed_at[*slot as usize - 1];
+            (at.is_none(), at)
+        });
+        choices.insert("skill_priority".into(), order.to_vec());
+    }
+    choices
 }
 
 /// Schéma match-v5, champs spécialisés confirmés sur la recette du 1er octobre 2026.
@@ -154,7 +247,7 @@ pub(super) fn extract_timeline(
                 if before > 0 {
                     let index = purchases
                         .iter()
-                        .rposition(|item| *item == before)
+                        .rposition(|p: &Purchase| p.item_id == before)
                         .ok_or(INVALID)?;
                     purchases.remove(index);
                     result.item_events.push(ItemEvent {
@@ -175,7 +268,10 @@ pub(super) fn extract_timeline(
             _ => {
                 let item_id = positive(&event["itemId"]).ok_or(INVALID)?;
                 if kind == "ITEM_PURCHASED" {
-                    purchases.push(item_id);
+                    purchases.push(Purchase {
+                        item_id,
+                        timestamp_ms,
+                    });
                     has_purchase = true;
                 }
                 // Une vente ou consommation ne retire pas un achat de son historique.
@@ -188,9 +284,14 @@ pub(super) fn extract_timeline(
         }
     }
     if has_purchase && result.unidentified_item_undos == 0 {
-        result.variants.insert("purchase_order".into(), purchases);
+        result.variants.insert(
+            "purchase_order".into(),
+            purchases.iter().map(|p| p.item_id).collect(),
+        );
+        result.net_purchases = Some(purchases);
     }
     if !skills.is_empty() {
+        result.variants.extend(derive_skill_choices(&skills));
         result.variants.insert("skill_order".into(), skills);
     }
     if !special_skills.is_empty() {
