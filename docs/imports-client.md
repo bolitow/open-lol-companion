@@ -87,7 +87,7 @@ et le compte est contrôlée par le client ; son refus reste visible pour l'inte
   "championId": 81,
   "championName": "Ezreal",
   "mapId": 11,
-  "blocks": [{ "label": "Objets principaux", "items": [{ "id": 3042, "count": 1 }] }]
+  "blocks": [{ "label": "Objets principaux", "items": [{ "id": 3004, "count": 1 }] }]
 }
 ```
 
@@ -102,15 +102,36 @@ du tableau avec un `sortrank` supérieur aux autres. Si un set à conserver util
 déjà le maximum `i32`, l'import échoue sans modifier les sets personnels. L'ordre
 réel dans la boutique est confirmé sur macOS ; il reste à vérifier sur Windows.
 
-Conversions des objets Larme, vérifiées dans Data Dragon 16.19.1 :
+Forme achetable (#88). Le cœur Rust ne réécrit aucun identifiant : l'interface
+(`apps/desktop/src/app/itemImport.ts`) résout chaque objet avec le catalogue du patch
+avant d'envoyer la requête, pour l'import manuel comme pour l'import automatique.
+Un objet n'est conservé que si `purchasable` **et** `in_store` valent `true`. Sinon :
 
-| Forme évoluée | Forme achetable importée |
-| --- | --- |
-| Muramana (3042) | Manamune (3004) |
-| Étreinte du Séraphin (3040) | Bâton de l'archange (3003) |
-| Fimbulvetr (3121) | Approche de l'hiver (3119) |
+1. on remonte vers `special_recipe` quand il est renseigné, sinon vers l'unique
+   composant de `builds_from` (huit niveaux au plus, cycles refusés) ;
+2. sans ancêtre achetable unique (plusieurs composants, aucun lien), l'objet est
+   **retiré** du set et signalé (panneau d'import manuel et statut de l'import
+   automatique : « objet sans équivalent achetable retiré ») ; la variante n'est rejetée que si plus aucun objet ne subsiste ;
+3. un identifiant absent du catalogue, ou dont `purchasable` / `in_store` ne sont
+   pas lisibles (absents ou statut non vérifié) pour un objet de la sélection **ou**
+   pour un maillon parcouru vers son ancêtre, rejette la variante entière : rien n'est
+   deviné et rien n'est retiré en silence. Un `false` lisible reste, lui, un objet
+   non achetable (converti ou retiré selon les points 1 et 2).
 
-Les autres identifiants sont conservés. Le nombre d'exemplaires doit être positif ;
+Exemples vérifiés sur le catalogue 16.19.1 : Muramana 3042 → Manamune 3004,
+Étreinte du séraphin 3040 → Bâton de l'archange 3003, Fimbulvetr 3121 → Approche
+de l'hiver 3119, Boussole runique 3866 et Trésor des mondes 3867 → Atlas 3865,
+Semelles militaires 3176 → Bottes 1001, Potion de corruption 2033 → Potion
+rechargeable 2031 ; Chaussures légèrement magiques 2422 est retirée. Plusieurs formes d'une même lignée
+n'ajoutent l'ancêtre qu'une fois ; les répétitions réelles (deux potions) restent.
+
+Seules les catégories `purchase_order` et `final_items` sont importables : l'import
+d'un objet isolé (`item`) ou de la seule relique (`trinket`) remplaçait le set de
+l'app par un set partiel. Le set reste en **un seul bloc** : les blocs Départ,
+Bottes, Core et Options dépendent des nouvelles catégories d'agrégation de #81 ;
+le contrat (`blocks`) accepte déjà plusieurs blocs, ordonnés tels quels.
+
+Le nombre d'exemplaires doit être positif ;
 un nom ou un bloc vide est refusé avant accès réseau.
 
 ## Concurrence et erreurs
@@ -292,7 +313,7 @@ Ne pas clôturer #13/#15 sur la base de cette recette synthétique.
 
 Le front importe explicitement la variante consultée sur la Faille (carte 11), même hors draft si League est connecté. L’ordre et les répétitions des achats sont conservés. Une variante vide ou contenant un ID absent du catalogue est refusée entièrement. Les catégories indépendantes ne sont pas assemblées en prétendue recommandation situationnelle.
 
-Moteur repris sans changement de la PR #59, head `cf04f75` : UID propre à l’app/champion/carte, autres sets préservés, formes évoluées de Larme converties en objets achetables. Un succès signifie que League a accepté le PUT ; la priorité visuelle en boutique reste à vérifier en partie. Aucun import automatique.
+Moteur repris sans changement de la PR #59, head `cf04f75` : UID propre à l’app/champion/carte, autres sets préservés, formes évoluées de Larme converties en objets achetables (depuis #88 : par le catalogue côté interface). Un succès signifie que League a accepté le PUT ; la priorité visuelle en boutique reste à vérifier en partie. Aucun import automatique.
 
 ## Personnalisées Faille (#12, #13, #14, #15)
 

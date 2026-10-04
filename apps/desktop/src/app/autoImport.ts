@@ -1,7 +1,7 @@
 import type {AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection, BuildReport, BuildRequest, BuildStats, CatalogRecord, FlashSlot, LcuSession, Role} from '@olc/shared';
 import {buildRequestKey, runePageFromBuild, variantsFor} from './buildModel';
 import {validSpellPair} from './spellEditing';
-import {itemSetRequest} from './itemImport';
+import {itemAdjustments,itemSetPlan,type ItemAdjustments} from './itemImport';
 import {championDetails} from './draft';
 import type {PreparationCatalog} from './catalog';
 import type {Locale} from './state';
@@ -33,7 +33,8 @@ export function autoImportTarget(session: LcuSession, catalog: PreparationCatalo
         championName: champion.name, itemLabel: locale === 'fr' ? 'Inventaire final observé' : 'Observed final inventory'};
 }
 export interface ObservedMetrics {games: number; wins: number | null; observedWinRate: number | null; lowSample: boolean}
-export interface AutoImportCandidate {selection: AutoImportSelection; metrics: ObservedMetrics}
+/** `adjustments` : objets du set remplacés ou retirés faute d'être achetables (#88), propre à la catégorie objets. */
+export interface AutoImportCandidate {selection: AutoImportSelection; metrics: ObservedMetrics; adjustments?: ItemAdjustments}
 export type AutoImportCandidates = Record<'runes' | 'items', AutoImportCandidate | null> & {spells: AutoImportCandidate | 'flashPreferenceRequired' | null};
 /** Les catégories restent indépendantes ; le tri porte sur l'effectif, jamais sur le taux. */
 export function chooseAutoImports(report: BuildReport, target: AutoImportTarget, minGames: number, records: readonly CatalogRecord[], flashSlot: FlashSlot | null = null): AutoImportCandidates {
@@ -53,8 +54,8 @@ export function chooseAutoImports(report: BuildReport, target: AutoImportTarget,
         if (page) {runes = {selection: {kind: 'runes', request: {championName: target.championName, primaryStyleId: page.primaryStyleId, subStyleId: page.subStyleId, selectedPerkIds: page.selectedPerkIds}}, metrics: metrics(variant)}; break;}
     }
     for (const variant of variantsFor(report, 'final_items').filter(eligible)) {
-        const request = itemSetRequest(target.context.championId, target.championName, target.itemLabel, variant.selection, records);
-        if (request) {items = {selection: {kind: 'items', request}, metrics: metrics(variant)}; break;}
+        const plan = itemSetPlan(target.context.championId, target.championName, target.itemLabel, variant.selection, records);
+        if (plan) {items = {selection: {kind: 'items', request: plan.request}, metrics: metrics(variant), adjustments: itemAdjustments(plan)}; break;}
     }
     const variant = variantsFor(report, 'summoner_spells').find(v=>eligible(v) && validSpellPair(v.selection,records));
     let spells: AutoImportCandidates['spells'] = null;
@@ -65,7 +66,7 @@ export function chooseAutoImports(report: BuildReport, target: AutoImportTarget,
     return {runes, items, spells};
 }
 export type AutoImportKind = AutoImportSelection['kind'];
-export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error' | 'needsFlash'; metrics?: ObservedMetrics; error?: unknown}
+export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error' | 'needsFlash'; metrics?: ObservedMetrics; adjustments?: ItemAdjustments; error?: unknown}
 export interface AutoImportSnapshot {runes: AutoImportProgress; items: AutoImportProgress; spells: AutoImportProgress}
 interface Dependencies {
     prepare: (target: AutoImportTarget, minGames: number, flashSlot: FlashSlot | null) => Promise<AutoImportCandidates>;
@@ -104,12 +105,13 @@ export function createAutoImportController(dependencies: Dependencies) {
             if (candidate === 'flashPreferenceRequired') {publish({...snapshot,[kind]:{status:'needsFlash'}}); return;}
             if (!candidate) {publish({...snapshot,[kind]:{status:'empty'}}); return;}
             const entryKey = slotKey(key,kind);
-            const importing: AutoImportProgress = {status:'importing',metrics:candidate.metrics};
+            const detail = {metrics:candidate.metrics,...(candidate.adjustments?{adjustments:candidate.adjustments}:{})};
+            const importing: AutoImportProgress = {status:'importing',...detail};
             inFlight.add(kind); ledger.set(entryKey, importing); publish({...snapshot,[kind]:importing});
             let result: AutoImportProgress;
             try {const receipt = await dependencies.send({context:current.context,selection:candidate.selection});
-                result = {status:receipt.confirmed?'confirmed':'accepted',metrics:candidate.metrics};}
-            catch (error) {result = {status:'error',error,metrics:candidate.metrics};}
+                result = {status:receipt.confirmed?'confirmed':'accepted',...detail};}
+            catch (error) {result = {status:'error',error,...detail};}
             inFlight.delete(kind);
             const stillSameContext = key === JSON.stringify([contextEpoch,lastContext]);
             if (stillSameContext) ledger.set(entryKey,result);
