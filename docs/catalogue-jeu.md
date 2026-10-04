@@ -58,6 +58,14 @@ Pour `FlatMPRegenMod` (absent des sources vérifiées), l’unité reste `null`.
 Les paramètres `mDataValues` d’effets gardent leur nom et leur nombre ; leur unité
 reste `null` quand elle n’est pas démontrée. Aucune addition de ces paramètres n’est
 présentée comme un simulateur de dégâts ou une règle de cumul.
+Les surcharges de valeurs par mode (`DataValuesModeOverride`, #116) deviennent un effet par mode,
+`cdragon_parameters:{clé de mode}`, à côté de l’effet `cdragon_parameters` des valeurs de base, qui
+n’est jamais modifié. La clé de mode est celle de la source (`ARAM`, `cherry`, `URF`…) : aucune
+correspondance avec une file ou une carte n’est inventée, et une clé hachée non résolue est conservée
+telle quelle avec le signalement `unresolved_mode_key:{clé}` dans `coverage.issues`. Une valeur non
+numérique reste `unsupported`, une valeur dupliquée devient un conflit ; une forme inattendue garde le
+champ brut `mode_parameter_overrides` en `unsupported`. Ces valeurs décrivent les paramètres d’un objet
+dans un mode, pas un ajustement d’équilibrage par champion, dont aucune source n’est collectée.
 
 ## Contrat, provenance et couverture
 

@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Catalogue : les surcharges de valeurs par mode des objets (ARAM, Arena, URF…) sont interprétées en effets `cdragon_parameters:{mode}` avec provenance, sans toucher aux valeurs de base ; types partagés correspondants (#116).
 - Collecteur : commande `campaign-queues` (ARAM, Swiftplay et Arena par défaut) avec une cible et un budget d'appels par plateforme et par file, et `campaign-report` pour suivre les parties retenues face à ces cibles ; les files inconnues sont refusées au lancement (#97).
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
@@ -83,6 +84,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 - Collecteur Riot API (`services/collector`, prototype) : joueurs de départ league-v4, parties Ranked Solo/Duo EUW et timelines match-v5 stockées dans PostgreSQL, gestionnaire de quotas Riot, arrêt et reprise sans doublon, bilan de collecte (#17).
 
 ### Modifié
+
+- Export du catalogue desktop : conserve aussi les objets propres à l'ARAM (carte 12) et à l'Arena (carte 30), avec le décompte par carte dans le manifeste ; la publication versionnée n'est pas encore régénérée (#116).
 
 - Agrégats : une partie dont la file n'est pas identifiée (710, 3130, identifiants inconnus) est exclue sous la raison `unknown_queue` au lieu d'être agrégée sans contrôle de format ; ses données brutes restent en base (#97).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).

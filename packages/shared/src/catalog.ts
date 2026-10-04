@@ -49,6 +49,30 @@ export interface CatalogEffect {
   calculation: CatalogValue | null;
 }
 
+/**
+ * Préfixe de l'effet qui porte les valeurs d'un objet pour un mode (#116) : l'identifiant est
+ * `cdragon_parameters:{clé de mode}`, la clé étant celle de la source (`ARAM`, `cherry`…) ou
+ * un hachage non résolu (`{bffdf499}`, signalé par `unresolved_mode_key:` dans `coverage.issues`).
+ * L'effet `cdragon_parameters` sans suffixe garde les valeurs de base, jamais remplacées.
+ */
+export const CATALOG_MODE_EFFECT_PREFIX = "cdragon_parameters:";
+export type CatalogModeEffectId = `${typeof CATALOG_MODE_EFFECT_PREFIX}${string}`;
+
+/** Cartes dont l'export desktop garde les objets : Faille, ARAM, Arena. */
+export type CatalogItemMapId = "11" | "12" | "30";
+
+/**
+ * Miroir de `item_filter` dans le manifeste de l'export desktop (#116). `maps` est la liste
+ * exportée ; `by_map` compte les objets conservés disponibles sur chaque carte.
+ * Le repli `all_items` garde tous les objets quand la disponibilité par carte est incertaine.
+ */
+export interface DesktopCatalogItemFilter {
+  mode: "maps_11_12_30_with_components" | "all_items";
+  reason: string | null;
+  maps: CatalogItemMapId[];
+  by_map: Record<CatalogItemMapId, number>;
+}
+
 export interface CatalogRecordCoverage {
   source_fields: number;
   normalized_fields: number;

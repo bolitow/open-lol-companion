@@ -374,10 +374,8 @@ fn real_bin_keys_and_mode_specific_values_are_not_mixed_with_base_values() {
     assert_eq!(records[0].stats["lethality"].value, 18);
     assert_eq!(records[0].stats["omnivamp"].value, 0.15);
     assert_eq!(records[0].stats["tenacity"].value, 0.3);
-    assert_eq!(
-        records[0].fields["mode_parameter_overrides"].status,
-        ValueStatus::Unsupported
-    );
+    // #116 : la surcharge ARAM est interprétée, jamais fondue dans la valeur de base.
+    assert!(!records[0].fields.contains_key("mode_parameter_overrides"));
     assert_eq!(
         records[0]
             .effects
@@ -388,6 +386,137 @@ fn real_bin_keys_and_mode_specific_values_are_not_mixed_with_base_values() {
             .value,
         1.5
     );
+    assert_eq!(
+        records[0]
+            .effects
+            .iter()
+            .find(|e| e.id == "cdragon_parameters:ARAM")
+            .unwrap()
+            .parameters["SpellbladeCooldown"]
+            .value,
+        3
+    );
+}
+
+fn with_override(raw: Value) -> Vec<CatalogRecord> {
+    let mut input = sources();
+    input[1].data["Items/3078"]["DataValuesModeOverride"] = raw;
+    let mut records = vec![record()];
+    enrich(VERSION, &mut records, &input).unwrap();
+    records
+}
+
+fn mode_effect<'a>(record: &'a CatalogRecord, mode: &str) -> Option<&'a CatalogEffect> {
+    record
+        .effects
+        .iter()
+        .find(|e| e.id == format!("cdragon_parameters:{mode}"))
+}
+
+#[test]
+fn aram_override_becomes_a_verified_effect_with_its_own_provenance() {
+    let records = with_override(json!({"ARAM": {"DataValues": [
+        {"mName": "SpellbladeCooldown", "mValue": 3.0, "__type": "ItemDataValue"},
+        {"mName": "BonusADRatio", "mValue": 1, "__type": "ItemDataValue"}
+    ], "__type": "ItemDataValues"}}));
+    let fr = &records[0];
+    let effect = mode_effect(fr, "ARAM").unwrap();
+    let cooldown = &effect.parameters["SpellbladeCooldown"];
+    assert_eq!(cooldown.value, 3.0);
+    assert_eq!(cooldown.status, ValueStatus::Verified);
+    assert_eq!(
+        cooldown.sources[0].pointer,
+        "/Items~13078/DataValuesModeOverride/ARAM/DataValues/0/mValue"
+    );
+    assert_eq!(effect.parameters["BonusADRatio"].value, 1);
+    assert!(!fr.fields.contains_key("mode_parameter_overrides"));
+    assert!(!fr
+        .coverage
+        .unmapped_fields
+        .iter()
+        .any(|field| field.contains("DataValuesModeOverride")));
+    assert!(!fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue.contains("mode_parameter_overrides")));
+}
+
+#[test]
+fn each_mode_gets_a_separate_effect_and_unresolved_keys_are_kept_and_reported() {
+    let records = with_override(json!({
+        "ARAM": {"DataValues": [{"mName": "A", "mValue": 1.0}]},
+        "cherry": {"DataValues": [{"mName": "A", "mValue": 2.0}]},
+        "{bffdf499}": {"DataValues": [{"mName": "A", "mValue": 4.0}]}
+    }));
+    let fr = &records[0];
+    assert_eq!(mode_effect(fr, "ARAM").unwrap().parameters["A"].value, 1.0);
+    assert_eq!(
+        mode_effect(fr, "cherry").unwrap().parameters["A"].value,
+        2.0
+    );
+    assert_eq!(
+        mode_effect(fr, "{bffdf499}").unwrap().parameters["A"].value,
+        4.0
+    );
+    assert!(fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue == "unresolved_mode_key:{bffdf499}"));
+    assert!(!fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue.starts_with("unresolved_mode_key:ARAM")));
+}
+
+#[test]
+fn a_non_numeric_mode_value_is_unsupported_and_a_duplicate_is_a_conflict() {
+    let records = with_override(json!({"ARAM": {"DataValues": [
+        {"mName": "Text", "mValue": "3"},
+        {"mName": "Empty", "mValue": null},
+        {"mName": "Twice", "mValue": 1.0},
+        {"mName": "Twice", "mValue": 2.0}
+    ]}}));
+    let fr = &records[0];
+    let effect = mode_effect(fr, "ARAM").unwrap();
+    assert_eq!(effect.parameters["Text"].status, ValueStatus::Unsupported);
+    assert_eq!(effect.parameters["Empty"].status, ValueStatus::Missing);
+    assert_eq!(effect.parameters["Twice"].status, ValueStatus::Conflict);
+    assert!(fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue == "conflict:effect_parameter.ARAM.Twice"));
+    assert!(fr
+        .coverage
+        .unmapped_fields
+        .iter()
+        .any(|field| field.ends_with("/DataValuesModeOverride/ARAM/DataValues/0/mValue")));
+}
+
+#[test]
+fn an_unparseable_override_stays_unsupported_without_inventing_an_effect() {
+    for raw in [
+        json!({"ARAM": 3}),
+        json!({"ARAM": {"DataValues": []}}),
+        json!([1, 2]),
+        Value::Null,
+    ] {
+        let records = with_override(raw.clone());
+        let fr = &records[0];
+        assert_eq!(
+            fr.fields["mode_parameter_overrides"].status,
+            ValueStatus::Unsupported,
+            "{raw}"
+        );
+        assert_eq!(fr.fields["mode_parameter_overrides"].value, raw);
+        assert!(fr
+            .effects
+            .iter()
+            .all(|effect| !effect.id.starts_with("cdragon_parameters:")));
+    }
 }
 
 #[test]
