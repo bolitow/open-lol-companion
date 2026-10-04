@@ -1113,13 +1113,17 @@ async fn link_match(
         .await?;
     }
     // La même partie peut être réutilisée par une exécution qui active les rangs.
+    // Les rangs ne servent qu'aux files classées et hors remake (#90) : ailleurs,
+    // chaque demande consommerait du budget d'appels sans jamais être lue.
     let rank_source = sqlx::query(
         "SELECT m.platform_id, m.detail
         FROM matches m JOIN collection_runs r ON r.id = $1
-        WHERE m.match_id = $2 AND r.params->>'collect_ranks' = 'true'",
+        WHERE m.match_id = $2 AND r.params->>'collect_ranks' = 'true'
+          AND m.queue_id = ANY($3) AND NOT m.is_remake",
     )
     .bind(job.run_id)
     .bind(&payload.match_id)
+    .bind(RANKED_QUEUE_IDS.as_slice())
     .fetch_optional(&mut **tx)
     .await?;
     if let Some(source) = rank_source {
