@@ -3,7 +3,7 @@ import {parsePreferences,type Preferences,type Locale} from './state';
 import {parseFlashSlot} from './spellEditing';
 export type SettingValues=Preferences&{flashSlot:FlashSlot|null};
 export type SettingKey=keyof SettingValues;
-export type SettingsSearchKey=SettingKey|DesktopSettingKey|'overlay';
+export type SettingsSearchKey=SettingKey|DesktopSettingKey|'overlay'|'apiAccess';
 export type SettingCategory='all'|'app'|'league';
 export interface SettingsStorage {getItem:(key:string)=>string|null;setItem:(key:string,value:string)=>void}
 export interface SettingsSnapshot {values:SettingValues;recent:SettingKey[];lastChange:{key:SettingKey;previous:SettingValues[SettingKey]}|null;storageFailed:boolean;flashStorageFailed:boolean}
@@ -45,6 +45,7 @@ export const settingDefinitions:readonly {key:SettingsSearchKey;category:Exclude
  {key:'flashSlot',category:'league',terms:'flash saut eclair sort sorts spell spells summoner invocateur touche touches key keys position emplacement slot d f'},
  {key:'closeToTray',category:'app',terms:'fermer fermeture fenetre close closing window tray barre systeme arriere plan background garder actif'},
  {key:'autostartEnabled',category:'app',terms:'lancement demarrage automatique ouvrir connexion session ordinateur startup start launch login autostart automatically computer'},
+ {key:'apiAccess',category:'app',terms:'api acces access serveur server service adresse address url jeton token trousseau keychain identifiants credentials connexion connection builds profils profiles'},
  {key:'overlay',category:'league',terms:'overlay panneau partie jeu affichage transparence opacite opacity raccourci shortcut ecran screen game panel'},
 ];
 const normalize=(value:string)=>value.normalize('NFD').replace(/\p{M}/gu,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();

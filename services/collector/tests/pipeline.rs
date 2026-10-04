@@ -570,7 +570,7 @@ async fn collecte_le_perimetre_configure_et_les_rangs_sans_doublons() {
     fake.league_page("GOLD", "I", 1, &["seed"]);
     fake.history("seed", &["KR_1", "KR_2", "KR_old"]);
     for id in ["KR_1", "KR_2"] {
-        fake.game_with(id, "KR", 450, recent(), true);
+        fake.game_with(id, "KR", 420, recent(), true);
     }
     let mut old = fixtures::match_detail("KR_old", "KR", 450, recent());
     old["info"]["gameVersion"] = serde_json::json!("15.18.1");
@@ -616,6 +616,102 @@ async fn collecte_le_perimetre_configure_et_les_rangs_sans_doublons() {
         db.scalar("SELECT count(*) FROM participant_rank_observations")
             .await,
         20
+    );
+    db.cleanup().await;
+}
+
+/// Programme une partie à 10 participants aux PUUID propres (`{prefix}-{i}`),
+/// pour compter précisément les rangs demandés partie par partie.
+fn scripted_game(fake: &FakeRiot, match_id: &str, queue: i32, prefix: &str, remake: bool) {
+    let mut detail = fixtures::match_detail(match_id, "EUW1", queue, recent());
+    for (i, participant) in detail["info"]["participants"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .enumerate()
+    {
+        participant["puuid"] = serde_json::json!(format!("{prefix}-{i}"));
+    }
+    detail["info"]["participants"][0]["gameEndedInEarlySurrender"] = serde_json::json!(remake);
+    fake.script(
+        &format!("matches/{match_id}"),
+        vec![Ok(common::ok_json(&detail))],
+    );
+    fake.script(
+        &format!("matches/{match_id}/timeline"),
+        vec![Ok(common::ok_json(&fixtures::timeline(match_id)))],
+    );
+}
+
+#[tokio::test]
+async fn les_rangs_ne_sont_demandes_que_pour_les_parties_classees_non_remake() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    fake.history(
+        "seed",
+        &["EUW1_SOLO", "EUW1_FLEX", "EUW1_ARAM", "EUW1_REMAKE"],
+    );
+    scripted_game(&fake, "EUW1_SOLO", 420, "solo", false);
+    scripted_game(&fake, "EUW1_FLEX", 440, "flex", false);
+    scripted_game(&fake, "EUW1_ARAM", 450, "aram", false);
+    scripted_game(&fake, "EUW1_REMAKE", 420, "remake", true);
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let params = RunParams {
+        queue_id: 0,
+        collect_ranks: true,
+        ..params(10, 1)
+    };
+    let run_id = collector.start_run(&params, now_ms()).await.unwrap();
+    let outcome = collector.execute(run_id, never()).await.unwrap();
+    assert_eq!(outcome.retained, 4);
+    // Seules les parties 420 et 440 non remake demandent les rangs de leurs joueurs.
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 20);
+    assert_eq!(
+        db.scalar(
+            "SELECT count(*) FROM collection_jobs
+             WHERE kind = 'participant_rank'
+               AND (job_key LIKE 'aram-%' OR job_key LIKE 'remake-%')"
+        )
+        .await,
+        0
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_partie_reutilisee_ne_cree_pas_de_rang_hors_files_classees_ni_remake() {
+    let db = db_or_skip!();
+    let fake = FakeRiot::default();
+    fake.league_page("GOLD", "I", 1, &["seed"]);
+    fake.history("seed", &["EUW1_SOLO", "EUW1_ARAM", "EUW1_REMAKE"]);
+    scripted_game(&fake, "EUW1_SOLO", 420, "solo", false);
+    scripted_game(&fake, "EUW1_ARAM", 450, "aram", false);
+    scripted_game(&fake, "EUW1_REMAKE", 440, "remake", true);
+    let collector = Collector::new(db.storage.clone(), fake.clone(), fast_options());
+    let without_ranks = RunParams {
+        queue_id: 0,
+        ..params(10, 1)
+    };
+    let first = collector.start_run(&without_ranks, now_ms()).await.unwrap();
+    collector.execute(first, never()).await.unwrap();
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 0);
+
+    // Les parties sont déjà en base : seule la réutilisation les rattache.
+    let with_ranks = RunParams {
+        collect_ranks: true,
+        ..without_ranks
+    };
+    let second = collector.start_run(&with_ranks, now_ms()).await.unwrap();
+    collector.execute(second, never()).await.unwrap();
+    assert_eq!(fake.calls(Endpoint::ParticipantRanks), 10);
+    assert_eq!(
+        db.scalar(
+            "SELECT count(*) FROM collection_jobs
+             WHERE kind = 'participant_rank' AND job_key NOT LIKE 'solo-%'"
+        )
+        .await,
+        0
     );
     db.cleanup().await;
 }

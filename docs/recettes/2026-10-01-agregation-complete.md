@@ -363,6 +363,10 @@ tête et chacune des six listes. La prochaine expiration était à 07:46:44 UTC.
 L'idempotence est vérifiée pour des entrées **et une fenêtre de validité des rangs
 stables** ; un recalcul ultérieur peut légitimement changer les rangs.
 
+> Note postérieure (#80) : cette dépendance à l'heure du calcul est supprimée. Le rang
+> est désormais l'observation la plus proche du début de la partie, dans un écart
+> configurable (168 h par défaut) ; ce paragraphe décrit le comportement de l'époque.
+
 La comparaison porte sur les empreintes MD5 des morceaux JSONB ordonnés et les
 métadonnées, en excluant les horodatages techniques de publication. Le SHA-256 du
 résumé ordonné de ces empreintes est

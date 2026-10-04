@@ -348,6 +348,7 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 - account-v1 / summoner-v4, champion-mastery-v4, spectator-v5.
 - Respect strict des rate limits (file par région, backoff), clé de production obligatoire.
 - Files séparées : Ranked Solo, Flex, Ranked 5v5, ARAM, Mayhem, Swiftplay, Arena.
+- Décision du 4 octobre 2026 (#90) : une campagne de collecte vise par défaut Solo (420) et Flex (440) ; les autres files (ARAM, Swiftplay, Arena…) sont collectées sur demande, en les listant explicitement (`campaign --queues`).
 
 **10.2 Agrégation** : par patch, rang, région, rôle ; recalcul horaire de la tierlist ; seuils minimaux d'échantillon ; données statiques par patch mises à jour automatiquement.
 
@@ -357,13 +358,37 @@ observations horodatées des rangs Solo/Flex, sans prétendre connaître le rang
 Synchronisation atomique Data Dragon FR/EN (champions standard/Classic, compétences,
 objets, runes, sorts et catalogues). Agrégats par patch/plateforme/file/rôle/rang,
 winrate, part des sélections, bans par draft, builds, achats et ordre des compétences ;
-seuils et couvertures explicites, tiers descriptifs à partir de la borne Wilson.
+seuils et couvertures explicites, tiers descriptifs (amendement #85 : winrate lissé vers
+la moyenne du compartiment, présence pick + ban, seuils absolus sans répartition forcée,
+au moins 20 champions éligibles ; la borne Wilson reste publiée comme intervalle).
 Une campagne de recette peut tourner jusqu'à 24 h avec rotation des régions et
 reprise. L'accès à tous les modes ne garantit pas un échantillon exhaustif ou
 représentatif ; les seeds restent issus du classement. Les modes non classés ne
 reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
 Voir [le contrat complet](../services/collector/README.md) et
 [la recette étendue](recettes/2026-10-01-agregation-complete.md).
+Contrôle de qualité #111 : en classé (420/440), les parties très courtes (`short_game`,
+300 s par défaut), celles où un participant est AFK (`afk`, champ `wasAfk` de match-v5) et
+celles où un participant a joué moins de 80 % de la durée (`early_departure`) sont exclues
+avec leurs compteurs ; seuils configurables et publiés, filtre AFK désactivable, reddition
+normale conservée. Sur la copie de recette (17 112 parties) : 37 `short_game`, 602 `afk`
+supplémentaires, 0 `early_departure`.
+Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
+proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
+l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.
+Correctif #82 (étape immédiate) : `ALL` est un échantillon collecté non repondéré, pas
+« tous les rangs » ; la couverture publie la répartition des participations par palier
+(`tier_participations`) et l'API l'étiquette `collected_sample` ; un indicateur
+`apex_share` (part Master+) et `high_elo_biased` (au-delà de 0,5) signale le biais de haut
+du ladder en attendant une collecte équilibrée par palier. La repondération et les
+quotas de seeds proportionnels restent à décider.
+
+Ticket #89 : recalcul par lots patch/plateforme/file ; un lot n'est relu que
+si ses parties, timelines, rangs observés proches, classement du catalogue d'objets
+ou paramètres changent, et la publication reste identique au recalcul complet. La
+mémoire est bornée par le plus gros lot. Décidé le 4 octobre 2026 : incrémental par
+défaut pour le recalcul horaire (`aggregate --watch`), `--full` force le recalcul
+complet ; l'`aggregate` ponctuel reste complet par défaut (`--incremental` pour les lots).
 
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
 CommunityDragon versionné des objets et fragments, sources immuables et

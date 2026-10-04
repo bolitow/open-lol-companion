@@ -58,13 +58,72 @@ fn extrait_les_categories_completes_et_omet_toute_donnee_joueur() {
 }
 
 #[test]
+fn derive_les_categories_de_runes_de_la_page_exacte() {
+    let result = extract_detail(&participant());
+    let v = &result.variants;
+    assert_eq!(v["rune_keystone"], vec![8005]);
+    assert_eq!(v["rune_primary_style"], vec![8000]);
+    assert_eq!(v["rune_secondary_style"], vec![8200]);
+    assert_eq!(v["rune_secondary_pair"], vec![8200, 8224, 8234]);
+    // Chaque rune d'emplacement est conditionnée à sa clé de voûte.
+    assert_eq!(v["rune_slot_1"], vec![8005, 9111]);
+    assert_eq!(v["rune_slot_2"], vec![8005, 9104]);
+    assert_eq!(v["rune_slot_3"], vec![8005, 8014]);
+    assert_eq!(v["rune_shard_offense"], vec![5005]);
+    assert_eq!(v["rune_shard_flex"], vec![5008]);
+    assert_eq!(v["rune_shard_defense"], vec![5011]);
+    // La page exacte reste publiée telle quelle.
+    assert_eq!(v["runes"].len(), 11);
+}
+
+#[test]
+fn la_paire_secondaire_est_independante_de_l_ordre_transmis() {
+    let mut source = participant();
+    source["perks"]["styles"][0]["selections"] = json!([{"perk": 8234},{"perk": 8224}]);
+    assert_eq!(
+        extract_detail(&source).variants["rune_secondary_pair"],
+        vec![8200, 8224, 8234]
+    );
+}
+
+#[test]
+fn une_page_de_runes_incomplete_ne_produit_aucune_categorie_derivee() {
+    let mut source = participant();
+    source["perks"]["statPerks"]["flex"] = json!(0);
+    let result = extract_detail(&source);
+    assert!(!result.variants.keys().any(|c| c.starts_with("rune")));
+}
+
+#[test]
+fn conserve_l_orientation_d_f_observee_sans_changer_la_cle_de_la_paire() {
+    // summoner1Id est la case D et summoner2Id la case F : la paire reste triée
+    // (clé de regroupement), l'orientation observée est portée à part.
+    let result = extract_detail(&participant());
+    assert_eq!(result.variants["summoner_spells"], vec![4, 14]);
+    assert_eq!(result.spell_slots, Some([14, 4]));
+    // Jamais sérialisée : projection interne de l'agrégation.
+    assert!(!serde_json::to_string(&result)
+        .unwrap()
+        .contains("spell_slots"));
+    let mut source = participant();
+    source["summoner2Id"] = json!(0);
+    assert_eq!(extract_detail(&source).spell_slots, None);
+}
+
+#[test]
 fn une_categorie_incomplete_ne_contamine_pas_les_autres() {
     let mut source = participant();
     source.as_object_mut().unwrap().remove("item2");
     source["summoner1Id"] = json!(-1);
     source["item6"] = json!(-1);
     let result = extract_detail(&source);
-    assert_eq!(result.variants.len(), 1);
+    // Seules les catégories de runes subsistent (page exacte et ses dérivées).
+    assert!(result
+        .variants
+        .keys()
+        .all(|category| category == "runes" || category.starts_with("rune_")));
+    // Page exacte et ses dix dérivées : aucune catégorie dérivée ne doit disparaître.
+    assert_eq!(result.variants.len(), 11);
     assert!(result.variants.contains_key("runes"));
     source["perks"]["styles"][1]["selections"] = json!([]);
     assert!(extract_detail(&source).variants.is_empty());
@@ -170,6 +229,67 @@ fn separe_les_points_speciaux_des_points_de_sort_normaux() {
     assert_eq!(result.skill_steps.len(), 2);
 }
 
+/// Suite de points de sort normaux aux horodatages croissants.
+fn skills(slots: &[u32]) -> Vec<Value> {
+    slots
+        .iter()
+        .enumerate()
+        .map(|(n, slot)| skill(1_000 * (n as u64 + 1), *slot))
+        .collect()
+}
+
+#[test]
+fn derive_la_priorite_de_maximisation_et_les_trois_premiers_points() {
+    // Q au rang 5 au point 8, E au point 13, W au point 18 ; l'ultime (4) est ignoré.
+    let result = extract(skills(&[
+        1, 2, 3, 1, 1, 4, 1, 1, 3, 3, 4, 3, 3, 2, 2, 4, 2, 2,
+    ]));
+    assert_eq!(result.variants["skill_priority"], vec![1, 3, 2]);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+    // La séquence intégrale reste publiée telle quelle.
+    assert_eq!(result.variants["skill_order"].len(), 18);
+}
+
+#[test]
+fn la_priorite_suit_le_rang_maximal_et_non_le_premier_point_investi() {
+    // Q est pris en premier mais W atteint le rang 5 avant ; E n'est jamais pris.
+    let result = extract(skills(&[1, 2, 2, 2, 2, 2, 1, 1, 1, 1]));
+    assert_eq!(result.variants["skill_priority"], vec![2, 1, 3]);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 2]);
+}
+
+#[test]
+fn deux_sorts_maximises_suffisent_a_fixer_le_troisieme_en_dernier() {
+    // Partie courte : le troisième sort ne peut passer devant un sort déjà au rang 5.
+    let result = extract(skills(&[1, 2, 3, 1, 1, 4, 1, 1, 3, 3, 4, 3, 3]));
+    assert_eq!(result.variants["skill_priority"], vec![1, 3, 2]);
+}
+
+#[test]
+fn un_seul_sort_maximise_ne_fixe_aucune_priorite() {
+    let result = extract(skills(&[1, 2, 3, 1, 1, 4, 1, 1, 3, 3]));
+    assert!(!result.variants.contains_key("skill_priority"));
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+}
+
+#[test]
+fn moins_de_trois_points_ne_donnent_aucun_depart() {
+    let result = extract(skills(&[1, 2]));
+    assert!(!result.variants.contains_key("skill_start"));
+    assert!(!result.variants.contains_key("skill_priority"));
+    assert_eq!(result.variants["skill_order"], vec![1, 2]);
+}
+
+#[test]
+fn les_points_speciaux_ne_comptent_ni_dans_le_depart_ni_dans_la_priorite() {
+    let mut events = skills(&[1, 2]);
+    events.push(json!({"type":"SKILL_LEVEL_UP","participantId":1,"timestamp":2_500,"skillSlot":3,"levelUpType":"EVOLVE"}));
+    events.push(skill(3_000, 3));
+    let result = extract(events);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+    assert_eq!(result.variants["special_skill_order"], vec![3]);
+}
+
 #[test]
 fn plafonne_les_sequences_sans_tronquer_silencieusement() {
     let at_limit = (0..64).map(|at| skill(at, 1)).collect();
@@ -265,4 +385,40 @@ fn un_remboursement_sans_objet_preserve_les_sorts_sans_inventer_un_ordre_achats(
         serde_json::to_value(&r).unwrap()["unidentified_item_undos"],
         1
     );
+}
+
+#[test]
+fn les_achats_nets_gardent_leur_horodatage_pour_les_etapes() {
+    let result = extract(vec![
+        item("ITEM_PURCHASED", 1_000, 2003),
+        item("ITEM_PURCHASED", 2_000, 1055),
+        item("ITEM_PURCHASED", 3_000, 2003),
+        json!({"type":"ITEM_UNDO","participantId":1,"timestamp":4_000,"beforeId":2003,"afterId":0,"goldGain":50}),
+        item("ITEM_SOLD", 500_000, 1055),
+    ]);
+    // L'empreinte existante reste inchangée ; les étapes lisent la même séquence nette.
+    assert_eq!(result.variants["purchase_order"], vec![2003, 1055]);
+    let purchases = result.net_purchases.as_ref().unwrap();
+    assert_eq!(
+        purchases
+            .iter()
+            .map(|p| (p.item_id, p.timestamp_ms))
+            .collect::<Vec<_>>(),
+        vec![(2003, 1_000), (1055, 2_000)]
+    );
+    // Projection interne : jamais sérialisée avec la variante publiable.
+    assert!(serde_json::to_value(&result)
+        .unwrap()
+        .get("net_purchases")
+        .is_none());
+}
+
+#[test]
+fn sans_ordre_net_fiable_aucune_etape_n_est_derivee() {
+    let undo = extract(vec![
+        item("ITEM_PURCHASED", 2, 1055),
+        json!({"type":"ITEM_UNDO","participantId":1,"timestamp":3,"beforeId":0,"afterId":0,"goldGain":300}),
+    ]);
+    assert!(undo.net_purchases.is_none());
+    assert!(extract(vec![skill(1, 1)]).net_purchases.is_none());
 }
