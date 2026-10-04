@@ -8,6 +8,7 @@
     "core:default",
     "allow-lcu-status",
     "allow-lcu-session",
+    "allow-client-patch",
     "allow-friends-state",
     "allow-community-builds",
     "allow-player-profile",

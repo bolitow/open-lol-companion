@@ -17,3 +17,6 @@ décrivent les données attendues et ne valident pas les réponses à l'exécuti
 Les contrats Tauri et les erreurs traduites FR/EN des imports du client LoL sont
 dans `src/imports.ts`. Le [contrat des imports](../../docs/imports-client.md)
 décrit leurs préconditions et les recettes à exécuter sur macOS et Windows.
+
+`ClientPatch` et `ClientPatchError` (`src/gameflow.ts`) décrivent la version du jeu
+lue dans le client par la commande `client_patch` ([contrat](../../docs/patch-client.md)).

@@ -8,6 +8,11 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 - Quota Riot partagé : l'API des profils garde 20 % de chaque fenêtre (4 appels/s, 20 par 2 min) que le collecteur ne consomme plus, pour qu'une recherche de profil ne dorme plus pendant une rafale de collecte ; le plafond global de la clé reste intact. Nouveau code d'erreur `riot_busy` (503) quand aucun créneau n'est obtenu en 20 s, distinct de `unavailable` et du refus immédiat `rate_limited` (#122).
 
+- Desktop : commande `client_patch` qui lit la version du jeu installée dans le client LoL (`/lol-patch/v1/game-version`) et en tire le patch `majeur.mineur`, avec son type partagé ; l'interface ne l'utilise pas encore (#93, partie cœur Rust).
+- Catalogue : l'infobulle des compétences et des sorts d'invocateur garde le type de dégâts (physique, magique, brut) sous forme de segments typés `tooltip_segments`, lu dans les balises de Data Dragon et non dans la formulation, donc valable dans toutes les langues ; le texte brut `tooltip` ne change pas, la regex du desktop reste à supprimer (#107).
+- Catalogue : augments Arena et Mayhem en données statiques (noms FR/EN, description, rareté, icône), exposés par l'API du référentiel et l'export desktop ; sans statistique, popularité ni tier, catalogue publié non régénéré (#118).
+- Catalogue : les surcharges de valeurs par mode des objets (ARAM, Arena, URF…) sont interprétées en effets `cdragon_parameters:{mode}` avec provenance, sans toucher aux valeurs de base ; types partagés correspondants (#116).
+- Collecteur : commande `campaign-queues` (ARAM, Swiftplay et Arena par défaut) avec une cible et un budget d'appels par plateforme et par file, et `campaign-report` pour suivre les parties retenues face à ces cibles ; les files inconnues sont refusées au lancement (#97).
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).
@@ -85,6 +90,11 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Export du catalogue desktop : conserve aussi les objets propres à l'ARAM (carte 12) et à l'Arena (carte 30), avec le décompte par carte dans le manifeste ; la publication versionnée n'est pas encore régénérée (#116).
+- Export du catalogue desktop : les tests de l'exemple `export_desktop_catalog` sont déclarés testables (`[[example]] test = true`) et tournent donc avec `pnpm test` et sur les trois OS de la CI ; l'étape dédiée Linux disparaît (#116).
+- Export du catalogue desktop : quand le repli `all_items` se déclenche (carte illisible), l'export journalise la raison et, par carte, le nombre d'objets à disponibilité illisible, aussi consigné dans le manifeste (champ optionnel `unreadable_by_map`, reflété dans `@olc/shared`) ; le seuil de déclenchement ne change pas (#116).
+- Catalogue : la lecture des paramètres `mDataValues` d'un objet et de ses surcharges de mode partage une seule fonction, sans changement de comportement (#116).
+- Agrégats : une partie dont la file n'est pas identifiée (710, 3130, identifiants inconnus) est exclue sous la raison `unknown_queue` au lieu d'être agrégée sans contrôle de format ; ses données brutes restent en base (#97).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 
 - Documents de planification `docs/superpowers/` exclus du suivi Git (#18).
