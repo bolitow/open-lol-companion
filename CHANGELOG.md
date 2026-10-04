@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Desktop : commande `client_patch` qui lit la version du jeu installée dans le client LoL (`/lol-patch/v1/game-version`) et en tire le patch `majeur.mineur`, avec son type partagé ; l'interface ne l'utilise pas encore (#93, partie cœur Rust).
 - Catalogue : l'infobulle des compétences et des sorts d'invocateur garde le type de dégâts (physique, magique, brut) sous forme de segments typés `tooltip_segments`, lu dans les balises de Data Dragon et non dans la formulation, donc valable dans toutes les langues ; le texte brut `tooltip` ne change pas, la regex du desktop reste à supprimer (#107).
 - Catalogue : augments Arena et Mayhem en données statiques (noms FR/EN, description, rareté, icône), exposés par l'API du référentiel et l'export desktop ; sans statistique, popularité ni tier, catalogue publié non régénéré (#118).
 - Catalogue : les surcharges de valeurs par mode des objets (ARAM, Arena, URF…) sont interprétées en effets `cdragon_parameters:{mode}` avec provenance, sans toucher aux valeurs de base ; types partagés correspondants (#116).
