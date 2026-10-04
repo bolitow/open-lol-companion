@@ -14,6 +14,14 @@ pub struct ProfileRank {
     pub tier: Option<String>,
     pub division: Option<String>,
     pub league_points: Option<i32>,
+    /// Victoires et défaites de la saison en cours (league-v4), vides si non classé.
+    pub wins: Option<u32>,
+    pub losses: Option<u32>,
+    /// Drapeaux factuels league-v4 : série de victoires, vétéran, nouveau dans le palier, inactif.
+    pub hot_streak: Option<bool>,
+    pub veteran: Option<bool>,
+    pub fresh_blood: Option<bool>,
+    pub inactive: Option<bool>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Profile {
@@ -70,6 +78,7 @@ pub struct Profiles<T: Transport> {
     cache: Mutex<HashMap<(String, String, String), Profile>>,
     matches: Mutex<HashMap<(String, String), PlayerMatch>>,
     requests: Semaphore,
+    riot_timeout: Duration,
 }
 impl<T: Transport> Profiles<T> {
     /// Le transport de production doit être coordonné avec le collecteur.
@@ -83,16 +92,24 @@ impl<T: Transport> Profiles<T> {
             cache: Mutex::new(HashMap::new()),
             matches: Mutex::new(HashMap::new()),
             requests: Semaphore::new(4),
+            riot_timeout: Duration::from_secs(20),
         }
+    }
+    /// Durée maximale d'un appel Riot, attente de quota partagé comprise.
+    pub fn with_riot_timeout(mut self, timeout: Duration) -> Self {
+        self.riot_timeout = timeout;
+        self
     }
     async fn get(&self, request: &Request) -> Result<Vec<u8>, ApiError> {
         let _permit = self
             .requests
             .try_acquire()
             .map_err(|_| ApiError::RateLimited)?;
-        let body = tokio::time::timeout(Duration::from_secs(20), self.client.get(request))
+        // Le transport HTTP est borné à 15 s, plus court que ce délai : dépasser celui-ci
+        // signifie en pratique que la réservation de quota partagé a attendu (collecte en cours).
+        let body = tokio::time::timeout(self.riot_timeout, self.client.get(request))
             .await
-            .map_err(|_| ApiError::Unavailable)?
+            .map_err(|_| ApiError::RiotBusy)?
             .map_err(|error| match error {
                 RiotError::NotFound => ApiError::NotFound,
                 RiotError::RateLimited { .. } => ApiError::RateLimited,
@@ -178,6 +195,12 @@ impl<T: Transport> Profiles<T> {
                         tier: Some(rank.tier.clone()),
                         division: Some(rank.division.clone()),
                         league_points: Some(rank.league_points),
+                        wins: rank.wins,
+                        losses: rank.losses,
+                        hot_streak: rank.hot_streak,
+                        veteran: rank.veteran,
+                        fresh_blood: rank.fresh_blood,
+                        inactive: rank.inactive,
                     },
                     None => ProfileRank {
                         queue_id,
@@ -185,6 +208,12 @@ impl<T: Transport> Profiles<T> {
                         tier: None,
                         division: None,
                         league_points: None,
+                        wins: None,
+                        losses: None,
+                        hot_streak: None,
+                        veteran: None,
+                        fresh_blood: None,
+                        inactive: None,
                     },
                 },
             )
@@ -458,6 +487,9 @@ mod tests {
         assert_eq!(p.game_name, "Current Name");
         assert_eq!(p.ranks[0].tier.as_deref(), Some("GOLD"));
         assert_eq!(p.ranks[1].status, "unranked");
+        // Les champs league-v4 absents de la réponse restent vides, jamais inventés.
+        assert_eq!(p.ranks[0].wins, None);
+        assert_eq!(p.ranks[0].hot_streak, None);
         let requests = fake.requests.lock().unwrap().clone();
         assert_eq!(requests.len(), 3);
         assert_eq!(requests[0].route.host(), "europe.api.riotgames.com");
@@ -538,5 +570,91 @@ mod tests {
                 .await,
             Err(ApiError::InvalidRequest)
         ));
+    }
+
+    /// Transport qui n'aboutit jamais : simule une attente de quota prolongée.
+    struct Stuck;
+    impl Transport for Stuck {
+        async fn send(&self, _: &Request) -> Result<RawResponse, TransportError> {
+            std::future::pending().await
+        }
+    }
+    #[tokio::test]
+    async fn une_attente_de_quota_trop_longue_est_distincte_d_une_panne() {
+        let service = Profiles::new(Stuck).with_riot_timeout(Duration::from_millis(30));
+        assert_eq!(
+            service
+                .profile("EUW1", "Current Name", "TEST")
+                .await
+                .unwrap_err(),
+            ApiError::RiotBusy
+        );
+    }
+    #[tokio::test]
+    async fn une_panne_du_transport_reste_unavailable() {
+        struct Broken;
+        impl Transport for Broken {
+            async fn send(&self, _: &Request) -> Result<RawResponse, TransportError> {
+                Err(TransportError::Timeout)
+            }
+        }
+        let service = Profiles::new(Broken);
+        assert_eq!(
+            service
+                .profile("EUW1", "Current Name", "TEST")
+                .await
+                .unwrap_err(),
+            ApiError::Unavailable
+        );
+    }
+
+    #[tokio::test]
+    async fn le_profil_expose_victoires_defaites_et_drapeaux_league_v4() {
+        struct Ranked;
+        impl Transport for Ranked {
+            async fn send(&self, request: &Request) -> Result<RawResponse, TransportError> {
+                let path = request.segments.join("/");
+                let body = if path.contains("accounts/by-riot-id") {
+                    json!({"puuid":"synthetic-player","gameName":"Current Name","tagLine":"TEST"})
+                } else if path.contains("summoners/by-puuid") {
+                    json!({"puuid":"synthetic-player","profileIconId":1,"summonerLevel":42})
+                } else {
+                    json!([{ "queueType":"RANKED_SOLO_5x5", "tier":"GOLD", "rank":"II", "leaguePoints":55,
+                        "wins":12, "losses":9, "hotStreak":true, "veteran":false, "freshBlood":true, "inactive":false }])
+                };
+                Ok(RawResponse {
+                    status: 200,
+                    headers: vec![],
+                    body: serde_json::to_vec(&body).unwrap(),
+                })
+            }
+        }
+        let p = Profiles::new(Ranked)
+            .profile("EUW1", "Current Name", "TEST")
+            .await
+            .unwrap();
+        let solo = &p.ranks[0];
+        assert_eq!((solo.wins, solo.losses), (Some(12), Some(9)));
+        assert_eq!(solo.hot_streak, Some(true));
+        assert_eq!(solo.veteran, Some(false));
+        assert_eq!(solo.fresh_blood, Some(true));
+        assert_eq!(solo.inactive, Some(false));
+        let flex = &p.ranks[1];
+        assert_eq!(flex.status, "unranked");
+        assert_eq!(
+            (flex.wins, flex.losses, flex.hot_streak),
+            (None, None, None)
+        );
+    }
+
+    /// Contrat partagé avec `@olc/shared` et `olc-build-client` : même JSON, même forme.
+    #[test]
+    fn le_json_du_profil_suit_le_contrat_partage() {
+        let golden: Value = serde_json::from_str(include_str!(
+            "../../../packages/shared/src/contracts/profile.json"
+        ))
+        .unwrap();
+        let profile: Profile = serde_json::from_value(golden.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&profile).unwrap(), golden);
     }
 }

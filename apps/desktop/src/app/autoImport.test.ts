@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import type {AutoImportReceipt, AutoImportRequest, BuildReport, BuildStats, LcuSession} from '@olc/shared';
+import type {AutoImportReceipt, AutoImportRequest, BuildReport, BuildStats, CatalogRecord, LcuSession} from '@olc/shared';
 import catalog from '../../public/game-data/catalog/en_US.json';
 import {autoImportTarget, chooseAutoImports, createAutoImportController, parseAutoImportPreferences, type AutoImportTarget} from './autoImport';
 import type {PreparationCatalog} from './catalog';
@@ -8,7 +8,7 @@ const session: LcuSession = {revision: 1, draftId:'draft-1', connected: true, ph
     account: {game_name: 'Player', tag_line: 'EUW', platform: 'EUW1'},
     draft: {supported: true, gameId: '123', queueId: 420, allySide: 'blue', allies: [{cellId: 0, championId: 432, locked: true, local: true, position: 'utility', acting: false}], enemies: [], allyBans: [], enemyBans: [], timer: null, localSpells: [4, 14]}};
 const target = (): AutoImportTarget => autoImportTarget(session, data, 'en')!;
-const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null, conditional_rate: null,...change});
+const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null, conditional_rate: null,win_rate_upper_bound:null,reliability:null,placement_games:0,average_placement:null,...change});
 const report = (builds = [variant()]): BuildReport => ({request:target().request,meta:{min_games:100,source_snapshot_at:'2026-10-02T08:00:00Z',published_at:'2026-10-02T08:01:00Z'},builds});
 const preferences = {runes:true,items:true,spells:false,minGames:1};
 function deferred<T>() {let resolve!:(value:T)=>void; const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve};}
@@ -44,6 +44,33 @@ describe('imports au prépick',()=>{
         expect(choices.items?.metrics).toEqual({games:50,wins:40,observedWinRate:80,lowSample:true});
         expect(chooseAutoImports(report(),target(),100,data.records).items).toBeNull();
         expect(choices.runes).toBeNull();
+    });
+    it('convertit un objet non achetable vers son ancêtre et signale le remplacement (3042 vers 3004)',()=>{
+        const choices=chooseAutoImports(report([variant({selection:[3042,3070]})]),target(),1,data.records);
+        expect(choices.items?.selection).toMatchObject({kind:'items',request:{blocks:[{items:[{id:3004,count:1},{id:3070,count:1}]}]}});
+        expect(choices.items?.adjustments).toEqual({converted:1,dropped:0});
+    });
+    it('retire de l’import automatique un objet sans équivalent achetable (2422) et le signale',()=>{
+        const choices=chooseAutoImports(report([variant({selection:[3070,2422]})]),target(),1,data.records);
+        expect(choices.items?.selection).toMatchObject({kind:'items',request:{blocks:[{items:[{id:3070,count:1}]}]}});
+        expect(choices.items?.adjustments).toEqual({converted:0,dropped:1});
+    });
+    it('passe à la variante suivante quand une variante devient vide ou a un statut boutique illisible',()=>{
+        const unreadable={kind:'item',id:'999001',fields:{purchasable:{value:true,unit:null,status:'unmapped',sources:[]},in_store:{value:true,unit:null,status:'verified',sources:[]}}} as unknown as CatalogRecord;
+        const records=[...data.records,unreadable];
+        const builds=[variant({games:90,selection:[2422]}),variant({games:80,selection:[3070,999001]}),variant({games:50,selection:[1001]})];
+        const choices=chooseAutoImports(report(builds),target(),1,records);
+        expect(choices.items?.selection).toMatchObject({kind:'items',request:{blocks:[{items:[{id:1001,count:1}]}]}});
+        expect(choices.items?.metrics.games).toBe(50);
+        expect(choices.items?.adjustments).toEqual({converted:0,dropped:0});
+        expect(chooseAutoImports(report(builds.slice(0,2)),target(),1,records).items).toBeNull();
+    });
+    it('reporte les objets remplacés ou retirés dans le statut de l’import automatique',async()=>{
+        const send=vi.fn(async(_request:AutoImportRequest)=>({confirmed:true}));
+        const controller=createAutoImportController({prepare:async()=>chooseAutoImports(report([variant({selection:[3042,2422]})]),target(),1,data.records),send});
+        controller.update(target(),{...preferences,runes:false});await flush();
+        expect(controller.getSnapshot().items).toMatchObject({status:'confirmed',adjustments:{converted:1,dropped:1}});
+        expect(send.mock.calls[0]?.[0]).toMatchObject({selection:{kind:'items',request:{blocks:[{items:[{id:3004,count:1}]}]}}});
     });
     it('importe une vraie page complète avec les statistiques indépendantes de sorts',()=>{
         const runes=variant({category:'runes',games:4,wins:3,selection:[8100,8112,8126,8141,8135,8300,8304,8316,5005,5010,5001]});

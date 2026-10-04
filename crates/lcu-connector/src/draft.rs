@@ -133,6 +133,8 @@ struct RawPlayer {
 #[serde(rename_all = "camelCase")]
 struct RawAction {
     actor_cell_id: i32,
+    #[serde(default)]
+    champion_id: u32,
     #[serde(rename = "type")]
     kind: String,
     completed: bool,
@@ -252,7 +254,23 @@ impl DraftSession {
             allies: players(&raw.my_team, false),
             enemies: players(&raw.their_team, true),
             ally_bans: bans(raw.bans.my_team_bans),
-            enemy_bans: bans(raw.bans.their_team_bans),
+            // Défensif (#30) : un ban adverse n'est projeté que s'il est annoncé par une action
+            // `ban` terminée jouée par une cellule adverse ; un ban en cours, jamais annoncé ou
+            // seulement joué par un allié (double ban permis en classé) ne quitte pas Rust.
+            enemy_bans: bans(
+                raw.bans
+                    .their_team_bans
+                    .into_iter()
+                    .filter(|id| {
+                        raw.actions.iter().flatten().any(|a| {
+                            a.kind == "ban"
+                                && a.completed
+                                && i64::from(a.champion_id) == i64::from(*id)
+                                && raw.their_team.iter().any(|p| p.cell_id == a.actor_cell_id)
+                        })
+                    })
+                    .collect(),
+            ),
             timer: raw
                 .timer
                 .filter(|t| !t.is_infinite && t.internal_now_in_epoch_ms > 0)
@@ -366,6 +384,79 @@ mod tests {
         assert!(!json.contains("chat"));
     }
     #[test]
+    fn aucune_identite_des_joueurs_ne_sort_de_la_projection() {
+        // Anonymat de la sélection (#30) : même si le client divulgue des identités, ni la
+        // projection ni ses clés ne les reprennent. Les marqueurs sont des canaris synthétiques.
+        let mut v = fixture();
+        let identity = json!({
+            "puuid": "CANARY-PUUID", "gameName": "CANARY-GAME", "tagLine": "CANARY-TAG",
+            "summonerName": "CANARY-SUMMONER", "summonerId": 424242, "obfuscatedPuuid": "CANARY-OBF",
+            "obfuscatedSummonerId": 434343, "nameVisibilityType": "VISIBLE",
+            "chatRoomName": "CANARY-CHAT", "spell1Id": 4, "spell2Id": 14, "skinId": 7
+        });
+        for team in ["myTeam", "theirTeam"] {
+            v[team] = json!((0..5)
+                .map(|cell| {
+                    let mut player = identity.clone();
+                    player["cellId"] = json!(cell + if team == "myTeam" { 0 } else { 5 });
+                    player["team"] = json!(if team == "myTeam" { 1 } else { 2 });
+                    player
+                })
+                .collect::<Vec<_>>());
+        }
+        v["chatDetails"] =
+            json!({"chatRoomName": "CANARY-CHAT", "mucJwtDto": {"jwt": "CANARY-JWT"}});
+        let draft = DraftSession::parse(v).unwrap();
+        let value = serde_json::to_value(&draft).unwrap();
+        let text = value.to_string();
+        for forbidden in [
+            "CANARY", "puuid", "gameName", "tagLine", "summoner", "chat", "424242",
+        ] {
+            assert!(
+                !text.to_lowercase().contains(&forbidden.to_lowercase()),
+                "{forbidden} sorti : {text}"
+            );
+        }
+        // Liste blanche des clés : tout nouveau champ doit être ajouté ici après revue de conformité.
+        let players = ["allies", "enemies"].map(|k| value[k][0].as_object().unwrap().clone());
+        for player in players {
+            let mut keys: Vec<_> = player.keys().map(String::as_str).collect();
+            keys.sort_unstable();
+            assert_eq!(
+                keys,
+                [
+                    "acting",
+                    "cellId",
+                    "championId",
+                    "local",
+                    "locked",
+                    "position"
+                ]
+            );
+        }
+        let mut keys: Vec<_> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "allies",
+                "allyBans",
+                "allySide",
+                "customGame",
+                "enemies",
+                "enemyBans",
+                "localSpells",
+                "supported",
+                "timer"
+            ]
+        );
+    }
+    #[test]
     fn utilise_le_cote_du_joueur_local_pas_son_index() {
         let mut v = fixture();
         v["myTeam"][0]["team"] = json!(2);
@@ -408,6 +499,38 @@ mod tests {
             DraftSession::parse(v).unwrap().enemies[0].champion_id,
             Some(157)
         );
+    }
+    #[test]
+    fn ne_garde_un_ban_adverse_que_s_il_est_annonce_par_une_action_terminee() {
+        // Filtre défensif (#30) : un ban adverse en cours ou jamais annoncé ne quitte pas Rust,
+        // même si `theirTeamBans` le divulgue ; les bans alliés ne sont pas concernés.
+        let mut v = fixture();
+        v["theirTeam"] = json!((5..8)
+            .map(|cell| json!({"cellId":cell,"team":1}))
+            .collect::<Vec<_>>());
+        v["bans"]["theirTeamBans"] = json!([157, 99, 0]);
+        v["actions"] = json!([[
+            {"actorCellId":5,"championId":157,"type":"ban","completed":true},
+            {"actorCellId":6,"championId":99,"type":"ban","completed":false,"isInProgress":true},
+            {"actorCellId":7,"championId":99,"type":"pick","completed":true}
+        ]]);
+        let d = DraftSession::parse(v.clone()).unwrap();
+        assert_eq!(d.enemy_bans, vec![157]);
+        assert_eq!(d.ally_bans, vec![103, 12, 34]);
+        v["actions"] = json!([]);
+        assert!(DraftSession::parse(v.clone())
+            .unwrap()
+            .enemy_bans
+            .is_empty());
+        // Les doubles bans entre équipes sont permis : seule la cellule adverse compte. Ici
+        // `theirTeamBans` divulgue 103, mais seule l'action alliée (cellule 0) le bannit.
+        v["bans"]["theirTeamBans"] = json!([103]);
+        v["actions"] = json!([[
+            {"actorCellId":0,"championId":103,"type":"ban","completed":true}
+        ]]);
+        let d = DraftSession::parse(v).unwrap();
+        assert!(d.enemy_bans.is_empty());
+        assert_eq!(d.ally_bans, vec![103, 12, 34]);
     }
     #[test]
     fn refuse_une_ressource_invalide_et_signale_les_modes_alternatifs() {

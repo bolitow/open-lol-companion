@@ -28,12 +28,34 @@ const DOCUMENT_CONCURRENCY: usize = 4;
 const MAX_ICON_BYTES: usize = 2 * 1024 * 1024;
 const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
 
+/// Cartes dont les objets sont exportés (#116) : Faille (11), ARAM (12) et Arena (30).
+/// La disponibilité par carte reste dans `fields.maps` de chaque objet ; elle ne dit pas
+/// qu'un objet est achetable dans chaque file, ce que le front vérifie avec `in_store`.
+const ITEM_MAPS: [&str; 3] = ["11", "12", "30"];
+
 #[derive(Debug, Serialize)]
 struct ItemSelection {
     #[serde(skip)]
     ids: BTreeSet<String>,
     mode: &'static str,
     reason: Option<&'static str>,
+    maps: [&'static str; 3],
+    /// Objets conservés disponibles sur chaque carte ; un objet commun à deux cartes compte deux fois.
+    by_map: BTreeMap<String, usize>,
+    /// Repli `all_items` seulement : objets dont la disponibilité sur la carte n'a pas pu être
+    /// lue (clé absente, valeur non booléenne ou champ `maps` incertain), par carte. Vide quand
+    /// le filtre par carte a pu s'appliquer.
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    unreadable_by_map: BTreeMap<String, usize>,
+}
+
+fn on_map(record: &CatalogRecord, map: &str) -> bool {
+    record
+        .fields
+        .get("maps")
+        .and_then(|maps| maps.value.get(map))
+        .and_then(Value::as_bool)
+        == Some(true)
 }
 
 fn public_url(url: &str) -> Result<Url, ExportError> {
@@ -68,26 +90,65 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
         .filter(|record| record.kind == "item")
         .map(|record| (record.id.clone(), record))
         .collect();
-    let all = |reason| ItemSelection {
-        ids: items.keys().cloned().collect(),
-        mode: "all_items",
-        reason: Some(reason),
+    let selection = |ids: BTreeSet<String>, mode, reason| ItemSelection {
+        by_map: ITEM_MAPS
+            .iter()
+            .map(|map| {
+                let count = ids
+                    .iter()
+                    .filter(|id| items.get(*id).is_some_and(|item| on_map(item, map)))
+                    .count();
+                (map.to_string(), count)
+            })
+            .collect(),
+        ids,
+        mode,
+        reason,
+        maps: ITEM_MAPS,
+        unreadable_by_map: BTreeMap::new(),
     };
+    let all = |reason| selection(items.keys().cloned().collect(), "all_items", Some(reason));
     let mut selected = BTreeSet::new();
+    // Premier objet illisible : sa raison est conservée. Tous les objets sont parcourus pour
+    // dénombrer, par carte, ce qui a déclenché le repli (un seul objet suffit à le déclencher).
+    let mut fallback: Option<&'static str> = None;
+    let mut unreadable_by_map: BTreeMap<String, usize> = BTreeMap::new();
     for (id, record) in &items {
-        let Some(maps) = record.fields.get("maps") else {
-            return all("unknown_map");
-        };
-        if !matches!(maps.status, ValueStatus::Verified | ValueStatus::Derived) {
-            return all("uncertain_map");
-        }
-        match maps.value.get("11").and_then(Value::as_bool) {
-            Some(true) => {
-                selected.insert(id.clone());
+        let readable = record
+            .fields
+            .get("maps")
+            .filter(|maps| matches!(maps.status, ValueStatus::Verified | ValueStatus::Derived));
+        let Some(maps) = readable else {
+            fallback.get_or_insert(if record.fields.contains_key("maps") {
+                "uncertain_map"
+            } else {
+                "unknown_map"
+            });
+            for map in ITEM_MAPS {
+                *unreadable_by_map.entry(map.to_string()).or_default() += 1;
             }
-            Some(false) => {}
-            None => return all("unknown_map"),
+            continue;
+        };
+        // Une carte exportée absente ou non booléenne rend la disponibilité incertaine :
+        // mieux vaut tout garder que perdre un objet propre à l'ARAM ou à l'Arena.
+        let mut available = false;
+        for map in ITEM_MAPS {
+            match maps.value.get(map).and_then(Value::as_bool) {
+                Some(on_map) => available |= on_map,
+                None => {
+                    fallback.get_or_insert("unknown_map");
+                    *unreadable_by_map.entry(map.to_string()).or_default() += 1;
+                }
+            }
         }
+        if available {
+            selected.insert(id.clone());
+        }
+    }
+    if let Some(reason) = fallback {
+        let mut result = all(reason);
+        result.unreadable_by_map = unreadable_by_map;
+        return result;
     }
     // Une recette peut inclure un composant réservé : garder sa fiche même si sa
     // carte est différente. Le parcours par ensemble termine aussi sur un cycle.
@@ -117,11 +178,7 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
             }
         }
     }
-    ItemSelection {
-        ids: selected,
-        mode: "map_11_with_components",
-        reason: None,
-    }
+    selection(selected, "maps_11_12_30_with_components", None)
 }
 
 fn champion_resources(index: &Value) -> Result<Vec<String>, ExportError> {
@@ -163,7 +220,13 @@ fn select_desktop_records(
                 && record.namespace == "standard"
                 && matches!(
                     record.kind.as_str(),
-                    "item" | "rune" | "rune_shard" | "champion" | "ability" | "summoner_spell"
+                    "item"
+                        | "rune"
+                        | "rune_shard"
+                        | "champion"
+                        | "ability"
+                        | "summoner_spell"
+                        | "augment"
                 )
         })
         .cloned()
@@ -510,6 +573,12 @@ async fn main() -> Result<(), ExportError> {
             "{locale} : {count} fiches racine, {total_records} au total, filtre {}",
             item_filter.mode
         );
+        if let Some(reason) = item_filter.reason {
+            eprintln!("{locale} : repli sur tous les objets ({reason})");
+            for (map, count) in &item_filter.unreadable_by_map {
+                eprintln!("{locale} : carte {map}, {count} objet(s) à disponibilité illisible");
+            }
+        }
         locale_meta.insert(
             locale.into(),
             LocaleMeta {
@@ -590,12 +659,22 @@ mod tests {
     use std::collections::BTreeMap;
 
     fn item(id: &str, map: Option<bool>, components: &[&str]) -> CatalogRecord {
+        // Les trois cartes exportées sont toujours présentes dans Data Dragon ; un test
+        // qui ne s'intéresse qu'à la Faille laisse donc l'ARAM et l'Arena à faux.
+        item_on(
+            id,
+            map.map(|map| json!({"11": map, "12": false, "30": false})),
+            components,
+        )
+    }
+
+    fn item_on(id: &str, maps: Option<Value>, components: &[&str]) -> CatalogRecord {
         let mut fields = BTreeMap::new();
-        if let Some(map) = map {
+        if let Some(maps) = maps {
             fields.insert(
                 "maps".into(),
                 CatalogValue {
-                    value: json!({"11": map}),
+                    value: maps,
                     unit: None,
                     status: ValueStatus::Verified,
                     sources: vec![],
@@ -659,8 +738,121 @@ mod tests {
             item("400", Some(false), &[]),
         ];
         let result = select_items(&records);
-        assert_eq!(result.mode, "map_11_with_components");
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
         assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+    }
+
+    #[test]
+    fn garde_les_objets_propres_a_laram_et_a_larena_sans_les_autres_cartes() {
+        let maps = |rift, aram, arena, other| {
+            Some(json!({"11": rift, "12": aram, "30": arena, "453": other}))
+        };
+        let records = vec![
+            item_on("100", maps(true, false, false, false), &[]),
+            item_on("200", maps(false, true, false, false), &[]),
+            item_on("300", maps(false, false, true, false), &[]),
+            item_on("400", maps(false, false, false, true), &[]),
+            item_on("500", maps(false, false, false, false), &[]),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
+        assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+        assert_eq!(result.maps, ["11", "12", "30"]);
+        assert_eq!(
+            result.by_map,
+            [("11", 1), ("12", 1), ("30", 1)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+    }
+
+    #[test]
+    fn le_decompte_par_carte_inclut_les_objets_presents_sur_plusieurs_cartes() {
+        let records = vec![
+            item_on(
+                "100",
+                Some(json!({"11": true, "12": true, "30": false})),
+                &["200"],
+            ),
+            item_on(
+                "200",
+                Some(json!({"11": false, "12": false, "30": false})),
+                &[],
+            ),
+            item_on(
+                "300",
+                Some(json!({"11": false, "12": true, "30": true})),
+                &[],
+            ),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+        // Le composant 200 est conservé pour la recette mais n'est disponible sur aucune carte.
+        assert_eq!(
+            result.by_map,
+            [("11", 1), ("12", 2), ("30", 1)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+    }
+
+    #[test]
+    fn une_carte_exportee_absente_ou_non_booleenne_conserve_tous_les_objets() {
+        for maps in [
+            json!({"11": true, "12": false}),
+            json!({"11": false, "30": true}),
+            json!({"12": true, "30": false}),
+            json!({"11": true, "12": "true", "30": false}),
+        ] {
+            let records = vec![
+                item_on(
+                    "100",
+                    Some(json!({"11": true, "12": false, "30": false})),
+                    &[],
+                ),
+                item_on("200", Some(maps), &[]),
+            ];
+            let result = select_items(&records);
+            assert_eq!(result.mode, "all_items");
+            assert_eq!(result.reason, Some("unknown_map"));
+            assert_eq!(result.ids, ["100", "200"].map(String::from).into());
+        }
+    }
+
+    #[test]
+    fn le_repli_all_items_denombre_par_carte_les_objets_a_disponibilite_illisible() {
+        let records = vec![
+            item_on(
+                "100",
+                Some(json!({"11": true, "12": false, "30": false})),
+                &[],
+            ),
+            item_on("200", Some(json!({"11": true, "30": false})), &[]),
+            item_on(
+                "300",
+                Some(json!({"11": true, "12": "oui", "30": null})),
+                &[],
+            ),
+            item_on("400", None, &[]),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "all_items");
+        // 200 ne dit rien de la carte 12, 300 est illisible sur 12 et 30, 400 sur les trois.
+        assert_eq!(
+            result.unreadable_by_map,
+            [("11", 1), ("12", 3), ("30", 2)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+        assert_eq!(result.ids.len(), 4);
+    }
+
+    #[test]
+    fn le_filtre_normal_ne_signale_aucune_disponibilite_illisible() {
+        let records = vec![item("100", Some(true), &[]), item("200", Some(false), &[])];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
+        assert!(result.unreadable_by_map.is_empty());
     }
 
     #[test]
@@ -740,7 +932,7 @@ mod tests {
         records.push(item("1002", Some(false), &[]));
         records.push(item("1003", Some(false), &[]));
         let (selected, filter) = select_desktop_records(&records, "fr_FR");
-        assert_eq!(filter.mode, "map_11_with_components");
+        assert_eq!(filter.mode, "maps_11_12_30_with_components");
         assert_eq!(
             selected
                 .iter()
@@ -760,6 +952,34 @@ mod tests {
         assert_eq!(selected[0], records[1]);
         assert_eq!(selected[2], records[0]);
         assert_eq!(selected[7], records[3]);
+    }
+
+    #[test]
+    fn le_catalogue_desktop_garde_les_augments_a_la_racine_sans_les_autres_familles() {
+        // #118 : augments Arena et Mayhem (données statiques), exportés avec leur langue.
+        let mut records = Vec::new();
+        for (kind, id, locale) in [
+            ("augment", "1205", "fr_FR"),
+            ("augment", "1205", "en_US"),
+            ("augment", "341", "fr_FR"),
+            ("queue", "1700", "fr_FR"),
+        ] {
+            let mut record = item(id, Some(true), &[]);
+            record.kind = kind.into();
+            record.locale = locale.into();
+            records.push(record);
+        }
+        let (selected, _) = select_desktop_records(&records, "fr_FR");
+        assert_eq!(
+            selected
+                .iter()
+                .map(|r| (r.kind.as_str(), r.id.as_str()))
+                .collect::<Vec<_>>(),
+            [("augment", "1205"), ("augment", "341")]
+        );
+        let partition = partition_champions(selected).unwrap();
+        assert_eq!(partition.root.len(), 2);
+        assert!(partition.champions.is_empty());
     }
 
     fn ability(champion_id: &str, slot: &str) -> CatalogRecord {

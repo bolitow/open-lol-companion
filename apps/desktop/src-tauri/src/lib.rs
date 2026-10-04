@@ -1,3 +1,4 @@
+mod api_access;
 mod desktop;
 mod diagnostics;
 mod friends;
@@ -5,6 +6,7 @@ mod imports;
 mod live;
 mod overlay;
 mod players;
+mod publications;
 use lcu_connector::LcuSession;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -37,17 +39,12 @@ fn lcu_status() -> LcuStatus {
 
 type SessionState = Arc<Mutex<LcuSession>>;
 
-type BuildState = Result<olc_build_client::BuildClient, olc_build_client::BuildError>;
-
 #[tauri::command]
 async fn community_builds(
     request: olc_build_client::BuildRequest,
-    state: tauri::State<'_, BuildState>,
+    state: tauri::State<'_, api_access::ApiState>,
 ) -> Result<olc_build_client::BuildReport, olc_build_client::BuildError> {
-    match state.inner() {
-        Ok(client) => client.builds(request).await,
-        Err(error) => Err(*error),
-    }
+    state.client().await?.builds(request).await
 }
 
 #[tauri::command]
@@ -56,6 +53,15 @@ fn lcu_session(state: tauri::State<'_, SessionState>) -> Result<LcuSession, &'st
         .lock()
         .map(|session| session.clone())
         .map_err(|_| "session_unavailable")
+}
+
+/// Version du jeu installée, lue à la demande dans le client local (#93).
+#[tauri::command]
+async fn client_patch() -> Result<lcu_connector::ClientPatch, lcu_connector::ClientPatchError> {
+    let client = players::client()
+        .await
+        .map_err(|_| lcu_connector::ClientPatchError::Unavailable)?;
+    lcu_connector::read_client_patch(&client).await
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -73,7 +79,7 @@ pub fn run() {
     builder
         .manage(diagnostics::DiagnosticsState::default())
         .manage(Arc::new(Mutex::new(LcuSession::default())))
-        .manage(olc_build_client::BuildClient::from_env())
+        .manage(api_access::ApiState::default())
         .manage(imports::ImportLocks::default())
         .manage(players::LocalState::default())
         .on_window_event(|window, event| {
@@ -104,6 +110,8 @@ pub fn run() {
             overlay::setup(app.handle());
             live::setup(app.handle());
             friends::setup(app.handle());
+            publications::setup(app.handle());
+            api_access::setup(app.handle());
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -156,7 +164,12 @@ pub fn run() {
             desktop::set_desktop_locale,
             lcu_status,
             lcu_session,
+            client_patch,
             community_builds,
+            publications::publication_state,
+            api_access::api_access_status,
+            api_access::save_api_access,
+            api_access::clear_api_access,
             players::player_profile,
             players::player_matches,
             imports::import_runes,
@@ -194,6 +207,10 @@ mod integration_permissions_tests {
             "set_desktop_setting",
             "set_desktop_locale",
             "export_diagnostics",
+            "api_access_status",
+            "save_api_access",
+            "clear_api_access",
+            "client_patch",
         ] {
             let permission = serde_json::json!(format!("allow-{}", command.replace('_', "-")));
             assert!(

@@ -3,8 +3,9 @@ mod common;
 
 use common::TestDb;
 use olc_api::error::ApiError;
-use olc_api::query::StatsQuery;
-use olc_api::stats::{builds, tierlist};
+use olc_api::query::{BansQuery, StatsQuery, TrendsQuery};
+use olc_api::stats::{bans, builds, matchups, performance, tierlist};
+use olc_api::trends::trends;
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
 use sqlx::PgPool;
@@ -34,8 +35,8 @@ fn champion(id: u32, position: Option<u32>) -> Value {
     json!({
         "patch": "16.19", "platform_id": "EUW1", "queue_id": 420,
         "role": "TOP", "rank": "ALL", "champion_id": id,
-        "games": 100, "wins": 60, "losses": 40, "population": 500,
-        "win_rate": 60.0, "pick_rate": 20.0, "win_rate_lower_bound": 50.2,
+        "games": 100, "wins": 60, "losses": 40, "population": 500, "bucket_matches": 250,
+        "win_rate": 60.0, "pick_rate": 40.0, "selection_share": 20.0, "win_rate_lower_bound": 50.2,
         "position": position, "tier": "A", "most_picked_rank": "GOLD"
     })
 }
@@ -58,9 +59,45 @@ fn contaminated(values: &mut Vec<Value>, base: &Value) {
     }
 }
 
+fn performance_entry(champion: u32) -> Value {
+    json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+        "role":"TOP", "rank":"ALL", "champion_id":champion,
+        "participations":120, "games":110, "short_games_excluded":10,
+        "kills":5.5, "deaths":4.0, "assists":6.5,
+        "kda":3.0, "damage_to_champions":21_000.0, "cs_per_min":7.4, "gold_per_min":410.0,
+        "vision_score":22.0,
+        "frames":[
+            {"minute":10, "games":105, "gold":3_600.0, "cs":78.0, "xp":4_900.0},
+            {"minute":15, "games":90, "gold":null, "cs":null, "xp":null}
+        ]
+    })
+}
+
+fn matchup_entry(champion: u32, opponent: u32, games: u64) -> Value {
+    let wins = games * 3 / 5;
+    let (rate, bound) = if games >= 100 {
+        (json!(60.0), json!(51.3))
+    } else {
+        (Value::Null, Value::Null)
+    };
+    json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+        "role":"TOP", "rank":"ALL", "champion_id":champion,
+        "opponent_champion_id":opponent, "games":games, "wins":wins, "losses":games - wins,
+        "win_rate":rate, "win_rate_lower_bound":bound
+    })
+}
+
 fn report() -> Value {
     let mut insufficient = champion(4, None);
-    for field in ["win_rate", "pick_rate", "win_rate_lower_bound", "tier"] {
+    for field in [
+        "win_rate",
+        "pick_rate",
+        "selection_share",
+        "win_rate_lower_bound",
+        "tier",
+    ] {
         insufficient[field] = Value::Null;
     }
     insufficient["games"] = json!(3);
@@ -93,23 +130,54 @@ fn report() -> Value {
         other["banned_matches"] = json!(99);
         bans.push(other);
     }
+    // Bans par palier de partie (#109) ; les cinq précédents n'ont pas de `rank` : ancien format.
+    for (id, banned, rank) in [
+        (1, 5, "GOLD"),
+        (999, 8, "GOLD"),
+        (4, 1, "GOLD"),
+        (1, 3, "DIAMOND"),
+        (1, 2, "UNKNOWN"),
+    ] {
+        bans.push(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420, "rank":rank,
+            "champion_id":id, "banned_matches":banned, "draft_matches":10,
+            "ban_rate": if id == 4 { Value::Null } else { json!(banned as f64 * 10.0) }
+        }));
+    }
 
     let coverage = json!({
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
         "matches":100, "participations":1000, "excluded_bot_participations":0,
-        "ranked_participations":500, "unranked_participations":0,
+        "ranked_participations":500, "tier_participations":{"GOLD":300, "MASTER":200},
+        "apex_share":0.4, "high_elo_biased":false,
+        "unranked_participations":0,
         "unknown_rank_participations":500, "unranked_mode_participations":0,
         "unknown_role_participations":0, "timeline_matches":80,
         "timeline_participations":800, "invalid_timeline_participations":5,
         "unidentified_item_undos":3, "draft_matches":100,
         "unknown_rank_rate":50.0, "rank_gap_median_hours":12.5, "rank_gap_max_hours":160.0,
-        "item_stage_participations":700, "missing_item_catalog_participations":10
+        "first_game_start_ms":1_000_000, "last_game_start_ms":1_900_000,
+        "item_stage_participations":700, "missing_item_catalog_participations":10,
+        "unknown_placement_participations":0,
+        "blue_side_matches":98, "blue_side_wins":52, "blue_side_win_rate":53.06,
+        "first_blood":{"matches":90, "wins":60, "blue_matches":46, "blue_wins":31,
+            "win_rate":66.67, "blue_win_rate":67.39},
+        "first_dragon":{"matches":80, "wins":50, "blue_matches":38, "blue_wins":22,
+            "win_rate":62.5, "blue_win_rate":57.89},
+        "first_tower":{"matches":95, "wins":70, "blue_matches":50, "blue_wins":37,
+            "win_rate":73.68, "blue_win_rate":74.0},
+        "match_tier_matches":60, "unknown_match_tier_matches":40,
+        "lane_matchup_participations":900
     });
     let mut coverage_entries = vec![coverage.clone()];
     for (field, value) in variants().into_iter().take(3) {
         let mut other = coverage.clone();
         other[field] = value;
         other["matches"] = json!(999);
+        // Bornes plus extrêmes que celles du périmètre demandé : si la fraîcheur lisait
+        // les couvertures voisines, elle ne vaudrait plus 1_000_000 / 1_900_000.
+        other["first_game_start_ms"] = json!(1);
+        other["last_game_start_ms"] = json!(9_999_999);
         coverage_entries.push(other);
     }
 
@@ -152,16 +220,55 @@ fn report() -> Value {
     other_item["champion_id"] = json!(2);
     items.push(other_item);
 
+    let averages = performance_entry(1);
+    let mut performances = vec![averages.clone()];
+    contaminated(&mut performances, &averages);
+    performances.push(performance_entry(2));
+    let split = |bucket: &str, games: u64, wins: u64| {
+        json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "dimension": if ["blue", "red"].contains(&bucket) { "side" } else { "duration" },
+            "bucket":bucket, "games":games, "wins":wins,
+            "win_rate":100.0 * wins as f64 / games as f64, "win_rate_lower_bound":40.0
+        })
+    };
+    let mut splits = vec![
+        split("lt_20", 10, 7),
+        split("30_35", 50, 28),
+        split("blue", 60, 36),
+        split("red", 40, 24),
+    ];
+    for row in splits.clone() {
+        contaminated(&mut splits, &row);
+        let mut other_champion = row;
+        other_champion["champion_id"] = json!(2);
+        splits.push(other_champion);
+    }
+
+    // Champion 1 : deux adversaires au-dessus du seuil (150 parties), un en dessous (40).
+    let mut lane_matchups = vec![
+        matchup_entry(1, 3, 40),
+        matchup_entry(1, 5, 150),
+        matchup_entry(1, 2, 150),
+    ];
+    let reference = matchup_entry(1, 2, 150);
+    contaminated(&mut lane_matchups, &reference);
+    lane_matchups.push(matchup_entry(2, 1, 150));
+
     json!({
         "schema_version":2, "rank_scope":"observed_rank_nearest_to_game_start_of_same_ranked_queue",
         "rank_max_age_hours":168, "min_game_duration_s":300, "min_played_percent":80, "exclude_afk":true,
-        "pick_rate_definition":"participations_in_group",
-        "tier_method":"wilson_lower_bound", "min_games":100,
+        "ban_rank_basis":"match_median", "ban_rank_min_known_players":6,
+        "pick_rate_definition":"champion_matches / bucket_matches * 100",
+        "tier_method":"tier_method fixture", "min_games":100,
         "filters":{"patches":["16.19","16.18"], "platforms":["EUW1","KR"], "queues":[420,440],
             "start_ms":1_000_000, "end_ms":2_000_000},
         "source_matches":100, "included_matches":99, "exclusions":{"remake":1},
         "coverage":coverage_entries, "groups":groups, "bans":bans,
-        "builds":build_values, "skill_levels":skills, "item_events":items,
+        "builds":build_values, "skill_levels":skills, "item_events":items, "splits":splits,
+        "performance":performances, "performance_method":"kda = (sum kills + sum assists) / max(sum deaths, 1)",
+        "matchups":lane_matchups, "matchup_method":"lane matchups: queues 420 and 440 only",
         "max_build_variants_per_category":20, "omitted_build_variants":7
     })
 }
@@ -217,6 +324,9 @@ async fn une_lecture_de_build_ne_parcourt_pas_les_morceaux_des_autres_population
         "builds",
         "skill_levels",
         "item_events",
+        "performance",
+        "matchups",
+        "splits",
     ] {
         source.as_object_mut().unwrap().remove(section);
     }
@@ -313,6 +423,9 @@ async fn la_migration_indexe_les_morceaux_existants_sans_changer_les_reponses() 
         "builds",
         "skill_levels",
         "item_events",
+        "performance",
+        "matchups",
+        "splits",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -411,17 +524,81 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["filters"], source["filters"]);
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
     assert_eq!(meta["min_games"], 100);
+    // Instantané antérieur à #91 : aucun plancher publié.
+    assert_eq!(meta["reliability_floor"], 0);
     assert_eq!(meta["rank_max_age_hours"], 168);
     assert_eq!(meta["min_game_duration_s"], 300);
     assert_eq!(meta["min_played_percent"], 80);
     assert_eq!(meta["exclude_afk"], true);
     assert_eq!(meta["exclusions"], json!({"remake": 1}));
+    assert_eq!(meta["ban_rank_basis"], "match_median");
+    assert_eq!(meta["ban_rank_min_known_players"], 6);
+    // Valeur neutre : l'API relaie `tier_method` sans l'interpréter (#85).
+    assert_eq!(meta["tier_method"], "tier_method fixture");
+    // ALL est un échantillon collecté non repondéré (#82), décrit par sa répartition de paliers.
+    assert_eq!(meta["population_label"], "collected_sample");
+    assert_eq!(
+        meta["coverage"][0]["tier_participations"],
+        json!({"GOLD": 300, "MASTER": 200})
+    );
+    // L'indicateur de biais Master+ est publié tel quel dans la couverture (#82).
+    assert_eq!(meta["coverage"][0]["apex_share"], 0.4);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"
     );
     assert_ne!(meta["source_snapshot_at"], meta["published_at"]);
     assert!(!meta["source_snapshot_at"].as_str().unwrap().is_empty());
+    // Fraîcheur réelle (#103) : bornes des parties du périmètre demandé, pas des périmètres voisins.
+    assert_eq!(
+        meta["freshness"],
+        json!({
+            "computed_at": meta["source_snapshot_at"],
+            "first_game_start_ms": 1_000_000,
+            "last_game_start_ms": 1_900_000,
+        })
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_part_apex_est_servi_avec_l_indicateur_recalcule_depuis_les_paliers() {
+    // Instantané publié avec le premier commit de #82 : `tier_participations` sans indicateur.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    coverage.remove("apex_share");
+    coverage.remove("high_elo_biased");
+    coverage.insert("ranked_participations".into(), json!(100));
+    coverage.insert(
+        "tier_participations".into(),
+        json!({"GOLD": 8, "MASTER": 60, "GRANDMASTER": 20, "CHALLENGER": 12}),
+    );
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    let share = meta["coverage"][0]["apex_share"].as_f64().unwrap();
+    assert!((share - 0.92).abs() < 1e-9, "part apex servie : {share}");
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], true);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_repartition_ni_part_apex_reste_non_mesure_et_non_biaise() {
+    // Antérieur à #82 : ni `tier_participations` ni indicateur, rien à recalculer.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    for field in ["tier_participations", "apex_share", "high_elo_biased"] {
+        coverage.remove(field);
+    }
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    assert_eq!(meta["coverage"][0]["tier_participations"], json!({}));
+    assert_eq!(meta["coverage"][0]["apex_share"], Value::Null);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     db.cleanup().await;
 }
 
@@ -446,6 +623,10 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     assert_eq!(insufficient.tier, None);
     assert_eq!(insufficient.win_rate, None);
     assert_eq!(insufficient.pick_rate, None);
+    assert_eq!(insufficient.selection_share, None);
+    assert_eq!(insufficient.bucket_matches, 250);
+    assert_eq!(response.entries[0].pick_rate, Some(40.0));
+    assert_eq!(response.entries[0].selection_share, Some(20.0));
     assert_eq!(insufficient.win_rate_lower_bound, None);
     let gold = tierlist(
         db.storage.pool(),
@@ -457,8 +638,22 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     .await
     .unwrap();
     assert_eq!(gold.total, 1);
+    assert_eq!(
+        serde_json::to_value(&gold.meta).unwrap()["population_label"],
+        "observed_tier"
+    );
     assert_eq!(gold.entries[0].games, 200);
     assert_eq!(gold.entries[0].key.rank, "GOLD");
+    // Les bans suivent le rang demandé : seul le ban GOLD du champion de la page est renvoyé.
+    assert_eq!(gold.bans.len(), 1);
+    assert_eq!(
+        (
+            gold.bans[0].rank.as_str(),
+            gold.bans[0].champion_id,
+            gold.bans[0].banned_matches
+        ),
+        ("GOLD", 1, 5)
+    );
     let beyond = tierlist(
         db.storage.pool(),
         StatsQuery {
@@ -471,6 +666,47 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     assert_eq!(beyond.total, 4);
     assert!(beyond.entries.is_empty());
     assert!(beyond.bans.is_empty());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_instantane_publie_sans_les_indicateurs_de_rang_fige_reste_lisible_avec_des_null() {
+    let db = db_or_skip!();
+    let mut source = report();
+    // Instantané antérieur au rang figé (#80) : ces trois clés n'existent pas dans le JSON stocké.
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    for key in [
+        "unknown_rank_rate",
+        "rank_gap_median_hours",
+        "rank_gap_max_hours",
+        "first_game_start_ms",
+        "last_game_start_ms",
+    ] {
+        assert!(coverage.remove(key).is_some());
+    }
+    publish(db.storage.pool(), source).await;
+    for response in [
+        tierlist(db.storage.pool(), query()).await.unwrap().meta,
+        builds(db.storage.pool(), query(), 1).await.unwrap().meta,
+    ] {
+        let meta = serde_json::to_value(response).unwrap();
+        let coverage = &meta["coverage"][0];
+        for key in [
+            "unknown_rank_rate",
+            "rank_gap_median_hours",
+            "rank_gap_max_hours",
+            "first_game_start_ms",
+            "last_game_start_ms",
+        ] {
+            assert_eq!(coverage[key], Value::Null, "{key} doit valoir null");
+        }
+        // La date de calcul reste servie ; les dates de parties sont inconnues, pas inventées.
+        assert_eq!(meta["freshness"]["computed_at"], meta["source_snapshot_at"]);
+        assert_eq!(meta["freshness"]["last_game_start_ms"], Value::Null);
+        // Les autres compteurs de la couverture sont relus tels quels.
+        assert_eq!(coverage["unknown_rank_participations"], 500);
+        assert_eq!(coverage["participations"], 1000);
+    }
     db.cleanup().await;
 }
 
@@ -508,7 +744,12 @@ async fn builds_garde_le_champion_la_population_et_les_effectifs_avant_paginatio
     assert_eq!(page.item_events, complete.item_events);
     assert_eq!(page.summary, complete.summary);
     assert_eq!(page.max_build_variants_per_category, 20);
-    assert_eq!(page.omitted_build_variants, 7);
+    // Le compteur global (7) du snapshot n'est pas servi : sans compteur par catégorie
+    // (instantané antérieur), le compte du groupe est inconnu et non repris du global.
+    assert_eq!(page.omitted_build_variants, None);
+    assert!(page.omitted_build_variants_by_category.is_empty());
+    assert_eq!(page.max_item_events, 2000);
+    assert_eq!(page.omitted_item_events, 0);
     let meta = serde_json::to_value(page.meta).unwrap();
     assert_eq!(meta["filters"], source["filters"]);
     assert_eq!(meta["coverage"], json!([source["coverage"][0].clone()]));
@@ -650,5 +891,911 @@ async fn builds_expose_le_taux_conditionnel_des_runes_sans_toucher_au_taux_globa
         .iter()
         .filter(|b| !b.category.starts_with("rune_"))
         .all(|b| b.conditional_rate.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn performance_isole_le_champion_et_la_population_sans_recalcul() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let response = performance(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(response.champion_id, 1);
+    assert_eq!(response.query, query());
+    assert_eq!(response.summary.as_ref().unwrap().games, 100);
+    let averages = response.performance.as_ref().unwrap();
+    assert_eq!(
+        serde_json::to_value(averages).unwrap(),
+        performance_entry(1)
+    );
+    assert_eq!(
+        response.performance_method,
+        "kda = (sum kills + sum assists) / max(sum deaths, 1)"
+    );
+    let meta = serde_json::to_value(&response.meta).unwrap();
+    assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
+    // Autre rang, rôle ou patch : aucune moyenne empruntée à une autre population.
+    for other in [
+        StatsQuery {
+            rank: "GOLD".into(),
+            role: "JUNGLE".into(),
+            ..query()
+        },
+        StatsQuery {
+            patch: "16.17".into(),
+            ..query()
+        },
+    ] {
+        assert!(performance(db.storage.pool(), other, 1)
+            .await
+            .unwrap()
+            .performance
+            .is_none());
+    }
+    assert!(performance(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .performance
+        .is_none());
+    assert_eq!(
+        performance(db.storage.pool(), query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    assert_eq!(
+        performance(
+            db.storage.pool(),
+            StatsQuery {
+                role: "MID".into(),
+                ..query()
+            },
+            1
+        )
+        .await
+        .err(),
+        Some(ApiError::InvalidRequest)
+    );
+    // Un instantané antérieur à #100 reste lisible, sans moyenne ni définition.
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("performance");
+    legacy.as_object_mut().unwrap().remove("performance_method");
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), legacy).await;
+    let old = performance(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(old.performance.is_none());
+    assert_eq!(old.performance_method, "");
+    assert!(old.summary.is_some());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn performance_lit_la_section_des_morceaux_v2() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let expected =
+        serde_json::to_value(performance(db.storage.pool(), query(), 1).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+        "performance",
+        "matchups",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(
+        serde_json::to_value(performance(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
+        expected
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn matchups_isole_le_champion_et_la_population_avec_leur_couverture() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let response = matchups(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(response.champion_id, 1);
+    assert_eq!(response.query, query());
+    assert_eq!(response.summary.as_ref().unwrap().games, 100);
+    // Effectif décroissant puis adversaire croissant ; la ligne sous le seuil reste publiée.
+    let opponents: Vec<_> = response
+        .matchups
+        .iter()
+        .map(|m| m.opponent_champion_id)
+        .collect();
+    assert_eq!(opponents, [2, 5, 3]);
+    assert_eq!(response.total, 3);
+    assert_eq!(response.paired_games, 340);
+    assert_eq!(
+        serde_json::to_value(&response.matchups[0]).unwrap(),
+        matchup_entry(1, 2, 150)
+    );
+    assert_eq!(response.matchups[2].win_rate, None);
+    assert_eq!(
+        response.matchup_method,
+        "lane matchups: queues 420 and 440 only"
+    );
+    let meta = serde_json::to_value(&response.meta).unwrap();
+    assert_eq!(meta["coverage"][0]["lane_matchup_participations"], 900);
+    // La pagination ne change ni le total ni l'effectif apparié.
+    let page = matchups(
+        db.storage.pool(),
+        StatsQuery {
+            offset: 1,
+            limit: 1,
+            ..query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        page.matchups
+            .iter()
+            .map(|m| m.opponent_champion_id)
+            .collect::<Vec<_>>(),
+        [5]
+    );
+    assert_eq!((page.total, page.paired_games), (3, 340));
+    // Autre rang, rôle ou patch : seule la ligne de cette population, rien d'emprunté.
+    for other in [
+        StatsQuery {
+            rank: "GOLD".into(),
+            ..query()
+        },
+        StatsQuery {
+            role: "JUNGLE".into(),
+            ..query()
+        },
+        StatsQuery {
+            patch: "16.18".into(),
+            ..query()
+        },
+    ] {
+        let isolated = matchups(db.storage.pool(), other, 1).await.unwrap();
+        assert_eq!((isolated.total, isolated.paired_games), (1, 150));
+    }
+    let empty = matchups(
+        db.storage.pool(),
+        StatsQuery {
+            role: "MIDDLE".into(),
+            ..query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    assert!(empty.matchups.is_empty());
+    assert_eq!((empty.total, empty.paired_games), (0, 0));
+    assert!(matchups(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .matchups
+        .is_empty());
+    assert_eq!(
+        matchups(db.storage.pool(), query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    // Un instantané antérieur à #123 reste lisible, sans matchup ni définition.
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("matchups");
+    legacy.as_object_mut().unwrap().remove("matchup_method");
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), legacy).await;
+    let old = matchups(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(old.matchups.is_empty());
+    assert_eq!(old.matchup_method, "");
+    assert!(old.summary.is_some());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn matchups_lit_la_section_des_morceaux_v2() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let expected =
+        serde_json::to_value(matchups(db.storage.pool(), query(), 1).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+        "performance",
+        "matchups",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(
+        serde_json::to_value(matchups(db.storage.pool(), query(), 1).await.unwrap()).unwrap(),
+        expected
+    );
+    db.cleanup().await;
+}
+
+fn bans_query() -> BansQuery {
+    BansQuery {
+        patch: "16.19".into(),
+        platform: "EUW1".into(),
+        queue: 420,
+        rank: "GOLD".into(),
+        limit: 50,
+    }
+}
+
+#[tokio::test]
+async fn les_bans_de_la_draft_suivent_le_palier_sans_pagination_ni_filtre_de_role() {
+    let db = db_or_skip!();
+    publish(db.storage.pool(), report()).await;
+    let gold = bans(db.storage.pool(), bans_query()).await.unwrap();
+    assert_eq!(gold.query, bans_query());
+    // Champion 999 : absent de toute page de la tierlist, mais bien banni en GOLD.
+    let ids: Vec<_> = gold
+        .bans
+        .iter()
+        .map(|b| (b.champion_id, b.ban_rate))
+        .collect();
+    assert_eq!(ids, [(999, Some(80.0)), (1, Some(50.0)), (4, None)]);
+    assert_eq!(gold.total, 3);
+    assert!(gold
+        .bans
+        .iter()
+        .all(|b| b.rank == "GOLD" && b.draft_matches == 10));
+    let meta = serde_json::to_value(&gold.meta).unwrap();
+    assert_eq!(meta["ban_rank_basis"], "match_median");
+    // Le rang d'un ban est le palier de la partie, pas celui d'un joueur.
+    assert_eq!(meta["population_label"], "match_tier");
+    assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
+
+    let limited = bans(
+        db.storage.pool(),
+        BansQuery {
+            limit: 2,
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(limited.total, 3);
+    assert_eq!(limited.bans.len(), 2);
+
+    // ALL : les bans publiés sans `rank` se relisent sous ALL, sans autre périmètre.
+    let all = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "ALL".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        all.bans.iter().map(|b| b.champion_id).collect::<Vec<_>>(),
+        [1, 2, 3, 4, 999]
+    );
+    assert!(all
+        .bans
+        .iter()
+        .all(|b| b.rank == "ALL" && b.banned_matches == 20));
+
+    for rank in ["DIAMOND", "UNKNOWN"] {
+        let other = bans(
+            db.storage.pool(),
+            BansQuery {
+                rank: rank.into(),
+                ..bans_query()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(other.bans.len(), 1, "{rank}");
+        assert_eq!(other.bans[0].rank, rank);
+    }
+    // Un palier sans ban publié : liste vide, jamais le ban d'un autre palier.
+    let empty = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "CHALLENGER".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert!(empty.bans.is_empty());
+    assert_eq!(empty.total, 0);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_paliers_cumules_se_lisent_comme_une_population_distincte_de_all_et_des_paliers() {
+    let db = db_or_skip!();
+    let mut value = report();
+    for (id, games) in [(1, 300), (2, 120)] {
+        let mut cumulated = champion(id, Some(id));
+        cumulated["rank"] = json!("EMERALD_PLUS");
+        cumulated["games"] = json!(games);
+        cumulated["wins"] = json!(games / 2);
+        cumulated["losses"] = json!(games / 2);
+        value["groups"].as_array_mut().unwrap().push(cumulated);
+    }
+    value["bans"].as_array_mut().unwrap().push(json!({
+        "patch":"16.19", "platform_id":"EUW1", "queue_id":420, "rank":"EMERALD_PLUS",
+        "champion_id":1, "banned_matches":7, "draft_matches":14, "ban_rate":50.0
+    }));
+    publish(db.storage.pool(), value).await;
+
+    let page = tierlist(
+        db.storage.pool(),
+        StatsQuery {
+            rank: "EMERALD_PLUS".into(),
+            ..query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(page.total, 2);
+    assert!(page.entries.iter().all(|e| e.key.rank == "EMERALD_PLUS"));
+    assert_eq!(
+        page.entries.iter().map(|e| e.games).collect::<Vec<_>>(),
+        [300, 120]
+    );
+    assert_eq!(page.bans.len(), 1);
+    assert_eq!(
+        (page.bans[0].rank.as_str(), page.bans[0].banned_matches),
+        ("EMERALD_PLUS", 7)
+    );
+    // ALL et GOLD ne voient jamais les lignes cumulées.
+    let all = tierlist(db.storage.pool(), query()).await.unwrap();
+    assert!(all.entries.iter().all(|e| e.key.rank == "ALL"));
+    let cumulated_bans = bans(
+        db.storage.pool(),
+        BansQuery {
+            rank: "EMERALD_PLUS".into(),
+            ..bans_query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(cumulated_bans.total, 1);
+    assert_eq!(cumulated_bans.bans[0].draft_matches, 14);
+    // Un palier cumulé sans donnée publiée reste vide, sans erreur ; un faux suffixe est refusé.
+    let empty = tierlist(
+        db.storage.pool(),
+        StatsQuery {
+            rank: "MASTER_PLUS".into(),
+            ..query()
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(empty.total, 0);
+    assert!(matches!(
+        tierlist(
+            db.storage.pool(),
+            StatsQuery {
+                rank: "CHALLENGER_PLUS".into(),
+                ..query()
+            },
+        )
+        .await,
+        Err(ApiError::InvalidRequest)
+    ));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn builds_publie_les_tranches_de_duree_et_les_cotes_du_champion_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let expected = |response: &olc_api::stats::BuildsResponse| {
+        // Population exacte, rang ALL et ordre stable : durée croissante puis bleu, rouge.
+        assert!(response
+            .splits
+            .iter()
+            .all(|s| s.key.champion_id == 1 && s.key.rank == "ALL"));
+        response
+            .splits
+            .iter()
+            .map(|s| (serde_json::to_value(s.bucket).unwrap(), s.games, s.wins))
+            .collect::<Vec<_>>()
+    };
+    let want = vec![
+        (json!("lt_20"), 10, 7),
+        (json!("30_35"), 50, 28),
+        (json!("blue"), 60, 36),
+        (json!("red"), 40, 24),
+    ];
+    publish(db.storage.pool(), report()).await;
+    let v1 = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(expected(&v1), want);
+    assert_eq!(
+        builds(db.storage.pool(), query(), 2)
+            .await
+            .unwrap()
+            .splits
+            .len(),
+        4
+    );
+    assert!(builds(db.storage.pool(), query(), 999)
+        .await
+        .unwrap()
+        .splits
+        .is_empty());
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), report()).await;
+    let v2 = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(expected(&v2), want);
+    assert_eq!(v2.splits, v1.splits);
+    // La tierlist et les tendances ne chargent pas les tranches.
+    let tiers = serde_json::to_value(tierlist(db.storage.pool(), query()).await.unwrap()).unwrap();
+    assert!(tiers.get("splits").is_none());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_requete_invalide() {
+    let db = db_or_skip!();
+    let mut source = report();
+    publish(db.storage.pool(), source.clone()).await;
+    let v1 = serde_json::to_value(bans(db.storage.pool(), bans_query()).await.unwrap()).unwrap();
+    let mut tx = db.storage.pool().begin().await.unwrap();
+    for section in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+        "performance",
+        "matchups",
+    ] {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(&mut *tx).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+    let v2 = serde_json::to_value(bans(db.storage.pool(), bans_query()).await.unwrap()).unwrap();
+    assert_eq!(v2, v1);
+    assert_eq!(v2["bans"].as_array().unwrap().len(), 3);
+    for invalid in [
+        BansQuery {
+            rank: "FAKE".into(),
+            ..bans_query()
+        },
+        BansQuery {
+            limit: 0,
+            ..bans_query()
+        },
+        BansQuery {
+            patch: "x".into(),
+            ..bans_query()
+        },
+    ] {
+        assert_eq!(
+            bans(db.storage.pool(), invalid).await.err(),
+            Some(ApiError::InvalidRequest)
+        );
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn l_api_expose_le_plancher_les_intervalles_et_la_fiabilite_sans_les_recalculer() {
+    let db = db_or_skip!();
+    let mut source = report();
+    source["reliability_floor"] = json!(30);
+    source["min_games"] = json!(1);
+    let intervals = json!({
+        "win_rate_lower_bound": 50.2, "win_rate_upper_bound": 69.1,
+        "pick_rate_lower_bound": 35.0, "pick_rate_upper_bound": 45.0,
+        "reliability": "sufficient"
+    });
+    for group in source["groups"].as_array_mut().unwrap() {
+        if group["champion_id"] == 3 && group["rank"] == "ALL" && group["role"] == "TOP" {
+            for (field, value) in intervals.as_object().unwrap() {
+                group[field] = value.clone();
+            }
+        }
+    }
+    for ban in source["bans"].as_array_mut().unwrap() {
+        if ban["rank"] == "GOLD" && ban["champion_id"] == 999 {
+            ban["ban_rate_lower_bound"] = json!(49.0);
+            ban["ban_rate_upper_bound"] = json!(95.0);
+            ban["reliability"] = json!("low");
+        }
+    }
+    for build in source["builds"].as_array_mut().unwrap() {
+        build["win_rate_upper_bound"] = json!(58.0);
+        build["reliability"] = json!("sufficient");
+    }
+    publish(db.storage.pool(), source).await;
+
+    let list = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(&list.meta).unwrap();
+    assert_eq!(meta["reliability_floor"], 30);
+    assert_eq!(meta["min_games"], 1);
+    let champion = serde_json::to_value(
+        list.entries
+            .iter()
+            .find(|e| e.key.champion_id == 3)
+            .unwrap(),
+    )
+    .unwrap();
+    for (field, value) in intervals.as_object().unwrap() {
+        assert_eq!(&champion[field], value, "{field}");
+    }
+    // Un groupe publié avant #91 reste lisible : aucune fiabilité inventée.
+    let legacy = list
+        .entries
+        .iter()
+        .find(|e| e.key.champion_id == 2)
+        .unwrap();
+    assert_eq!(legacy.reliability, None);
+    assert_eq!(legacy.win_rate_upper_bound, None);
+
+    let gold = bans(db.storage.pool(), bans_query()).await.unwrap();
+    let ban =
+        serde_json::to_value(gold.bans.iter().find(|b| b.champion_id == 999).unwrap()).unwrap();
+    assert_eq!(ban["ban_rate_lower_bound"], 49.0);
+    assert_eq!(ban["ban_rate_upper_bound"], 95.0);
+    assert_eq!(ban["reliability"], "low");
+
+    let detail = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(!detail.builds.is_empty());
+    assert!(detail.builds.iter().all(|b| {
+        let value = serde_json::to_value(b).unwrap();
+        value["win_rate_upper_bound"] == 58.0 && value["reliability"] == "sufficient"
+    }));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_instantane_publie_avant_les_splits_reste_lisible_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let mut legacy = report();
+    legacy.as_object_mut().unwrap().remove("splits");
+    publish(db.storage.pool(), legacy.clone()).await;
+    assert!(builds(db.storage.pool(), query(), 1)
+        .await
+        .unwrap()
+        .splits
+        .is_empty());
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), legacy).await;
+    let response = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert!(response.splits.is_empty());
+    assert_eq!(response.total, 3);
+    db.cleanup().await;
+}
+
+fn trends_query() -> TrendsQuery {
+    TrendsQuery {
+        platform: "EUW1".into(),
+        queue: 420,
+        role: "TOP".into(),
+        rank: "ALL".into(),
+    }
+}
+
+/// Deux patchs publiés pour la même population, plus des entrées voisines à ne pas mélanger.
+fn trends_report() -> Value {
+    let mut source = report();
+    // La fixture porte déjà un groupe 16.18 TOP/ALL du champion 1 : on le précise.
+    let previous = source["groups"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|g| {
+            g["patch"] == "16.18"
+                && g["platform_id"] == "EUW1"
+                && g["queue_id"] == 420
+                && g["role"] == "TOP"
+                && g["rank"] == "ALL"
+        })
+        .unwrap();
+    previous["games"] = json!(250);
+    previous["wins"] = json!(120);
+    previous["losses"] = json!(130);
+    previous["population"] = json!(1000);
+    previous["win_rate"] = json!(48.0);
+    previous["pick_rate"] = json!(25.0);
+    // La fixture porte déjà la couverture et un ban 16.18 (autre patch, même population).
+    let previous_ban = source["bans"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|b| b["patch"] == "16.18" && b["platform_id"] == "EUW1" && b["queue_id"] == 420)
+        .unwrap();
+    previous_ban["banned_matches"] = json!(10);
+    previous_ban["ban_rate"] = json!(10.0);
+    source
+}
+
+/// Reproduit la publication en morceaux du collecteur (stockage v2) pour un rapport donné.
+async fn publish_chunked(pool: &PgPool, mut source: Value) {
+    publish(pool, source.clone()).await;
+    let sections = [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+        "performance",
+        "matchups",
+    ];
+    for section in sections {
+        // Un instantané antérieur à #119 n'a pas la section : aucun morceau à écrire.
+        let Some(items) = source.as_object_mut().unwrap().remove(section) else {
+            continue;
+        };
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(pool).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn tendances_donnent_la_serie_du_champion_sur_les_patchs_publies_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let source = trends_report();
+    publish(db.storage.pool(), source.clone()).await;
+    let full = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), source.clone()).await;
+    let chunked = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    assert_eq!(
+        serde_json::to_value(&full).unwrap(),
+        serde_json::to_value(&chunked).unwrap()
+    );
+    assert_eq!(chunked.champion_id, 1);
+    assert_eq!(chunked.query, trends_query());
+    let patches: Vec<_> = chunked.points.iter().map(|p| p.patch.as_str()).collect();
+    assert_eq!(patches, ["16.18", "16.19"]);
+    let (old, new) = (&chunked.points[0], &chunked.points[1]);
+    // 16.19 : population TOP/ALL ; ni GOLD, ni JUNGLE, ni KR, ni file 440 ne s'y ajoutent.
+    assert_eq!((new.games, new.wins, new.population), (100, 60, 500));
+    assert_eq!((old.games, old.wins, old.population), (250, 120, 1000));
+    assert_eq!(new.win_rate, Some(60.0));
+    // Pick rate par partie (#84) : 100 parties du champion / 250 parties du compartiment.
+    assert_eq!(new.pick_rate, Some(40.0));
+    assert_eq!((new.banned_matches, new.draft_matches), (20, 100));
+    assert_eq!(new.ban_rate, Some(20.0));
+    assert_eq!(new.delta_win_rate, Some(12.0));
+    assert_eq!(new.delta_pick_rate, Some(15.0));
+    assert_eq!(new.delta_ban_rate, Some(10.0));
+    assert_eq!(old.delta_win_rate, None);
+    // La couverture annoncée porte tous les patchs de la plateforme et de la file.
+    let meta = serde_json::to_value(&chunked.meta).unwrap();
+    let scopes: Vec<_> = meta["coverage"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["patch"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(scopes.len(), 2);
+    assert!(scopes.contains(&"16.18".to_string()) && scopes.contains(&"16.19".to_string()));
+    assert!(meta["coverage"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|c| c["platform_id"] == "EUW1" && c["queue_id"] == 420));
+    // Un autre rang est une autre série.
+    let gold = trends(
+        db.storage.pool(),
+        TrendsQuery {
+            rank: "GOLD".into(),
+            ..trends_query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    // 16.18 est observé mais sans ligne GOLD du champion : point vide, aucun écart.
+    assert_eq!(gold.points.len(), 2);
+    assert_eq!(
+        (gold.points[0].patch.as_str(), gold.points[0].games),
+        ("16.18", 0)
+    );
+    assert_eq!(
+        (gold.points[1].patch.as_str(), gold.points[1].games),
+        ("16.19", 200)
+    );
+    assert_eq!(gold.points[1].delta_win_rate, None);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn tendances_rejettent_les_requetes_invalides_et_signalent_l_absence_d_instantane() {
+    let db = db_or_skip!();
+    assert_eq!(
+        trends(db.storage.pool(), trends_query(), 1).await.err(),
+        Some(ApiError::Unavailable)
+    );
+    assert_eq!(
+        trends(db.storage.pool(), trends_query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    for invalid in [
+        TrendsQuery {
+            platform: "EUROPE".into(),
+            ..trends_query()
+        },
+        TrendsQuery {
+            queue: 0,
+            ..trends_query()
+        },
+        TrendsQuery {
+            role: "MID".into(),
+            ..trends_query()
+        },
+        TrendsQuery {
+            rank: "FAKE".into(),
+            ..trends_query()
+        },
+    ] {
+        assert_eq!(
+            trends(db.storage.pool(), invalid, 1).await.err(),
+            Some(ApiError::InvalidRequest)
+        );
+    }
+    publish(db.storage.pool(), trends_report()).await;
+    // Champion absent : série vide de parties, jamais celle d'un autre champion.
+    let unknown = trends(db.storage.pool(), trends_query(), 999_999)
+        .await
+        .unwrap();
+    assert!(unknown
+        .points
+        .iter()
+        .all(|p| p.games == 0 && p.win_rate.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_serie_ne_parcourt_pas_les_morceaux_des_autres_champions_ni_les_builds() {
+    let db = db_or_skip!();
+    let source = trends_report();
+    publish_chunked(db.storage.pool(), source.clone()).await;
+    sqlx::query(
+        "INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items)
+        SELECT 1,'groups',100+n,jsonb_build_array($1::jsonb || jsonb_build_object('champion_id',1000+n))
+        FROM generate_series(1,2048) n",
+    )
+    .bind(&source["groups"][1])
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    sqlx::query("ANALYZE champion_stats_snapshot_chunks")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    // Même requête SQL que l'API, avec un patch nul : tous les patchs, un seul champion.
+    let sql = format!(
+        "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {}",
+        include_str!("../src/sql/stats_snapshot.sql")
+    );
+    let vars =
+        json!({"patch":null,"platform":"EUW1","queue":420,"role":"TOP","rank":"ALL","champion":1});
+    let plan: Value = sqlx::query_scalar(&sql)
+        .bind(vars)
+        .bind("$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))")
+        .bind("$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue)")
+        .bind(false)
+        .fetch_one(db.storage.pool())
+        .await
+        .unwrap();
+    assert!(plan.to_string().contains("snapshot_chunk_populations_idx"));
+    let selected = selected_chunk_rows(&plan[0]["Plan"]);
+    assert!(
+        (1..=16).contains(&selected),
+        "{selected} morceaux lus pour 2048 morceaux voisins : {plan}"
+    );
+    let response = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    assert_eq!(response.points.len(), 2);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_variantes_omises_sont_celles_du_groupe_demande_et_les_achats_sont_plafonnes() {
+    let db = db_or_skip!();
+    let mut source = report();
+    // Compteurs par (groupe, catégorie) : le champion 2 et les autres populations portent
+    // des valeurs différentes qui ne doivent jamais entrer dans la réponse du champion 1.
+    for build in source["builds"].as_array_mut().unwrap() {
+        let own = build["champion_id"] == 1
+            && build["rank"] == "ALL"
+            && build["role"] == "TOP"
+            && build["patch"] == "16.19"
+            && build["platform_id"] == "EUW1"
+            && build["queue_id"] == 420;
+        build["omitted_variants"] = json!(if own { 4 } else { 900 });
+    }
+    // Plus de lignes d'achats que le plafond pour le champion 1, dont deux très fréquentes.
+    let template = source["item_events"][0].clone();
+    for n in 0..2100 {
+        let mut row = template.clone();
+        row["item_id"] = json!(2000 + n);
+        row["minute"] = json!(n % 40);
+        row["events"] = json!(if n < 2 { 1000 } else { 1 });
+        source["item_events"].as_array_mut().unwrap().push(row);
+    }
+    publish(db.storage.pool(), source).await;
+    let page = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(page.omitted_build_variants, Some(4));
+    let by_category = serde_json::to_value(&page.omitted_build_variants_by_category).unwrap();
+    assert_eq!(by_category, json!([{"category":"final_items","omitted":4}]));
+    // 2101 lignes pour le champion 1 (1 de la fixture + 2100) : 101 retirées, les plus
+    // fréquentes conservées.
+    assert_eq!(page.max_item_events, 2000);
+    assert_eq!(page.item_events.len(), 2000);
+    assert_eq!(page.omitted_item_events, 101);
+    assert_eq!(
+        page.item_events.iter().filter(|e| e.events == 1000).count(),
+        2
+    );
+    assert!(page.item_events.iter().any(|e| e.events == 42));
+    assert!(page.item_events.iter().all(|e| e.key.champion_id == 1));
+    // Un autre champion ne reçoit ni ces compteurs ni ces lignes.
+    let other = builds(db.storage.pool(), query(), 2).await.unwrap();
+    assert_eq!(other.omitted_build_variants, Some(900));
+    assert_eq!(other.omitted_item_events, 0);
     db.cleanup().await;
 }

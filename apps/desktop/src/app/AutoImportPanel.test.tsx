@@ -1,7 +1,7 @@
 import {expect,it,vi,afterEach} from 'vitest';
 import {SettingsProvider} from './SettingsContext';
 import {renderToStaticMarkup} from 'react-dom/server';
-import {AutoImportPanel} from './AutoImportPanel';
+import {AutoImportPanel,Progress} from './AutoImportPanel';
 import {initialState} from './state';
 
 it('présente trois activations séparées, initialement décochées, en FR et EN',()=>{
@@ -21,6 +21,14 @@ it('l’aperçu navigateur désactive les commandes et explique le passage au de
 it('retire les réglages et les annonces du rendu hors de la page paramètres',()=>{
     const html=renderToStaticMarkup(<SettingsProvider><AutoImportPanel session={initialState.session} locale="fr" native={true} visible={false}/></SettingsProvider>);
     expect(html).toBe('');
+});
+it('signale en FR et EN les objets remplacés ou retirés du set envoyé à League',()=>{
+    const progress={status:'confirmed' as const,adjustments:{converted:2,dropped:1}};
+    const fr=renderToStaticMarkup(<Progress progress={progress} locale="fr" label="Importer les objets"/>);
+    expect(fr).toContain('2 objets non achetables remplacés');expect(fr).toContain('1 objet sans équivalent achetable retiré du set envoyé à League');
+    const en=renderToStaticMarkup(<Progress progress={progress} locale="en" label="Import items"/>);
+    expect(en).toContain('2 unpurchasable items replaced');expect(en).toContain('1 item with no purchasable equivalent removed from the set sent to League');
+    expect(renderToStaticMarkup(<Progress progress={{status:'confirmed',adjustments:{converted:0,dropped:0}}} locale="fr" label="x"/>)).not.toContain('achetable');
 });
 
 afterEach(()=>vi.unstubAllGlobals());
