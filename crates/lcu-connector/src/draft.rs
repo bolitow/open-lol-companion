@@ -366,6 +366,79 @@ mod tests {
         assert!(!json.contains("chat"));
     }
     #[test]
+    fn aucune_identite_des_joueurs_ne_sort_de_la_projection() {
+        // Anonymat de la sélection (#30) : même si le client divulgue des identités, ni la
+        // projection ni ses clés ne les reprennent. Les marqueurs sont des canaris synthétiques.
+        let mut v = fixture();
+        let identity = json!({
+            "puuid": "CANARY-PUUID", "gameName": "CANARY-GAME", "tagLine": "CANARY-TAG",
+            "summonerName": "CANARY-SUMMONER", "summonerId": 424242, "obfuscatedPuuid": "CANARY-OBF",
+            "obfuscatedSummonerId": 434343, "nameVisibilityType": "VISIBLE",
+            "chatRoomName": "CANARY-CHAT", "spell1Id": 4, "spell2Id": 14, "skinId": 7
+        });
+        for team in ["myTeam", "theirTeam"] {
+            v[team] = json!((0..5)
+                .map(|cell| {
+                    let mut player = identity.clone();
+                    player["cellId"] = json!(cell + if team == "myTeam" { 0 } else { 5 });
+                    player["team"] = json!(if team == "myTeam" { 1 } else { 2 });
+                    player
+                })
+                .collect::<Vec<_>>());
+        }
+        v["chatDetails"] =
+            json!({"chatRoomName": "CANARY-CHAT", "mucJwtDto": {"jwt": "CANARY-JWT"}});
+        let draft = DraftSession::parse(v).unwrap();
+        let value = serde_json::to_value(&draft).unwrap();
+        let text = value.to_string();
+        for forbidden in [
+            "CANARY", "puuid", "gameName", "tagLine", "summoner", "chat", "424242",
+        ] {
+            assert!(
+                !text.to_lowercase().contains(&forbidden.to_lowercase()),
+                "{forbidden} sorti : {text}"
+            );
+        }
+        // Liste blanche des clés : tout nouveau champ doit être ajouté ici après revue de conformité.
+        let players = ["allies", "enemies"].map(|k| value[k][0].as_object().unwrap().clone());
+        for player in players {
+            let mut keys: Vec<_> = player.keys().map(String::as_str).collect();
+            keys.sort_unstable();
+            assert_eq!(
+                keys,
+                [
+                    "acting",
+                    "cellId",
+                    "championId",
+                    "local",
+                    "locked",
+                    "position"
+                ]
+            );
+        }
+        let mut keys: Vec<_> = value
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        keys.sort_unstable();
+        assert_eq!(
+            keys,
+            [
+                "allies",
+                "allyBans",
+                "allySide",
+                "customGame",
+                "enemies",
+                "enemyBans",
+                "localSpells",
+                "supported",
+                "timer"
+            ]
+        );
+    }
+    #[test]
     fn utilise_le_cote_du_joueur_local_pas_son_index() {
         let mut v = fixture();
         v["myTeam"][0]["team"] = json!(2);

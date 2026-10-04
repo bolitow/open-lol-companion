@@ -113,6 +113,8 @@ Sources vérifiées : [API officielle Riot](https://developer.riotgames.com/docs
 [raccourcis Tauri](https://v2.tauri.app/plugin/global-shortcut/),
 [GetClientRect](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getclientrect).
 
+Revue de conformité Riot de ces données, ligne à ligne : [revue du 4 octobre 2026](revues/2026-10-04-conformite-overlays.md) (#30).
+
 ## Validation et limites
 
 Les tests automatisés couvrent projection, données incomplètes, identité ambiguë,

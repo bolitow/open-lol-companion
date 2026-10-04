@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Revue de conformité Riot de tous les overlays et projections (panneau en partie, projection Live Client, sélection des champions, bilan, prototype) : rapport daté ligne à ligne, cas à soumettre à Riot et fonctions refusées complétés dans `rules/conformite-riot.md`, test de non-fuite des identités de la projection de sélection (#30).
+
 - Projection Live Client élargie par liste blanche : or courant, vision, mort/réapparition, niveaux de compétences, côté et poste du joueur local, totaux K/D/A et CS des équipes comme au tableau des scores, événements publics (objectifs, kills) sans nom de joueur ; aucune donnée adverse cachée. La dernière lecture est conservée en mémoire jusqu'au bilan d'après-partie puis purgée (#102).
 
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
