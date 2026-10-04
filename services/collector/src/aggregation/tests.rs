@@ -1012,3 +1012,39 @@ fn une_variante_sans_victoire_publie_une_borne_wilson_nulle_et_non_negative() {
         .unwrap();
     assert_eq!(champion.win_rate_lower_bound, Some(0.0));
 }
+
+#[test]
+fn une_file_inconnue_est_isolee_par_une_exclusion_explicite() {
+    // 710 et 3130 sont observées en recette sans que leur sens soit vérifiable hors ligne :
+    // elles ne contribuent à aucun groupe, mais leur nombre reste visible.
+    let mut acc = Accumulator::new(1).unwrap();
+    for (id, queue) in [("EUW1_710", 710), ("EUW1_3130", 3130), ("EUW1_9999", 9999)] {
+        let mut g = game(id);
+        g.queue_id = queue;
+        g.detail["info"]["queueId"] = json!(queue);
+        acc.add(&g);
+    }
+    acc.add(&game("EUW1_ranked"));
+    let r = acc.finish();
+    assert_eq!((r.source_matches, r.included_matches), (4, 1));
+    assert_eq!(r.exclusions.get("unknown_queue"), Some(&3));
+    assert!(r.groups.iter().all(|g| g.key.queue_id == 420));
+    assert!(r.coverage.iter().all(|c| c.scope.queue_id == 420));
+}
+
+#[test]
+fn les_files_identifiees_hors_classe_restent_agregees() {
+    // ARAM, Swiftplay et Arena (1700 et variantes observées) ne sont jamais isolées.
+    for queue in [450, 480, 1700, 1710, 1740, 1750] {
+        assert!(
+            crate::queues::is_identified(queue),
+            "la file {queue} doit être identifiée"
+        );
+    }
+    for queue in [0, -1, 710, 3130, 9999] {
+        assert!(
+            !crate::queues::is_identified(queue),
+            "la file {queue} ne doit pas être identifiée"
+        );
+    }
+}

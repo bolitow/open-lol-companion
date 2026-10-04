@@ -53,7 +53,7 @@ describe('recherche des réglages sans effet de bord',()=>{
   expect(searchSettings('micro','fr','all')).toEqual([]);
   expect(searchSettings('flash','fr','app')).toEqual([]);
   expect(searchSettings('','en','league')).toEqual(['flashSlot','overlay']);
-  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','overlay']);
+  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','apiAccess','overlay']);
  });
 });
 it('distingue une panne de sauvegarde Flash d’une panne des préférences de l’application',()=>{

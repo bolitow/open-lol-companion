@@ -8,10 +8,13 @@ use olc_collector::aggregation::{self, AggregationError, AggregationOptions};
 use olc_collector::campaign;
 use olc_collector::catalog::{self, CommunityPolicy};
 use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
-use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
+use olc_collector::config::{
+    database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier, DEFAULT_CAMPAIGN_QUEUES,
+};
+use olc_collector::privacy::{self, RetentionPolicy};
 use olc_collector::report;
 use olc_collector::riot_client::HttpsTransport;
-use olc_collector::shared_quota::CoordinatedTransport;
+use olc_collector::shared_quota::{CoordinatedTransport, Priority};
 use olc_collector::static_data;
 use olc_collector::storage::{RunStatus, Storage};
 use tracing_subscriber::EnvFilter;
@@ -99,7 +102,33 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Collecte toutes les files sur les plateformes choisies, par tranches reprenables de 15 min.
+    /// Applique la rétention des données personnelles (#99) : PUUID, Riot ID, parties brutes.
+    Purge {
+        /// Jours de conservation des PUUID, Riot ID et observations de rang.
+        #[arg(long, env = "OLC_RETENTION_IDENTIFIER_DAYS", default_value_t = privacy::DEFAULT_IDENTIFIER_DAYS)]
+        identifier_days: u32,
+        /// Jours de conservation des parties brutes (détails et timelines).
+        #[arg(long, env = "OLC_RETENTION_RAW_MATCH_DAYS", default_value_t = privacy::DEFAULT_RAW_MATCH_DAYS)]
+        raw_match_days: u32,
+        /// Purge immédiatement puis chaque heure (Ctrl+C pour arrêter).
+        #[arg(long)]
+        watch: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Ferme les demandes de rang en attente qui ne servent à aucune partie classée (#90).
+    /// Simulation par défaut : rien n'est modifié sans `--apply`.
+    CloseUnservedRanks {
+        /// Limite l'opération à une exécution ; sinon toutes les exécutions.
+        #[arg(long)]
+        run_id: Option<i64>,
+        /// Applique réellement la fermeture (sans cette option, compte seulement).
+        #[arg(long)]
+        apply: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Collecte les files choisies (Solo et Flex par défaut) sur les plateformes choisies, par tranches reprenables de 15 min.
     Campaign {
         #[arg(
             long,
@@ -121,12 +150,57 @@ enum Command {
         call_budget_per_platform: u64,
         #[arg(long, default_value_t = 4)]
         concurrency: usize,
+        /// Files collectées, séparées par des virgules : une exécution par plateforme et par
+        /// file, le budget et la cible de chaque plateforme étant répartis entre ses files.
+        /// Par défaut Solo/Duo (420) et Flex (440) ; ARAM, Swiftplay, Arena et les autres
+        /// s'ajoutent en les listant (par exemple 450,480,1700). 0 découvre toutes les files
+        /// et ne se combine pas. Les rangs ne sont observés que pour 0, 420 et 440.
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_values_t = DEFAULT_CAMPAIGN_QUEUES
+        )]
+        queues: Vec<i32>,
     },
     /// Reprend la campagne avec ses fenêtres, patches et échéance d'origine.
     CampaignResume {
         campaign_id: i64,
         #[command(flatten)]
         runtime: RuntimeArgs,
+    },
+    /// Collecte des files choisies (ARAM, Swiftplay, Arena par défaut), une cible par file et plateforme (#97).
+    CampaignQueues {
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_value = "EUW1,NA1,KR,OC1,EUN1,BR1,JP1,TW2,TR1,LA1,VN2,ME1,LA2,RU,SG2"
+        )]
+        platforms: Vec<String>,
+        /// Files identifiées uniquement ; Arena est 1700, ses variantes 1740 et 1750 s'ajoutent ici.
+        #[arg(long, value_delimiter = ',', default_values_t = campaign::DEFAULT_QUEUES)]
+        queues: Vec<i32>,
+        #[arg(long,default_value_t=24,value_parser=clap::value_parser!(u8).range(1..=24))]
+        hours: u8,
+        /// Parties à retenir par plateforme **et** par file.
+        #[arg(long, default_value_t = 1000)]
+        target_per_queue: u32,
+        #[arg(long, value_delimiter = ',')]
+        patches: Vec<String>,
+        #[arg(long, default_value_t = 5)]
+        seeds_per_division: u32,
+        #[arg(long, default_value_t = 100)]
+        max_matches_per_seed: u32,
+        /// Budget d'appels Riot par plateforme **et** par file.
+        #[arg(long, default_value_t = 20000)]
+        call_budget_per_queue: u64,
+        #[arg(long, default_value_t = 4)]
+        concurrency: usize,
+    },
+    /// Affiche la cible et les parties retenues de chaque plateforme et file d'une campagne (#97).
+    CampaignReport {
+        campaign_id: i64,
+        #[arg(long)]
+        json: bool,
     },
     /// Lance une nouvelle exécution.
     Run {
@@ -369,6 +443,68 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             }
             Ok(ExitCode::SUCCESS)
         }
+        Command::Purge {
+            identifier_days,
+            raw_match_days,
+            watch,
+            json,
+        } => {
+            let policy =
+                RetentionPolicy::new(identifier_days, raw_match_days).map_err(|e| e.to_string())?;
+            let storage = connect(&db_url, 2).await?;
+            let purge = || async {
+                let report = privacy::purge(&storage, policy).await?;
+                if json {
+                    println!("{}", serde_json::to_string(&report)?);
+                } else {
+                    println!(
+                        "Rétention appliquée (identifiants {} j, parties brutes {} j) : {} parties et {} timelines supprimées, {} parties et {} timelines pseudonymisées, {} joueurs de départ, {} découvertes, {} liens, {} travaux, {} observations de rang et {} parties exclues du cache négatif effacés.",
+                        report.identifier_days,
+                        report.raw_match_days,
+                        report.matches_deleted,
+                        report.timelines_deleted,
+                        report.matches_redacted,
+                        report.timelines_redacted,
+                        report.seed_players_deleted,
+                        report.discoveries_deleted,
+                        report.sampled_match_seeds_cleared,
+                        report.jobs_deleted,
+                        report.rank_observations_deleted,
+                        report.excluded_matches_deleted
+                    );
+                }
+                Ok::<(), AggregationError>(())
+            };
+            if watch {
+                aggregation::run_periodic(purge, shutdown())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            } else {
+                tokio::select! { _=shutdown()=>return Ok(ExitCode::from(3)),r=purge()=>r.map_err(|e|e.to_string())? }
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::CloseUnservedRanks {
+            run_id,
+            apply,
+            json,
+        } => {
+            let storage = connect(&db_url, 2).await?;
+            let count = storage
+                .close_unserved_rank_jobs(run_id, apply)
+                .await
+                .map_err(|e| e.to_string())?;
+            if json {
+                println!("{}", serde_json::json!({"applied": apply, "jobs": count}));
+            } else if apply {
+                println!("{count} demandes de rang fermées (skipped:unserved_queue).");
+            } else {
+                println!(
+                    "{count} demandes de rang seraient fermées ; relancer avec --apply pour les fermer."
+                );
+            }
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Migrate => {
             let storage = connect(&db_url, 2).await?;
             println!("Migrations appliquées.");
@@ -397,6 +533,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             max_matches_per_seed,
             call_budget_per_platform,
             concurrency,
+            queues,
         } => {
             let storage = connect(&db_url, concurrency.clamp(1, 16) as u32 + 3).await?;
             let patches = if patches.is_empty() {
@@ -407,22 +544,9 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 patches
             };
             let template = RunParams {
-                queue_id: 0,
                 patches,
-                collect_ranks: true,
                 target_matches: target_per_platform,
-                tiers: vec![
-                    Tier::Iron,
-                    Tier::Bronze,
-                    Tier::Silver,
-                    Tier::Gold,
-                    Tier::Platinum,
-                    Tier::Emerald,
-                    Tier::Diamond,
-                    Tier::Master,
-                    Tier::Grandmaster,
-                    Tier::Challenger,
-                ],
+                tiers: all_tiers(),
                 window_days: 28,
                 seeds_per_division,
                 max_matches_per_seed,
@@ -432,9 +556,10 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             template.validate().map_err(|e| e.to_string())?;
             let api_key = ApiKey::from_env_value(std::env::var("RIOT_API_KEY").ok())
                 .map_err(|e| e.to_string())?;
-            let id = campaign::start(
+            let id = campaign::start_for_queues(
                 &storage,
                 &platforms,
+                &queues,
                 &template,
                 now_ms(),
                 Duration::from_secs(u64::from(hours) * 3600),
@@ -451,6 +576,77 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 },
             )
             .await
+        }
+        Command::CampaignQueues {
+            platforms,
+            queues,
+            hours,
+            target_per_queue,
+            patches,
+            seeds_per_division,
+            max_matches_per_seed,
+            call_budget_per_queue,
+            concurrency,
+        } => {
+            campaign::validate_queues(&queues).map_err(|e| e.to_string())?;
+            let storage = connect(&db_url, concurrency.clamp(1, 16) as u32 + 3).await?;
+            let patches = if patches.is_empty() {
+                static_data::cached_patches(&storage, 2)
+                    .await
+                    .map_err(|e| e.to_string())?
+            } else {
+                patches
+            };
+            let template = RunParams {
+                patches,
+                collect_ranks: campaign::needs_rank_observations(&queues),
+                target_matches: target_per_queue,
+                tiers: all_tiers(),
+                window_days: 28,
+                seeds_per_division,
+                max_matches_per_seed,
+                call_budget: call_budget_per_queue,
+                ..RunParams::default()
+            };
+            template.validate().map_err(|e| e.to_string())?;
+            let api_key = ApiKey::from_env_value(std::env::var("RIOT_API_KEY").ok())
+                .map_err(|e| e.to_string())?;
+            let id = campaign::start_per_queue(
+                &storage,
+                &platforms,
+                &queues,
+                &template,
+                now_ms(),
+                Duration::from_secs(u64::from(hours) * 3600),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+            drive_campaign(
+                &storage,
+                &api_key,
+                id,
+                RuntimeOptions {
+                    concurrency: concurrency.clamp(1, 16),
+                    ..RuntimeOptions::default()
+                },
+            )
+            .await
+        }
+        Command::CampaignReport { campaign_id, json } => {
+            let storage = connect(&db_url, 2).await?;
+            let coverage = campaign::coverage(&storage, campaign_id)
+                .await
+                .map_err(|e| e.to_string())?;
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string(&coverage)
+                        .map_err(|_| "couverture non sérialisable".to_owned())?
+                );
+            } else {
+                print!("{}", coverage.render());
+            }
+            Ok(ExitCode::SUCCESS)
         }
         Command::CampaignResume {
             campaign_id,
@@ -595,7 +791,7 @@ async fn collect(db_url: &str, options: RuntimeOptions, start: Start) -> Result<
     let _lock = storage.lock_collector().await.map_err(|e| e.to_string())?;
     let transport =
         HttpsTransport::new(&api_key, Duration::from_secs(15)).map_err(|e| e.to_string())?;
-    let transport = CoordinatedTransport::new(transport, storage.clone());
+    let transport = CoordinatedTransport::new(transport, storage.clone(), Priority::Background);
     let collector = Collector::new(storage.clone(), transport, options);
 
     let run_id = match start {
@@ -686,6 +882,22 @@ fn explain(outcome: &RunOutcome, failed_jobs: i64) {
     }
 }
 
+/// Iron à Challenger : les campagnes partent de tous les rangs.
+fn all_tiers() -> Vec<Tier> {
+    vec![
+        Tier::Iron,
+        Tier::Bronze,
+        Tier::Silver,
+        Tier::Gold,
+        Tier::Platinum,
+        Tier::Emerald,
+        Tier::Diamond,
+        Tier::Master,
+        Tier::Grandmaster,
+        Tier::Challenger,
+    ]
+}
+
 async fn shutdown() {
     if tokio::signal::ctrl_c().await.is_err() {
         std::future::pending::<()>().await;
@@ -699,7 +911,7 @@ async fn drive_campaign(
     options: RuntimeOptions,
 ) -> Result<ExitCode, String> {
     let transport = HttpsTransport::new(key, Duration::from_secs(15)).map_err(|e| e.to_string())?;
-    let transport = CoordinatedTransport::new(transport, storage.clone());
+    let transport = CoordinatedTransport::new(transport, storage.clone(), Priority::Background);
     eprintln!("Campagne #{id} en cours ; reprise : olc-collector campaign-resume {id}.");
     let outcome = campaign::execute(storage, transport, options, id, shutdown())
         .await
@@ -714,4 +926,32 @@ async fn drive_campaign(
     } else {
         ExitCode::from(3)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn campaign_queues(args: &[&str]) -> Vec<i32> {
+        let mut argv = vec!["olc-collector", "campaign"];
+        argv.extend_from_slice(args);
+        match Cli::try_parse_from(argv).unwrap().command {
+            Command::Campaign { queues, .. } => queues,
+            _ => panic!("sous-commande campaign attendue"),
+        }
+    }
+
+    #[test]
+    fn la_campagne_collecte_solo_et_flex_par_defaut() {
+        assert_eq!(campaign_queues(&[]), [420, 440]);
+    }
+
+    #[test]
+    fn la_campagne_accepte_des_files_explicites() {
+        assert_eq!(campaign_queues(&["--queues", "450"]), [450]);
+        assert_eq!(
+            campaign_queues(&["--queues", "420,440,450,480,1700"]),
+            [420, 440, 450, 480, 1700]
+        );
+    }
 }
