@@ -315,7 +315,25 @@ publie aussi `first_game_start_ms` et `last_game_start_ms` (début, en ms Unix, 
 ancienne et de la plus récente partie **incluse** du périmètre, remakes et parties
 invalides exclus, #103) : la vraie fraîcheur, distincte de `source_snapshot_at` qui est
 l'heure du calcul. Les écarts `rank_gap_*_hours` restent l'âge de l'observation de rang
-relativement à la partie ; ils ne dépendent pas de l'heure du calcul. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
+relativement à la partie ; ils ne dépendent pas de l'heure du calcul.
+
+`ALL` n'est pas « tous les rangs » du ladder (#82) : c'est l'échantillon collecté, où
+chaque participation compte 1, sans pondération par la taille réelle des paliers. Les
+seeds étant pris en nombre égal par strate, le haut du ladder y est surreprésenté. Pour
+le rendre lisible, chaque couverture publie `tier_participations`, la répartition des
+participations classées par palier observé figé à la partie (`IRON` … `CHALLENGER`,
+tous rôles confondus). Sa somme égale `ranked_participations` ; `UNRANKED`, `UNKNOWN` et
+`UNRANKED_MODE` gardent leurs compteurs propres. Elle est vide hors Solo/Flex et dans un
+instantané antérieur. Aucune repondération n'est appliquée aux taux.
+En attendant une collecte équilibrée par palier, la couverture publie aussi un indicateur
+de biais dérivé de cette répartition : `apex_share`, part (entre 0 et 1, et non en %) des
+participations classées en Master, Grandmaster et Challenger sur la somme de
+`tier_participations`, et `high_elo_biased`, vrai quand `apex_share` dépasse strictement
+0,5 (50 % pile n'est pas biaisé). Sans participation classée (hors Solo/Flex, instantané
+antérieur), `apex_share` vaut `null` et `high_elo_biased` `false`. Un instantané publié
+avant l'indicateur mais déjà doté de `tier_participations` est complété à la lecture par
+l'API (`Coverage::complete_tier_bias`, même calcul). C'est une information de lecture :
+rien n'est corrigé ni décidé à partir d'elle. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
 inventé à partir des objets ou du rang.
 
 | Mesure | Définition et limites |

@@ -269,12 +269,43 @@ pub struct ItemEventStats {
     pub events: u64,
 }
 
+/// Seuil strict (#82) : au-delà de la moitié de participations Master+, l'échantillon est biaisé.
+pub const HIGH_ELO_BIAS_THRESHOLD: f64 = 0.5;
+const APEX_TIERS: [&str; 3] = ["MASTER", "GRANDMASTER", "CHALLENGER"];
+
+/// Part Master+ et drapeau de biais d'une répartition par palier (#82). Part `None` sans
+/// participation classée. La division flottante d'effectifs est exacte à 0,5 : 50 % pile
+/// n'est pas biaisé.
+pub(super) fn tier_bias(tiers: &BTreeMap<String, u64>) -> (Option<f64>, bool) {
+    let total: u64 = tiers.values().sum();
+    if total == 0 {
+        return (None, false);
+    }
+    let apex: u64 = APEX_TIERS.iter().filter_map(|t| tiers.get(*t)).sum();
+    let share = apex as f64 / total as f64;
+    (Some(share), share > HIGH_ELO_BIAS_THRESHOLD)
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct Coverage {
     pub matches: u64,
     pub participations: u64,
     pub excluded_bot_participations: u64,
     pub ranked_participations: u64,
+    /// Répartition des participations classées par palier observé (`IRON` … `CHALLENGER`),
+    /// figé à la partie (#82) : décrit l'échantillon de `ALL`, non repondéré sur le ladder.
+    /// Sa somme égale `ranked_participations` ; vide hors Solo/Flex ou avant #82.
+    #[serde(default)]
+    pub tier_participations: BTreeMap<String, u64>,
+    /// Part (0 à 1, et non un pourcentage) des participations classées en Master, Grandmaster et
+    /// Challenger parmi `tier_participations` (#82) ; nulle sans participation classée. Absente
+    /// d'un instantané publié avant l'indicateur : `complete_tier_bias` la recalcule alors.
+    #[serde(default)]
+    pub apex_share: Option<f64>,
+    /// Vrai quand `apex_share` dépasse strictement `HIGH_ELO_BIAS_THRESHOLD` : l'échantillon
+    /// de `ALL` est dominé par le haut du ladder. Information, jamais une décision.
+    #[serde(default)]
+    pub high_elo_biased: bool,
     pub unranked_participations: u64,
     pub unknown_rank_participations: u64,
     pub unranked_mode_participations: u64,
@@ -342,6 +373,18 @@ pub struct Coverage {
 pub struct ItemCatalogRef {
     pub patch: String,
     pub version: String,
+}
+
+impl Coverage {
+    /// Recalcule l'indicateur de biais depuis `tier_participations` quand `apex_share` est absent,
+    /// c'est-à-dire pour un instantané publié avant l'indicateur (#82) : le relire avec `null` et
+    /// `false` laisserait croire à un échantillon sans biais. Même fonction que le collecteur ;
+    /// sans répartition, la part reste nulle et le drapeau faux. Sans effet si la part est présente.
+    pub fn complete_tier_bias(&mut self) {
+        if self.apex_share.is_none() {
+            (self.apex_share, self.high_elo_biased) = tier_bias(&self.tier_participations);
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -671,7 +714,13 @@ impl Accumulator {
                 "UNKNOWN" => coverage.unknown_rank_participations += 1,
                 "UNRANKED" => coverage.unranked_participations += 1,
                 "UNRANKED_MODE" => coverage.unranked_mode_participations += 1,
-                _ => coverage.ranked_participations += 1,
+                tier => {
+                    coverage.ranked_participations += 1;
+                    *coverage
+                        .tier_participations
+                        .entry(tier.to_owned())
+                        .or_default() += 1;
+                }
             }
             if p.role == Role::Unknown {
                 coverage.unknown_role_participations += 1;
@@ -1175,6 +1224,8 @@ impl Accumulator {
             .into_iter()
             .map(|(scope, mut counts)| {
                 let ranked_queue = counts.participations - counts.unranked_mode_participations;
+                (counts.apex_share, counts.high_elo_biased) =
+                    tier_bias(&counts.tier_participations);
                 counts.unknown_rank_rate =
                     rate(counts.unknown_rank_participations, ranked_queue, 1);
                 let mut gaps = rank_gaps.remove(&scope).unwrap_or_default();

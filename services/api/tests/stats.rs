@@ -118,7 +118,9 @@ fn report() -> Value {
     let coverage = json!({
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
         "matches":100, "participations":1000, "excluded_bot_participations":0,
-        "ranked_participations":500, "unranked_participations":0,
+        "ranked_participations":500, "tier_participations":{"GOLD":300, "MASTER":200},
+        "apex_share":0.4, "high_elo_biased":false,
+        "unranked_participations":0,
         "unknown_rank_participations":500, "unranked_mode_participations":0,
         "unknown_role_participations":0, "timeline_matches":80,
         "timeline_participations":800, "invalid_timeline_participations":5,
@@ -482,6 +484,15 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["ban_rank_min_known_players"], 6);
     // Valeur neutre : l'API relaie `tier_method` sans l'interpréter (#85).
     assert_eq!(meta["tier_method"], "tier_method fixture");
+    // ALL est un échantillon collecté non repondéré (#82), décrit par sa répartition de paliers.
+    assert_eq!(meta["population_label"], "collected_sample");
+    assert_eq!(
+        meta["coverage"][0]["tier_participations"],
+        json!({"GOLD": 300, "MASTER": 200})
+    );
+    // L'indicateur de biais Master+ est publié tel quel dans la couverture (#82).
+    assert_eq!(meta["coverage"][0]["apex_share"], 0.4);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"
@@ -497,6 +508,46 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
             "last_game_start_ms": 1_900_000,
         })
     );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_part_apex_est_servi_avec_l_indicateur_recalcule_depuis_les_paliers() {
+    // Instantané publié avec le premier commit de #82 : `tier_participations` sans indicateur.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    coverage.remove("apex_share");
+    coverage.remove("high_elo_biased");
+    coverage.insert("ranked_participations".into(), json!(100));
+    coverage.insert(
+        "tier_participations".into(),
+        json!({"GOLD": 8, "MASTER": 60, "GRANDMASTER": 20, "CHALLENGER": 12}),
+    );
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    let share = meta["coverage"][0]["apex_share"].as_f64().unwrap();
+    assert!((share - 0.92).abs() < 1e-9, "part apex servie : {share}");
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], true);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn un_morceau_sans_repartition_ni_part_apex_reste_non_mesure_et_non_biaise() {
+    // Antérieur à #82 : ni `tier_participations` ni indicateur, rien à recalculer.
+    let db = db_or_skip!();
+    let mut source = report();
+    let coverage = source["coverage"][0].as_object_mut().unwrap();
+    for field in ["tier_participations", "apex_share", "high_elo_biased"] {
+        coverage.remove(field);
+    }
+    publish(db.storage.pool(), source).await;
+    let response = tierlist(db.storage.pool(), query()).await.unwrap();
+    let meta = serde_json::to_value(response.meta).unwrap();
+    assert_eq!(meta["coverage"][0]["tier_participations"], json!({}));
+    assert_eq!(meta["coverage"][0]["apex_share"], Value::Null);
+    assert_eq!(meta["coverage"][0]["high_elo_biased"], false);
     db.cleanup().await;
 }
 
@@ -536,6 +587,10 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     .await
     .unwrap();
     assert_eq!(gold.total, 1);
+    assert_eq!(
+        serde_json::to_value(&gold.meta).unwrap()["population_label"],
+        "observed_tier"
+    );
     assert_eq!(gold.entries[0].games, 200);
     assert_eq!(gold.entries[0].key.rank, "GOLD");
     // Les bans suivent le rang demandé : seul le ban GOLD du champion de la page est renvoyé.
@@ -781,6 +836,8 @@ async fn les_bans_de_la_draft_suivent_le_palier_sans_pagination_ni_filtre_de_rol
         .all(|b| b.rank == "GOLD" && b.draft_matches == 10));
     let meta = serde_json::to_value(&gold.meta).unwrap();
     assert_eq!(meta["ban_rank_basis"], "match_median");
+    // Le rang d'un ban est le palier de la partie, pas celui d'un joueur.
+    assert_eq!(meta["population_label"], "match_tier");
     assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
 
     let limited = bans(

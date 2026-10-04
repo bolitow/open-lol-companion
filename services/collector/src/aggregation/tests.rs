@@ -1396,6 +1396,184 @@ fn une_couverture_publiee_avant_le_rang_fige_reste_lisible() {
     assert_eq!(coverage.rank_gap_max_hours, None);
 }
 
+#[test]
+fn la_couverture_publie_la_repartition_des_participations_par_palier() {
+    let mut g = game("EUW1_tiers");
+    for (i, tier) in ["GOLD", "GOLD", "MASTER", "IRON"].iter().enumerate() {
+        g.ranks.insert(
+            format!("fake-puuid-{i}"),
+            observed("ranked", Some(tier), 3600),
+        );
+    }
+    g.ranks
+        .insert("fake-puuid-4".into(), observed("unranked", None, 3600));
+    // Observation trop éloignée : participation UNKNOWN, jamais rangée dans un palier.
+    let too_old = u64::from(DEFAULT_RANK_MAX_AGE_HOURS) * 3600 + 1;
+    g.ranks.insert(
+        "fake-puuid-5".into(),
+        observed("ranked", Some("DIAMOND"), too_old),
+    );
+    let mut normal = game("EUW1_normal_tiers");
+    normal.queue_id = 400;
+    normal.detail["info"]["queueId"] = json!(400);
+    normal
+        .ranks
+        .insert("fake-puuid-0".into(), observed("ranked", Some("GOLD"), 60));
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&g);
+    acc.add(&normal);
+    let r = acc.finish();
+    let by_queue = |q: i32| {
+        &r.coverage
+            .iter()
+            .find(|c| c.scope.queue_id == q)
+            .unwrap()
+            .counts
+    };
+    let ranked = by_queue(420);
+    let expected: std::collections::BTreeMap<String, u64> = [
+        ("GOLD".to_owned(), 2),
+        ("IRON".to_owned(), 1),
+        ("MASTER".to_owned(), 1),
+    ]
+    .into();
+    assert_eq!(ranked.tier_participations, expected);
+    // Seuls les dix paliers Riot y figurent : la somme égale les participations classées.
+    assert_eq!(
+        ranked.tier_participations.values().sum::<u64>(),
+        ranked.ranked_participations
+    );
+    assert_eq!(
+        (
+            ranked.unranked_participations,
+            ranked.unknown_rank_participations
+        ),
+        (1, 5)
+    );
+    // Hors Solo/Flex, aucun palier n'est attribué : la répartition reste vide.
+    assert!(by_queue(400).tier_participations.is_empty());
+}
+
+#[test]
+fn une_couverture_publiee_avant_la_repartition_des_paliers_reste_lisible() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    legacy
+        .as_object_mut()
+        .unwrap()
+        .remove("tier_participations")
+        .unwrap();
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert!(coverage.tier_participations.is_empty());
+}
+
+fn tiers(counts: &[(&str, u64)]) -> std::collections::BTreeMap<String, u64> {
+    counts.iter().map(|(t, n)| ((*t).to_owned(), *n)).collect()
+}
+
+#[test]
+fn une_repartition_dominee_par_le_haut_du_ladder_est_signalee_comme_biaisee() {
+    // 92 % de Master+ (Master, Grandmaster, Challenger) : biais de haut elo (#82).
+    let (share, biased) = super::model::tier_bias(&tiers(&[
+        ("GOLD", 8),
+        ("MASTER", 50),
+        ("GRANDMASTER", 22),
+        ("CHALLENGER", 20),
+    ]));
+    assert!((share.unwrap() - 0.92).abs() < 1e-9);
+    assert!(biased);
+}
+
+#[test]
+fn sans_participation_classee_la_part_apex_est_inconnue_et_le_drapeau_faux() {
+    assert_eq!(super::model::tier_bias(&tiers(&[])), (None, false));
+}
+
+#[test]
+fn le_seuil_de_biais_est_strict_cinquante_pour_cent_exactement_n_est_pas_biaise() {
+    let (share, biased) = super::model::tier_bias(&tiers(&[("DIAMOND", 50), ("MASTER", 50)]));
+    assert_eq!(share, Some(0.5));
+    assert!(!biased);
+    let (share, biased) = super::model::tier_bias(&tiers(&[("DIAMOND", 49), ("MASTER", 51)]));
+    assert_eq!(share, Some(0.51));
+    assert!(biased);
+    // Sans aucun apex : part nulle (et non absente), drapeau faux.
+    assert_eq!(
+        super::model::tier_bias(&tiers(&[("GOLD", 3), ("EMERALD", 1)])),
+        (Some(0.0), false)
+    );
+}
+
+#[test]
+fn la_couverture_publie_la_part_apex_et_le_drapeau_de_biais() {
+    let mut g = game("EUW1_apex");
+    for (i, tier) in ["MASTER", "CHALLENGER", "GRANDMASTER", "GOLD"]
+        .iter()
+        .enumerate()
+    {
+        g.ranks.insert(
+            format!("fake-puuid-{i}"),
+            observed("ranked", Some(tier), 3600),
+        );
+    }
+    let mut normal = game("EUW1_normal_apex");
+    normal.queue_id = 400;
+    normal.detail["info"]["queueId"] = json!(400);
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&g);
+    acc.add(&normal);
+    let r = acc.finish();
+    let by_queue = |q: i32| {
+        &r.coverage
+            .iter()
+            .find(|c| c.scope.queue_id == q)
+            .unwrap()
+            .counts
+    };
+    // 3 Master+ sur 4 participations classées ; les UNKNOWN restent hors du dénominateur.
+    assert_eq!(by_queue(420).apex_share, Some(0.75));
+    assert!(by_queue(420).high_elo_biased);
+    // Hors Solo/Flex : aucune participation classée, donc pas de part.
+    assert_eq!(by_queue(400).apex_share, None);
+    assert!(!by_queue(400).high_elo_biased);
+}
+
+#[test]
+fn une_couverture_publiee_avant_l_indicateur_de_biais_reste_lisible() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    for field in ["apex_share", "high_elo_biased"] {
+        legacy.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert_eq!(coverage.apex_share, None);
+    assert!(!coverage.high_elo_biased);
+}
+
+#[test]
+fn un_instantane_sans_part_apex_recalcule_l_indicateur_depuis_les_paliers() {
+    // Publié avec le premier commit de #82 : répartition présente, indicateur absent.
+    let mut legacy = super::Coverage {
+        tier_participations: tiers(&[("GOLD", 8), ("MASTER", 50), ("CHALLENGER", 42)]),
+        ..Default::default()
+    };
+    assert_eq!((legacy.apex_share, legacy.high_elo_biased), (None, false));
+    legacy.complete_tier_bias();
+    assert!((legacy.apex_share.unwrap() - 0.92).abs() < 1e-9);
+    assert!(legacy.high_elo_biased);
+    // Sans répartition (hors Solo/Flex ou antérieur à #82) : rien à inventer.
+    let mut empty = super::Coverage::default();
+    empty.complete_tier_bias();
+    assert_eq!((empty.apex_share, empty.high_elo_biased), (None, false));
+    // Une part déjà publiée n'est jamais recalculée.
+    let mut published = super::Coverage {
+        tier_participations: tiers(&[("GOLD", 1), ("MASTER", 9)]),
+        apex_share: Some(0.1),
+        ..Default::default()
+    };
+    published.complete_tier_bias();
+    assert_eq!(published.apex_share, Some(0.1));
+    assert!(!published.high_elo_biased);
+}
+
 fn stage_catalog(version: &str) -> super::stages::ItemCatalog {
     let item = |price: u32, tags: Value, from: Value| {
         let mut fields =

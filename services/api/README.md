@@ -142,7 +142,22 @@ des champions de la page ; `/v1/bans` (`patch`, `platform`, `queue` requis, `ran
 `limit=50` par défaut, bornes 1–200, aucun autre paramètre) renvoie les bans du rang
 demandé, du plus au moins banni (taux nul en dernier, puis effectif, puis champion), avant
 `limit` compté dans `total` ; un champion banni sans entrée dans un rôle n'y disparaît pas.
-La couverture ajoute `match_tier_matches` et `unknown_match_tier_matches`. Un instantané
+La couverture ajoute `match_tier_matches` et `unknown_match_tier_matches`.
+Population (#82) : `meta.population_label` nomme la population du `rank` demandé, en
+identifiant stable à traduire par l'interface : `collected_sample` pour `ALL` (échantillon
+collecté non repondéré, à ne pas présenter comme « tous les rangs »), `observed_tier` pour un
+palier de joueur (tierlist, builds), `match_tier` pour un palier de partie (`/v1/bans`),
+`unknown_rank`, `unranked`, `unranked_mode` pour les rangs homonymes. La répartition qui
+décrit `ALL` est `coverage[].tier_participations` (participations classées par palier,
+somme égale à `ranked_participations`, `{}` pour un instantané antérieur), complétée par
+l'indicateur de biais de la même couverture : `apex_share` (part, entre 0 et 1, des
+participations classées en Master, Grandmaster et Challenger, `null` sans participation
+classée) et `high_elo_biased` (vrai quand `apex_share` dépasse strictement 0,5, sinon
+faux ; faux aussi quand `apex_share` est `null`). Pour un instantané publié avant cet
+indicateur mais déjà doté de `tier_participations`, l'API recalcule les deux champs à la
+lecture, avec la fonction du collecteur ; ils ne restent `null`/`false` que si la répartition
+est absente ou vide. Une `apex_share` publiée n'est jamais recalculée. La clé `ALL`
+reste le défaut du contrat. Un instantané
 antérieur à #109 sert ses bans sous `ALL` seulement. Le ban rate est une information de
 draft : l'application n'effectue ni ne recommande aucun ban automatiquement. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` (#113) ne
