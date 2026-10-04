@@ -98,6 +98,14 @@ async fn run(args: Args) -> Result<(), String> {
                     .allowed_origins
                     .push(origin.parse().map_err(|_| "origine CORS invalide")?);
             }
+            // Sujets de jeton habilités à l'export et à l'effacement RGPD ; vide par défaut.
+            state.privacy_operators = std::env::var("OLC_API_PRIVACY_OPERATORS")
+                .unwrap_or_default()
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+                .collect();
             if let Ok(key) = std::env::var("RIOT_API_KEY") {
                 let key =
                     ApiKey::from_env_value(Some(key)).map_err(|_| "configuration Riot invalide")?;

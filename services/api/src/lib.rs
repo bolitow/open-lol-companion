@@ -2,6 +2,7 @@
 pub mod auth;
 pub mod catalog;
 pub mod error;
+pub mod privacy;
 pub mod profiles;
 pub mod query;
 pub mod realtime;

@@ -19,6 +19,7 @@ Commandes depuis la racine ; migrations du collecteur appliquées au démarrage.
 | `OLC_API_BIND` | Écoute, défaut `127.0.0.1:3030` |
 | `OLC_API_ALLOWED_ORIGINS` | Origines web exactes, séparées par virgule ; aucune par défaut |
 | `RIOT_API_KEY` | Facultative : profils indisponibles sans clé, agrégats/statiques disponibles |
+| `OLC_API_PRIVACY_OPERATORS` | Sujets de jeton autorisés à l'export/effacement RGPD, séparés par virgule ; aucun par défaut |
 | `OLC_TEST_DATABASE_URL` | Base d'administration des tests PostgreSQL jetables |
 
 ```sh
@@ -59,6 +60,21 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/v1/catalog/{version}/{locale}/{kind}` | Fiches paginées, recherche et filtres de statistiques/prix/disponibilité |
 | `/v1/catalog/{version}/{locale}/{kind}/{id}` | Fiche, valeurs sourcées et paramètres/limites des effets |
 | `/v1/catalog-diff?from=…&to=…&locale=…&kind=…` | Diff paginé entre deux empreintes de publication |
+
+### Données personnelles (#99)
+
+| Route POST | Effet |
+| --- | --- |
+| `/v1/privacy/export` | Données détenues pour un PUUID : joueurs de départ, rangs observés, découvertes, parties avec **sa seule** fiche de participant, timelines, travaux de collecte |
+| `/v1/privacy/erase` | Efface ce PUUID partout, en une transaction : lignes supprimées, identifiants retirés du JSONB des parties (les autres joueurs restent) |
+
+Corps : `{"puuid":"…"}` ; le PUUID n'apparaît jamais dans l'URL. Réservées aux
+sujets de `OLC_API_PRIVACY_OPERATORS` (sinon `forbidden`, avant toute requête SQL) :
+le sujet d'un jeton ne prouve pas la propriété d'un compte Riot, l'opérateur vérifie
+l'identité du demandeur hors de l'API puis obtient son PUUID par la route profil.
+Effacement idempotent ; `jobs_in_flight` > 0 signale un travail de collecte en cours,
+à relancer après la fin de la collecte. Pas de CORS : outil d'opérateur, pas du site.
+Rétention planifiée : `olc-collector purge` ([README du collecteur](../collector/README.md)).
 
 Les routes `catalog` sont publiques comme les statiques (ETag/304 et cache
 revalidable). Contrats Rust/TypeScript, paramètres précis, langues FR/EN et
@@ -145,7 +161,7 @@ en-têtes et cacher uniquement les routes statiques. Images sur les CDN Riot.
 Cette commande ne déploie ni CDN ni terminaison TLS.
 
 Erreurs JSON : `{"error":{"code":"…"}}`. Codes : `invalid_request` (400),
-`unauthorized` (401), `not_found` (404), `unavailable` (503), `rate_limited` (429,
+`unauthorized` (401), `forbidden` (403, sujet non habilité aux routes RGPD), `not_found` (404), `unavailable` (503), `rate_limited` (429,
 refus immédiat : plus de 4 appels Riot en cours sur l'instance), `riot_busy` (503,
 aucun créneau de quota Riot obtenu en 20 s : réessayer plus tard, ce n'est pas une panne).
 Aucun corps brut Riot, URL sensible ou détail SQL. Le consommateur traduit ces
