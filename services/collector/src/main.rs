@@ -121,6 +121,40 @@ enum Command {
         #[command(flatten)]
         runtime: RuntimeArgs,
     },
+    /// Collecte des files choisies (ARAM, Swiftplay, Arena par défaut), une cible par file et plateforme (#97).
+    CampaignQueues {
+        #[arg(
+            long,
+            value_delimiter = ',',
+            default_value = "EUW1,NA1,KR,OC1,EUN1,BR1,JP1,TW2,TR1,LA1,VN2,ME1,LA2,RU,SG2"
+        )]
+        platforms: Vec<String>,
+        /// Files identifiées uniquement ; Arena est 1700, ses variantes 1740 et 1750 s'ajoutent ici.
+        #[arg(long, value_delimiter = ',', default_values_t = campaign::DEFAULT_QUEUES)]
+        queues: Vec<i32>,
+        #[arg(long,default_value_t=24,value_parser=clap::value_parser!(u8).range(1..=24))]
+        hours: u8,
+        /// Parties à retenir par plateforme **et** par file.
+        #[arg(long, default_value_t = 1000)]
+        target_per_queue: u32,
+        #[arg(long, value_delimiter = ',')]
+        patches: Vec<String>,
+        #[arg(long, default_value_t = 5)]
+        seeds_per_division: u32,
+        #[arg(long, default_value_t = 100)]
+        max_matches_per_seed: u32,
+        /// Budget d'appels Riot par plateforme **et** par file.
+        #[arg(long, default_value_t = 20000)]
+        call_budget_per_queue: u64,
+        #[arg(long, default_value_t = 4)]
+        concurrency: usize,
+    },
+    /// Affiche la cible et les parties retenues de chaque plateforme et file d'une campagne (#97).
+    CampaignReport {
+        campaign_id: i64,
+        #[arg(long)]
+        json: bool,
+    },
     /// Lance une nouvelle exécution.
     Run {
         #[command(flatten)]
@@ -402,18 +436,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 patches,
                 collect_ranks: true,
                 target_matches: target_per_platform,
-                tiers: vec![
-                    Tier::Iron,
-                    Tier::Bronze,
-                    Tier::Silver,
-                    Tier::Gold,
-                    Tier::Platinum,
-                    Tier::Emerald,
-                    Tier::Diamond,
-                    Tier::Master,
-                    Tier::Grandmaster,
-                    Tier::Challenger,
-                ],
+                tiers: all_tiers(),
                 window_days: 28,
                 seeds_per_division,
                 max_matches_per_seed,
@@ -442,6 +465,77 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 },
             )
             .await
+        }
+        Command::CampaignQueues {
+            platforms,
+            queues,
+            hours,
+            target_per_queue,
+            patches,
+            seeds_per_division,
+            max_matches_per_seed,
+            call_budget_per_queue,
+            concurrency,
+        } => {
+            campaign::validate_queues(&queues).map_err(|e| e.to_string())?;
+            let storage = connect(&db_url, concurrency.clamp(1, 16) as u32 + 3).await?;
+            let patches = if patches.is_empty() {
+                static_data::cached_patches(&storage, 2)
+                    .await
+                    .map_err(|e| e.to_string())?
+            } else {
+                patches
+            };
+            let template = RunParams {
+                patches,
+                collect_ranks: campaign::needs_rank_observations(&queues),
+                target_matches: target_per_queue,
+                tiers: all_tiers(),
+                window_days: 28,
+                seeds_per_division,
+                max_matches_per_seed,
+                call_budget: call_budget_per_queue,
+                ..RunParams::default()
+            };
+            template.validate().map_err(|e| e.to_string())?;
+            let api_key = ApiKey::from_env_value(std::env::var("RIOT_API_KEY").ok())
+                .map_err(|e| e.to_string())?;
+            let id = campaign::start_per_queue(
+                &storage,
+                &platforms,
+                &queues,
+                &template,
+                now_ms(),
+                Duration::from_secs(u64::from(hours) * 3600),
+            )
+            .await
+            .map_err(|e| e.to_string())?;
+            drive_campaign(
+                &storage,
+                &api_key,
+                id,
+                RuntimeOptions {
+                    concurrency: concurrency.clamp(1, 16),
+                    ..RuntimeOptions::default()
+                },
+            )
+            .await
+        }
+        Command::CampaignReport { campaign_id, json } => {
+            let storage = connect(&db_url, 2).await?;
+            let coverage = campaign::coverage(&storage, campaign_id)
+                .await
+                .map_err(|e| e.to_string())?;
+            if json {
+                println!(
+                    "{}",
+                    serde_json::to_string(&coverage)
+                        .map_err(|_| "couverture non sérialisable".to_owned())?
+                );
+            } else {
+                print!("{}", coverage.render());
+            }
+            Ok(ExitCode::SUCCESS)
         }
         Command::CampaignResume {
             campaign_id,
@@ -670,6 +764,22 @@ fn explain(outcome: &RunOutcome, failed_jobs: i64) {
             eprintln!("\nCollecte arrêtée. Pour reprendre : olc-collector resume {id}")
         }
     }
+}
+
+/// Iron à Challenger : les campagnes partent de tous les rangs.
+fn all_tiers() -> Vec<Tier> {
+    vec![
+        Tier::Iron,
+        Tier::Bronze,
+        Tier::Silver,
+        Tier::Gold,
+        Tier::Platinum,
+        Tier::Emerald,
+        Tier::Diamond,
+        Tier::Master,
+        Tier::Grandmaster,
+        Tier::Challenger,
+    ]
 }
 
 async fn shutdown() {

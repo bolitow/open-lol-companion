@@ -59,6 +59,15 @@ fn lcu_session(state: tauri::State<'_, SessionState>) -> Result<LcuSession, &'st
         .map_err(|_| "session_unavailable")
 }
 
+/// Version du jeu installée, lue à la demande dans le client local (#93).
+#[tauri::command]
+async fn client_patch() -> Result<lcu_connector::ClientPatch, lcu_connector::ClientPatchError> {
+    let client = players::client()
+        .await
+        .map_err(|_| lcu_connector::ClientPatchError::Unavailable)?;
+    lcu_connector::read_client_patch(&client).await
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default()
@@ -158,6 +167,7 @@ pub fn run() {
             desktop::set_desktop_locale,
             lcu_status,
             lcu_session,
+            client_patch,
             community_builds,
             publications::publication_state,
             players::player_profile,
@@ -197,6 +207,7 @@ mod integration_permissions_tests {
             "set_desktop_setting",
             "set_desktop_locale",
             "export_diagnostics",
+            "client_patch",
         ] {
             let permission = serde_json::json!(format!("allow-{}", command.replace('_', "-")));
             assert!(
