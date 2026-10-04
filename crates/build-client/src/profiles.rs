@@ -81,6 +81,13 @@ pub struct ProfileRank {
     pub tier: Option<String>,
     pub division: Option<String>,
     pub league_points: Option<i32>,
+    // Champs league-v4 ajoutés (#96) : absents d'une ancienne API, donc `None` à la lecture.
+    pub wins: Option<u32>,
+    pub losses: Option<u32>,
+    pub hot_streak: Option<bool>,
+    pub veteran: Option<bool>,
+    pub fresh_blood: Option<bool>,
+    pub inactive: Option<bool>,
 }
 /// Miroir `Profile` ; le PUUID reste en mémoire et n'est jamais journalisé.
 #[derive(Clone, Debug, Serialize, Deserialize)]

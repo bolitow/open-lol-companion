@@ -156,6 +156,14 @@ export interface ProfileRank {
   tier: string | null;
   division: string | null;
   league_points: number | null;
+  /** Victoires et défaites de la saison (league-v4) ; absents d'un profil lu dans le client LoL. */
+  wins?: number | null;
+  losses?: number | null;
+  /** Drapeaux factuels league-v4 : série de victoires, vétéran, nouveau dans le palier, inactif. */
+  hot_streak?: boolean | null;
+  veteran?: boolean | null;
+  fresh_blood?: boolean | null;
+  inactive?: boolean | null;
 }
 
 export interface Profile {
