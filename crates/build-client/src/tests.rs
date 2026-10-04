@@ -198,6 +198,33 @@ async fn ne_transmet_ni_corps_d_erreur_ni_statistiques_sous_seuil() {
 }
 
 #[tokio::test]
+async fn transmet_le_taux_conditionnel_des_runes_et_le_masque_sous_le_seuil() {
+    let mut slot = variant("rune_slot_1", vec![8005, 9111]);
+    slot["conditional_rate"] = json!(72.0);
+    let mut low = variant("rune_slot_2", vec![8005, 9104]);
+    low["games"] = json!(2);
+    low["wins"] = json!(1);
+    low["conditional_rate"] = json!(4.0);
+    let legacy = variant("rune_keystone", vec![8005]);
+    let mut invalid = variant("rune_slot_3", vec![8005, 8014]);
+    invalid["conditional_rate"] = json!(172.0);
+    let (url, job) = server(vec![
+        (200, page(0, 3, vec![slot, low, legacy])),
+        (200, page(0, 1, vec![invalid])),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let rates: Vec<_> = report.builds.iter().map(|b| b.conditional_rate).collect();
+    assert_eq!(rates, vec![Some(72.0), None, None]);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}
+
+#[tokio::test]
 async fn transmet_la_borne_wilson_des_etapes_et_la_masque_comme_le_winrate() {
     let mut core = variant("core", vec![6672, 3031, 3089]);
     core["win_rate_lower_bound"] = json!(41.2);
