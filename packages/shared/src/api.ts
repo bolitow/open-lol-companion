@@ -102,6 +102,10 @@ export interface BuildStats extends GroupKey {
    * de `BuildReport` tant que le client Rust du desktop ne le relaie pas (hors périmètre #113).
    */
   omitted_variants?: number | null;
+  /** Arena, variantes hors objets : participations au placement valide ; 0 hors Arena et pour les objets. */
+  placement_games: number;
+  /** Arena, variantes hors objets : placement moyen (1 = première) ; nul sous le seuil, hors Arena et pour les objets. */
+  average_placement: number | null;
 }
 
 export interface SkillStats extends GroupKey {

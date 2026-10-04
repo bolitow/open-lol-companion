@@ -1030,6 +1030,7 @@ fn une_variante_publiee_avant_les_etapes_reste_lisible() {
         "category":"final_items","selection":[3031],"games":3,"wins":2,"performance_available":true,"population":3,"pick_rate":100.0,"win_rate":66.6});
     let build: super::BuildStats = serde_json::from_value(legacy).unwrap();
     assert_eq!(build.win_rate_lower_bound, None);
+    assert_eq!((build.placement_games, build.average_placement), (0, None));
     let mut coverage = serde_json::to_value(super::Coverage::default()).unwrap();
     for field in [
         "item_stage_participations",
@@ -1630,4 +1631,146 @@ fn un_instantane_publie_avant_les_splits_reste_lisible() {
     report.as_object_mut().unwrap().remove("splits").unwrap();
     let report: super::AggregationReport = serde_json::from_value(report).unwrap();
     assert!(report.splits.is_empty());
+}
+
+/// Sorts d'invocateur et runes identiques pour tous les participants (hors identifiants
+/// de joueurs), pour produire des variantes `summoner_spells` et `runes`.
+fn with_spells_and_runes(mut g: StoredMatch, first: u32, second: u32) -> StoredMatch {
+    for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["summoner1Id"] = json!(first);
+        p["summoner2Id"] = json!(second);
+        p["item0"] = json!(1001);
+        for slot in 1..=6 {
+            p[format!("item{slot}")] = json!(0);
+        }
+        p["perks"] = json!({
+            "styles": [
+                {"description": "subStyle", "style": 8200, "selections": [{"perk": 8224}, {"perk": 8234}]},
+                {"description": "primaryStyle", "style": 8000, "selections": [
+                    {"perk": 8005}, {"perk": 9111}, {"perk": 9104}, {"perk": 8014}]}
+            ],
+            "statPerks": {"offense": 5005, "flex": 5008, "defense": 5011}
+        });
+    }
+    g
+}
+
+fn all_builds<'a>(
+    r: &'a super::AggregationReport,
+    champion: u32,
+    category: &str,
+) -> Vec<&'a super::BuildStats> {
+    r.builds
+        .iter()
+        .filter(|b| b.key.rank == "ALL" && b.key.champion_id == champion && b.category == category)
+        .collect()
+}
+
+#[test]
+fn arena_publie_le_placement_moyen_des_runes_et_des_sorts_et_pas_de_taux_de_victoire() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for (id, placements) in [
+        ("EUW1_b1", [1, 2, 3, 4, 5, 6]),
+        ("EUW1_b2", [2, 1, 3, 4, 5, 6]),
+    ] {
+        let g = arena_game(id, 1740, &placements, "subteamPlacement");
+        acc.add(&with_spells_and_runes(g, 4, 14));
+    }
+    let r = acc.finish();
+    // Champion 1 (sous-équipe 1) : placements 1 puis 2.
+    for category in ["summoner_spells", "runes"] {
+        let builds = all_builds(&r, 1, category);
+        assert_eq!(builds.len(), 1, "{category}");
+        let b = builds[0];
+        assert_eq!(b.games, 2, "{category}");
+        assert!(!b.performance_available, "{category}");
+        assert_eq!(
+            (b.wins, b.win_rate, b.win_rate_lower_bound),
+            (None, None, None),
+            "{category}"
+        );
+        assert_eq!(b.placement_games, 2, "{category}");
+        assert_eq!(b.average_placement, Some(1.5), "{category}");
+    }
+    // Sous-équipe 6 (champion 16) : toujours dernière.
+    assert_eq!(all_builds(&r, 16, "runes")[0].average_placement, Some(6.0));
+    // Les objets Arena ne publient aucune performance, placement compris.
+    for category in ["item", "final_items", "trinket"] {
+        for b in all_builds(&r, 1, category) {
+            assert_eq!(
+                (
+                    b.wins,
+                    b.win_rate,
+                    b.win_rate_lower_bound,
+                    b.average_placement
+                ),
+                (None, None, None, None),
+                "{category}"
+            );
+            assert_eq!(b.placement_games, 0, "{category}");
+        }
+    }
+}
+
+#[test]
+fn hors_arena_les_runes_et_les_sorts_gardent_leur_taux_de_victoire() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_solo_build");
+    for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+        p["placement"] = json!(1);
+        p["subteamPlacement"] = json!(1);
+    }
+    acc.add(&with_spells_and_runes(g, 4, 14));
+    let r = acc.finish();
+    for category in ["summoner_spells", "runes"] {
+        let builds = all_builds(&r, 1, category);
+        assert_eq!(builds.len(), 1, "{category}");
+        let b = builds[0];
+        assert!(b.performance_available, "{category}");
+        assert_eq!((b.wins, b.win_rate), (Some(1), Some(100.0)), "{category}");
+        assert!(b.win_rate_lower_bound.is_some(), "{category}");
+        assert_eq!((b.placement_games, b.average_placement), (0, None));
+    }
+}
+
+#[test]
+fn le_seuil_masque_le_placement_moyen_des_variantes_arena() {
+    let mut acc = Accumulator::new(2).unwrap();
+    let g = arena_game(
+        "EUW1_b_seuil",
+        1740,
+        &[1, 2, 3, 4, 5, 6],
+        "subteamPlacement",
+    );
+    acc.add(&with_spells_and_runes(g, 4, 14));
+    let r = acc.finish();
+    let b = all_builds(&r, 1, "runes")[0];
+    assert_eq!((b.games, b.placement_games), (1, 1));
+    assert_eq!(b.average_placement, None);
+}
+
+#[test]
+fn arena_departage_les_variantes_a_effectif_egal_par_placement_moyen_et_non_par_victoire() {
+    // Sorts A = [4, 14] : placements 1 et 4 (moyenne 2,5, une seule victoire).
+    // Sorts B = [3, 4] : placements 3 et 3 (moyenne 3, deux victoires). A passe avant B
+    // malgré les victoires de B et l'ordre numérique de leur sélection.
+    let mut acc = Accumulator::new(1).unwrap();
+    for (id, placements, spells) in [
+        ("EUW1_t1", [1, 2, 3, 4, 5, 6], (4, 14)),
+        ("EUW1_t2", [4, 2, 3, 1, 5, 6], (4, 14)),
+        ("EUW1_t3", [3, 1, 2, 4, 5, 6], (3, 4)),
+        ("EUW1_t4", [3, 1, 2, 4, 5, 6], (3, 4)),
+    ] {
+        let g = arena_game(id, 1740, &placements, "subteamPlacement");
+        acc.add(&with_spells_and_runes(g, spells.0, spells.1));
+    }
+    let r = acc.finish();
+    let spells: Vec<_> = all_builds(&r, 1, "summoner_spells")
+        .iter()
+        .map(|b| (b.selection.clone(), b.average_placement))
+        .collect();
+    assert_eq!(
+        spells,
+        vec![(vec![4, 14], Some(2.5)), (vec![3, 4], Some(3.0))]
+    );
 }

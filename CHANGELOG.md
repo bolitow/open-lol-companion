@@ -91,7 +91,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
-- Agrégats Arena (files 1700, 1710, 1740, 1750) calculés sur le placement de sous-équipe plutôt que sur le booléen de victoire : placement moyen, taux de première et de deuxième place ; taux de victoire et borne Wilson nuls, classement et tier fondés sur le placement moyen. Aucun calcul d’augments (#104).
+- Agrégats Arena (files 1700, 1710, 1740, 1750) calculés sur le placement de sous-équipe plutôt que sur le booléen de victoire : placement moyen, taux de première et de deuxième place ; taux de victoire et borne Wilson nuls, classement et tier fondés sur le placement moyen. Les variantes de builds hors objets (runes, sorts d’invocateur, ordre de compétences) publient aussi le placement moyen au lieu du taux de victoire en Arena ; les objets n’y publient ni victoire ni placement. Aucun calcul d’augments (#104).
 - Builds : les sorts d’invocateur publient l’orientation D/F la plus fréquente observée pour chaque paire, avec ou sans Flash (ordre numérique à égalité), sans changer les effectifs ni le classement des variantes ; l’import sans Flash en profite (#124).
 - Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
