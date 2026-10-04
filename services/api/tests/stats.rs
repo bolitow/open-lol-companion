@@ -903,6 +903,7 @@ async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
