@@ -120,9 +120,16 @@ des parties incluses dans les périmètres lus ; chaque couverture porte les mê
 son propre périmètre. `published_at` et `source_snapshot_at` avancent à chaque recalcul,
 même sans nouvelle partie : seule `last_game_start_ms` date la dernière partie. Les dates de
 parties valent `null` pour un instantané antérieur jusqu'au prochain calcul. Les builds incluent les étapes
-d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque variante
-porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
-et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
+d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`), les choix de runes
+(#86 : `rune_keystone`, `rune_primary_style`, `rune_secondary_style`, `rune_secondary_pair`,
+`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`) et chaque variante
+porte `win_rate_lower_bound` (Wilson 95 %). Leur `pick_rate` est le taux conjoint sur toutes
+les parties à page complète du groupe ; `conditional_rate` (pourcentage de 0 à 100, comme
+`pick_rate`) rapporte les `games` de la ligne aux `games` de son parent dans le même groupe
+(champion, rôle, rang, patch, plateforme, file) : `rune_keystone` `[clé]` pour
+`rune_slot_1..3`, `rune_secondary_style` `[arbre]` pour `rune_secondary_pair`. Il vaut `null`
+pour les autres catégories, sans parent ou à 0 partie, ou sous `min_games`. La réponse
+builds ajoute `build_stage_method` et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
 (`0` pour un instantané antérieur). Les contrôles de qualité des files classées (#111) sont publiés dans les métadonnées :
 `min_game_duration_s` et `min_played_percent` (0 pour un instantané antérieur),

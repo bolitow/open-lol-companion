@@ -858,6 +858,43 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
 }
 
 #[tokio::test]
+async fn builds_expose_le_taux_conditionnel_des_runes_sans_toucher_au_taux_global() {
+    let db = db_or_skip!();
+    let mut source = report();
+    let rune = |category: &str, selection: Value, games: u64, conditional: Value| {
+        json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "category":category, "selection":selection, "games":games,
+            "wins":games / 2, "performance_available":true, "population":100,
+            "pick_rate":games as f64, "win_rate":50.0, "conditional_rate":conditional
+        })
+    };
+    let builds_list = source["builds"].as_array_mut().unwrap();
+    builds_list.push(rune("rune_keystone", json!([8005]), 50, Value::Null));
+    builds_list.push(rune("rune_slot_1", json!([8005, 9111]), 36, json!(72.0)));
+    publish(db.storage.pool(), source).await;
+    let response = builds(db.storage.pool(), query(), 1).await.unwrap();
+    let find = |category: &str| {
+        response
+            .builds
+            .iter()
+            .find(|b| b.category == category)
+            .unwrap()
+    };
+    assert_eq!(find("rune_slot_1").conditional_rate, Some(72.0));
+    assert_eq!(find("rune_slot_1").pick_rate, Some(36.0));
+    assert_eq!(find("rune_keystone").conditional_rate, None);
+    // Un instantané antérieur reste lisible : aucun taux conditionnel annoncé.
+    assert!(response
+        .builds
+        .iter()
+        .filter(|b| !b.category.starts_with("rune_"))
+        .all(|b| b.conditional_rate.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn performance_isole_le_champion_et_la_population_sans_recalcul() {
     let db = db_or_skip!();
     publish(db.storage.pool(), report()).await;

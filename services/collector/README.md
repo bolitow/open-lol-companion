@@ -525,7 +525,24 @@ dans son propre (groupe, catégorie), calculé à la finalisation ; `null` dans 
   parmi les parties de la variante (`summoner1Id` en D, `summoner2Id` en F), avec ou sans
   Flash ; à égalité, l'ordre numérique. Cette orientation n'influence ni l'effectif ni le classement.
 - `runes` : 11 identifiants ordonnés — arbre principal, 4 runes principales, arbre
-  secondaire, 2 runes secondaires, fragments offense/flex/défense.
+  secondaire, 2 runes secondaires, fragments offense/flex/défense. Page exacte,
+  conservée comme preuve et pour l'import : un fragment différent crée une autre variante.
+- Choix de runes (#86), dérivés de la page exacte sans nouvelle collecte, chacun avec sa
+  propre population (parties à page complète), son effectif, son winrate et sa borne
+  Wilson : `rune_keystone`, `rune_primary_style`, `rune_secondary_style` (`[id]`),
+  `rune_secondary_pair` (`[arbre, rune, rune]`, paire triée), `rune_slot_1..3`
+  (`[clé de voûte, rune]` : la rune de l'emplacement est conditionnée à sa clé de voûte) et
+  `rune_shard_offense|flex|defense` (`[fragment]`). Ces catégories ne sont pas des
+  recommandations : aucun assemblage de page n'est fait ici.
+- Taux conditionnel `conditional_rate` (#86), en plus du `pick_rate` (taux sur toutes les
+  parties de la population de la catégorie). Dénominateur : les `games` du choix parent dans
+  le même groupe (champion, rôle, rang, patch, plateforme, file) — la clé de voûte
+  (`rune_keystone` `[clé]`) pour `rune_slot_1..3`, l'arbre secondaire (`rune_secondary_style`
+  `[arbre]`) pour `rune_secondary_pair`. Exemple : une rune à 36 parties sous une clé à 50
+  parties vaut `72.0`. C'est un **pourcentage de 0 à 100**, comme `pick_rate`. `null` pour les autres catégories (leur sélection ne contient pas de parent),
+  si le parent est absent ou à 0 partie, ou si l'effectif est sous `min_games` comme
+  `pick_rate`. Le dénominateur est lu avant le plafond de variantes par catégorie : une ligne
+  parent coupée n'invalide pas le taux d'une ligne conservée.
 - `skill_order` : points Q/W/E/R normaux dans l'ordre temporel ; `special_skill_order`
   sépare les évolutions. `skill_levels` expose l'ordre du point investi et son temps
   moyen, pas le niveau du champion (les points peuvent être gardés).

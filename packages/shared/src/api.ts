@@ -142,8 +142,31 @@ export type BuildStageCategory =
   | "item_slot_5"
   | "item_slot_6";
 
+/**
+ * Choix de runes (#86), dérivés de la page exacte `runes` (11 identifiants) pour que
+ * chaque choix ait son propre effectif et sa propre borne Wilson. Population : parties
+ * avec une page complète. `selection` :
+ * - `rune_keystone`, `rune_primary_style`, `rune_secondary_style` : `[id]` ;
+ * - `rune_secondary_pair` : `[arbre secondaire, rune, rune]`, paire triée (`conditional_rate`
+ *   rapporté aux `games` de `rune_secondary_style` pour l'arbre) ;
+ * - `rune_slot_1..3` : `[clé de voûte, rune]` (rune de l'emplacement, conditionnée à la
+ *   clé de voûte : `conditional_rate` = `games` / `games` de `rune_keystone` pour la clé) ;
+ * - `rune_shard_offense`, `rune_shard_flex`, `rune_shard_defense` : `[fragment]`.
+ */
+export type BuildRuneCategory =
+  | "rune_keystone"
+  | "rune_primary_style"
+  | "rune_secondary_style"
+  | "rune_secondary_pair"
+  | "rune_slot_1"
+  | "rune_slot_2"
+  | "rune_slot_3"
+  | "rune_shard_offense"
+  | "rune_shard_flex"
+  | "rune_shard_defense";
+
 export interface BuildStats extends GroupKey {
-  /** Empreintes exactes (`final_items`, `purchase_order`…) ou `BuildStageCategory`. */
+  /** Empreintes exactes (`final_items`, `runes`…), `BuildStageCategory` ou `BuildRuneCategory`. */
   category: string;
   selection: number[];
   games: number;
@@ -154,6 +177,14 @@ export interface BuildStats extends GroupKey {
   win_rate: number | null;
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
+  /**
+   * Taux conditionnel (#86), en pourcentage (0 à 100, comme `pick_rate`) : `games` / parties du
+   * choix parent dans le même groupe (champion, rôle, rang, patch, plateforme, file). Parent :
+   * `rune_keystone` pour `rune_slot_1..3`, `rune_secondary_style` pour `rune_secondary_pair`.
+   * `null` pour les autres catégories, parent absent ou nul, ou effectif sous le seuil.
+   * `pick_rate` reste le taux sur toutes les parties de la population.
+   */
+  conditional_rate: number | null;
   /** Borne supérieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable (#91). */
   win_rate_upper_bound: number | null;
   /** `low` sous `meta.reliability_floor` parties de la variante ; null avant #91. */

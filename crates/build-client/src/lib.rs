@@ -124,6 +124,9 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Taux conditionnel des runes (#86), en pourcentage (0 à 100, comme `pick_rate`) ; absent des instantanés antérieurs.
+    #[serde(default)]
+    pub conditional_rate: Option<f64>,
     /// Borne supérieure de Wilson à 95 % (#91) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_upper_bound: Option<f64>,
@@ -163,6 +166,9 @@ impl BuildVariant {
             || self
                 .average_placement
                 .is_some_and(|v| !v.is_finite() || v < 1.0)
+            || self
+                .conditional_rate
+                .is_some_and(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
         {
             return Err(BuildError::InvalidResponse);
         }
@@ -172,6 +178,7 @@ impl BuildVariant {
             self.win_rate = None;
             self.win_rate_lower_bound = None;
             self.win_rate_upper_bound = None;
+            self.conditional_rate = None;
         }
         // Même seuil que le collecteur : le placement moyen n'est publié qu'à partir de
         // `min_games` parties avec placement, pas seulement `min_games` parties jouées.
