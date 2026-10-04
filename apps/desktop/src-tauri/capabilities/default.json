@@ -8,8 +8,10 @@
     "core:default",
     "allow-lcu-status",
     "allow-lcu-session",
+    "allow-client-patch",
     "allow-friends-state",
     "allow-community-builds",
+    "allow-publication-state",
     "allow-player-profile",
     "allow-player-matches",
     "allow-import-runes",
@@ -27,6 +29,9 @@
     "allow-desktop-settings",
     "allow-set-desktop-setting",
     "allow-set-desktop-locale",
-    "allow-export-diagnostics"
+    "allow-export-diagnostics",
+    "allow-api-access-status",
+    "allow-save-api-access",
+    "allow-clear-api-access"
   ]
 }

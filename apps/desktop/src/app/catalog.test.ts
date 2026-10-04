@@ -21,3 +21,10 @@ it('lit la locale demandée et rejette une fiche incohérente',async()=>{
  await expect(loadCatalog('fr')).rejects.toThrow();
  expect(fetch).toHaveBeenCalledWith('/game-data/catalog/fr_FR.json');
 });
+it('charge une racine qui contient des fiches augment (#118) sans perdre les autres familles',async()=>{
+ const base={locale:'fr_FR',namespace:'standard',description:null,icon:null,fields:{},stats:{},coverage:{},effects:[]};
+ const records=[{...base,kind:'augment',id:'1205',name:'Aegis de glace',icon:'/game-data/catalog/icons/augment/1205.png'},{...base,kind:'item',id:'1001',name:'Bottes'},{...base,kind:'rune',id:'8005',name:'Précision'},{...base,kind:'rune_shard',id:'5008',name:'Force adaptative'},{...base,kind:'summoner_spell',id:'4',name:'Saut éclair'}];
+ vi.stubGlobal('fetch',vi.fn(async()=>({ok:true,json:async()=>({version:'16.19.1',records})})));
+ const catalog=await loadCatalog('fr');
+ expect(catalog.records.map(r=>r.kind)).toEqual(['augment','item','rune','rune_shard','summoner_spell']);
+});
