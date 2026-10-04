@@ -70,7 +70,12 @@ contexte : aucun poste par défaut n’est inventé.
   - Équipes : totaux K/D/A et CS des alliés et des adversaires, tels que le tableau
     des scores les montre, calculés en Rust ; `null` si un score ou le côté local
     manque. Ni or, ni sorts d'invocateur, ni vision, ni position adverse. Aucun total
-    d'or (cas limite de #30).
+    d'or projeté aujourd'hui : la somme d'or estimée par équipe (valeur des objets
+    visibles, total par équipe seulement) est « à soumettre à Riot, décision produit :
+    affichage prévu, somme par équipe seulement », avec validation explicite dans #25
+    avant fusion de tout code qui l'affiche. Objets, sorts d'invocateur, niveau et score
+    de vision des adversaires sont refusés (décision produit du 4 octobre 2026, #30) :
+    ils ne seront jamais projetés ni affichés, ni par joueur ni en liste.
   - Événements publics : GameStart, MinionsSpawning, GameEnd, ChampionKill, FirstBlood,
     DragonKill, HeraldKill, BaronKill, TurretKilled, InhibKilled, Ace ; les autres
     (Multikill, FirstBrick, Horde, Atakhan…) sont ignorés. Aucun nom : chacun porte
