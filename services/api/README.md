@@ -122,11 +122,13 @@ même sans nouvelle partie : seule `last_game_start_ms` date la dernière partie
 parties valent `null` pour un instantané antérieur jusqu'au prochain calcul. Les builds incluent les étapes
 d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`), les choix de runes
 (#86 : `rune_keystone`, `rune_primary_style`, `rune_secondary_style`, `rune_secondary_pair`,
-`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`) et chaque variante
-porte `win_rate_lower_bound` (Wilson 95 %). Leur `pick_rate` est le taux conjoint sur toutes
-les parties à page complète du groupe ; `conditional_rate` (pourcentage de 0 à 100, comme
-`pick_rate`) rapporte les `games` de la ligne aux `games` de son parent dans le même groupe
-(champion, rôle, rang, patch, plateforme, file) : `rune_keystone` `[clé]` pour
+`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`), les choix de montée
+(#87 : `skill_start` des trois premiers points, `skill_priority` de l'ordre de
+maximisation Q/W/E) et chaque variante
+porte `win_rate_lower_bound` (Wilson 95 %). Le `pick_rate` des lignes de runes est le taux
+conjoint sur toutes les parties à page complète du groupe ; `conditional_rate` (pourcentage de
+0 à 100, comme `pick_rate`) rapporte les `games` de la ligne aux `games` de son parent dans le
+même groupe (champion, rôle, rang, patch, plateforme, file) : `rune_keystone` `[clé]` pour
 `rune_slot_1..3`, `rune_secondary_style` `[arbre]` pour `rune_secondary_pair`. Il vaut `null`
 pour les autres catégories, sans parent ou à 0 partie, ou sous `min_games`. La réponse
 builds ajoute `build_stage_method` et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la

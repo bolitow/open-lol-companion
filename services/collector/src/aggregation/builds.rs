@@ -109,6 +109,51 @@ fn derive_rune_choices(page: &[u32]) -> BTreeMap<String, Vec<u32>> {
     ])
 }
 
+/// Rang maximal d'un sort de base (Q, W, E) ; l'ultime (4) a sa propre montée.
+const BASIC_SKILL_MAX_RANK: usize = 5;
+/// Nombre de premiers points publiés comme départ de montée.
+const SKILL_START_POINTS: usize = 3;
+
+/// Choix de montée (#87) dérivés de la séquence intégrale des points normaux, sans
+/// nouvelle collecte : la séquence complète est quasi unique par partie et dépend de
+/// sa durée, ces catégories lui donnent un effectif exploitable.
+/// - `skill_start` : les trois premiers points, dans l'ordre ;
+/// - `skill_priority` : ordre dans lequel Q, W, E atteignent le rang 5. Deux sorts au
+///   rang 5 fixent déjà l'ordre (le troisième est dernier, maximisé ou non) ; avec
+///   moins, l'ordre serait deviné et la catégorie est omise plutôt que biaisée.
+fn derive_skill_choices(skills: &[u32]) -> BTreeMap<String, Vec<u32>> {
+    let mut choices = BTreeMap::new();
+    if skills.len() >= SKILL_START_POINTS {
+        choices.insert("skill_start".into(), skills[..SKILL_START_POINTS].to_vec());
+    }
+    let mut ranks = [0usize; 3];
+    // Point (1-indexé) auquel chaque sort de base atteint son rang maximal.
+    let mut maxed_at = [None; 3];
+    for (point, slot) in skills.iter().enumerate() {
+        let Some(index) = usize::try_from(*slot)
+            .ok()
+            .and_then(|slot| slot.checked_sub(1))
+            .filter(|index| *index < ranks.len())
+        else {
+            continue;
+        };
+        ranks[index] += 1;
+        if ranks[index] == BASIC_SKILL_MAX_RANK {
+            maxed_at[index] = Some(point + 1);
+        }
+    }
+    if maxed_at.iter().flatten().count() >= 2 {
+        // `None` trie après `Some` : le sort non maximisé ferme la priorité.
+        let mut order = [1u32, 2, 3];
+        order.sort_by_key(|slot| {
+            let at = maxed_at[*slot as usize - 1];
+            (at.is_none(), at)
+        });
+        choices.insert("skill_priority".into(), order.to_vec());
+    }
+    choices
+}
+
 /// Schéma match-v5, champs spécialisés confirmés sur la recette du 1er octobre 2026.
 /// Les types inconnus n'influencent aucune catégorie ; les événements reconnus
 /// incomplets font échouer la projection, pour ne pas publier une séquence tronquée.
@@ -246,6 +291,7 @@ pub(super) fn extract_timeline(
         result.net_purchases = Some(purchases);
     }
     if !skills.is_empty() {
+        result.variants.extend(derive_skill_choices(&skills));
         result.variants.insert("skill_order".into(), skills);
     }
     if !special_skills.is_empty() {

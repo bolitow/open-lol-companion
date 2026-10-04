@@ -229,6 +229,67 @@ fn separe_les_points_speciaux_des_points_de_sort_normaux() {
     assert_eq!(result.skill_steps.len(), 2);
 }
 
+/// Suite de points de sort normaux aux horodatages croissants.
+fn skills(slots: &[u32]) -> Vec<Value> {
+    slots
+        .iter()
+        .enumerate()
+        .map(|(n, slot)| skill(1_000 * (n as u64 + 1), *slot))
+        .collect()
+}
+
+#[test]
+fn derive_la_priorite_de_maximisation_et_les_trois_premiers_points() {
+    // Q au rang 5 au point 8, E au point 13, W au point 18 ; l'ultime (4) est ignoré.
+    let result = extract(skills(&[
+        1, 2, 3, 1, 1, 4, 1, 1, 3, 3, 4, 3, 3, 2, 2, 4, 2, 2,
+    ]));
+    assert_eq!(result.variants["skill_priority"], vec![1, 3, 2]);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+    // La séquence intégrale reste publiée telle quelle.
+    assert_eq!(result.variants["skill_order"].len(), 18);
+}
+
+#[test]
+fn la_priorite_suit_le_rang_maximal_et_non_le_premier_point_investi() {
+    // Q est pris en premier mais W atteint le rang 5 avant ; E n'est jamais pris.
+    let result = extract(skills(&[1, 2, 2, 2, 2, 2, 1, 1, 1, 1]));
+    assert_eq!(result.variants["skill_priority"], vec![2, 1, 3]);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 2]);
+}
+
+#[test]
+fn deux_sorts_maximises_suffisent_a_fixer_le_troisieme_en_dernier() {
+    // Partie courte : le troisième sort ne peut passer devant un sort déjà au rang 5.
+    let result = extract(skills(&[1, 2, 3, 1, 1, 4, 1, 1, 3, 3, 4, 3, 3]));
+    assert_eq!(result.variants["skill_priority"], vec![1, 3, 2]);
+}
+
+#[test]
+fn un_seul_sort_maximise_ne_fixe_aucune_priorite() {
+    let result = extract(skills(&[1, 2, 3, 1, 1, 4, 1, 1, 3, 3]));
+    assert!(!result.variants.contains_key("skill_priority"));
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+}
+
+#[test]
+fn moins_de_trois_points_ne_donnent_aucun_depart() {
+    let result = extract(skills(&[1, 2]));
+    assert!(!result.variants.contains_key("skill_start"));
+    assert!(!result.variants.contains_key("skill_priority"));
+    assert_eq!(result.variants["skill_order"], vec![1, 2]);
+}
+
+#[test]
+fn les_points_speciaux_ne_comptent_ni_dans_le_depart_ni_dans_la_priorite() {
+    let mut events = skills(&[1, 2]);
+    events.push(json!({"type":"SKILL_LEVEL_UP","participantId":1,"timestamp":2_500,"skillSlot":3,"levelUpType":"EVOLVE"}));
+    events.push(skill(3_000, 3));
+    let result = extract(events);
+    assert_eq!(result.variants["skill_start"], vec![1, 2, 3]);
+    assert_eq!(result.variants["special_skill_order"], vec![3]);
+}
+
 #[test]
 fn plafonne_les_sequences_sans_tronquer_silencieusement() {
     let at_limit = (0..64).map(|at| skill(at, 1)).collect();

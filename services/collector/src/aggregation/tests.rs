@@ -1093,6 +1093,78 @@ fn les_runes_sont_agregees_par_cle_de_voute_arbre_emplacement_et_fragment() {
     assert_eq!(rune_rows(&r, "runes").len(), 3);
 }
 
+/// Partie avec timeline : points de sort normaux du participant 1.
+fn with_skills(mut g: StoredMatch, slots: &[u32]) -> StoredMatch {
+    let events: Vec<Value> = slots
+        .iter()
+        .enumerate()
+        .map(|(n, slot)| {
+            json!({"type":"SKILL_LEVEL_UP","participantId":1,"timestamp":1000*(n+1),
+                   "skillSlot":slot,"levelUpType":"NORMAL"})
+        })
+        .collect();
+    g.timeline = Some(json!({
+        "metadata":{"matchId":g.match_id},
+        "info":{"participants":[{"participantId":1}],"frames":[{"events":events}]}
+    }));
+    g
+}
+
+#[test]
+fn la_priorite_et_le_depart_des_sorts_ont_leur_population_et_leurs_victoires() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let full = [1, 2, 3, 1, 1, 4, 1, 1, 3, 3, 4, 3, 3, 2, 2, 4, 2, 2];
+    // Partie courte : un seul sort au rang 5, donc départ publiable mais pas de priorité.
+    let short = [1, 2, 3, 1, 1];
+    for (n, (slots, win)) in [
+        (&full[..], true),
+        (&full[..], false),
+        (&[2, 1, 3, 2, 2, 4, 2, 2, 1, 1, 4, 1, 1][..], true),
+        (&short[..], true),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut g = game(&format!("EUW1_skill{n}"));
+        if !win {
+            reverse_winner(&mut g);
+        }
+        acc.add(&with_skills(g, slots));
+    }
+    let r = acc.finish();
+    let rows = |category: &str| {
+        r.builds
+            .iter()
+            .filter(|b| b.key.rank == "ALL" && b.key.champion_id == 1 && b.category == category)
+            .map(|b| (b.selection.clone(), b.games, b.wins, b.population))
+            .collect::<Vec<_>>()
+    };
+    // Population de la priorité : seulement les parties où au moins deux sorts sont maxés.
+    assert_eq!(
+        rows("skill_priority"),
+        vec![
+            (vec![1, 3, 2], 2, Some(1), 3),
+            (vec![2, 1, 3], 1, Some(1), 3)
+        ]
+    );
+    // Le départ regroupe les parties malgré des séquences intégrales toutes différentes.
+    assert_eq!(
+        rows("skill_start"),
+        vec![
+            (vec![1, 2, 3], 3, Some(2), 4),
+            (vec![2, 1, 3], 1, Some(1), 4)
+        ]
+    );
+    // Le taux est calculé sur la population propre de la catégorie.
+    let priority = r
+        .builds
+        .iter()
+        .find(|b| b.key.rank == "ALL" && b.category == "skill_priority" && b.selection == [1, 3, 2])
+        .unwrap();
+    assert!((priority.pick_rate.unwrap() - 66.666_666_666_666_66).abs() < 1e-9);
+    assert!(priority.win_rate_lower_bound.is_some());
+}
+
 #[test]
 fn le_taux_conditionnel_rapporte_la_rune_a_sa_cle_de_voute_ou_a_son_arbre() {
     let mut acc = Accumulator::new(1).unwrap();

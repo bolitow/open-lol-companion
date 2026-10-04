@@ -165,8 +165,22 @@ export type BuildRuneCategory =
   | "rune_shard_flex"
   | "rune_shard_defense";
 
+/**
+ * Choix de montée des compétences (#87), dérivés de la séquence intégrale `skill_order`
+ * (points normaux Q/W/E/R = 1..4, évolutions exclues). `selection` :
+ * - `skill_start` : les 3 premiers points, dans l'ordre. Population : parties avec au
+ *   moins 3 points ;
+ * - `skill_priority` : ordre dans lequel Q, W et E atteignent le rang 5, sous la forme
+ *   `[1|2|3, 1|2|3, 1|2|3]`. Population : parties où au moins deux sorts ont atteint
+ *   le rang 5 (le troisième est alors dernier) ; sinon la catégorie est absente.
+ */
+export type BuildSkillCategory = "skill_start" | "skill_priority";
+
 export interface BuildStats extends GroupKey {
-  /** Empreintes exactes (`final_items`, `runes`…), `BuildStageCategory` ou `BuildRuneCategory`. */
+  /**
+   * Empreintes exactes (`final_items`, `runes`, `skill_order`…), `BuildStageCategory`,
+   * `BuildRuneCategory` ou `BuildSkillCategory`.
+   */
   category: string;
   selection: number[];
   games: number;
