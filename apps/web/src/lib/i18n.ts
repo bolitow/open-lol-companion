@@ -144,9 +144,11 @@ const fr = {
   errors: {
     invalid_request: "Filtres refusés par l’API.",
     unauthorized: "Le site n’est pas autorisé à lire l’API.",
+    forbidden: "Accès refusé par l’API.",
     not_found: "Introuvable.",
     unavailable: "Données momentanément indisponibles. Réessayez plus tard.",
     rate_limited: "Trop de demandes en cours. Réessayez dans quelques instants.",
+    riot_busy: "Riot est momentanément saturé. Réessayez dans quelques instants.",
     not_configured: "L’accès à l’API n’est pas configuré sur ce serveur.",
   },
 };
@@ -268,9 +270,11 @@ const en: Dictionary = {
   errors: {
     invalid_request: "Filters rejected by the API.",
     unauthorized: "The site is not allowed to read the API.",
+    forbidden: "Access denied by the API.",
     not_found: "Not found.",
     unavailable: "Data temporarily unavailable. Please try again later.",
     rate_limited: "Too many requests. Please try again in a moment.",
+    riot_busy: "Riot is temporarily busy. Please try again in a moment.",
     not_configured: "API access is not configured on this server.",
   },
 };

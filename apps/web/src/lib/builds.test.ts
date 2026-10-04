@@ -18,6 +18,13 @@ function build(category: string, selection: number[], games: number): BuildStats
     population: 500,
     pick_rate: null,
     win_rate: null,
+    win_rate_lower_bound: null,
+    win_rate_upper_bound: null,
+    win_rate_delta: null,
+    conditional_rate: null,
+    reliability: null,
+    placement_games: 0,
+    average_placement: null,
   };
 }
 
