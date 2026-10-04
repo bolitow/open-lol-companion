@@ -32,8 +32,9 @@ export function Dashboard({ t, onDraft, profile, history, friends }: {
       <aside className="dashboard-aside">{friends}<EmptyPanel title={t.home.progress} description={t.home.progressHint}/></aside>
     </div>;
 }
-export function GameScreen({ screen, session, t, locale, onImportSettings }: {
+export function GameScreen({ screen, session, t, locale, onImportSettings, showDraftWinEstimate=false }: {
     screen: Exclude<Screen, 'settings' | 'dashboard' | 'champions' | 'players'>;
+    showDraftWinEstimate?:boolean;
     locale:Locale;
     onImportSettings?:()=>void;
     session: LcuSession;
@@ -42,5 +43,5 @@ export function GameScreen({ screen, session, t, locale, onImportSettings }: {
     if (screen === 'in-game') return <InGameScreen locale={locale}/>;
     if (screen !== 'champ-select')
         return <><div className="screen-heading"><span className="eyebrow">{session.phase ? t.phases[session.phase] : t.game.phaseUnknown}</span><h1>{t.navigation[screen]}</h1><p>{t.game.postHint}</p></div><EmptyPanel title={t.game.unavailable} description={t.connection.data} icon="sword"/></>;
-    return <DraftBoard connected={session.connected} draft={session.draft} runePage={session.runePage} locale={locale} t={t} onImportSettings={onImportSettings}/>;
+    return <DraftBoard showDraftWinEstimate={showDraftWinEstimate} connected={session.connected} draft={session.draft} runePage={session.runePage} locale={locale} t={t} onImportSettings={onImportSettings}/>;
 }

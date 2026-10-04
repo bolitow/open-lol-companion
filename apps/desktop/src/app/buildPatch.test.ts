@@ -41,3 +41,10 @@ it('la nouvelle lecture reste prioritaire après invalidation',async()=>{
  completions[1]!({...context,client:{patch:'16.21',gameVersion:'16.21.1'}});await second;
  completions[0]!(context);await first;expect(store.getSnapshot().value?.client?.patch).toBe('16.21');
 });
+it('sépare invalidation de publication et vérification de patch lors des picks',async()=>{
+ const store=createPatchStore(async()=>context);
+ const initial=store.getSnapshot().publicationRevision;
+ await store.load();await store.load();
+ expect(store.getSnapshot().publicationRevision).toBe(initial);
+ store.invalidate();expect(store.getSnapshot().publicationRevision).toBe(initial+1);
+});

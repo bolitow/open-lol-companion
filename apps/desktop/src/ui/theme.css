@@ -1,12 +1,12 @@
 @font-face {
   font-family:Sora;
-  src:url('/prototype/assets/Sora.ttf') format('truetype');
+  src:url('/fonts/Sora.ttf') format('truetype');
   font-weight:100 800;
   font-display:swap
 }
 @font-face {
   font-family:Source Sans;
-  src:url('/prototype/assets/SourceSans3.ttf') format('truetype');
+  src:url('/fonts/SourceSans3.ttf') format('truetype');
   font-weight:200 900;
   font-display:swap
 }

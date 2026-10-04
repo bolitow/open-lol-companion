@@ -7,15 +7,16 @@ export interface Preferences {
     theme: 'dark' | 'light';
     locale: Locale;
     motion: boolean;
+    showDraftWinEstimate: boolean;
 }
 export function parsePreferences(raw: string | null): Preferences {
-    const defaults: Preferences = { theme: 'dark', locale: 'fr', motion: true };
+    const defaults: Preferences = { theme: 'dark', locale: 'fr', motion: true, showDraftWinEstimate: true };
     try {
         const value: unknown = JSON.parse(raw ?? 'null');
         if (!value || typeof value !== 'object')
             return defaults;
         const data = value as Record<string, unknown>;
-        return { theme: data.theme === 'light' ? 'light' : 'dark', locale: data.locale === 'en' ? 'en' : 'fr', motion: typeof data.motion === 'boolean' ? data.motion : true };
+        return { theme: data.theme === 'light' ? 'light' : 'dark', locale: data.locale === 'en' ? 'en' : 'fr', motion: typeof data.motion === 'boolean' ? data.motion : true, showDraftWinEstimate: typeof data.showDraftWinEstimate === 'boolean' ? data.showDraftWinEstimate : true };
     }
     catch {
         return defaults;

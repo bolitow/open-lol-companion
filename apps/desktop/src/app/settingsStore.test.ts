@@ -4,8 +4,8 @@ const memory=(initial:Record<string,string>={})=>{const data=new Map(Object.entr
 describe('réglages partagés',()=>{
  it('reprend les clés existantes et garde Flash non défini sans choix explicite',()=>{
   const storage=memory({'olc.app.preferences':'{"theme":"light","locale":"en","motion":false}','olc.flash-slot':'"F"'});
-  expect(createSettingsStore(storage).getSnapshot().values).toEqual({theme:'light',locale:'en',motion:false,flashSlot:'F',autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined});
-  expect(createSettingsStore(memory()).getSnapshot().values).toEqual({theme:'dark',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined});
+  expect(createSettingsStore(storage).getSnapshot().values).toEqual({theme:'light',locale:'en',motion:false,flashSlot:'F',autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
+  expect(createSettingsStore(memory()).getSnapshot().values).toEqual({theme:'dark',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
   expect(createSettingsStore(memory({'olc.app.preferences':'broken','olc.flash-slot':'"Z"'})).getSnapshot().values.flashSlot).toBeNull();
  });
  it('propage un changement aux consommateurs et le restaure au prochain lancement',()=>{
@@ -19,7 +19,7 @@ describe('réglages partagés',()=>{
  it('annule seulement la dernière modification et persiste le retour y compris Flash non choisi',()=>{
   const storage=memory(),store=createSettingsStore(storage);
   store.change('theme','light');store.change('flashSlot','F');store.undo();
-  expect(store.getSnapshot().values).toEqual({theme:'light',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined});
+  expect(store.getSnapshot().values).toEqual({theme:'light',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
   expect(createSettingsStore(storage).getSnapshot().values).toEqual(store.getSnapshot().values);
   expect(store.getSnapshot().lastChange).toBeNull();store.undo();expect(store.getSnapshot().values.theme).toBe('light');
  });
@@ -52,8 +52,8 @@ describe('recherche des réglages sans effet de bord',()=>{
   expect(searchSettings('flash couleur','fr','all')).toEqual([]);
   expect(searchSettings('micro','fr','all')).toEqual([]);
   expect(searchSettings('flash','fr','app')).toEqual([]);
-  expect(searchSettings('','en','league')).toEqual(['flashSlot','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
-  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','apiAccess','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
+  expect(searchSettings('','en','league')).toEqual(['showDraftWinEstimate','flashSlot','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
+  expect(searchSettings('','fr','all')).toEqual(['showDraftWinEstimate','theme','locale','motion','flashSlot','closeToTray','autostartEnabled','apiAccess','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
  });
 });
 it('distingue une panne de sauvegarde Flash d’une panne des préférences de l’application',()=>{
@@ -125,4 +125,31 @@ it('conserve et persiste l’activation sorts existante à travers une modificat
  expect(createSettingsStore(storage).getSnapshot().values.autoSpells).toBe(true);
  expect(searchSettings('imports sorts','fr','league')).toEqual(['autoSpells']);
  expect(searchSettings('panneau partie','fr','league')).toEqual(['overlay']);
+});
+
+
+describe('préférence du taux estimé de draft (#187)',()=>{
+ it('est active par défaut, persiste, notifie immédiatement et peut être annulée',()=>{
+  const data=new Map<string,string>();const storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value)}};
+  const store=createSettingsStore(storage);let observed=true;
+  const unsubscribe=store.subscribe(()=>{observed=store.getSnapshot().values.showDraftWinEstimate});
+  expect(store.getSnapshot().values.showDraftWinEstimate).toBe(true);
+  store.change('showDraftWinEstimate',false);expect(observed).toBe(false);
+  expect(createSettingsStore(storage).getSnapshot().values.showDraftWinEstimate).toBe(false);
+  store.undo();expect(observed).toBe(true);unsubscribe();
+ });
+ it('reste recherchable dans les deux langues',()=>{
+  expect(searchSettings('victoire draft','fr','league')).toContain('showDraftWinEstimate');
+  expect(searchSettings('draft win estimate','en','league')).toContain('showDraftWinEstimate');
+ });
+});
+
+
+it('conserve le choix en mémoire si le disque échoue et réessaie sa sauvegarde',()=>{
+ const storage=memory();let broken=true;
+ const adapter={getItem:storage.getItem,setItem:(key:string,value:string)=>{if(broken)throw new Error('storage');storage.setItem(key,value)}};
+ const store=createSettingsStore(adapter);store.change('showDraftWinEstimate',false);
+ expect(store.getSnapshot().values.showDraftWinEstimate).toBe(false);expect(store.getSnapshot().storageFailed).toBe(true);
+ broken=false;store.retrySave();expect(store.getSnapshot().storageFailed).toBe(false);
+ expect(createSettingsStore(storage).getSnapshot().values.showDraftWinEstimate).toBe(false);
 });

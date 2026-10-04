@@ -19,16 +19,16 @@ export function resolveBuildPatch(value:BuildPatchContext|null,catalog:string):P
 }
 /** Un seul chargement partagé ; une invalidation écarte les réponses de l'ancienne session. */
 export function createPatchStore(read:()=>Promise<BuildPatchContext>){
- let state:{value:BuildPatchContext|null;pending:boolean;revision:number}={value:null,pending:false,revision:0};
+ let state:{value:BuildPatchContext|null;pending:boolean;revision:number;publicationRevision:number}={value:null,pending:false,revision:0,publicationRevision:0};
  let generation=0,flight:Promise<void>|null=null;
  const listeners=new Set<()=>void>();
  const publish=(next:typeof state)=>{state=next;listeners.forEach(fn=>fn())};
  const store={getSnapshot:()=>state,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn)}},
-  invalidate(){generation++;flight=null;publish({value:null,pending:false,revision:state.revision+1})},
+  invalidate(){generation++;flight=null;publish({value:null,pending:false,revision:state.revision+1,publicationRevision:state.publicationRevision+1})},
   load():Promise<void>{
    if(flight)return flight;
    const epoch=generation;publish({...state,pending:true});
-   flight=read().then(value=>{if(epoch===generation)publish({value,pending:false,revision:state.revision+1})},()=>{if(epoch===generation)publish({value:{client:null,clientError:'unavailable',manifest:null,manifestError:'unavailable'},pending:false,revision:state.revision+1})}).finally(()=>{if(epoch===generation)flight=null});
+   flight=read().then(value=>{if(epoch===generation)publish({...state,value,pending:false,revision:state.revision+1})},()=>{if(epoch===generation)publish({...state,value:{client:null,clientError:'unavailable',manifest:null,manifestError:'unavailable'},pending:false,revision:state.revision+1})}).finally(()=>{if(epoch===generation)flight=null});
    return flight;
   },
  };return store;

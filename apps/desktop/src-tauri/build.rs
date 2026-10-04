@@ -23,6 +23,7 @@ fn main() {
             "collection_refresh",
             "collection_set_wish",
             "community_builds",
+            "community_draft_stats",
             "publication_state",
             "api_access_status",
             "save_api_access",

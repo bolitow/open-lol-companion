@@ -6,6 +6,10 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Draft classée : estimation descriptive des deux camps et couverture, recalcul local depuis une tierlist complète et cohérente des six rôles ; transport Rust borné, réglage masquant aussi calcul/chargement, aucune estimation de remplacement sans données (#181).
+
+- Overlay : mention légale courte FR/EN et accès clavier en édition ; réglage persistant du pourcentage estimé de draft. Le prototype et ses ressources propres sortent du build distribué, tout en restant accessibles en développement ; polices partagées conservées (#187).
+
 - Cosmétiques versionnés : séries FR/EN, avatars et chemins de skins liés au catalogue actif ; cache Rust d’images à la demande borné à 128 Mio, sans alias `latest`, avec reprise locale après redémarrage. Raccord au front Collection et avatars existant, préchargement progressif conservé (#93).
 
 - Catalogue desktop téléchargeable : instantanés FR/EN et artworks versionnés publiés par l’API, cache Rust vérifié avec reprise, bascule complète et conservation du dernier catalogue sain ; recherche, draft et fiches suivent le snapshot actif, avec état et nouvelle tentative FR/EN (#93).

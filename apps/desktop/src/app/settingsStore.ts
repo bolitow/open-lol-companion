@@ -27,8 +27,8 @@ export function createSettingsStore(storage:SettingsStorage,onChange=()=>{}){
  const publish=(patch:Partial<SettingsSnapshot>)=>{state={...state,...patch};listeners.forEach(listener=>listener())};
  const save=(key:string,values:SettingValues)=>{
   try{
-   const {theme,locale,motion}=values;
-   storage.setItem(key,JSON.stringify(key===appKey?{theme,locale,motion}:key===autoImportStorageKey?autoImportPreferences(values):values.flashSlot));failed.delete(key);
+   const {theme,locale,motion,showDraftWinEstimate}=values;
+   storage.setItem(key,JSON.stringify(key===appKey?{theme,locale,motion,showDraftWinEstimate}:key===autoImportStorageKey?autoImportPreferences(values):values.flashSlot));failed.delete(key);
   }catch{failed.add(key)}
  };
  const apply=(key:SettingKey,value:SettingValues[SettingKey],undo=false)=>{
@@ -50,6 +50,7 @@ export function createSettingsStore(storage:SettingsStorage,onChange=()=>{}){
 }
 export type SettingsStore=ReturnType<typeof createSettingsStore>;
 export const settingDefinitions:readonly {key:SettingsSearchKey;category:Exclude<SettingCategory,'all'>;terms:string}[]=[
+ {key:'showDraftWinEstimate',category:'league',terms:'draft selection victoire victoires win chance chances estimate estimation estimated pourcentage percent probability probabilite afficher masquer display hide'},
  {key:'theme',category:'app',terms:'theme themes apparence appearance couleur couleurs color colors mode sombre dark nuit night clair light luminosite brightness'},
  {key:'locale',category:'app',terms:'langue langues language languages anglais english francais french traduction translation'},
  {key:'motion',category:'app',terms:'animations animation effets effects mouvement mouvements motion transition transitions moins less fewer reduce reduire ralentir desactiver disable couper arreter stop'},

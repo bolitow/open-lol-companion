@@ -62,6 +62,20 @@ async fn community_builds(
 }
 
 #[tauri::command]
+async fn community_draft_stats(
+    app: tauri::AppHandle,
+    request: olc_build_client::DraftStatsRequest,
+    state: tauri::State<'_, api_access::ApiState>,
+) -> Result<olc_build_client::DraftStatsReport, olc_build_client::BuildError> {
+    let client = state.client().await?;
+    let result = client.draft_stats(request).await;
+    if matches!(result, Err(olc_build_client::BuildError::Unauthorized)) {
+        api_access::report_rejection(&app, &client);
+    }
+    result
+}
+
+#[tauri::command]
 fn lcu_session(state: tauri::State<'_, SessionState>) -> Result<LcuSession, &'static str> {
     state
         .lock()
@@ -200,6 +214,7 @@ pub fn run() {
             lcu_session,
             client_patch,
             community_builds,
+            community_draft_stats,
             publications::publication_state,
             api_access::api_access_status,
             api_access::save_api_access,

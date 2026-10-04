@@ -1,6 +1,8 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
 pub mod cosmetic_images;
+mod draft_stats;
+pub use draft_stats::{DraftChampionStats, DraftStatsReport, DraftStatsRequest};
 pub mod credentials;
 pub mod desktop_catalog;
 mod observations;

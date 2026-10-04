@@ -30,6 +30,7 @@ export function OverlayView({state, session, onHeight, onEdit, editError}: {stat
         <div className="overlay-panel-content"><span className="game-overlay-brand">Open LoL Companion</span>
         {preview ? <div className="game-overlay-preview"><h1>{t.previewTitle}</h1><p>{t.previewBody}</p></div> : <><LiveSummary session={session} locale={preferences.locale}/><LiveBuildSummary session={session} locale={preferences.locale}/></>}
         </div>
+        <p className="overlay-legal" tabIndex={editing?0:undefined}>{t.legal}</p>
         {editing&&<button className="overlay-resize" type="button" title={t.resize} aria-label={t.resize} {...gesture('resize')}><Icon name="expand" size={16}/></button>}
     </aside>;
 }

@@ -36,3 +36,7 @@ body { color: #f3f7fa; font-family: Inter, -apple-system, BlinkMacSystemFont, "S
 
 /* Repli sans flou natif sur Windows : contraste lisible, aucune capture du jeu. */
 .game-overlay-panel[data-material="solid"][data-style="dark"]{background:linear-gradient(145deg,#172938ed,#0e1925d9);border-color:#7593a77a}
+
+/* La mention reste hors du contenu rogné et ne capte aucune entrée en jeu. */
+.overlay-legal{flex-shrink:0;margin:8px 0 0;padding:5px 6px;border-radius:4px;background:#0e1925;color:#d4dfe9;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+.overlay-legal:focus-visible{outline:2px solid #fca48d;outline-offset:2px}

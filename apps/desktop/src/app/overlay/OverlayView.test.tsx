@@ -41,3 +41,16 @@ it('réserve les poignées et commandes à la session d’édition',()=>{
  const html=renderToStaticMarkup(<OverlayView state={{...state,editSession:4}} session={session}/>);
  expect(html).toContain('Déplacer');expect(html).toContain('Redimensionner');expect(html).toContain('Annuler');
 });
+
+
+it('affiche la mention légale FR/EN et la rend focalisable seulement en édition',()=>{
+ for(const locale of ['fr','en'] as const){
+  const render=(editing:boolean)=>renderToStaticMarkup(<OverlayView state={{...state,editSession:editing?4:null,preferences:{...state.preferences,locale}}} session={session}/>);
+  const html=render(false);
+  expect(html).toContain(locale==='fr'?"Non approuvé par Riot Games":"Not endorsed by Riot Games");
+  expect(html).toContain(locale==='fr'?"Aucune donnée cachée":"No hidden data");
+  expect(html).toContain('class="overlay-legal"');
+  expect(html).not.toContain('tabindex');
+  expect(render(true)).toMatch(/class="overlay-legal"[^>]*tabindex="0"/);
+ }
+});

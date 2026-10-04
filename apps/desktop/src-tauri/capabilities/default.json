@@ -8,6 +8,7 @@
     "allow-client-patch",
     "allow-friends-state",
     "allow-community-builds",
+    "allow-community-draft-stats",
     "allow-publication-state",
     "allow-player-profile",
     "allow-player-matches",
