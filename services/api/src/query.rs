@@ -50,38 +50,62 @@ fn default_rank() -> String {
 fn default_limit() -> usize {
     50
 }
+/// Population demandée pour une série entre patchs : tout patch publié, jamais mélangé.
+/// Aucune pagination : la série compte au plus un point par patch de l'instantané.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct TrendsQuery {
+    pub platform: String,
+    pub queue: i32,
+    pub role: String,
+    #[serde(default = "default_rank")]
+    pub rank: String,
+}
+fn is_patch(patch: &str) -> bool {
+    let parts: Vec<_> = patch.split('.').collect();
+    parts.len() == 2
+        && parts
+            .iter()
+            .all(|p| !p.is_empty() && p.len() <= 3 && p.bytes().all(|b| b.is_ascii_digit()))
+}
+/// Dimensions communes à toutes les routes statistiques ; les bornes restent identiques.
+fn are_dimensions(platform: &str, queue: i32, role: &str, rank: &str) -> bool {
+    olc_collector::config::PLATFORMS.contains(&platform)
+        && (1..=100_000).contains(&queue)
+        && ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY", "UNKNOWN"].contains(&role)
+        && [
+            "ALL",
+            "IRON",
+            "BRONZE",
+            "SILVER",
+            "GOLD",
+            "PLATINUM",
+            "EMERALD",
+            "DIAMOND",
+            "MASTER",
+            "GRANDMASTER",
+            "CHALLENGER",
+            "UNKNOWN",
+            "UNRANKED",
+            "UNRANKED_MODE",
+        ]
+        .contains(&rank)
+}
 impl StatsQuery {
     pub fn validate(&self) -> Result<(), &'static str> {
-        let parts: Vec<_> = self.patch.split('.').collect();
-        if parts.len() != 2
-            || parts
-                .iter()
-                .any(|p| p.is_empty() || p.len() > 3 || !p.bytes().all(|b| b.is_ascii_digit()))
-            || !olc_collector::config::PLATFORMS.contains(&self.platform.as_str())
-            || self.queue <= 0
-            || self.queue > 100_000
-            || !["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY", "UNKNOWN"]
-                .contains(&self.role.as_str())
-            || ![
-                "ALL",
-                "IRON",
-                "BRONZE",
-                "SILVER",
-                "GOLD",
-                "PLATINUM",
-                "EMERALD",
-                "DIAMOND",
-                "MASTER",
-                "GRANDMASTER",
-                "CHALLENGER",
-                "UNKNOWN",
-                "UNRANKED",
-                "UNRANKED_MODE",
-            ]
-            .contains(&self.rank.as_str())
+        if !is_patch(&self.patch)
+            || !are_dimensions(&self.platform, self.queue, &self.role, &self.rank)
             || self.offset > 10_000
             || !(1..=200).contains(&self.limit)
         {
+            return Err("invalid_request");
+        }
+        Ok(())
+    }
+}
+impl TrendsQuery {
+    pub fn validate(&self) -> Result<(), &'static str> {
+        if !are_dimensions(&self.platform, self.queue, &self.role, &self.rank) {
             return Err("invalid_request");
         }
         Ok(())
@@ -176,6 +200,40 @@ mod tests {
                 serde_json::from_value::<BansQuery>(value).is_err(),
                 "{extra}"
             );
+        }
+    }
+
+    #[test]
+    fn les_tendances_controlent_les_memes_dimensions_sans_patch_ni_pagination() {
+        let q: TrendsQuery =
+            serde_json::from_value(json!({"platform":"EUW1","queue":420,"role":"MIDDLE"})).unwrap();
+        assert_eq!(q.rank, "ALL");
+        assert!(q.validate().is_ok());
+        for invalid in [
+            TrendsQuery {
+                platform: "EUROPE".into(),
+                ..q.clone()
+            },
+            TrendsQuery {
+                queue: 0,
+                ..q.clone()
+            },
+            TrendsQuery {
+                role: "MID".into(),
+                ..q.clone()
+            },
+            TrendsQuery {
+                rank: "FAKE".into(),
+                ..q.clone()
+            },
+        ] {
+            assert!(invalid.validate().is_err(), "{invalid:?}");
+        }
+        // Une série couvre tous les patchs : le patch et la pagination sont refusés.
+        for extra in [("patch", json!("16.19")), ("limit", json!(10))] {
+            let mut value = json!({"platform":"EUW1","queue":420,"role":"MIDDLE"});
+            value[extra.0] = extra.1;
+            assert!(serde_json::from_value::<TrendsQuery>(value).is_err());
         }
     }
 }

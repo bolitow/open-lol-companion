@@ -5,7 +5,7 @@ use crate::realtime::Publication;
 use crate::{
     error::ApiError,
     profiles::HistoryQuery,
-    query::{BansQuery, StatsQuery},
+    query::{BansQuery, StatsQuery, TrendsQuery},
 };
 use axum::{
     extract::{
@@ -15,7 +15,7 @@ use axum::{
     http::{HeaderMap, HeaderValue},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use olc_collector::{riot_client::HttpsTransport, shared_quota::CoordinatedTransport};
@@ -36,6 +36,8 @@ pub struct AppState {
     pub ws_slots: Arc<Semaphore>,
     pub http_slots: Arc<Semaphore>,
     pub allowed_origins: Vec<axum::http::HeaderValue>,
+    /// Sujets de jeton autorisés à exporter ou effacer les données d'un joueur (#99).
+    pub privacy_operators: Vec<String>,
 }
 impl AppState {
     pub fn new(pool: PgPool, auth: Auth) -> Self {
@@ -48,6 +50,7 @@ impl AppState {
             ws_slots: Arc::new(Semaphore::new(128)),
             http_slots: Arc::new(Semaphore::new(32)),
             allowed_origins: vec![],
+            privacy_operators: vec![],
         }
     }
 }
@@ -57,8 +60,11 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/tierlist", get(tierlist))
         .route("/v1/bans", get(bans))
         .route("/v1/builds/{champion_id}", get(builds))
+        .route("/v1/trends/{champion_id}", get(trends))
         .route("/v1/profiles/{platform}/{name}/{tag}", get(profile))
         .route("/v1/profiles/{platform}/{name}/{tag}/matches", get(history))
+        .route("/v1/privacy/export", post(crate::privacy::export))
+        .route("/v1/privacy/erase", post(crate::privacy::erase))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     let cors = CorsLayer::new()
         .allow_origin(state.allowed_origins.clone())
@@ -96,18 +102,20 @@ pub fn router(state: AppState) -> Router {
 }
 async fn authenticate(
     State(state): State<AppState>,
-    request: axum::extract::Request,
+    mut request: axum::extract::Request,
     next: Next,
 ) -> Response {
-    let valid = request
+    let claims = request
         .headers()
         .get("authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|s| s.strip_prefix("Bearer "))
-        .is_some_and(|token| state.auth.verify(token).is_ok());
-    if !valid {
+        .and_then(|token| state.auth.verify(token).ok());
+    let Some(claims) = claims else {
         return ApiError::Unauthorized.into_response();
-    }
+    };
+    // Les routes RGPD vérifient le sujet du jeton.
+    request.extensions_mut().insert(claims);
     let mut response = next.run(request).await;
     response
         .headers_mut()
@@ -164,6 +172,20 @@ async fn builds(
         .await?,
     ))
 }
+async fn trends(
+    State(state): State<AppState>,
+    path: Result<Path<u32>, PathRejection>,
+    query: Result<Query<TrendsQuery>, QueryRejection>,
+) -> Result<Json<crate::trends::TrendsResponse>, ApiError> {
+    Ok(Json(
+        crate::trends::trends(
+            &state.pool,
+            query.map_err(|_| ApiError::InvalidRequest)?.0,
+            path.map_err(|_| ApiError::InvalidRequest)?.0,
+        )
+        .await?,
+    ))
+}
 type ProfilePath = Result<Path<(String, String, String)>, PathRejection>;
 async fn profile(
     State(state): State<AppState>,
@@ -212,6 +234,7 @@ mod tests {
     };
     use sqlx::postgres::PgPoolOptions;
     use tower::ServiceExt;
+    type Response = axum::response::Response;
 
     fn state() -> AppState {
         AppState::new(
@@ -266,6 +289,7 @@ mod tests {
             "/v1/tierlist",
             "/v1/bans",
             "/v1/builds/1",
+            "/v1/trends/1",
             "/v1/profiles/EUW1/name/tag",
             "/v1/profiles/EUW1/name/tag/matches",
         ] {
@@ -283,6 +307,76 @@ mod tests {
             );
         }
     }
+    async fn post_privacy(app: &Router, path: &str, token: Option<&str>, body: &str) -> Response {
+        let mut builder = Request::builder()
+            .method("POST")
+            .uri(path)
+            .header("content-type", "application/json");
+        if let Some(token) = token {
+            builder = builder.header("authorization", format!("Bearer {token}"));
+        }
+        app.clone()
+            .oneshot(builder.body(Body::from(body.to_owned())).unwrap())
+            .await
+            .unwrap()
+    }
+
+    async fn error_code(response: Response) -> serde_json::Value {
+        let body = to_bytes(response.into_body(), 4096).await.unwrap();
+        serde_json::from_slice::<serde_json::Value>(&body).unwrap()["error"]["code"].clone()
+    }
+
+    #[tokio::test]
+    async fn les_routes_rgpd_sont_reservees_aux_operateurs_avant_toute_requete_sql() {
+        let mut state = state();
+        state.privacy_operators.push("dpo".into());
+        let now = jsonwebtoken::get_current_timestamp();
+        let session = state.auth.issue("session", now, 60).unwrap();
+        let operator = state.auth.issue("dpo", now, 60).unwrap();
+        let app = router(state);
+        for path in ["/v1/privacy/export", "/v1/privacy/erase"] {
+            let body = r#"{"puuid":"fake-puuid-1"}"#;
+            let response = post_privacy(&app, path, None, body).await;
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED, "{path}");
+            // Un jeton valide ne suffit pas : la base paresseuse n'est jamais contactée.
+            let response = post_privacy(&app, path, Some(&session), body).await;
+            assert_eq!(response.status(), StatusCode::FORBIDDEN, "{path}");
+            assert_eq!(response.headers()["cache-control"], "no-store");
+            assert_eq!(error_code(response).await, "forbidden");
+            for invalid in [
+                r#"{"puuid":"BOT"}"#,
+                r#"{"puuid":""}"#,
+                r#"{"id":"x"}"#,
+                "pas du json",
+            ] {
+                let response = post_privacy(&app, path, Some(&operator), invalid).await;
+                assert_eq!(
+                    response.status(),
+                    StatusCode::BAD_REQUEST,
+                    "{path} {invalid}"
+                );
+                assert_eq!(error_code(response).await, "invalid_request");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn sans_operateur_configure_personne_n_accede_aux_routes_rgpd() {
+        let state = state();
+        let token = state
+            .auth
+            .issue("dpo", jsonwebtoken::get_current_timestamp(), 60)
+            .unwrap();
+        let response = post_privacy(
+            &router(state),
+            "/v1/privacy/export",
+            Some(&token),
+            r#"{"puuid":"fake-puuid-1"}"#,
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+    }
+
     #[tokio::test]
     async fn les_parametres_invalides_restent_des_erreurs_json_et_le_statique_est_public() {
         let state = state();
@@ -298,6 +392,11 @@ mod tests {
                 true,
             ),
             ("/v1/builds/not-an-id", true),
+            ("/v1/trends/not-an-id", true),
+            (
+                "/v1/trends/1?platform=EUW1&queue=420&role=TOP&patch=16.19",
+                true,
+            ),
             ("/v1/static/no-version/fr_FR/item.json", false),
         ] {
             let mut builder = Request::builder().uri(path);

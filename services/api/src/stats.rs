@@ -35,7 +35,19 @@ pub struct SnapshotMeta {
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub filters: AggregationOptions,
+    pub freshness: Freshness,
     pub coverage: Vec<ScopeCoverage>,
+}
+/// Fraîcheur réelle des périmètres lus (#103), distincte de l'heure du calcul : les dates
+/// de parties viennent de la couverture publiée ; `null` pour un instantané antérieur.
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct Freshness {
+    /// Date du calcul (même instant que `source_snapshot_at`).
+    pub computed_at: String,
+    /// Début (ms Unix) de la plus ancienne partie incluse des périmètres lus.
+    pub first_game_start_ms: Option<i64>,
+    /// Début (ms Unix) de la plus récente partie incluse des périmètres lus.
+    pub last_game_start_ms: Option<i64>,
 }
 #[derive(Serialize)]
 pub struct TierlistResponse {
@@ -64,13 +76,34 @@ pub struct BuildsResponse {
     pub builds: Vec<BuildStats>,
     pub skill_levels: Vec<SkillStats>,
     pub item_events: Vec<ItemEventStats>,
+    /// Winrate du champion par tranche de durée puis par côté (#119) ; le côté n'est publié
+    /// que pour le rang `ALL`. Vide pour un instantané antérieur ou pour Arena.
+    pub splits: Vec<SplitStats>,
     pub max_build_variants_per_category: u32,
-    pub omitted_build_variants: u64,
+    /// Variantes non publiées pour le seul groupe demandé (#113), somme de
+    /// `omitted_build_variants_by_category` ; le compteur global du snapshot n'est pas servi.
+    /// Nul pour un instantané antérieur, où ce compte est inconnu.
+    pub omitted_build_variants: Option<u64>,
+    /// Variantes non publiées par catégorie du groupe demandé ; liste vide si inconnu.
+    pub omitted_build_variants_by_category: Vec<OmittedBuildVariants>,
+    /// Plafond d'`item_events` servis pour le groupe demandé.
+    pub max_item_events: u32,
+    /// Lignes d'`item_events` du groupe retirées par ce plafond (les moins fréquentes).
+    pub omitted_item_events: u64,
     /// Règles des étapes d'achat (#81) ; vide pour un instantané antérieur.
     pub build_stage_method: String,
     /// Version du catalogue d'objets jointe au patch demandé ; nulle sans étapes.
     pub item_catalog_version: Option<String>,
 }
+/// Variantes de builds coupées par le plafond de publication dans une catégorie (#113).
+#[derive(Serialize, Debug, PartialEq, Eq)]
+pub struct OmittedBuildVariants {
+    pub category: String,
+    pub omitted: u32,
+}
+/// Nombre maximal de lignes `item_events` servies pour un groupe : l'effectif par groupe
+/// croît avec le volume collecté (objets × minutes) et la réponse n'est pas paginée.
+pub const MAX_ITEM_EVENTS: u32 = 2000;
 /// Tierlist filtrée sur une population explicite, triée selon le rang publié.
 pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
     query.validate().map_err(|_| ApiError::InvalidRequest)?;
@@ -156,6 +189,8 @@ pub async fn builds(
             .then(a.selection.cmp(&b.selection))
     });
     let total = variants.len();
+    // Avant pagination : le compte décrit tout le groupe, pas la page demandée.
+    let (omitted_build_variants, omitted_build_variants_by_category) = omitted_variants(&variants);
     let builds = variants
         .into_iter()
         .skip(query.offset)
@@ -166,11 +201,18 @@ pub async fn builds(
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
-    let item_events = report
+    let item_events: Vec<_> = report
         .item_events
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
+    let (item_events, omitted_item_events) = cap_item_events(item_events, MAX_ITEM_EVENTS);
+    let mut splits: Vec<_> = report
+        .splits
+        .into_iter()
+        .filter(|s| selected(&s.key))
+        .collect();
+    splits.sort_by_key(|s| (s.dimension, s.bucket));
     let item_catalog_version = report
         .item_catalogs
         .into_iter()
@@ -185,11 +227,70 @@ pub async fn builds(
         builds,
         skill_levels,
         item_events,
+        splits,
         max_build_variants_per_category: report.max_build_variants_per_category,
-        omitted_build_variants: report.omitted_build_variants,
+        omitted_build_variants,
+        omitted_build_variants_by_category,
+        max_item_events: MAX_ITEM_EVENTS,
+        omitted_item_events,
         build_stage_method: report.build_stage_method,
         item_catalog_version,
     })
+}
+
+/// Variantes omises par catégorie du groupe, lues sur les variantes publiées (le compteur est
+/// identique pour toutes celles d'une catégorie). Une catégorie sans compteur (instantané
+/// antérieur) est absente de la liste et rend le total inconnu, jamais nul.
+fn omitted_variants(variants: &[BuildStats]) -> (Option<u64>, Vec<OmittedBuildVariants>) {
+    let mut known = BTreeMap::<&str, Option<u32>>::new();
+    for variant in variants {
+        known
+            .entry(&variant.category)
+            .or_insert(variant.omitted_variants);
+    }
+    let complete = known.values().all(Option::is_some);
+    let by_category: Vec<_> = known
+        .into_iter()
+        .filter_map(|(category, omitted)| {
+            omitted.map(|omitted| OmittedBuildVariants {
+                category: category.to_owned(),
+                omitted,
+            })
+        })
+        .collect();
+    let total = complete.then(|| by_category.iter().map(|c| u64::from(c.omitted)).sum());
+    (total, by_category)
+}
+
+/// Garde les `max` lignes les plus fréquentes (égalité : événement, objet, minute) et rend
+/// le nombre de lignes retirées ; la liste reste dans l'ordre naturel de lecture.
+fn cap_item_events(mut events: Vec<ItemEventStats>, max: u32) -> (Vec<ItemEventStats>, u64) {
+    let max = max as usize;
+    if events.len() <= max {
+        return (events, 0);
+    }
+    let omitted = (events.len() - max) as u64;
+    events.sort_by(|a, b| {
+        b.events
+            .cmp(&a.events)
+            .then_with(|| (&a.event, a.item_id, a.minute).cmp(&(&b.event, b.item_id, b.minute)))
+    });
+    events.truncate(max);
+    events.sort_by(|a, b| (&a.event, a.item_id, a.minute).cmp(&(&b.event, b.item_id, b.minute)));
+    (events, omitted)
+}
+
+/// Population lue dans l'instantané ; `patch` absent sélectionne tous les patchs publiés.
+pub(crate) struct Selection<'a> {
+    pub patch: Option<&'a str>,
+    pub platform: &'a str,
+    pub queue: i32,
+    /// `None` sans classement à lire : aucun morceau `groups` n'est chargé (#109).
+    pub role: Option<&'a str>,
+    pub rank: &'a str,
+    pub champion_id: Option<u32>,
+    /// Charge aussi builds, compétences et achats du champion (inutile pour une série).
+    pub with_details: bool,
 }
 
 async fn load(
@@ -198,18 +299,36 @@ async fn load(
     champion_id: Option<u32>,
     groups: bool,
 ) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
+    load_selection(
+        pool,
+        &Selection {
+            patch: Some(&query.patch),
+            platform: &query.platform,
+            queue: query.queue,
+            role: groups.then_some(query.role.as_str()),
+            rank: &query.rank,
+            champion_id,
+            with_details: champion_id.is_some(),
+        },
+    )
+    .await
+}
+
+pub(crate) async fn load_selection(
+    pool: &PgPool,
+    selection: &Selection<'_>,
+) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
     // Une seule lecture cohérente : sélection indexée des morceaux avant le filtre JSON.
     // La tierlist ne charge pas les builds ni les événements de tous les champions.
     // Sans `groups`, le rôle est nul : la requête SQL ne lit alors aucun morceau de classement.
-    let role = groups.then_some(&query.role);
-    let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":role,"rank":query.rank,"champion":champion_id});
-    let population = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
-    let scope = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)";
+    let vars = serde_json::json!({"patch":selection.patch,"platform":selection.platform,"queue":selection.queue,"role":selection.role,"rank":selection.rank,"champion":selection.champion_id});
+    let population = "$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
+    let scope = "$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue)";
     let rows = sqlx::query(include_str!("sql/stats_snapshot.sql"))
         .bind(vars)
         .bind(population)
         .bind(scope)
-        .bind(champion_id.is_some())
+        .bind(selection.with_details)
         .fetch_all(pool)
         .await?;
     let row = rows.first().ok_or(ApiError::Unavailable)?;
@@ -237,8 +356,19 @@ async fn load(
     if report.schema_version != 2 || report.min_games == 0 {
         return Err(ApiError::Unavailable);
     }
+    let coverage: Vec<ScopeCoverage> = report
+        .coverage
+        .iter()
+        .filter(|c| selection.patch.is_none() || selection.patch == Some(c.scope.patch.as_str()))
+        .filter(|c| {
+            c.scope.platform_id == selection.platform && c.scope.queue_id == selection.queue
+        })
+        .cloned()
+        .collect();
+    let source_snapshot_at: String = row.try_get("source_snapshot_at")?;
     let meta = SnapshotMeta {
-        source_snapshot_at: row.try_get("source_snapshot_at")?,
+        freshness: freshness(&source_snapshot_at, &coverage),
+        source_snapshot_at,
         published_at: row.try_get("published_at")?,
         schema_version: report.schema_version,
         min_games: report.min_games,
@@ -254,14 +384,20 @@ async fn load(
         pick_rate_definition: report.pick_rate_definition.clone(),
         tier_method: report.tier_method.clone(),
         filters: report.filters.clone(),
-        coverage: report
-            .coverage
-            .iter()
-            .filter(|c| scope_matches(&c.scope, query))
-            .cloned()
-            .collect(),
+        coverage,
     };
     Ok((meta, report))
+}
+/// Bornes des parties incluses sur les périmètres lus ; une date absente d'un périmètre
+/// (instantané antérieur) ne masque pas celles des autres.
+fn freshness(computed_at: &str, coverage: &[ScopeCoverage]) -> Freshness {
+    let first = coverage.iter().filter_map(|c| c.counts.first_game_start_ms);
+    let last = coverage.iter().filter_map(|c| c.counts.last_game_start_ms);
+    Freshness {
+        computed_at: computed_at.to_owned(),
+        first_game_start_ms: first.min(),
+        last_game_start_ms: last.max(),
+    }
 }
 fn scope_matches(scope: &ScopeKey, query: &StatsQuery) -> bool {
     scope.patch == query.patch
@@ -282,4 +418,109 @@ fn matches(key: &GroupKey, query: &StatsQuery) -> bool {
         && key.queue_id == query.queue
         && key.rank == query.rank
         && role == query.role
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn scope(patch: &str, first: Option<i64>, last: Option<i64>) -> ScopeCoverage {
+        let mut value = serde_json::to_value(Coverage::default()).unwrap();
+        value["patch"] = patch.into();
+        value["platform_id"] = "EUW1".into();
+        value["queue_id"] = 420.into();
+        value["first_game_start_ms"] = first.into();
+        value["last_game_start_ms"] = last.into();
+        serde_json::from_value(value).unwrap()
+    }
+
+    #[test]
+    fn la_fraicheur_borne_les_parties_de_tous_les_perimetres_lus() {
+        let coverage = [
+            scope("16.18", Some(100), Some(500)),
+            scope("16.19", Some(300), Some(900)),
+            scope("16.20", None, None),
+        ];
+        assert_eq!(
+            freshness("2026-10-04 10:00:00+00", &coverage),
+            Freshness {
+                computed_at: "2026-10-04 10:00:00+00".into(),
+                first_game_start_ms: Some(100),
+                last_game_start_ms: Some(900),
+            }
+        );
+        assert_eq!(freshness("x", &[]).last_game_start_ms, None);
+    }
+
+    fn build(category: &str, selection: u32, omitted: Option<u32>) -> BuildStats {
+        serde_json::from_value(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "category":category, "selection":[selection], "games":10,
+            "wins":5, "performance_available":true, "population":10,
+            "pick_rate":null, "win_rate":null, "omitted_variants":omitted
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn les_variantes_omises_se_lisent_par_categorie_puis_se_totalisent() {
+        let builds = [
+            build("summoner_spells", 1, Some(5)),
+            build("summoner_spells", 2, Some(5)),
+            build("runes", 1, Some(0)),
+            build("final_items", 1, Some(12)),
+        ];
+        let (total, by_category) = omitted_variants(&builds);
+        assert_eq!(total, Some(17));
+        let read: Vec<_> = by_category
+            .iter()
+            .map(|c| (c.category.as_str(), c.omitted))
+            .collect();
+        assert_eq!(
+            read,
+            [("final_items", 12), ("runes", 0), ("summoner_spells", 5)]
+        );
+    }
+
+    #[test]
+    fn des_variantes_omises_inconnues_ne_sont_jamais_presentees_comme_zero() {
+        // Instantané antérieur : aucune variante ne porte le compteur.
+        let (total, by_category) = omitted_variants(&[build("runes", 1, None)]);
+        assert_eq!((total, by_category.len()), (None, 0));
+        // Mélange : seule la catégorie inconnue manque, le total reste inconnu.
+        let (total, by_category) =
+            omitted_variants(&[build("runes", 1, None), build("final_items", 1, Some(2))]);
+        assert_eq!((total, by_category.len()), (None, 1));
+        // Aucune variante observée : rien n'a pu être omis.
+        assert_eq!(omitted_variants(&[]).0, Some(0));
+    }
+
+    fn event(item_id: u32, minute: u32, events: u64) -> ItemEventStats {
+        serde_json::from_value(json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "event":"ITEM_PURCHASED", "item_id":item_id, "minute":minute, "events":events
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn les_achats_servis_sont_plafonnes_sur_les_plus_frequents() {
+        let all = vec![
+            event(3, 2, 5),
+            event(1, 1, 9),
+            event(2, 1, 5),
+            event(4, 3, 1),
+        ];
+        let (kept, omitted) = cap_item_events(all.clone(), 2);
+        assert_eq!(omitted, 2);
+        // Les deux plus fréquents ; l'égalité se départage par (objet, minute), le résultat
+        // est rendu dans l'ordre naturel de lecture.
+        let read: Vec<_> = kept.iter().map(|e| (e.item_id, e.minute)).collect();
+        assert_eq!(read, [(1, 1), (2, 1)]);
+        let (kept, omitted) = cap_item_events(all.clone(), 4);
+        assert_eq!((kept, omitted), (all, 0));
+    }
 }

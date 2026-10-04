@@ -38,3 +38,13 @@ it('conserve les réglages overlay dans les résultats défilants et la recherch
  expect(html).toContain('overlay-settings-title');
  expect(html).not.toContain('Aucun réglage trouvé.');
 });
+
+it('trouve l’accès à l’API par la recherche et masque la saisie du jeton',()=>{
+ for(const query of ['jeton','token','trousseau']){
+  const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query,category:'app'}} update={()=>{}}/></SettingsProvider>);
+  expect(html).toContain('api-access-title');expect(html).not.toContain('Aucun réglage trouvé.');
+ }
+ const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'jeton',category:'all'}} update={()=>{}}/></SettingsProvider>);
+ expect(html).toContain('type="password"');expect(html).toContain('autoComplete="off"');
+ expect(html).toContain('L’accès à l’API se configure dans l’application desktop.');
+});

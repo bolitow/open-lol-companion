@@ -329,6 +329,7 @@ fn common_spell(builder: &mut Builder<'_>, version: &str, group: &str) {
     builder.description("/description");
     builder.icon("/image/full", version, group);
     builder.text("tooltip", "/tooltip");
+    builder.tooltip_segments("tooltip_segments", "/tooltip");
     builder.field("cooldown", "/cooldown", Shape::Numbers, Some("seconds"));
     builder.field("range", "/range", Shape::Numbers, Some("game_units"));
     builder.field("cost", "/cost", Shape::Numbers, Some("resource_points"));
