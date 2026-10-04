@@ -128,6 +128,11 @@ hôte/méthode. Les en-têtes Riot remplacent les limites initiales prudentes d'
 clé de développement : 20 appels/s et 100/2 min. Les observations de rang ajoutent
 jusqu'à un appel par nouveau joueur, avec cache Solo/Flex de 24 h.
 
+Le seau est partagé avec l'API des profils : le collecteur n'en consomme que 80 %
+(16 appels/s et 80 par 2 min avec les limites ci-dessus, au moins 1 par fenêtre) ;
+le reste est réservé aux requêtes interactives de l'API. Voir
+[`services/api/README.md`](../api/README.md#profils-historique-et-quotas).
+
 | Situation | Comportement |
 | --- | --- |
 | Quota local épuisé | Attente avant l'envoi |

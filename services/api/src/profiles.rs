@@ -70,6 +70,7 @@ pub struct Profiles<T: Transport> {
     cache: Mutex<HashMap<(String, String, String), Profile>>,
     matches: Mutex<HashMap<(String, String), PlayerMatch>>,
     requests: Semaphore,
+    riot_timeout: Duration,
 }
 impl<T: Transport> Profiles<T> {
     /// Le transport de production doit être coordonné avec le collecteur.
@@ -83,16 +84,24 @@ impl<T: Transport> Profiles<T> {
             cache: Mutex::new(HashMap::new()),
             matches: Mutex::new(HashMap::new()),
             requests: Semaphore::new(4),
+            riot_timeout: Duration::from_secs(20),
         }
+    }
+    /// Durée maximale d'un appel Riot, attente de quota partagé comprise.
+    pub fn with_riot_timeout(mut self, timeout: Duration) -> Self {
+        self.riot_timeout = timeout;
+        self
     }
     async fn get(&self, request: &Request) -> Result<Vec<u8>, ApiError> {
         let _permit = self
             .requests
             .try_acquire()
             .map_err(|_| ApiError::RateLimited)?;
-        let body = tokio::time::timeout(Duration::from_secs(20), self.client.get(request))
+        // Le transport HTTP est borné à 15 s, plus court que ce délai : dépasser celui-ci
+        // signifie en pratique que la réservation de quota partagé a attendu (collecte en cours).
+        let body = tokio::time::timeout(self.riot_timeout, self.client.get(request))
             .await
-            .map_err(|_| ApiError::Unavailable)?
+            .map_err(|_| ApiError::RiotBusy)?
             .map_err(|error| match error {
                 RiotError::NotFound => ApiError::NotFound,
                 RiotError::RateLimited { .. } => ApiError::RateLimited,
@@ -538,5 +547,41 @@ mod tests {
                 .await,
             Err(ApiError::InvalidRequest)
         ));
+    }
+
+    /// Transport qui n'aboutit jamais : simule une attente de quota prolongée.
+    struct Stuck;
+    impl Transport for Stuck {
+        async fn send(&self, _: &Request) -> Result<RawResponse, TransportError> {
+            std::future::pending().await
+        }
+    }
+    #[tokio::test]
+    async fn une_attente_de_quota_trop_longue_est_distincte_d_une_panne() {
+        let service = Profiles::new(Stuck).with_riot_timeout(Duration::from_millis(30));
+        assert_eq!(
+            service
+                .profile("EUW1", "Current Name", "TEST")
+                .await
+                .unwrap_err(),
+            ApiError::RiotBusy
+        );
+    }
+    #[tokio::test]
+    async fn une_panne_du_transport_reste_unavailable() {
+        struct Broken;
+        impl Transport for Broken {
+            async fn send(&self, _: &Request) -> Result<RawResponse, TransportError> {
+                Err(TransportError::Timeout)
+            }
+        }
+        let service = Profiles::new(Broken);
+        assert_eq!(
+            service
+                .profile("EUW1", "Current Name", "TEST")
+                .await
+                .unwrap_err(),
+            ApiError::Unavailable
+        );
     }
 }

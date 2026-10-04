@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Quota Riot partagé : l'API des profils garde 20 % de chaque fenêtre (4 appels/s, 20 par 2 min) que le collecteur ne consomme plus, pour qu'une recherche de profil ne dorme plus pendant une rafale de collecte ; le plafond global de la clé reste intact. Nouveau code d'erreur `riot_busy` (503) quand aucun créneau n'est obtenu en 20 s, distinct de `unavailable` et du refus immédiat `rate_limited` (#122).
+
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).
 
 - Bilan de la recette multirégion : 8 601 nouvelles parties, quinze plateformes, arrêt sur refus de clé et limites de couverture/statistiques documentés (#18).

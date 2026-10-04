@@ -3,7 +3,7 @@ mod common;
 use common::TestDb;
 use olc_collector::{
     riot_client::{RawResponse, Request, Transport, TransportError},
-    shared_quota::CoordinatedTransport,
+    shared_quota::{CoordinatedTransport, Priority},
 };
 use serde_json::json;
 use std::{
@@ -116,5 +116,65 @@ async fn un_429_est_partage_avec_un_nouveau_processus() {
     .await
     .is_err());
     assert!(next.sent.lock().unwrap().is_empty());
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_requete_interactive_passe_pendant_une_rafale_du_collecteur() {
+    let Some(db) = TestDb::create().await else {
+        return;
+    };
+    // 10 appels par 1,5 s : le collecteur plafonne à 8, deux appels restent réservés.
+    sqlx::query("INSERT INTO riot_shared_quota(host,state) VALUES('europe.api.riotgames.com',$1)")
+        .bind(json!({"app":{"windows":[{"limit":10,"period_ms":1500,"sent":[]}],"blocked_until":0},"methods":{}}))
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    let background = Recording::default();
+    let collector = Arc::new(CoordinatedTransport::new(
+        background.clone(),
+        db.storage.clone(),
+    ));
+    let burst: Vec<_> = (0..12)
+        .map(|i| {
+            let collector = collector.clone();
+            tokio::spawn(async move {
+                collector
+                    .send(&Request::match_detail(&format!("EUW1_{i}")))
+                    .await
+            })
+        })
+        .collect();
+    // La rafale a rempli la part du collecteur ; l'interactif arrive ensuite.
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while background.sent.lock().unwrap().len() < 8 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(background.sent.lock().unwrap().len(), 8);
+    let interactive = Recording::default();
+    let api = CoordinatedTransport::new(interactive.clone(), db.storage.clone())
+        .with_priority(Priority::Interactive);
+    let started = Instant::now();
+    api.send(&Request::match_detail("EUW1_api")).await.unwrap();
+    // Sans part réservée, l'appel attendrait le glissement de la fenêtre (1,5 s).
+    assert!(started.elapsed() < Duration::from_millis(700));
+    assert_eq!(interactive.sent.lock().unwrap().len(), 1);
+    for task in burst {
+        task.await.unwrap().unwrap();
+    }
+    // Le plafond global n'a jamais été dépassé : 10 appels maximum par fenêtre de 1,5 s.
+    let mut sent = background.sent.lock().unwrap().clone();
+    sent.extend(interactive.sent.lock().unwrap().iter().copied());
+    sent.sort();
+    for (i, at) in sent.iter().enumerate() {
+        let in_window = sent[i..]
+            .iter()
+            .take_while(|other| other.duration_since(*at) < Duration::from_millis(1490))
+            .count();
+        assert!(in_window <= 10, "plafond Riot dépassé");
+    }
     db.cleanup().await;
 }
