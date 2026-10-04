@@ -1176,6 +1176,7 @@ async fn les_bans_sont_identiques_en_stockage_v1_et_en_morceaux_et_refusent_une_
         "skill_levels",
         "item_events",
         "splits",
+        "performance",
     ] {
         let items = source.as_object_mut().unwrap().remove(section).unwrap();
         for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
@@ -1360,6 +1361,7 @@ async fn publish_chunked(pool: &PgPool, mut source: Value) {
         "skill_levels",
         "item_events",
         "splits",
+        "performance",
     ];
     for section in sections {
         // Un instantané antérieur à #119 n'a pas la section : aucun morceau à écrire.
