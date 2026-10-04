@@ -4,7 +4,8 @@ use serde_json::Value;
 use std::collections::BTreeMap;
 
 /// 2 : ajout de la famille `augment` (#118), qui change la projection des sources CommunityDragon.
-pub const NORMALIZER_VERSION: u32 = 2;
+/// 3 : champ `tooltip_segments` des compétences et sorts d'invocateur (#107).
+pub const NORMALIZER_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogSource {
@@ -52,6 +53,23 @@ pub struct CatalogValue {
     pub unit: Option<String>,
     pub status: ValueStatus,
     pub sources: Vec<ValueSource>,
+}
+
+/// Type de dégâts porté par les balises `physicalDamage`, `magicDamage` et `trueDamage` des
+/// infobulles Data Dragon : il vient de la balise, jamais de la formulation du texte.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DamageType {
+    Physical,
+    Magic,
+    True,
+}
+
+/// Fragment d'une infobulle : texte seul (jamais de balisage) et type de dégâts, `null` hors balise de dégâts.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TooltipSegment {
+    pub text: String,
+    pub damage_type: Option<DamageType>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
