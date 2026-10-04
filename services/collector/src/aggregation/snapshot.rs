@@ -80,6 +80,7 @@ pub(super) async fn publish(
     write_section(tx, "builds", &report.builds).await?;
     write_section(tx, "skill_levels", &report.skill_levels).await?;
     write_section(tx, "item_events", &report.item_events).await?;
+    write_section(tx, "splits", &report.splits).await?;
     Ok(())
 }
 
