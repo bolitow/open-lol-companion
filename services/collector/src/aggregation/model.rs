@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use super::builds::{self, BuildObservation};
+use super::context::{self, FirstObjectiveStats, SplitBucket, SplitStats};
 use super::stages::{ItemCatalog, STAGE_CATEGORIES, STAGE_METHOD};
 
 /// Catégories de variantes publiées sur le placement moyen en Arena (#104). Liste
@@ -194,6 +195,24 @@ pub struct Coverage {
     /// `games` mais absentes des métriques de placement.
     #[serde(default)]
     pub unknown_placement_participations: u64,
+    /// Parties à deux camps (équipes 100 et 200, hors Arena) dont le côté a été compté (#119).
+    #[serde(default)]
+    pub blue_side_matches: u64,
+    /// Parmi elles, victoires de l'équipe bleue.
+    #[serde(default)]
+    pub blue_side_wins: u64,
+    /// Winrate du côté bleu (%), nul sous le seuil.
+    #[serde(default)]
+    pub blue_side_win_rate: Option<f64>,
+    /// Issue des parties selon l'équipe ayant pris le premier sang (#119).
+    #[serde(default)]
+    pub first_blood: FirstObjectiveStats,
+    /// Issue des parties selon l'équipe ayant pris le premier dragon.
+    #[serde(default)]
+    pub first_dragon: FirstObjectiveStats,
+    /// Issue des parties selon l'équipe ayant pris la première tour.
+    #[serde(default)]
+    pub first_tower: FirstObjectiveStats,
 }
 
 /// Version du catalogue normalisé (#61) jointe à un patch agrégé.
@@ -231,6 +250,9 @@ pub struct AggregationReport {
     pub builds: Vec<BuildStats>,
     pub skill_levels: Vec<SkillStats>,
     pub item_events: Vec<ItemEventStats>,
+    /// Winrate par tranche de durée et par côté (#119) ; vide dans les rapports antérieurs.
+    #[serde(default)]
+    pub splits: Vec<SplitStats>,
     pub max_build_variants_per_category: u32,
     pub omitted_build_variants: u64,
     /// Règles des catégories d'étapes (#81) ; vide dans les rapports antérieurs.
@@ -259,6 +281,8 @@ pub(super) struct StoredMatch {
     pub ranks: BTreeMap<String, ObservedRank>,
     /// Début de la partie (ms Unix), colonne `game_start` : même source que les filtres de fenêtre.
     pub game_start_ms: i64,
+    /// Durée en secondes, colonne `game_duration_s` déjà normalisée à l'ingestion.
+    pub game_duration_s: i32,
 }
 
 type Population = (ScopeKey, Role, String);
@@ -287,6 +311,8 @@ pub(super) struct Accumulator {
     build_populations: BTreeMap<(GroupKey, String), u64>,
     skills: BTreeMap<(GroupKey, u32, u32), (u64, u128)>,
     events: BTreeMap<(GroupKey, String, u32, u32), u64>,
+    /// Parties et victoires par groupe et par tranche de durée ou côté (#119).
+    splits: BTreeMap<(GroupKey, SplitBucket), Count>,
     /// Écarts partie → observation des rangs retenus, en secondes, par périmètre.
     rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
     /// Catalogue d'objets par patch (« 16.19 »), joint pour dériver les étapes (#81).
@@ -306,13 +332,13 @@ impl Accumulator {
                 tier_method: "Wilson95 lower bound (Arena: ascending average placement); S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
                 included_matches: 0, exclusions: BTreeMap::new(), coverage: vec![], groups: vec![],
-                bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![],
+                bans: vec![], builds: vec![], skill_levels: vec![], item_events: vec![], splits: vec![],
                 max_build_variants_per_category: 20, omitted_build_variants: 0,
                 build_stage_method: STAGE_METHOD.into(), item_catalogs: vec![],
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
             bans:BTreeMap::new(), builds:BTreeMap::new(), inverted_spells:BTreeMap::new(), build_populations:BTreeMap::new(),
-            skills:BTreeMap::new(), events:BTreeMap::new(), rank_gaps:BTreeMap::new(),
+            skills:BTreeMap::new(), events:BTreeMap::new(), splits:BTreeMap::new(), rank_gaps:BTreeMap::new(),
             item_catalogs:BTreeMap::new(),
         })
     }
@@ -374,6 +400,26 @@ impl Accumulator {
                 .last_game_start_ms
                 .map_or(game.game_start_ms, |v| v.max(game.game_start_ms)),
         );
+        // Victoire du côté bleu : seulement pour deux camps réellement opposés (#119). La coop
+        // contre l'IA est exclue : les humains y occupent toujours le même camp.
+        let blue_won = (!arena_game && !is_coop(game.queue_id))
+            .then(|| blue_side_won(&participants))
+            .flatten();
+        if let Some(blue_won) = blue_won {
+            coverage.blue_side_matches += 1;
+            coverage.blue_side_wins += u64::from(blue_won);
+            for (stats, objective) in [
+                (&mut coverage.first_blood, "champion"),
+                (&mut coverage.first_dragon, "dragon"),
+                (&mut coverage.first_tower, "tower"),
+            ] {
+                if let Some(team) = context::first_team(&game.detail, objective) {
+                    let blue_first = team == context::BLUE_TEAM;
+                    stats.record(blue_first, blue_first == blue_won);
+                }
+            }
+        }
+        let duration_bucket = SplitBucket::from_duration_s(game.game_duration_s);
         if let Some(bans) = valid_bans(&game.detail) {
             coverage.draft_matches += 1;
             for champion in bans {
@@ -458,6 +504,16 @@ impl Accumulator {
                     c.placement_sum += u64::from(placement);
                     c.top1 += u64::from(placement == 1);
                     c.top2 += u64::from(placement <= 2);
+                }
+                if blue_won.is_some() {
+                    let side = (key.rank == "ALL")
+                        .then(|| SplitBucket::from_team(p.team))
+                        .flatten();
+                    for bucket in duration_bucket.into_iter().chain(side) {
+                        let c = self.splits.entry((key.clone(), bucket)).or_default();
+                        c.games += 1;
+                        c.wins += u64::from(p.win);
+                    }
                 }
                 *self
                     .populations
@@ -763,6 +819,19 @@ impl Accumulator {
                 events,
             })
             .collect();
+        self.report.splits = self
+            .splits
+            .into_iter()
+            .map(|((key, bucket), c)| SplitStats {
+                key,
+                dimension: bucket.dimension(),
+                bucket,
+                games: c.games,
+                wins: c.wins,
+                win_rate: rate(c.wins, c.games, minimum),
+                win_rate_lower_bound: (c.games >= minimum).then(|| wilson(c.wins, c.games)),
+            })
+            .collect();
         let mut rank_gaps = self.rank_gaps;
         self.report.coverage = self
             .coverage
@@ -775,6 +844,15 @@ impl Accumulator {
                 gaps.sort_unstable();
                 counts.rank_gap_median_hours = median(&gaps).map(|s| s / 3600.0);
                 counts.rank_gap_max_hours = gaps.last().map(|s| *s as f64 / 3600.0);
+                counts.blue_side_win_rate =
+                    rate(counts.blue_side_wins, counts.blue_side_matches, minimum);
+                for stats in [
+                    &mut counts.first_blood,
+                    &mut counts.first_dragon,
+                    &mut counts.first_tower,
+                ] {
+                    stats.finish(minimum);
+                }
                 ScopeCoverage { scope, counts }
             })
             .collect();
@@ -782,7 +860,7 @@ impl Accumulator {
     }
 }
 
-fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
+pub(super) fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
     (d >= min && d > 0).then(|| 100.0 * n as f64 / d as f64)
 }
 /// Médiane d'une liste triée ; moyenne des deux valeurs centrales si l'effectif est pair.
@@ -857,6 +935,12 @@ struct Participant {
     team: u32,
     /// Placement de la sous-équipe en Arena (1 = première) ; nul si absent ou incohérent.
     placement: Option<u32>,
+}
+/// Issue de l'équipe bleue ; nulle sans les deux camps ou si les deux ont le même résultat.
+fn blue_side_won(participants: &[Participant]) -> Option<bool> {
+    let outcome = |team| participants.iter().find(|p| p.team == team).map(|p| p.win);
+    let (blue, red) = (outcome(context::BLUE_TEAM)?, outcome(context::RED_TEAM)?);
+    (blue != red).then_some(blue)
 }
 fn is_arena(game: &StoredMatch) -> bool {
     game.detail["info"]["gameMode"].as_str() == Some("CHERRY")

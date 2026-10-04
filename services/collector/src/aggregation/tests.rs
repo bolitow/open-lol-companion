@@ -15,6 +15,7 @@ fn game(id: &str) -> StoredMatch {
         timeline: None,
         ranks: Default::default(),
         game_start_ms: 1_000_000,
+        game_duration_s: 1800,
     }
 }
 
@@ -1318,6 +1319,265 @@ fn une_couverture_publiee_avant_la_fraicheur_reste_lisible_avec_des_null() {
     let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
     assert_eq!(coverage.first_game_start_ms, None);
     assert_eq!(coverage.last_game_start_ms, None);
+}
+
+// --- Winrate selon la durée, le côté et les premiers objectifs (#119) ---
+
+fn splits_of(r: &super::AggregationReport, champion: u32, rank: &str) -> Vec<(String, u64, u64)> {
+    r.splits
+        .iter()
+        .filter(|s| s.key.champion_id == champion && s.key.rank == rank)
+        .map(|s| {
+            (
+                serde_json::to_value(s.bucket)
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_owned(),
+                s.games,
+                s.wins,
+            )
+        })
+        .collect()
+}
+
+fn lasting(id: &str, seconds: i32) -> StoredMatch {
+    let mut g = game(id);
+    g.game_duration_s = seconds;
+    g
+}
+
+/// Équipes match-v5 : `first` désigne l'équipe ayant pris l'objectif en premier.
+fn with_first(mut g: StoredMatch, blood: u32, dragon: Option<u32>, tower: u32) -> StoredMatch {
+    let objectives = |team: u32| {
+        let first = |winner: Option<u32>| json!({"first": winner == Some(team), "kills": 1});
+        json!({
+            "champion": first(Some(blood)), "dragon": first(dragon),
+            "tower": first(Some(tower)), "baron": {"first": false, "kills": 0}
+        })
+    };
+    g.detail["info"]["teams"] = json!([
+        {"teamId": 100, "bans": [], "objectives": objectives(100)},
+        {"teamId": 200, "bans": [], "objectives": objectives(200)},
+    ]);
+    g
+}
+
+#[test]
+fn la_duree_est_repartie_en_tranches_dont_la_borne_basse_est_incluse() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for (n, seconds) in [1199, 1200, 1499, 1500, 1799, 1800, 2100, 2399, 2400, 3600]
+        .into_iter()
+        .enumerate()
+    {
+        acc.add(&lasting(&format!("EUW1_{n}"), seconds));
+    }
+    // Durée absente ou nulle : la partie reste comptée ailleurs, jamais dans une tranche.
+    acc.add(&lasting("EUW1_90", 0));
+    let r = acc.finish();
+    let buckets: Vec<_> = splits_of(&r, 1, "ALL")
+        .into_iter()
+        .filter(|(b, ..)| !["blue", "red"].contains(&b.as_str()))
+        .collect();
+    assert_eq!(
+        buckets,
+        [
+            ("lt_20", 1, 1),
+            ("20_25", 2, 2),
+            ("25_30", 2, 2),
+            ("30_35", 1, 1),
+            ("35_40", 2, 2),
+            ("gte_40", 2, 2),
+        ]
+        .map(|(b, g, w)| (b.to_owned(), g, w))
+    );
+    assert_eq!(r.included_matches, 11);
+}
+
+#[test]
+fn le_winrate_de_duree_suit_la_victoire_de_chaque_participant() {
+    let mut acc = Accumulator::new(2).unwrap();
+    acc.add(&lasting("EUW1_1", 1000));
+    let mut lost = lasting("EUW1_2", 1100);
+    reverse_winner(&mut lost);
+    acc.add(&lost);
+    acc.add(&lasting("EUW1_3", 3000));
+    let r = acc.finish();
+    let short = r
+        .splits
+        .iter()
+        .find(|s| s.key.champion_id == 1 && s.key.rank == "ALL" && s.games == 2)
+        .unwrap();
+    assert_eq!((short.wins, short.win_rate), (1, Some(50.0)));
+    assert!(short.win_rate_lower_bound.unwrap() < 50.0);
+    // Sous le seuil : les comptes restent, les taux sont masqués.
+    let long = r
+        .splits
+        .iter()
+        .find(|s| s.key.champion_id == 1 && s.key.rank == "ALL" && s.games == 1)
+        .unwrap();
+    assert_eq!((long.win_rate, long.win_rate_lower_bound), (None, None));
+}
+
+#[test]
+fn le_cote_est_publie_pour_tous_les_rangs_seulement_en_all_et_les_durees_pour_chaque_rang() {
+    let mut acc = Accumulator::new(1).unwrap();
+    let mut g = game("EUW1_1");
+    g.ranks
+        .insert("fake-puuid-0".into(), observed("ranked", Some("GOLD"), 60));
+    acc.add(&g);
+    let r = acc.finish();
+    // Champion 1 est bleu et gagne ; champion 6 est rouge et perd.
+    assert_eq!(
+        splits_of(&r, 1, "ALL"),
+        [("30_35".to_owned(), 1, 1), ("blue".to_owned(), 1, 1)]
+    );
+    assert_eq!(splits_of(&r, 6, "ALL")[1], ("red".to_owned(), 1, 0));
+    assert_eq!(splits_of(&r, 1, "GOLD"), [("30_35".to_owned(), 1, 1)]);
+}
+
+#[test]
+fn aucune_tranche_ni_cote_en_arena_ni_hors_deux_camps() {
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&arena_game("EUW1_1", 1700, &[1, 2, 3, 4], "placement"));
+    let mut one_side = game("EUW1_2");
+    one_side.queue_id = 1820;
+    one_side.detail["info"]["queueId"] = json!(1820);
+    one_side.detail["info"]["participants"] = json!([{"participantId":1,"teamId":100,"championId":1,"win":true},
+               {"participantId":2,"teamId":100,"championId":2,"win":true}]);
+    one_side.detail["metadata"]["participants"] = json!(["a", "b"]);
+    acc.add(&one_side);
+    let r = acc.finish();
+    assert_eq!(r.included_matches, 2);
+    assert!(r.splits.is_empty());
+    for c in &r.coverage {
+        assert_eq!(c.counts.blue_side_matches, 0);
+        assert_eq!(c.counts.first_blood.matches, 0);
+    }
+}
+
+#[test]
+fn la_coop_contre_l_ia_n_est_ni_un_cote_ni_une_tranche() {
+    let mut g = game("EUW1_coop");
+    g.queue_id = 880;
+    g.detail["info"]["queueId"] = json!(880);
+    g.detail["metadata"]["participants"] = json!((0..5)
+        .map(|i| format!("fake-puuid-{i}"))
+        .collect::<Vec<_>>());
+    for p in g.detail["info"]["participants"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .skip(5)
+    {
+        p["puuid"] = json!("BOT");
+    }
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&g);
+    let r = acc.finish();
+    assert_eq!(r.included_matches, 1);
+    assert!(r.splits.is_empty());
+    assert_eq!(r.coverage[0].counts.blue_side_matches, 0);
+}
+
+#[test]
+fn la_couverture_publie_le_winrate_du_cote_bleu_du_perimetre() {
+    let mut acc = Accumulator::new(3).unwrap();
+    acc.add(&game("EUW1_1"));
+    acc.add(&game("EUW1_2"));
+    let mut red = game("EUW1_3");
+    reverse_winner(&mut red);
+    acc.add(&red);
+    let r = acc.finish();
+    let c = &r.coverage[0].counts;
+    assert_eq!((c.blue_side_matches, c.blue_side_wins), (3, 2));
+    assert!((c.blue_side_win_rate.unwrap() - 66.66666666666667).abs() < 1e-10);
+    let mut small = Accumulator::new(4).unwrap();
+    small.add(&game("EUW1_1"));
+    let c = &small.finish().coverage[0].counts;
+    assert_eq!((c.blue_side_matches, c.blue_side_win_rate), (1, None));
+}
+
+#[test]
+fn la_couverture_conditionne_le_winrate_aux_premiers_objectifs() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Bleu (gagnant) : premier sang et première tour, dragon rouge.
+    acc.add(&with_first(game("EUW1_1"), 100, Some(200), 100));
+    // Rouge (perdant) prend le premier sang ; bleu prend le dragon.
+    acc.add(&with_first(game("EUW1_2"), 200, Some(100), 100));
+    // Victoire rouge : l'équipe qui a pris le premier sang gagne.
+    let mut red = with_first(game("EUW1_3"), 200, None, 200);
+    reverse_winner(&mut red);
+    acc.add(&red);
+    // Sans équipes : aucun objectif lisible, jamais deviné.
+    acc.add(&game("EUW1_4"));
+    let r = acc.finish();
+    let c = &r.coverage[0].counts;
+    assert_eq!(c.blue_side_matches, 4);
+    let blood = &c.first_blood;
+    assert_eq!((blood.matches, blood.wins), (3, 2));
+    assert_eq!((blood.blue_matches, blood.blue_wins), (1, 1));
+    assert!((blood.win_rate.unwrap() - 66.66666666666667).abs() < 1e-10);
+    assert_eq!(blood.blue_win_rate, Some(100.0));
+    let dragon = &c.first_dragon;
+    assert_eq!((dragon.matches, dragon.wins), (2, 1));
+    assert_eq!((dragon.blue_matches, dragon.blue_wins), (1, 1));
+    let tower = &c.first_tower;
+    assert_eq!((tower.matches, tower.wins), (3, 3));
+    assert_eq!((tower.blue_matches, tower.blue_wins), (2, 2));
+}
+
+#[test]
+fn des_objectifs_incoherents_ne_sont_pas_comptes() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for (n, teams) in [
+        // Les deux équipes « premières » : donnée contradictoire.
+        json!([{"teamId":100,"objectives":{"dragon":{"first":true}}},
+               {"teamId":200,"objectives":{"dragon":{"first":true}}}]),
+        // Aucune équipe première : l'objectif n'a pas eu lieu.
+        json!([{"teamId":100,"objectives":{"dragon":{"first":false}}},
+               {"teamId":200,"objectives":{"dragon":{"first":false}}}]),
+        // Champ absent ou de mauvais type.
+        json!([{"teamId":100,"objectives":{"dragon":{"first":"oui"}}},
+               {"teamId":200,"objectives":{}}]),
+        // Identifiants d'équipe répétés.
+        json!([{"teamId":100,"objectives":{"dragon":{"first":true}}},
+               {"teamId":100,"objectives":{"dragon":{"first":false}}}]),
+        // Une seule équipe décrite.
+        json!([{"teamId":100,"objectives":{"dragon":{"first":true}}}]),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut g = game(&format!("EUW1_{n}"));
+        g.detail["info"]["teams"] = teams;
+        acc.add(&g);
+    }
+    let r = acc.finish();
+    assert_eq!(r.included_matches, 5);
+    assert_eq!(r.coverage[0].counts.first_dragon.matches, 0);
+}
+
+#[test]
+fn un_instantane_publie_avant_les_splits_reste_lisible() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    for field in [
+        "blue_side_matches",
+        "blue_side_wins",
+        "blue_side_win_rate",
+        "first_blood",
+        "first_dragon",
+        "first_tower",
+    ] {
+        legacy.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert_eq!(coverage.blue_side_matches, 0);
+    assert_eq!(coverage.first_blood, Default::default());
+    let mut report = serde_json::to_value(Accumulator::new(1).unwrap().finish()).unwrap();
+    report.as_object_mut().unwrap().remove("splits").unwrap();
+    let report: super::AggregationReport = serde_json::from_value(report).unwrap();
+    assert!(report.splits.is_empty());
 }
 
 /// Sorts d'invocateur et runes identiques pour tous les participants (hors identifiants

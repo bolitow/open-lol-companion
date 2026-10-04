@@ -47,6 +47,9 @@ pub struct BuildsResponse {
     pub builds: Vec<BuildStats>,
     pub skill_levels: Vec<SkillStats>,
     pub item_events: Vec<ItemEventStats>,
+    /// Winrate du champion par tranche de durée puis par côté (#119) ; le côté n'est publié
+    /// que pour le rang `ALL`. Vide pour un instantané antérieur ou pour Arena.
+    pub splits: Vec<SplitStats>,
     pub max_build_variants_per_category: u32,
     pub omitted_build_variants: u64,
     /// Règles des étapes d'achat (#81) ; vide pour un instantané antérieur.
@@ -126,6 +129,12 @@ pub async fn builds(
         .into_iter()
         .filter(|b| selected(&b.key))
         .collect();
+    let mut splits: Vec<_> = report
+        .splits
+        .into_iter()
+        .filter(|s| selected(&s.key))
+        .collect();
+    splits.sort_by_key(|s| (s.dimension, s.bucket));
     let item_catalog_version = report
         .item_catalogs
         .into_iter()
@@ -140,6 +149,7 @@ pub async fn builds(
         builds,
         skill_levels,
         item_events,
+        splits,
         max_build_variants_per_category: report.max_build_variants_per_category,
         omitted_build_variants: report.omitted_build_variants,
         build_stage_method: report.build_stage_method,

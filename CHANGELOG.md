@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Winrate selon la durée de partie, le côté et les premiers objectifs : par champion et par groupe, tranches de moins de 20, 20-25, 25-30, 30-35, 35-40 et 40 minutes ou plus (liste `splits`, route builds) ; par champion, winrate des côtés bleu et rouge pour le rang `ALL` ; en couverture, winrate du côté bleu et issue des parties selon l’équipe ayant pris le premier sang, le premier dragon ou la première tour. Rien n’est publié pour Arena ni la coop contre l’IA ; migration `0014` (section `splits`). Affichage desktop, comptage des redditions et des parties courtes et entrées du modèle de draft restent à livrer (#119).
+
 - Fraîcheur réelle des statistiques : la couverture de chaque périmètre publie le début de sa première et de sa dernière partie incluse, et la méta de l’API ajoute `freshness` (date du calcul et bornes des parties lues), car « Données au » n’était que l’heure du recalcul. Les écarts partie → rang (médian, maximal) restent servis par la couverture ; affichage desktop, alerte d’obsolescence et date de dernière collecte par plateforme restent à livrer (#103).
 
 - Tendances entre patchs : route `/v1/trends/{champion_id}` donnant, pour un champion, un rôle et un rang, la série winrate, pick, ban et effectif de chaque patch de l’instantané publié, avec les écarts au patch précédent ; patch vide ou taux sous le seuil laissés explicites (#110).
