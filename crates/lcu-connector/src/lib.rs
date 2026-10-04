@@ -19,6 +19,8 @@ pub mod friends;
 mod gameflow;
 pub mod imports;
 pub mod live;
+mod patch;
+pub use patch::{read_client_patch, ClientPatch, ClientPatchError, GAME_VERSION_ENDPOINT};
 pub mod players;
 mod runes;
 mod session;

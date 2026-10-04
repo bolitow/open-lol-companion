@@ -39,6 +39,14 @@ impl GameflowPhase {
         matches!(self, Self::GameStart | Self::InProgress | Self::Reconnect)
     }
 
+    /// Vrai pendant les écrans d'après-partie : le bilan en mémoire reste disponible.
+    pub fn is_post_game(self) -> bool {
+        matches!(
+            self,
+            Self::WaitingForStats | Self::PreEndOfGame | Self::EndOfGame
+        )
+    }
+
     /// Nouvelle phase portée par un événement WebSocket, s'il concerne cet endpoint.
     pub fn from_event(event: &JsonApiEvent) -> Option<Self> {
         if event.uri != Self::ENDPOINT {
@@ -58,6 +66,22 @@ mod tests {
         assert!(p.is_champ_select());
         let p: GameflowPhase = serde_json::from_str("\"InProgress\"").unwrap();
         assert!(p.is_in_game());
+        assert!(!p.is_post_game());
+    }
+
+    #[test]
+    fn reconnait_les_phases_d_apres_partie() {
+        for (name, expected) in [
+            ("WaitingForStats", true),
+            ("PreEndOfGame", true),
+            ("EndOfGame", true),
+            ("InProgress", false),
+            ("Lobby", false),
+            ("None", false),
+        ] {
+            let p: GameflowPhase = serde_json::from_str(&format!("\"{name}\"")).unwrap();
+            assert_eq!(p.is_post_game(), expected, "{name}");
+        }
     }
 
     #[test]

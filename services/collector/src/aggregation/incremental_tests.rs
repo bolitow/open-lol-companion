@@ -21,6 +21,7 @@ fn game(id: &str, platform: &str, queue: i32, patch: &str) -> StoredMatch {
         detail,
         timeline: None,
         ranks: BTreeMap::new(),
+        game_start_ms: 1_000_000,
     }
 }
 

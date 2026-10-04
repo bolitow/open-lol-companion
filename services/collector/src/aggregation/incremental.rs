@@ -338,6 +338,7 @@ impl LotCounts {
             pick_rate_definition: _,
             tier_method: _,
             min_games: _,
+            reliability_floor: _,
             filters: _,
             max_build_variants_per_category: _,
             build_stage_method: _,
@@ -348,6 +349,7 @@ impl LotCounts {
             builds: _,
             skill_levels: _,
             item_events: _,
+            splits: _,
         } = report;
         Self {
             source_matches: *source_matches,
@@ -382,6 +384,7 @@ impl AggregationReport {
             builds,
             skill_levels,
             item_events,
+            splits,
             source_matches: _,
             included_matches: _,
             exclusions: _,
@@ -397,6 +400,7 @@ impl AggregationReport {
             pick_rate_definition: _,
             tier_method: _,
             min_games: _,
+            reliability_floor: _,
             filters: _,
             max_build_variants_per_category: _,
             build_stage_method: _,
@@ -408,6 +412,7 @@ impl AggregationReport {
         self.builds.extend(builds);
         self.skill_levels.extend(skill_levels);
         self.item_events.extend(item_events);
+        self.splits.extend(splits);
     }
 }
 
