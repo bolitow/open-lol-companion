@@ -207,8 +207,13 @@ export interface PerformanceFrameStats {
 export interface PerformanceStats extends GroupKey {
   /** Toutes les participations de la population (dénominateur de couverture). */
   participations: number;
-  /** Participations dont toutes les valeurs de fin de partie sont exploitables. */
+  /**
+   * Participations d'une partie d'au moins 15 minutes (900 s) dont toutes les valeurs de fin
+   * de partie sont exploitables.
+   */
   games: number;
+  /** Participations écartées des moyennes car la partie dure moins de 15 minutes (900 s). */
+  short_games_excluded: number;
   kills: number | null;
   deaths: number | null;
   assists: number | null;

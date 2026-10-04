@@ -360,17 +360,24 @@ exactes sont publiées dans `performance_method`.
 | Champ | Définition |
 | --- | --- |
 | `participations` | Toutes les participations de la population (dénominateur de couverture) |
-| `games` | Participations dont `kills`, `deaths`, `assists`, `totalDamageDealtToChampions`, `totalMinionsKilled`, `neutralMinionsKilled`, `goldEarned` et `visionScore` sont des entiers positifs ou nuls, avec une durée stockée > 0 ; sinon la participation est écartée en bloc, rien n'est deviné |
+| `short_games_excluded` | Participations de la population dont la partie dure moins de 15 minutes (`duration < 900 s`) : écartées de toutes les moyennes, frames à 10 et 15 min comprises, mais comptées dans `participations`. Une partie de 900 s est comptée. Les autres sections (winrate, pick rate, builds) gardent ces parties (#100) |
+| `games` | Participations d'une partie d'au moins 900 s dont `kills`, `deaths`, `assists`, `totalDamageDealtToChampions`, `totalMinionsKilled`, `neutralMinionsKilled`, `goldEarned` et `visionScore` sont des entiers positifs ou nuls, avec une durée stockée > 0 ; sinon la participation est écartée en bloc, rien n'est deviné |
 | `kills`, `deaths`, `assists`, `damage_to_champions`, `vision_score` | Somme / `games` |
 | `kda` | `(ΣK + ΣA) / max(ΣD, 1)` sur les sommes de la population, pas une moyenne de KDA par partie |
 | `cs_per_min`, `gold_per_min` | Somme (CS = sbires + monstres neutres, or gagné) / somme des durées de partie en minutes |
-| `frames[]` | Minutes 10 et 15 : première frame de timeline avec `minute × 60 000 ≤ timestamp < minute × 60 000 + frameInterval` ; `gold` = `totalGold`, `cs` = `minionsKilled + jungleMinionsKilled`, `xp` ; moyenne sur les participations ayant cette frame (`games` propre). Une partie finie avant la minute n'y contribue pas |
+| `frames[]` | Minutes 10 et 15 : première frame de timeline avec `minute × 60 000 ≤ timestamp < minute × 60 000 + frameInterval` ; `gold` = `totalGold`, `cs` = `minionsKilled + jungleMinionsKilled`, `xp` ; moyenne sur les participations ayant cette frame (`games` propre), parties d'au moins 900 s seulement. Une partie finie avant la minute n'y contribue pas |
 
 Sous `--min-games`, les moyennes sont nulles et les effectifs restent publiés ; chaque
 minute applique le seuil à son propre effectif. Les frames ne sont lues que si la timeline
 de la participation est valide (mêmes règles que les builds). Les parties exclues (remake,
-contrôles de qualité #111) n'y contribuent pas. Un rapport antérieur relit `performance`
-vide et `performance_method` vide.
+contrôles de qualité #111) n'y contribuent pas. Les parties de moins de 15 minutes sont
+écartées (`short_games_excluded`), le reste des écarts est
+`participations − games − short_games_excluded` (valeurs incomplètes). CS/min et or/min
+restent pondérés par la durée (somme / somme des durées). Le seuil de 900 s s'applique à
+toutes les files, alors que le plancher de 300 s de #111 ne concerne que Solo/Duo et Flex :
+en ARAM et en Arena, `short_games_excluded` peut donc représenter une grosse part de
+`participations`. Un rapport antérieur relit `performance` vide, `performance_method` vide
+et `short_games_excluded` à 0.
 
 ## Matchups de lane (#123)
 
