@@ -18,9 +18,12 @@ struct Metadata<'a> {
     min_game_duration_s: u32,
     min_played_percent: u32,
     exclude_afk: bool,
+    ban_rank_basis: &'a str,
+    ban_rank_min_known_players: u32,
     pick_rate_definition: &'a str,
     tier_method: &'a str,
     min_games: u32,
+    reliability_floor: u32,
     filters: &'a AggregationOptions,
     source_matches: u64,
     included_matches: u64,
@@ -38,17 +41,33 @@ pub(super) async fn publish(
     tx: &mut Transaction<'_, Postgres>,
     report: &AggregationReport,
 ) -> Result<(), AggregationError> {
-    // Vue empruntée : ne pas dupliquer toutes les listes dans un arbre serde_json::Value.
-    let metadata = Metadata {
+    write_head(tx, report).await?;
+    // Un recalcul complet remplace aussi les lots (#89) : aucune empreinte ne survit à
+    // ses morceaux, que la suppression des lots emporte en cascade.
+    sqlx::query("DELETE FROM champion_stats_snapshot_lots WHERE snapshot_id=1")
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query("DELETE FROM champion_stats_snapshot_chunks WHERE snapshot_id=1")
+        .execute(&mut **tx)
+        .await?;
+    write_sections(tx, &mut SectionWriter::default(), report).await
+}
+
+/// Vue empruntée : ne pas dupliquer toutes les listes dans un arbre serde_json::Value.
+fn metadata(report: &AggregationReport) -> Metadata<'_> {
+    Metadata {
         schema_version: report.schema_version,
         rank_scope: &report.rank_scope,
         rank_max_age_hours: report.rank_max_age_hours,
         min_game_duration_s: report.min_game_duration_s,
         min_played_percent: report.min_played_percent,
         exclude_afk: report.exclude_afk,
+        ban_rank_basis: &report.ban_rank_basis,
+        ban_rank_min_known_players: report.ban_rank_min_known_players,
         pick_rate_definition: &report.pick_rate_definition,
         tier_method: &report.tier_method,
         min_games: report.min_games,
+        reliability_floor: report.reliability_floor,
         filters: &report.filters,
         source_matches: report.source_matches,
         included_matches: report.included_matches,
@@ -59,52 +78,102 @@ pub(super) async fn publish(
         item_catalogs: &report.item_catalogs,
         performance_method: &report.performance_method,
         matchup_method: &report.matchup_method,
-    };
-    // Premier verrou d'écriture : un instantané devenu ancien échoue avant de toucher
-    // aux morceaux. Tête, suppression et nouveaux morceaux sont validés ensemble.
+    }
+}
+
+/// Paramètres de l'en-tête, sans compteurs ni filtres : base de l'empreinte d'un lot (#89).
+/// Tout nouveau champ d'en-tête invalide donc les lots publiés avant lui.
+pub(super) fn settings_text(report: &AggregationReport) -> Result<String, AggregationError> {
+    let mut head = serde_json::to_value(metadata(report))?;
+    if let Some(fields) = head.as_object_mut() {
+        // Les filtres et le catalogue d'un lot entrent déjà dans l'empreinte de ses données.
+        for field in [
+            "source_matches",
+            "included_matches",
+            "exclusions",
+            "omitted_build_variants",
+            "filters",
+            "item_catalogs",
+        ] {
+            fields.remove(field);
+        }
+    }
+    Ok(head.to_string())
+}
+
+/// En-tête seul (métadonnées et compteurs). Premier verrou d'écriture : un instantané
+/// devenu ancien échoue avant de toucher aux morceaux. Tête, suppression et nouveaux
+/// morceaux sont validés ensemble.
+pub(super) async fn write_head(
+    tx: &mut Transaction<'_, Postgres>,
+    report: &AggregationReport,
+) -> Result<(), AggregationError> {
     sqlx::query(
         "INSERT INTO champion_stats_snapshot (id,source_snapshot_at,published_at,report,storage_version)
         VALUES (1,transaction_timestamp(),clock_timestamp(),$1,2)
         ON CONFLICT (id) DO UPDATE SET source_snapshot_at=EXCLUDED.source_snapshot_at,
             published_at=EXCLUDED.published_at,report=EXCLUDED.report,storage_version=2",
     )
-    .bind(sqlx::types::Json(metadata))
+    .bind(sqlx::types::Json(metadata(report)))
     .execute(&mut **tx)
     .await?;
-    sqlx::query("DELETE FROM champion_stats_snapshot_chunks WHERE snapshot_id=1")
-        .execute(&mut **tx)
-        .await?;
-    write_section(tx, "coverage", &report.coverage).await?;
-    write_section(tx, "groups", &report.groups).await?;
-    write_section(tx, "bans", &report.bans).await?;
-    write_section(tx, "builds", &report.builds).await?;
-    write_section(tx, "skill_levels", &report.skill_levels).await?;
-    write_section(tx, "item_events", &report.item_events).await?;
-    write_section(tx, "performance", &report.performance).await?;
-    write_section(tx, "matchups", &report.matchups).await?;
+    Ok(())
+}
+
+/// Rang du prochain morceau par section et lot d'origine des morceaux écrits (#89).
+#[derive(Default)]
+pub(super) struct SectionWriter {
+    pub lot: Option<super::ScopeKey>,
+    pub next_index: BTreeMap<String, i32>,
+    pub written: i32,
+}
+
+/// Seul point d'écriture des sections, commun au recalcul complet et aux lots : une
+/// section ajoutée ici est publiée par les deux modes.
+pub(super) async fn write_sections(
+    tx: &mut Transaction<'_, Postgres>,
+    writer: &mut SectionWriter,
+    report: &AggregationReport,
+) -> Result<(), AggregationError> {
+    write_section(tx, writer, "coverage", &report.coverage).await?;
+    write_section(tx, writer, "groups", &report.groups).await?;
+    write_section(tx, writer, "bans", &report.bans).await?;
+    write_section(tx, writer, "builds", &report.builds).await?;
+    write_section(tx, writer, "skill_levels", &report.skill_levels).await?;
+    write_section(tx, writer, "item_events", &report.item_events).await?;
+    write_section(tx, writer, "splits", &report.splits).await?;
+    write_section(tx, writer, "performance", &report.performance).await?;
+    write_section(tx, writer, "matchups", &report.matchups).await?;
     Ok(())
 }
 
 async fn write_section<T: Serialize>(
     tx: &mut Transaction<'_, Postgres>,
+    writer: &mut SectionWriter,
     section: &str,
     entries: &[T],
 ) -> Result<(), AggregationError> {
     let mut offset = 0;
-    let mut index = 0_i32;
     while let Some(chunk) = next_chunk(entries, &mut offset)? {
+        let index = writer.next_index.entry(section.to_owned()).or_default();
+        let lot = writer.lot.as_ref();
         sqlx::query(
-            "INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items)
-            VALUES (1,$1,$2,$3::jsonb)",
+            "INSERT INTO champion_stats_snapshot_chunks
+            (snapshot_id,section,chunk_index,items,lot_patch,lot_platform_id,lot_queue_id)
+            VALUES (1,$1,$2,$3::jsonb,$4,$5,$6)",
         )
         .bind(section)
-        .bind(index)
+        .bind(*index)
         .bind(chunk)
+        .bind(lot.map(|l| &l.patch))
+        .bind(lot.map(|l| &l.platform_id))
+        .bind(lot.map(|l| l.queue_id))
         .execute(&mut **tx)
         .await?;
-        index = index
+        *index = index
             .checked_add(1)
             .ok_or(AggregationError::SnapshotTooLarge)?;
+        writer.written += 1;
     }
     Ok(())
 }

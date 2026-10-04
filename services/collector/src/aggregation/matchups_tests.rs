@@ -72,6 +72,7 @@ fn ranked_game(id: &str, queue: i32) -> StoredMatch {
         patch: "15.19".into(),
         is_remake: false,
         game_duration_s: 1800,
+        game_start_ms: 1_000_000,
         detail: match_detail(id, "EUW1", queue, 1_000_000),
         timeline: None,
         ranks: [(
