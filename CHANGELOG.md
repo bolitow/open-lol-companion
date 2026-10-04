@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Variantes de build : borne haute de Wilson (avec la borne basse existante) et écart au winrate du groupe champion publiés par variante, et tri des variantes par performance (`sort=performance`) sur `/v1/builds`, l’effectif restant le tri par défaut. Les types partagés et le client de builds du desktop les relaient ; l’affichage dans l’interface reste à faire (#112).
+
 - Priorité de maximisation (ordre dans lequel Q, W et E atteignent le rang 5) et trois premiers points des compétences, avec effectif, winrate et borne Wilson, dérivés de la séquence intégrale sans nouvelle collecte et publiés dans l’instantané et l’API. La séquence intégrale reste publiée (#87).
 
 - Statistiques de runes par clé de voûte, arbre principal et secondaire (avec sa paire), rune d’emplacement conditionnée à la clé de voûte et fragment par ligne, avec effectif, winrate et borne Wilson, dérivées des pages exactes sans nouvelle collecte et publiées dans l’instantané et l’API. Les runes d’emplacement et la paire secondaire exposent aussi `conditional_rate`, leur taux rapporté à leur clé de voûte ou à leur arbre secondaire (pourcentage, `null` sans dénominateur, sous `min_games` ou pour les autres catégories), en plus du `pick_rate` inchangé. Les pages exactes restent publiées (#86).

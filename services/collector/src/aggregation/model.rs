@@ -230,6 +230,11 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Écart (points de pourcentage, signé) entre le winrate de la variante et celui du groupe
+    /// champion (même patch, plateforme, file, rôle et rang) ; nul sous le seuil de l'une des
+    /// deux populations ou sans performance publiable (#112).
+    #[serde(default)]
+    pub win_rate_delta: Option<f64>,
     /// Taux conditionnel (#86), en pourcentage (0 à 100) : `games` ÷ parties du choix parent dans le
     /// même groupe. Parent : la clé de voûte (`rune_slot_1..3`) ou l'arbre secondaire
     /// (`rune_secondary_pair`). `null` sans parent, parent absent ou nul, ou sous le seuil.
@@ -981,6 +986,12 @@ impl Accumulator {
             },
         );
         cumulative::extend(&mut self.events, |k| &mut k.0.rank, |a, b| *a += b);
+        // Winrate non arrondi de chaque groupe champion, référence de l'écart des variantes (#112).
+        let group_rates: BTreeMap<GroupKey, f64> = self
+            .counts
+            .iter()
+            .filter_map(|(key, c)| Some((key.clone(), rate(c.wins, c.games, minimum)?)))
+            .collect();
         let mut popular: BTreeMap<(ScopeKey, Role, u32), (u64, String)> = BTreeMap::new();
         for (key, c) in &self.counts {
             if is_ranked_tier(&key.rank) {
@@ -1194,6 +1205,14 @@ impl Accumulator {
                     arena && ARENA_PLACEMENT_CATEGORIES.contains(&category.as_str());
                 let win = (performance_available && c.games >= minimum)
                     .then(|| wilson_interval(c.wins, c.games));
+                let win_rate = if performance_available {
+                    rate(c.wins, c.games, minimum)
+                } else {
+                    None
+                };
+                let win_rate_delta = win_rate
+                    .zip(group_rates.get(&key))
+                    .map(|(variant, group)| variant - group);
                 BuildStats {
                     key,
                     category,
@@ -1203,13 +1222,10 @@ impl Accumulator {
                     performance_available,
                     population,
                     pick_rate: rate(c.games, population, minimum).filter(|_| c.games >= minimum),
-                    win_rate: if performance_available {
-                        rate(c.wins, c.games, minimum)
-                    } else {
-                        None
-                    },
+                    win_rate,
                     win_rate_lower_bound: win.map(|(lower, _)| lower),
                     win_rate_upper_bound: win.map(|(_, upper)| upper),
+                    win_rate_delta,
                     reliability: Some(Reliability::of(c.games)),
                     omitted_variants: None,
                     placement_games: if placement_published {

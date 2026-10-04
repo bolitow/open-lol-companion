@@ -2,7 +2,7 @@
 //! Seul l'indicateur de biais d'une couverture ancienne est complété à la lecture (#82).
 use crate::{
     error::ApiError,
-    query::{BansQuery, StatsQuery},
+    query::{BansQuery, BuildSort, StatsQuery},
 };
 use olc_collector::aggregation::*;
 use serde::Serialize;
@@ -105,6 +105,8 @@ pub struct BansResponse {
 pub struct BuildsResponse {
     pub meta: SnapshotMeta,
     pub query: StatsQuery,
+    /// Tri appliqué aux variantes avant pagination (#112).
+    pub sort: BuildSort,
     pub champion_id: u32,
     pub summary: Option<ChampionStats>,
     pub total: usize,
@@ -226,11 +228,21 @@ pub async fn bans(pool: &PgPool, query: BansQuery) -> Result<BansResponse, ApiEr
         bans: entries,
     })
 }
-/// Variantes de build, compétences et achats du champion dans la même population.
+/// Variantes de build, compétences et achats du champion dans la même population,
+/// triées par effectif.
 pub async fn builds(
     pool: &PgPool,
     query: StatsQuery,
     champion_id: u32,
+) -> Result<BuildsResponse, ApiError> {
+    builds_sorted(pool, query, champion_id, BuildSort::Games).await
+}
+/// Comme [`builds`], avec un tri explicite des variantes au sein de chaque catégorie.
+pub async fn builds_sorted(
+    pool: &PgPool,
+    query: StatsQuery,
+    champion_id: u32,
+    sort: BuildSort,
 ) -> Result<BuildsResponse, ApiError> {
     query.validate().map_err(|_| ApiError::InvalidRequest)?;
     if champion_id == 0 {
@@ -247,6 +259,14 @@ pub async fn builds(
     variants.sort_by(|a, b| {
         a.category
             .cmp(&b.category)
+            .then_with(|| match sort {
+                BuildSort::Games => std::cmp::Ordering::Equal,
+                // Sans borne publiée (sous le seuil, Arena), la variante passe après les autres.
+                BuildSort::Performance => b
+                    .win_rate_lower_bound
+                    .unwrap_or(-1.0)
+                    .total_cmp(&a.win_rate_lower_bound.unwrap_or(-1.0)),
+            })
             .then(b.games.cmp(&a.games))
             .then(a.selection.cmp(&b.selection))
     });
@@ -283,6 +303,7 @@ pub async fn builds(
     Ok(BuildsResponse {
         meta,
         query,
+        sort,
         champion_id,
         summary,
         total,

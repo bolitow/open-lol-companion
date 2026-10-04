@@ -3,8 +3,8 @@ mod common;
 
 use common::TestDb;
 use olc_api::error::ApiError;
-use olc_api::query::{BansQuery, StatsQuery, TrendsQuery};
-use olc_api::stats::{bans, builds, matchups, performance, tierlist};
+use olc_api::query::{BansQuery, BuildSort, StatsQuery, TrendsQuery};
+use olc_api::stats::{bans, builds, builds_sorted, matchups, performance, tierlist};
 use olc_api::trends::trends;
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
@@ -854,6 +854,108 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
         .builds
         .iter()
         .all(|b| b.win_rate_lower_bound.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn builds_se_trie_par_effectif_par_defaut_et_par_performance_sur_demande() {
+    let db = db_or_skip!();
+    let mut source = report();
+    let variant = |selection: u32, games: u64, lower: Value, upper: Value, delta: Value| {
+        json!({
+            "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
+            "role":"TOP", "rank":"ALL", "champion_id":1,
+            "category":"starter", "selection":[selection], "games":games,
+            "wins":games / 2, "performance_available":true, "population":1000,
+            "pick_rate":10.0, "win_rate":50.0, "win_rate_lower_bound":lower,
+            "win_rate_upper_bound":upper, "win_rate_delta":delta
+        })
+    };
+    let list = source["builds"].as_array_mut().unwrap();
+    list.push(variant(1, 150, json!(40.0), json!(60.0), json!(-1.5)));
+    list.push(variant(2, 120, json!(55.0), json!(70.0), json!(3.0)));
+    list.push(variant(3, 300, json!(55.0), json!(65.0), json!(2.0)));
+    list.push(variant(4, 50, Value::Null, Value::Null, Value::Null));
+    publish(db.storage.pool(), source).await;
+    let starters = |response: &olc_api::stats::BuildsResponse| -> Vec<u32> {
+        response
+            .builds
+            .iter()
+            .filter(|b| b.category == "starter")
+            .map(|b| b.selection[0])
+            .collect()
+    };
+    // Défaut : effectif décroissant, comportement inchangé.
+    let by_games = builds(db.storage.pool(), query(), 1).await.unwrap();
+    assert_eq!(by_games.sort, BuildSort::Games);
+    assert_eq!(starters(&by_games), [3, 1, 2, 4]);
+    // Performance : borne basse décroissante, égalité par effectif, sans borne en dernier.
+    let by_performance = builds_sorted(db.storage.pool(), query(), 1, BuildSort::Performance)
+        .await
+        .unwrap();
+    assert_eq!(by_performance.sort, BuildSort::Performance);
+    assert_eq!(starters(&by_performance), [3, 2, 1, 4]);
+    // Les catégories restent regroupées, `final_items` (sans borne) garde l'ordre d'effectif.
+    let categories: Vec<_> = by_performance
+        .builds
+        .iter()
+        .map(|b| b.category.as_str())
+        .collect();
+    assert_eq!(
+        categories,
+        [
+            "final_items",
+            "final_items",
+            "final_items",
+            "starter",
+            "starter",
+            "starter",
+            "starter"
+        ]
+    );
+    assert_eq!(by_performance.builds[0].selection, [1001]);
+    // L'intervalle et l'écart sont servis tels que publiés.
+    let first = by_performance
+        .builds
+        .iter()
+        .find(|b| b.selection == [3])
+        .unwrap();
+    assert_eq!(
+        (first.win_rate_upper_bound, first.win_rate_delta),
+        (Some(65.0), Some(2.0))
+    );
+    // La pagination s'applique après le tri choisi.
+    let page = StatsQuery {
+        offset: 3,
+        limit: 2,
+        ..query()
+    };
+    let paged = builds_sorted(db.storage.pool(), page, 1, BuildSort::Performance)
+        .await
+        .unwrap();
+    assert_eq!(paged.total, 7);
+    assert_eq!(starters(&paged), [3, 2]);
+    // Un instantané antérieur reste lisible : champs nouveaux absents, tri sans effet de bord.
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish(db.storage.pool(), report()).await;
+    let legacy = builds_sorted(db.storage.pool(), query(), 1, BuildSort::Performance)
+        .await
+        .unwrap();
+    assert!(legacy
+        .builds
+        .iter()
+        .all(|b| b.win_rate_upper_bound.is_none() && b.win_rate_delta.is_none()));
+    assert_eq!(
+        legacy
+            .builds
+            .iter()
+            .map(|b| b.selection[0])
+            .collect::<Vec<_>>(),
+        [1001, 1002, 1003]
+    );
     db.cleanup().await;
 }
 

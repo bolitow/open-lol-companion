@@ -124,6 +124,9 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Écart signé (points) au winrate du groupe champion (#112) ; absent des instantanés antérieurs.
+    #[serde(default)]
+    pub win_rate_delta: Option<f64>,
     /// Taux conditionnel des runes (#86), en pourcentage (0 à 100, comme `pick_rate`) ; absent des instantanés antérieurs.
     #[serde(default)]
     pub conditional_rate: Option<f64>,
@@ -167,6 +170,9 @@ impl BuildVariant {
                 .average_placement
                 .is_some_and(|v| !v.is_finite() || v < 1.0)
             || self
+                .win_rate_delta
+                .is_some_and(|v| !v.is_finite() || !(-100.0..=100.0).contains(&v))
+            || self
                 .conditional_rate
                 .is_some_and(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
         {
@@ -178,6 +184,7 @@ impl BuildVariant {
             self.win_rate = None;
             self.win_rate_lower_bound = None;
             self.win_rate_upper_bound = None;
+            self.win_rate_delta = None;
             self.conditional_rate = None;
         }
         // Même seuil que le collecteur : le placement moyen n'est publié qu'à partir de
@@ -190,6 +197,7 @@ impl BuildVariant {
             self.wins = None;
             self.win_rate_lower_bound = None;
             self.win_rate_upper_bound = None;
+            self.win_rate_delta = None;
         }
         Ok(())
     }

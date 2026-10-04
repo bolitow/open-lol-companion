@@ -192,6 +192,13 @@ export interface BuildStats extends GroupKey {
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
   /**
+   * Écart signé (points de pourcentage) entre le winrate de la variante et celui du groupe
+   * champion (même patch, plateforme, file, rôle et rang) ; nul sous le seuil, sans performance
+   * publiable ou pour un instantané antérieur à #112. Ce n'est pas le winrate de la population
+   * de la catégorie (parties à page de runes complète, par exemple).
+   */
+  win_rate_delta: number | null;
+  /**
    * Taux conditionnel (#86), en pourcentage (0 à 100, comme `pick_rate`) : `games` / parties du
    * choix parent dans le même groupe (champion, rôle, rang, patch, plateforme, file). Parent :
    * `rune_keystone` pour `rune_slot_1..3`, `rune_secondary_style` pour `rune_secondary_pair`.
@@ -448,9 +455,17 @@ export interface OmittedBuildVariants {
   omitted: number;
 }
 
+/**
+ * Tri des variantes, au sein de chaque catégorie, avant pagination (#112) : `games` (défaut)
+ * par effectif décroissant ; `performance` par borne basse de Wilson décroissante, puis
+ * effectif, les variantes sans borne en dernier.
+ */
+export type BuildSort = "games" | "performance";
+
 export interface BuildsResponse {
   meta: SnapshotMeta;
   query: StatsQuery;
+  sort: BuildSort;
   champion_id: number;
   summary: ChampionStats | null;
   total: number;

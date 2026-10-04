@@ -102,6 +102,13 @@ Valable pour `/v1/tierlist`, `/v1/builds` et `/v1/bans`.
 `offset=0`, `limit=50` ; bornes 0–10 000 et 1–200. Paramètres inconnus refusés.
 Tierlist triée par position puis champion ; builds par catégorie, effectif
 décroissant, sélection. La pagination des builds ne tronque pas compétences/achats.
+`/v1/builds` accepte en plus `sort=games` (défaut) ou `sort=performance` (#112) : les
+variantes restent regroupées par catégorie, puis `performance` les ordonne par borne basse
+de Wilson décroissante, effectif et sélection, les variantes sans borne (sous le seuil,
+Arena, instantané antérieur) venant après. Le tri précède la pagination et la réponse
+renvoie `sort` ; toute autre valeur, ou `sort` sur la tierlist, est refusée (400).
+Ce n'est pas une recommandation : le winrate d'un inventaire final reste biaisé par la
+durée et la survie de la partie.
 
 Les métadonnées conservent les dates source/publication, seuil, méthode, couverture
 du périmètre et fenêtre calculée. `rank_scope` et `rank_max_age_hours` décrivent le
@@ -125,13 +132,16 @@ d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`), les choix
 `rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`), les choix de montée
 (#87 : `skill_start` des trois premiers points, `skill_priority` de l'ordre de
 maximisation Q/W/E) et chaque variante
-porte `win_rate_lower_bound` (Wilson 95 %). Le `pick_rate` des lignes de runes est le taux
-conjoint sur toutes les parties à page complète du groupe ; `conditional_rate` (pourcentage de
-0 à 100, comme `pick_rate`) rapporte les `games` de la ligne aux `games` de son parent dans le
-même groupe (champion, rôle, rang, patch, plateforme, file) : `rune_keystone` `[clé]` pour
-`rune_slot_1..3`, `rune_secondary_style` `[arbre]` pour `rune_secondary_pair`. Il vaut `null`
-pour les autres catégories, sans parent ou à 0 partie, ou sous `min_games`. La réponse
-builds ajoute `build_stage_method` et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
+porte `win_rate_lower_bound` et `win_rate_upper_bound` (intervalle de Wilson 95 %) ainsi que
+`win_rate_delta`, écart signé en points au winrate du groupe champion (`null` sous le
+seuil, sans performance publiable ou pour un instantané antérieur à #112). Le `pick_rate` des
+lignes de runes est le taux conjoint sur toutes les parties à page complète du groupe ;
+`conditional_rate` (pourcentage de 0 à 100, comme `pick_rate`) rapporte les `games` de la ligne
+aux `games` de son parent dans le même groupe (champion, rôle, rang, patch, plateforme, file) :
+`rune_keystone` `[clé]` pour `rune_slot_1..3`, `rune_secondary_style` `[arbre]` pour
+`rune_secondary_pair`. Il vaut `null` pour les autres catégories, sans parent ou à 0 partie, ou
+sous `min_games`. La réponse builds ajoute `build_stage_method`
+et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
 (`0` pour un instantané antérieur). Les contrôles de qualité des files classées (#111) sont publiés dans les métadonnées :
 `min_game_duration_s` et `min_played_percent` (0 pour un instantané antérieur),
