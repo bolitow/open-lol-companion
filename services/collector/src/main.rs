@@ -8,7 +8,9 @@ use olc_collector::aggregation::{self, AggregationError, AggregationOptions};
 use olc_collector::campaign;
 use olc_collector::catalog::{self, CommunityPolicy};
 use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
-use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
+use olc_collector::config::{
+    database_url, queue_needs_ranks, ApiKey, Division, RunParams, RuntimeOptions, Tier,
+};
 use olc_collector::privacy::{self, RetentionPolicy};
 use olc_collector::report;
 use olc_collector::riot_client::HttpsTransport;
@@ -107,7 +109,19 @@ enum Command {
         #[arg(long)]
         json: bool,
     },
-    /// Collecte toutes les files sur les plateformes choisies, par tranches reprenables de 15 min.
+    /// Ferme les demandes de rang en attente qui ne servent à aucune partie classée (#90).
+    /// Simulation par défaut : rien n'est modifié sans `--apply`.
+    CloseUnservedRanks {
+        /// Limite l'opération à une exécution ; sinon toutes les exécutions.
+        #[arg(long)]
+        run_id: Option<i64>,
+        /// Applique réellement la fermeture (sans cette option, compte seulement).
+        #[arg(long)]
+        apply: bool,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Collecte les files de l'historique (toutes par défaut) sur les plateformes choisies, par tranches reprenables de 15 min.
     Campaign {
         #[arg(
             long,
@@ -129,6 +143,11 @@ enum Command {
         call_budget_per_platform: u64,
         #[arg(long, default_value_t = 4)]
         concurrency: usize,
+        /// Identifiant de file ; 0 découvre toutes les files de l'historique. Une file
+        /// précise est filtrée par Riot : les parties des autres files ne sont pas
+        /// téléchargées. Les rangs ne sont observés que pour 0, 420 et 440.
+        #[arg(long, default_value_t = 0)]
+        queue: i32,
     },
     /// Reprend la campagne avec ses fenêtres, patches et échéance d'origine.
     CampaignResume {
@@ -415,6 +434,27 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             }
             Ok(ExitCode::SUCCESS)
         }
+        Command::CloseUnservedRanks {
+            run_id,
+            apply,
+            json,
+        } => {
+            let storage = connect(&db_url, 2).await?;
+            let count = storage
+                .close_unserved_rank_jobs(run_id, apply)
+                .await
+                .map_err(|e| e.to_string())?;
+            if json {
+                println!("{}", serde_json::json!({"applied": apply, "jobs": count}));
+            } else if apply {
+                println!("{count} demandes de rang fermées (skipped:unserved_queue).");
+            } else {
+                println!(
+                    "{count} demandes de rang seraient fermées ; relancer avec --apply pour les fermer."
+                );
+            }
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Migrate => {
             let storage = connect(&db_url, 2).await?;
             println!("Migrations appliquées.");
@@ -443,6 +483,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             max_matches_per_seed,
             call_budget_per_platform,
             concurrency,
+            queue,
         } => {
             let storage = connect(&db_url, concurrency.clamp(1, 16) as u32 + 3).await?;
             let patches = if patches.is_empty() {
@@ -453,9 +494,9 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 patches
             };
             let template = RunParams {
-                queue_id: 0,
+                queue_id: queue,
                 patches,
-                collect_ranks: true,
+                collect_ranks: queue_needs_ranks(queue),
                 target_matches: target_per_platform,
                 tiers: vec![
                     Tier::Iron,

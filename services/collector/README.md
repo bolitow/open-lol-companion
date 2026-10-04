@@ -71,6 +71,31 @@ SG2, TW2 et VN2, routées vers Europe, Americas, Asia ou SEA selon Riot.
 | `--concurrency` | 2 | Requêtes simultanées, bornées à 16 |
 | `--max-duration-mins` | Aucune | Durée d'un lancement, reprise possible |
 
+Ordre de réservation des travaux d'une exécution : joueurs de départ, historiques,
+timelines, **détails de parties**, puis rangs. Les détails passent avant les rangs : un
+rang ne sert que pour une partie déjà retenue et ne doit pas consommer le budget qui
+permettrait de télécharger plus de parties (#90).
+
+**Cache négatif.** Une partie téléchargée puis exclue du périmètre (plateforme, file,
+patch ou fenêtre) est mémorisée dans `excluded_matches` : ses faits indexés seulement
+(file, patch, date, durée, remake), ni détail ni identifiant de joueur. Une autre
+exécution la rejuge sans appel si son périmètre l'exclut aussi ; si son périmètre
+l'accepte, elle est téléchargée normalement. Le verdict n'est donc jamais figé.
+
+**Maintenance des rangs inutiles.** Les demandes de rang créées avant le filtrage par
+file peuvent rester en attente pour des parties non classées :
+
+```sh
+cargo run -p olc-collector --release -- close-unserved-ranks            # simulation, ne modifie rien
+cargo run -p olc-collector --release -- close-unserved-ranks --apply    # ferme (outcome skipped:unserved_queue)
+```
+
+`--run-id <id>` limite l'opération à une exécution. Seules les demandes `pending` ou
+`retry_wait` sont fermées, et seulement si le joueur apparaît dans des parties retenues
+dont aucune n'est classée (420/440 hors remake) ; un joueur dont le détail est purgé ou
+caviardé est conservé. Commencer par la simulation, jamais sur une base de production
+sans sauvegarde.
+
 `resume <id> --call-budget <total>` relève le budget ; `--retry-failed` remet les
 travaux en échec en attente. `report <id> [--json]` donne le bilan. Une timeline
 ayant reçu plusieurs 404 reste `unavailable` ; une panne réseau ne reçoit jamais
@@ -96,7 +121,10 @@ observations des rangs activées, cible de 10 000 parties et budget de 100 000 a
 **par plateforme**, concurrence 4. Ce sont des plafonds/objectifs, pas une promesse
 de volume atteint en 24 h. Les options `--platforms`, `--patches`,
 `--target-per-platform`, `--seeds-per-division`, `--max-matches-per-seed`,
-`--call-budget-per-platform`, `--concurrency` les adaptent.
+`--call-budget-per-platform`, `--concurrency`, `--queue` les adaptent. `--queue <id>`
+(0 par défaut = toutes les files) restreint la découverte à une file : Riot filtre alors
+l'historique et les parties des autres files ne sont jamais téléchargées. Les rangs ne
+sont observés que pour 0, 420 et 440 ; pour toute autre file, `collect_ranks` est coupé.
 
 Une campagne crée atomiquement ses exécutions et conserve leur liste, leur fenêtre,
 leur ordre de rotation et son échéance. Chaque plateforme dispose d'une tranche de
@@ -322,7 +350,7 @@ Ctrl+C annule le calcul ou l'attente (0 en mode continu, 3 en ponctuel).
 Aucun superviseur système n'est installé par le binaire.
 
 Tables : `collection_runs`, `collection_jobs`, `seed_players`, `run_discoveries`,
-`run_matches`, `matches`, `match_timelines`, `participant_rank_observations`,
+`run_matches`, `matches`, `excluded_matches`, `match_timelines`, `participant_rank_observations`,
 `collection_campaigns`, `campaign_runs`, `static_data_releases`, `static_data_manifest`,
 `champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB, et
 les observations de rang gardent leur historique daté, pendant les durées de rétention
@@ -351,6 +379,7 @@ cargo run -p olc-collector --release -- purge --watch   # immédiatement puis ch
 | PUUID et Riot ID dans le JSONB des parties et timelines | 30 jours (`--identifier-days`, `OLC_RETENTION_IDENTIFIER_DAYS`) | `puuid`, `summonerId`, `summonerName`, `riotIdGameName`, `riotIdName`, `riotIdTagline`, `profileIcon` retirés des participants ; `metadata.participants` remplacés par `""` |
 | `participant_rank_observations` | 30 jours | Supprimées |
 | `seed_players`, `run_discoveries`, `collection_jobs` d'une exécution sans activité depuis 30 jours | 30 jours | Supprimés ; `run_matches.seed_puuid` vidé |
+| `excluded_matches` (cache négatif, #90) | Aucune purge | Faits de partie sans PUUID ni détail (identifiant de partie, file, patch, date, durée) : pas de donnée personnelle de joueur ; purge à décider avec les autres durées |
 
 Pourquoi ces valeurs : l'agrégation ne lit que les rangs observés depuis moins de
 24 h et ne recalcule par défaut que les deux derniers patches (environ 4 semaines) ;

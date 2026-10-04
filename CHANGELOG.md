@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Collecteur : `olc-collector close-unserved-ranks` ferme les demandes de rang encore en attente pour des parties non classées (créées avant le filtrage par file), en simulation par défaut et avec `--apply` pour agir ; `campaign --queue <id>` permet de concentrer une campagne sur une file (toutes par défaut, rangs coupés hors 0/420/440) (#90).
 - Desktop : **Réglages → Accès à l’API** permet de saisir l’adresse du service et un jeton d’accès, validés par le cœur Rust puis gardés dans le trousseau du système (Keychain sous macOS, Gestionnaire d’identifiants sous Windows). Builds communautaires, profils joueurs et canal des publications basculent sans redémarrage ; le jeton n’est ni journalisé, ni renvoyé à l’interface, ni réaffiché, et peut être retiré. Les variables `OLC_API_URL` et `OLC_API_TOKEN` restent prioritaires pour le développement. Aucun endpoint public d’émission ni rafraîchissement de jeton : modèle de distribution à valider (#98).
 - RGPD : rétention configurable des données personnelles du collecteur. `olc-collector purge` (ponctuel ou `--watch` horaire) supprime les parties brutes après 90 jours et, après 30 jours, retire PUUID et Riot ID des parties et timelines, supprime observations de rang, joueurs de départ et travaux des exécutions inactives ; valeurs par défaut proposées, à valider. L'API ajoute `POST /v1/privacy/export` et `POST /v1/privacy/erase` (PUUID dans le corps, réservés aux sujets de `OLC_API_PRIVACY_OPERATORS`, nouveau code `forbidden`), types alignés dans `@olc/shared`. CGU, politique de confidentialité et hébergement UE restent à traiter (#99).
 - CI : un workflow planifié (`patch-watch.yml`) compare chaque jour la version courante de Data Dragon aux patchs déjà contrôlés et, pour un nouveau patch LoL, lance les tests sur Linux puis consigne le résultat dans une issue « Patch LoL X.Y : contrôle automatique » ; aucun secret ni appel Riot authentifié, relance manuelle possible avec l'option « force ». Les contrôles du catalogue exporté et du format de match-v5 sur le nouveau patch restent à faire (#121).
@@ -90,6 +91,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Collecteur : les détails de parties sont réservés avant les demandes de rang, et une partie téléchargée puis exclue du périmètre est mémorisée (faits seulement, table `excluded_matches`) pour ne pas être retéléchargée par une autre exécution ; budget d'appels Riot mieux employé (#90).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 
 - Documents de planification `docs/superpowers/` exclus du suivi Git (#18).
