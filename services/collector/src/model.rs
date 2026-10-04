@@ -78,11 +78,16 @@ impl Exclusion {
     }
 }
 
+/// Files où le rang des participants est exploité (Solo/Duo et Flex) ; les autres
+/// modes n'ont pas de rang compétitif applicable, inutile de le demander (#90).
+pub const RANKED_QUEUE_IDS: [i32; 2] = [420, 440];
+
 /// Résultat du contrôle d'une réponse de détail.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MatchCheck {
     Accepted(MatchFacts, Value),
-    Excluded(Exclusion),
+    /// Les faits de la partie accompagnent le verdict : le cache négatif les conserve.
+    Excluded(Exclusion, MatchFacts),
 }
 
 /// Colonnes indexées d'une partie.
@@ -201,7 +206,7 @@ pub fn check_match(body: &[u8], expected_id: &str, scope: &Scope) -> Result<Matc
     };
     Ok(match scope.contains(&facts) {
         Ok(()) => MatchCheck::Accepted(facts, raw),
-        Err(reason) => MatchCheck::Excluded(reason),
+        Err(reason) => MatchCheck::Excluded(reason, facts),
     })
 }
 
@@ -532,23 +537,47 @@ mod tests {
     fn exclut_plateforme_file_et_fenetre() {
         let s = scope();
         let check = |v: Value| check_match(&body(&v), "EUW1_1", &s).unwrap();
+        let reason = |v: Value| match check(v) {
+            MatchCheck::Excluded(reason, _) => Some(reason),
+            MatchCheck::Accepted(..) => None,
+        };
         assert_eq!(
-            check(match_detail("EUW1_1", "EUN1", 420, 1_500_000)),
-            MatchCheck::Excluded(Exclusion::WrongPlatform)
+            reason(match_detail("EUW1_1", "EUN1", 420, 1_500_000)),
+            Some(Exclusion::WrongPlatform)
         );
         assert_eq!(
-            check(match_detail("EUW1_1", "EUW1", 440, 1_500_000)),
-            MatchCheck::Excluded(Exclusion::WrongQueue)
+            reason(match_detail("EUW1_1", "EUW1", 440, 1_500_000)),
+            Some(Exclusion::WrongQueue)
         );
         assert_eq!(
-            check(match_detail("EUW1_1", "EUW1", 420, 999_999)),
-            MatchCheck::Excluded(Exclusion::OutOfWindow)
+            reason(match_detail("EUW1_1", "EUW1", 420, 999_999)),
+            Some(Exclusion::OutOfWindow)
         );
         // Borne de fin exclue.
         assert_eq!(
-            check(match_detail("EUW1_1", "EUW1", 420, 2_000_000)),
-            MatchCheck::Excluded(Exclusion::OutOfWindow)
+            reason(match_detail("EUW1_1", "EUW1", 420, 2_000_000)),
+            Some(Exclusion::OutOfWindow)
         );
+    }
+
+    #[test]
+    fn une_partie_exclue_garde_ses_faits_pour_le_cache_negatif() {
+        let s = scope();
+        let check = check_match(
+            &body(&match_detail("EUW1_1", "EUW1", 440, 1_500_000)),
+            "EUW1_1",
+            &s,
+        )
+        .unwrap();
+        let MatchCheck::Excluded(reason, facts) = check else {
+            panic!("la file 440 doit être exclue d'un périmètre 420");
+        };
+        assert_eq!(reason, Exclusion::WrongQueue);
+        assert_eq!(facts.queue_id, 440);
+        assert_eq!(facts.game_start_ms, 1_500_000);
+        // Les faits suffisent à rejuger la partie dans un autre périmètre.
+        let all_queues = Scope { queue_id: 0, ..s };
+        assert_eq!(all_queues.check_stored(&facts), Ok(()));
     }
 
     #[test]

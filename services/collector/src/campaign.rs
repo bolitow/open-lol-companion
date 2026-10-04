@@ -11,7 +11,7 @@ use thiserror::Error;
 use tokio::time::Instant;
 
 use crate::collector::{collection_window, now_ms, Collector, CollectorError, StopReason};
-use crate::config::{RunParams, RuntimeOptions};
+use crate::config::{queue_needs_ranks, RunParams, RuntimeOptions};
 use crate::queues;
 use crate::riot_client::Transport;
 use crate::storage::{RunStatus, Storage, StorageError};
@@ -87,7 +87,7 @@ pub fn needs_rank_observations(queues: &[i32]) -> bool {
 
 /// Crée toutes les exécutions dans une transaction, avec le même instant de fin.
 /// Les choix de volumes et de patches sont fournis par le lanceur et restent figés.
-/// La file est celle du modèle (0 = toutes les files) : une exécution par plateforme.
+/// Une exécution par plateforme, dans la file du modèle.
 pub async fn start(
     storage: &Storage,
     platforms: &[String],
@@ -95,21 +95,54 @@ pub async fn start(
     now_ms: i64,
     duration: Duration,
 ) -> Result<i64, CampaignError> {
-    start_runs(
+    check_platforms_and_duration(platforms, duration)?;
+    let mut parameters = Vec::new();
+    for platform in platforms {
+        parameters.push(RunParams {
+            platform_id: platform.clone(),
+            ..template.clone()
+        });
+    }
+    create(
         storage,
         platforms,
         &[template.queue_id],
         template,
+        parameters,
         now_ms,
         duration,
     )
     .await
 }
 
-/// Comme `start`, avec une exécution par couple (plateforme, file) : la cible du modèle
-/// et son budget d'appels s'appliquent à **chaque** exécution. L'ordre de rotation est
-/// plateforme puis file, pour qu'une campagne écourtée couvre toutes les files des
-/// premières plateformes plutôt qu'une seule file partout.
+/// Comme [`start`], avec une exécution par plateforme **et** par file de `queues`
+/// (voir [`run_params_for_queues`]). Les files par défaut sont
+/// [`crate::config::DEFAULT_CAMPAIGN_QUEUES`] (décision du 4 octobre 2026, #90).
+pub async fn start_for_queues(
+    storage: &Storage,
+    platforms: &[String],
+    queues: &[i32],
+    template: &RunParams,
+    now_ms: i64,
+    duration: Duration,
+) -> Result<i64, CampaignError> {
+    check_platforms_and_duration(platforms, duration)?;
+    let parameters = run_params_for_queues(platforms, queues, template)?;
+    // Le gabarit est conservé tel quel dans `params->'template'` à titre de trace : ses
+    // champs `queue_id` et `collect_ranks` y sont ignorés, les files réelles sont dans
+    // `params->'queues'` et dans les paramètres de chaque exécution.
+    create(
+        storage, platforms, queues, template, parameters, now_ms, duration,
+    )
+    .await
+}
+
+/// Comme [`start`], avec une exécution par couple (plateforme, file) parmi les files
+/// identifiées ([`validate_queues`]) : la cible du modèle et son budget d'appels
+/// s'appliquent à **chaque** exécution, sans répartition (#97, commande `campaign-queues`).
+/// L'ordre de rotation est plateforme puis file, pour qu'une campagne écourtée couvre
+/// toutes les files des premières plateformes. Pour la répartition du budget d'une
+/// plateforme entre ses files, voir [`start_for_queues`].
 pub async fn start_per_queue(
     storage: &Storage,
     platforms: &[String],
@@ -119,17 +152,27 @@ pub async fn start_per_queue(
     duration: Duration,
 ) -> Result<i64, CampaignError> {
     validate_queues(queues)?;
-    start_runs(storage, platforms, queues, template, now_ms, duration).await
+    check_platforms_and_duration(platforms, duration)?;
+    let mut parameters = Vec::with_capacity(platforms.len() * queues.len());
+    for platform in platforms {
+        for &queue_id in queues {
+            parameters.push(RunParams {
+                platform_id: platform.clone(),
+                queue_id,
+                ..template.clone()
+            });
+        }
+    }
+    create(
+        storage, platforms, queues, template, parameters, now_ms, duration,
+    )
+    .await
 }
 
-async fn start_runs(
-    storage: &Storage,
+fn check_platforms_and_duration(
     platforms: &[String],
-    queues: &[i32],
-    template: &RunParams,
-    now_ms: i64,
     duration: Duration,
-) -> Result<i64, CampaignError> {
+) -> Result<(), CampaignError> {
     if platforms.is_empty() || platforms.iter().collect::<BTreeSet<_>>().len() != platforms.len() {
         return Err(CampaignError::Invalid("plateformes absentes ou dupliquées"));
     }
@@ -138,20 +181,72 @@ async fn start_runs(
             "durée attendue : de 1 ms à 24 heures",
         ));
     }
-    let deadline_ms = now_ms
-        .checked_add(duration.as_millis() as i64)
-        .ok_or(CampaignError::Invalid("échéance hors limites"))?;
-    let mut parameters = Vec::new();
+    Ok(())
+}
+
+/// Paramètres de chaque exécution : plateforme par plateforme, puis file par file.
+///
+/// Riot filtre l'historique sur une seule file : plusieurs files demandent donc plusieurs
+/// exécutions. Le budget d'appels et la cible de parties de `template` valent pour une
+/// plateforme ; ils sont répartis également entre ses files (budget arrondi à l'inférieur,
+/// cible à la supérieure), pour que le plafond par plateforme reste celui annoncé. Les
+/// rangs ne sont observés que pour les files qui les exploitent. `0` (toutes les files)
+/// ne se combine avec aucune autre file.
+pub fn run_params_for_queues(
+    platforms: &[String],
+    queues: &[i32],
+    template: &RunParams,
+) -> Result<Vec<RunParams>, CampaignError> {
+    if queues.is_empty() || queues.iter().collect::<BTreeSet<_>>().len() != queues.len() {
+        return Err(CampaignError::Invalid("files absentes ou dupliquées"));
+    }
+    if queues.len() > 1 && queues.contains(&0) {
+        return Err(CampaignError::Invalid(
+            "la file 0 (toutes les files) ne se combine pas avec d'autres files",
+        ));
+    }
+    let count = queues.len() as u64;
+    if template.call_budget < count {
+        return Err(CampaignError::Invalid(
+            "budget d'appels par plateforme inférieur au nombre de files",
+        ));
+    }
+    let call_budget = template.call_budget / count;
+    let target_matches = u32::try_from(u64::from(template.target_matches).div_ceil(count))
+        .unwrap_or(u32::MAX)
+        .max(1);
+    let mut runs = Vec::with_capacity(platforms.len() * queues.len());
     for platform in platforms {
         for &queue_id in queues {
             let params = RunParams {
                 platform_id: platform.clone(),
                 queue_id,
+                collect_ranks: queue_needs_ranks(queue_id),
+                call_budget,
+                target_matches,
                 ..template.clone()
             };
             params.validate().map_err(StorageError::from)?;
-            parameters.push(params);
+            runs.push(params);
         }
+    }
+    Ok(runs)
+}
+
+async fn create(
+    storage: &Storage,
+    platforms: &[String],
+    queues: &[i32],
+    template: &RunParams,
+    parameters: Vec<RunParams>,
+    now_ms: i64,
+    duration: Duration,
+) -> Result<i64, CampaignError> {
+    let deadline_ms = now_ms
+        .checked_add(duration.as_millis() as i64)
+        .ok_or(CampaignError::Invalid("échéance hors limites"))?;
+    for params in &parameters {
+        params.validate().map_err(StorageError::from)?;
     }
     let (window_start, window_end) = collection_window(now_ms, template.window_days);
     let mut connection = storage.transaction_connection().await?;
@@ -525,6 +620,86 @@ async fn finish(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::DEFAULT_CAMPAIGN_QUEUES;
+
+    fn platforms() -> Vec<String> {
+        vec!["EUW1".into(), "NA1".into()]
+    }
+
+    fn template() -> RunParams {
+        RunParams {
+            target_matches: 1001,
+            call_budget: 1000,
+            ..RunParams::default()
+        }
+    }
+
+    #[test]
+    fn les_files_par_defaut_sont_solo_et_flex() {
+        assert_eq!(DEFAULT_CAMPAIGN_QUEUES, [420, 440]);
+    }
+
+    #[test]
+    fn une_execution_par_plateforme_et_par_file_avec_le_budget_reparti() {
+        let runs =
+            run_params_for_queues(&platforms(), &DEFAULT_CAMPAIGN_QUEUES, &template()).unwrap();
+        let scopes: Vec<_> = runs
+            .iter()
+            .map(|r| (r.platform_id.as_str(), r.queue_id))
+            .collect();
+        assert_eq!(
+            scopes,
+            [("EUW1", 420), ("EUW1", 440), ("NA1", 420), ("NA1", 440)]
+        );
+        // Le budget et la cible de chaque plateforme sont répartis entre ses files.
+        assert!(runs.iter().all(|r| r.call_budget == 500));
+        assert!(runs.iter().all(|r| r.target_matches == 501));
+        assert!(runs.iter().all(|r| r.collect_ranks));
+    }
+
+    #[test]
+    fn une_file_explicite_hors_solo_et_flex_est_acceptee_sans_rangs() {
+        let runs = run_params_for_queues(&platforms(), &[450], &template()).unwrap();
+        assert_eq!(runs.len(), 2);
+        assert!(runs.iter().all(|r| r.queue_id == 450 && !r.collect_ranks));
+        // Une seule file : budget et cible de la plateforme restent entiers.
+        assert!(runs
+            .iter()
+            .all(|r| r.call_budget == 1000 && r.target_matches == 1001));
+        // Plusieurs files explicites, classées ou non : les rangs suivent chaque file.
+        let mixed = run_params_for_queues(&platforms(), &[420, 450, 1700], &template()).unwrap();
+        let ranks: Vec<_> = mixed.iter().take(3).map(|r| r.collect_ranks).collect();
+        assert_eq!(ranks, [true, false, false]);
+    }
+
+    #[test]
+    fn les_listes_de_files_incoherentes_sont_refusees() {
+        for queues in [&[][..], &[420, 420], &[0, 420], &[-1]] {
+            assert!(
+                run_params_for_queues(&platforms(), queues, &template()).is_err(),
+                "{queues:?}"
+            );
+        }
+        // 0 seul = toutes les files, comportement historique conservé.
+        let all = run_params_for_queues(&platforms(), &[0], &template()).unwrap();
+        assert!(all.iter().all(|r| r.queue_id == 0 && r.collect_ranks));
+    }
+
+    #[test]
+    fn un_budget_inferieur_au_nombre_de_files_est_refuse() {
+        // Sinon chaque file recevrait au moins 1 appel et la plateforme dépasserait son plafond.
+        let small = RunParams {
+            call_budget: 1,
+            ..template()
+        };
+        assert!(run_params_for_queues(&platforms(), &DEFAULT_CAMPAIGN_QUEUES, &small).is_err());
+        let exact = RunParams {
+            call_budget: 2,
+            ..template()
+        };
+        let runs = run_params_for_queues(&platforms(), &DEFAULT_CAMPAIGN_QUEUES, &exact).unwrap();
+        assert!(runs.iter().all(|r| r.call_budget == 1));
+    }
 
     #[test]
     fn les_files_par_defaut_sont_aram_swiftplay_et_arena_et_sont_valides() {

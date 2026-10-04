@@ -325,6 +325,7 @@ La qualité des builds et du draft dépend du volume de parties collectées : c'
 - account-v1 / summoner-v4, champion-mastery-v4, spectator-v5.
 - Respect strict des rate limits (file par région, backoff), clé de production obligatoire.
 - Files séparées : Ranked Solo, Flex, Ranked 5v5, ARAM, Mayhem, Swiftplay, Arena.
+- Décision du 4 octobre 2026 (#90) : une campagne de collecte vise par défaut Solo (420) et Flex (440) ; les autres files (ARAM, Swiftplay, Arena…) sont collectées sur demande, en les listant explicitement (`campaign --queues`).
 
 **10.2 Agrégation** : par patch, rang, région, rôle ; recalcul horaire de la tierlist ; seuils minimaux d'échantillon ; données statiques par patch mises à jour automatiquement.
 
