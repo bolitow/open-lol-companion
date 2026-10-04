@@ -10,6 +10,8 @@ use serde::Serialize;
 pub enum ApiError {
     InvalidRequest,
     Unauthorized,
+    /// Jeton valide, mais sujet non habilité (routes RGPD).
+    Forbidden,
     NotFound,
     Unavailable,
     RateLimited,
@@ -31,6 +33,7 @@ impl IntoResponse for ApiError {
         let (status, code) = match self {
             Self::InvalidRequest => (StatusCode::BAD_REQUEST, "invalid_request"),
             Self::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
+            Self::Forbidden => (StatusCode::FORBIDDEN, "forbidden"),
             Self::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             Self::Unavailable => (StatusCode::SERVICE_UNAVAILABLE, "unavailable"),
             Self::RateLimited => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),

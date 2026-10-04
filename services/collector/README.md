@@ -20,6 +20,8 @@ Les exemples ci-dessous sont exécutés depuis la racine du dépôt.
 | `DATABASE_URL` | Connexion PostgreSQL du service |
 | `RIOT_API_KEY` | Collecte authentifiée uniquement ; en-tête `X-Riot-Token`, jamais journalisé |
 | `RUST_LOG` | Facultatif, `info` par défaut ; `warn,sqlx=error` pour une longue recette |
+| `OLC_RETENTION_IDENTIFIER_DAYS` | Facultatif : conservation des PUUID, Riot ID et observations de rang, 30 jours par défaut (#99) |
+| `OLC_RETENTION_RAW_MATCH_DAYS` | Facultatif : conservation des parties brutes, 90 jours par défaut (#99) |
 | `OLC_TEST_DATABASE_URL` | Tests : base d'administration permettant de créer et supprimer des bases jetables |
 
 ```sh
@@ -322,8 +324,9 @@ Aucun superviseur système n'est installé par le binaire.
 Tables : `collection_runs`, `collection_jobs`, `seed_players`, `run_discoveries`,
 `run_matches`, `matches`, `match_timelines`, `participant_rank_observations`,
 `collection_campaigns`, `campaign_runs`, `static_data_releases`, `static_data_manifest`,
-`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB ; les
-observations de rang gardent leur historique daté.
+`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB, et
+les observations de rang gardent leur historique daté, pendant les durées de rétention
+ci-dessous.
 
 Les lots bornent les données brutes simultanément lues, **pas toute la mémoire** :
 les compteurs de variantes et événements restent en RAM jusqu'à la publication.
@@ -331,13 +334,54 @@ La recette mesure temps et mémoire ; un passage à très grande échelle néces
 une stratégie de calcul/pagination supplémentaire. Les groupes trop petits restent
 hors classement, même après une longue collecte.
 
+## Rétention des données personnelles (#99)
+
+```sh
+cargo run -p olc-collector --release -- purge --json
+cargo run -p olc-collector --release -- purge --watch   # immédiatement puis chaque heure
+```
+
+`purge` applique deux durées, comptées depuis l'enregistrement de la donnée
+(`fetched_at`, `observed_at`, dernière activité de l'exécution). Valeurs par défaut
+**proposées, à valider** avant exploitation publique :
+
+| Donnée | Durée | Après expiration |
+| --- | --- | --- |
+| Parties brutes : `matches`, `match_timelines` et leurs liens `run_matches` | 90 jours (`--raw-match-days`, `OLC_RETENTION_RAW_MATCH_DAYS`) | Supprimées, sauf partie liée à une exécution `running` |
+| PUUID et Riot ID dans le JSONB des parties et timelines | 30 jours (`--identifier-days`, `OLC_RETENTION_IDENTIFIER_DAYS`) | `puuid`, `summonerId`, `summonerName`, `riotIdGameName`, `riotIdName`, `riotIdTagline`, `profileIcon` retirés des participants ; `metadata.participants` remplacés par `""` |
+| `participant_rank_observations` | 30 jours | Supprimées |
+| `seed_players`, `run_discoveries`, `collection_jobs` d'une exécution sans activité depuis 30 jours | 30 jours | Supprimés ; `run_matches.seed_puuid` vidé |
+
+Pourquoi ces valeurs : l'agrégation ne lit que les rangs observés depuis moins de
+24 h et ne recalcule par défaut que les deux derniers patches (environ 4 semaines) ;
+30 jours laissent la reprise d'une collecte et le contrôle d'une recette, 90 jours
+permettent de recalculer six patches après une correction de l'agrégation. Les parties
+pseudonymisées restent agrégées (champions, rôles, objets, timelines) ; leur rang
+n'est plus attribuable, ce qui est déjà le cas après 24 h. Les bots (`BOT`, zéros)
+gardent leur marqueur, nécessaire au comptage des files coop.
+
+Conséquences : une exécution en pause depuis plus de 30 jours perd ses travaux ; sa
+reprise se termine aussitôt en `incomplete` ; `report <id>` d'une exécution purgée ne retrouve
+plus le détail de ses travaux (le bilan final reste dans `collection_runs.report`).
+Une partie supprimée peut être retéléchargée si une nouvelle collecte la redécouvre.
+La purge est idempotente, travaille par lots de 200 lignes et ne fait aucun appel
+Riot. La migration `0010` ajoute des index GIN sur les participants du JSONB : sur une
+base volumineuse, appliquer la première migration (premier lancement d'une commande
+ou de l'API) à un moment calme. `--watch` reprend l'ordonnanceur horaire d'`aggregate` ; aucun superviseur
+système n'est installé. Code de sortie 3 si Ctrl+C interrompt une purge ponctuelle.
+
+Export et effacement d'un joueur sur demande : routes authentifiées de l'API
+(`POST /v1/privacy/export` et `/v1/privacy/erase`, [README de l'API](../api/README.md)),
+implémentées dans `src/privacy.rs` et partagées avec la purge.
+
 ## Conformité, données personnelles et validation
 
 Clé côté service uniquement. PUUID/Riot ID restent dans la base privée, jamais dans
 les rapports publiables. Les données brutes ne sont pas un export public. Cette
 fonctionnalité exploite des parties terminées et des données statiques officielles,
-sans action dans le jeu. La conservation/suppression des données personnelles et la
-clé de production restent à traiter avant exploitation publique (#2).
+sans action dans le jeu. Rétention, export et effacement : section précédente (#99).
+Restent hors de ce service : CGU, politique de confidentialité, mentions légales,
+hébergement UE documenté et clé de production (#2).
 
 Open LoL Companion isn't endorsed by Riot Games and doesn't reflect the views or
 opinions of Riot Games or anyone officially involved in producing or managing Riot

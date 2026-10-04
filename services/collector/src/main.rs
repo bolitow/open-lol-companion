@@ -9,6 +9,7 @@ use olc_collector::campaign;
 use olc_collector::catalog::{self, CommunityPolicy};
 use olc_collector::collector::{now_ms, Collector, RunOutcome, StopReason};
 use olc_collector::config::{database_url, ApiKey, Division, RunParams, RuntimeOptions, Tier};
+use olc_collector::privacy::{self, RetentionPolicy};
 use olc_collector::report;
 use olc_collector::riot_client::HttpsTransport;
 use olc_collector::shared_quota::CoordinatedTransport;
@@ -89,6 +90,20 @@ enum Command {
         #[arg(long)]
         watch: bool,
         /// Rapport JSON complet ; une ligne par publication en mode continu.
+        #[arg(long)]
+        json: bool,
+    },
+    /// Applique la rétention des données personnelles (#99) : PUUID, Riot ID, parties brutes.
+    Purge {
+        /// Jours de conservation des PUUID, Riot ID et observations de rang.
+        #[arg(long, env = "OLC_RETENTION_IDENTIFIER_DAYS", default_value_t = privacy::DEFAULT_IDENTIFIER_DAYS)]
+        identifier_days: u32,
+        /// Jours de conservation des parties brutes (détails et timelines).
+        #[arg(long, env = "OLC_RETENTION_RAW_MATCH_DAYS", default_value_t = privacy::DEFAULT_RAW_MATCH_DAYS)]
+        raw_match_days: u32,
+        /// Purge immédiatement puis chaque heure (Ctrl+C pour arrêter).
+        #[arg(long)]
+        watch: bool,
         #[arg(long)]
         json: bool,
     },
@@ -357,6 +372,46 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                     .map_err(|e| e.to_string())?;
             } else {
                 tokio::select! { _=shutdown()=>return Ok(ExitCode::from(3)),r=sync()=>r.map_err(|e|e.to_string())? }
+            }
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Purge {
+            identifier_days,
+            raw_match_days,
+            watch,
+            json,
+        } => {
+            let policy =
+                RetentionPolicy::new(identifier_days, raw_match_days).map_err(|e| e.to_string())?;
+            let storage = connect(&db_url, 2).await?;
+            let purge = || async {
+                let report = privacy::purge(&storage, policy).await?;
+                if json {
+                    println!("{}", serde_json::to_string(&report)?);
+                } else {
+                    println!(
+                        "Rétention appliquée (identifiants {} j, parties brutes {} j) : {} parties et {} timelines supprimées, {} parties et {} timelines pseudonymisées, {} joueurs de départ, {} découvertes, {} liens, {} travaux et {} observations de rang effacés.",
+                        report.identifier_days,
+                        report.raw_match_days,
+                        report.matches_deleted,
+                        report.timelines_deleted,
+                        report.matches_redacted,
+                        report.timelines_redacted,
+                        report.seed_players_deleted,
+                        report.discoveries_deleted,
+                        report.sampled_match_seeds_cleared,
+                        report.jobs_deleted,
+                        report.rank_observations_deleted
+                    );
+                }
+                Ok::<(), AggregationError>(())
+            };
+            if watch {
+                aggregation::run_periodic(purge, shutdown())
+                    .await
+                    .map_err(|e| e.to_string())?;
+            } else {
+                tokio::select! { _=shutdown()=>return Ok(ExitCode::from(3)),r=purge()=>r.map_err(|e|e.to_string())? }
             }
             Ok(ExitCode::SUCCESS)
         }

@@ -84,6 +84,11 @@ une échéance persistée et des tranches de 15 minutes par plateforme. Une clé
 développement peut expirer avant la fin. Aucun superviseur ni service permanent
 n'est installé. Voir [le contrat et les options](../services/collector/README.md).
 
+Rétention des données personnelles (#99) : `cargo run -p olc-collector --release -- purge --watch`
+supprime les parties brutes après 90 jours et retire PUUID et Riot ID après 30 jours
+(valeurs proposées, réglables par `OLC_RETENTION_*`). Détails dans le
+[README du collecteur](../services/collector/README.md#rétention-des-données-personnelles-99).
+
 ## 3 ter. API interne (backend, facultatif)
 
 Compléter le `.env` existant avec `services/api/.env.example`, notamment un secret
