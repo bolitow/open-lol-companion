@@ -9,7 +9,7 @@ export async function loadCatalog(locale:Locale):Promise<PreparationCatalog>{
  const response=await fetch(`/game-data/catalog/${language}.json`);
  if(!response.ok)throw new Error('catalog-unavailable');
  const value:unknown=await response.json();
- return parseCatalog(value,language,['rune','rune_shard','item','summoner_spell']);
+ return parseCatalog(value,language,['rune','rune_shard','item','summoner_spell','augment']);
 }
 function parseCatalog(value:unknown,language:string,kinds:string[]):PreparationCatalog{
  if(!object(value)||typeof value.version!=='string'||!/^\d+\.\d+\.\d+$/.test(value.version)||!Array.isArray(value.records)||!value.records.length)throw new Error('catalog-invalid');
