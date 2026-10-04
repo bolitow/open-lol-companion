@@ -1685,6 +1685,13 @@ fn le_controle_afk_ne_concerne_que_les_files_classees_et_se_desactive() {
 #[test]
 fn la_duree_est_repartie_en_tranches_dont_la_borne_basse_est_incluse() {
     let mut acc = Accumulator::new(1).unwrap();
+    // Contrôle de durée (#111) désactivé : ce test porte sur les tranches, pas sur
+    // l'exclusion `short_game` d'une partie classée trop courte (couverte plus haut).
+    acc.set_quality_thresholds(&QualityThresholds {
+        min_game_duration_s: 0,
+        ..QualityThresholds::default()
+    })
+    .unwrap();
     for (n, seconds) in [1199, 1200, 1499, 1500, 1799, 1800, 2100, 2399, 2400, 3600]
         .into_iter()
         .enumerate()
