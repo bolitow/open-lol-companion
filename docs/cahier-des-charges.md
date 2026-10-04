@@ -350,6 +350,10 @@ supplémentaires, 0 `early_departure`.
 Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
 proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
 l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.
+Correctif #82 (étape immédiate) : `ALL` est un échantillon collecté non repondéré, pas
+« tous les rangs » ; la couverture publie la répartition des participations par palier
+(`tier_participations`) et l'API l'étiquette `collected_sample`. La repondération et les
+quotas de seeds proportionnels restent à décider.
 
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
 CommunityDragon versionné des objets et fragments, sources immuables et

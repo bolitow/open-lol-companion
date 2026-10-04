@@ -123,6 +123,12 @@ export interface Coverage {
   participations: number;
   excluded_bot_participations: number;
   ranked_participations: number;
+  /**
+   * Participations classées par palier observé (`IRON` … `CHALLENGER`), figé à la partie (#82) :
+   * décrit l'échantillon de `ALL`, non repondéré sur le ladder. Somme égale à
+   * `ranked_participations` ; vide hors Solo/Flex ou avant #82.
+   */
+  tier_participations: Record<string, number>;
   unranked_participations: number;
   unknown_rank_participations: number;
   unranked_mode_participations: number;
@@ -150,6 +156,20 @@ export interface Coverage {
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}
 
+/**
+ * Nature de la population servie pour le `rank` demandé (#82), miroir de `PopulationLabel`.
+ * `collected_sample` (`ALL`) : échantillon collecté non repondéré, jamais « tous les rangs » ;
+ * `observed_tier` : palier du joueur figé à la partie ; `match_tier` : palier de la partie
+ * (bans) ; `unknown_rank`, `unranked`, `unranked_mode` : rangs homonymes.
+ */
+export type PopulationLabel =
+  | "collected_sample"
+  | "observed_tier"
+  | "match_tier"
+  | "unknown_rank"
+  | "unranked"
+  | "unranked_mode";
+
 /** Métadonnées et contenu sont lus depuis le même instantané publié. */
 export interface SnapshotMeta {
   source_snapshot_at: string;
@@ -173,6 +193,8 @@ export interface SnapshotMeta {
   pick_rate_definition: string;
   tier_method: string;
   filters: AggregationOptions;
+  /** Nature de la population du `rank` demandé ; sa répartition est `coverage[].tier_participations`. */
+  population_label: PopulationLabel;
   coverage: ScopeCoverage[];
 }
 

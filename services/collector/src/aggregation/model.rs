@@ -187,6 +187,11 @@ pub struct Coverage {
     pub participations: u64,
     pub excluded_bot_participations: u64,
     pub ranked_participations: u64,
+    /// Répartition des participations classées par palier observé (`IRON` … `CHALLENGER`),
+    /// figé à la partie (#82) : décrit l'échantillon de `ALL`, non repondéré sur le ladder.
+    /// Sa somme égale `ranked_participations` ; vide hors Solo/Flex ou avant #82.
+    #[serde(default)]
+    pub tier_participations: BTreeMap<String, u64>,
     pub unranked_participations: u64,
     pub unknown_rank_participations: u64,
     pub unranked_mode_participations: u64,
@@ -483,7 +488,13 @@ impl Accumulator {
                 "UNKNOWN" => coverage.unknown_rank_participations += 1,
                 "UNRANKED" => coverage.unranked_participations += 1,
                 "UNRANKED_MODE" => coverage.unranked_mode_participations += 1,
-                _ => coverage.ranked_participations += 1,
+                tier => {
+                    coverage.ranked_participations += 1;
+                    *coverage
+                        .tier_participations
+                        .entry(tier.to_owned())
+                        .or_default() += 1;
+                }
             }
             if p.role == Role::Unknown {
                 coverage.unknown_role_participations += 1;

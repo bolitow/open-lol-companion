@@ -224,7 +224,16 @@ ont `UNRANKED_MODE`. `UNKNOWN` (aucune observation assez proche) et `UNRANKED` r
 distincts. `rank_scope` vaut `observed_rank_nearest_to_game_start_of_same_ranked_queue` ;
 chaque couverture publie `unknown_rank_rate` (part `UNKNOWN` des participations
 Solo/Flex, en %) et les écarts médian/maximal retenus (`rank_gap_median_hours`,
-`rank_gap_max_hours`), nuls hors files classées ou sans observation. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
+`rank_gap_max_hours`), nuls hors files classées ou sans observation.
+
+`ALL` n'est pas « tous les rangs » du ladder (#82) : c'est l'échantillon collecté, où
+chaque participation compte 1, sans pondération par la taille réelle des paliers. Les
+seeds étant pris en nombre égal par strate, le haut du ladder y est surreprésenté. Pour
+le rendre lisible, chaque couverture publie `tier_participations`, la répartition des
+participations classées par palier observé figé à la partie (`IRON` … `CHALLENGER`,
+tous rôles confondus). Sa somme égale `ranked_participations` ; `UNRANKED`, `UNKNOWN` et
+`UNRANKED_MODE` gardent leurs compteurs propres. Elle est vide hors Solo/Flex et dans un
+instantané antérieur. Aucune repondération n'est appliquée aux taux. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
 inventé à partir des objets ou du rang.
 
 | Mesure | Définition et limites |

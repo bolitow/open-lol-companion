@@ -32,7 +32,40 @@ pub struct SnapshotMeta {
     pub pick_rate_definition: String,
     pub tier_method: String,
     pub filters: AggregationOptions,
+    /// Nature de la population servie pour le `rank` demandé (#82). `ALL` est un échantillon
+    /// collecté, non repondéré sur le ladder : sa répartition est `coverage[].tier_participations`.
+    pub population_label: PopulationLabel,
     pub coverage: Vec<ScopeCoverage>,
+}
+/// Étiquette honnête de la population demandée (#82), identifiant stable traduit par l'interface.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PopulationLabel {
+    /// `ALL` : toutes les participations collectées du périmètre, sans pondération par la
+    /// taille réelle des paliers ; ce n'est pas « tous les rangs » du ladder.
+    CollectedSample,
+    /// Palier Riot observé du joueur, figé à la partie (#80).
+    ObservedTier,
+    /// Palier Riot de la partie (#109, médiane des joueurs) : population des bans.
+    MatchTier,
+    /// `UNKNOWN` : aucun rang observé assez proche de la partie (ou partie sans palier).
+    UnknownRank,
+    /// `UNRANKED` : joueur observé sans classement dans la file.
+    Unranked,
+    /// `UNRANKED_MODE` : file sans rang compétitif.
+    UnrankedMode,
+}
+/// Dérive l'étiquette du `rank` validé ; `by_player` est faux pour les bans, rangés au palier
+/// de leur partie. Aucun seuil ni jugement sur la répartition : elle est publiée à côté.
+fn population_label(rank: &str, by_player: bool) -> PopulationLabel {
+    match rank {
+        "ALL" => PopulationLabel::CollectedSample,
+        "UNKNOWN" => PopulationLabel::UnknownRank,
+        "UNRANKED" => PopulationLabel::Unranked,
+        "UNRANKED_MODE" => PopulationLabel::UnrankedMode,
+        _ if by_player => PopulationLabel::ObservedTier,
+        _ => PopulationLabel::MatchTier,
+    }
 }
 #[derive(Serialize)]
 pub struct TierlistResponse {
@@ -250,6 +283,8 @@ async fn load(
         pick_rate_definition: report.pick_rate_definition.clone(),
         tier_method: report.tier_method.clone(),
         filters: report.filters.clone(),
+        // `groups` n'est faux que pour les bans, rangés au palier de leur partie (#109).
+        population_label: population_label(&query.rank, groups),
         coverage: report
             .coverage
             .iter()
@@ -278,4 +313,39 @@ fn matches(key: &GroupKey, query: &StatsQuery) -> bool {
         && key.queue_id == query.queue
         && key.rank == query.rank
         && role == query.role
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_est_etiquete_echantillon_collecte_jamais_tous_les_rangs() {
+        assert_eq!(
+            population_label("ALL", true),
+            PopulationLabel::CollectedSample
+        );
+        assert_eq!(
+            population_label("ALL", false),
+            PopulationLabel::CollectedSample
+        );
+        let json = serde_json::to_value(PopulationLabel::CollectedSample).unwrap();
+        assert_eq!(json, "collected_sample");
+    }
+
+    #[test]
+    fn un_palier_designe_le_rang_du_joueur_ou_celui_de_la_partie_pour_les_bans() {
+        for tier in ["IRON", "GOLD", "MASTER", "CHALLENGER"] {
+            assert_eq!(population_label(tier, true), PopulationLabel::ObservedTier);
+            assert_eq!(population_label(tier, false), PopulationLabel::MatchTier);
+        }
+        for (rank, label) in [
+            ("UNKNOWN", PopulationLabel::UnknownRank),
+            ("UNRANKED", PopulationLabel::Unranked),
+            ("UNRANKED_MODE", PopulationLabel::UnrankedMode),
+        ] {
+            assert_eq!(population_label(rank, true), label);
+            assert_eq!(population_label(rank, false), label);
+        }
+    }
 }

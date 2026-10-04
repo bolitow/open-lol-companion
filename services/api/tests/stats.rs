@@ -117,7 +117,8 @@ fn report() -> Value {
     let coverage = json!({
         "patch":"16.19", "platform_id":"EUW1", "queue_id":420,
         "matches":100, "participations":1000, "excluded_bot_participations":0,
-        "ranked_participations":500, "unranked_participations":0,
+        "ranked_participations":500, "tier_participations":{"GOLD":300, "MASTER":200},
+        "unranked_participations":0,
         "unknown_rank_participations":500, "unranked_mode_participations":0,
         "unknown_role_participations":0, "timeline_matches":80,
         "timeline_participations":800, "invalid_timeline_participations":5,
@@ -440,6 +441,12 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
     assert_eq!(meta["exclusions"], json!({"remake": 1}));
     assert_eq!(meta["ban_rank_basis"], "match_median");
     assert_eq!(meta["ban_rank_min_known_players"], 6);
+    // ALL est un échantillon collecté non repondéré (#82), décrit par sa répartition de paliers.
+    assert_eq!(meta["population_label"], "collected_sample");
+    assert_eq!(
+        meta["coverage"][0]["tier_participations"],
+        json!({"GOLD": 300, "MASTER": 200})
+    );
     assert_eq!(
         meta["rank_scope"],
         "observed_rank_nearest_to_game_start_of_same_ranked_queue"
@@ -485,6 +492,10 @@ async fn tierlist_conserve_les_valeurs_nulles_et_ne_somme_pas_all_avec_gold() {
     .await
     .unwrap();
     assert_eq!(gold.total, 1);
+    assert_eq!(
+        serde_json::to_value(&gold.meta).unwrap()["population_label"],
+        "observed_tier"
+    );
     assert_eq!(gold.entries[0].games, 200);
     assert_eq!(gold.entries[0].key.rank, "GOLD");
     // Les bans suivent le rang demandé : seul le ban GOLD du champion de la page est renvoyé.
@@ -684,6 +695,8 @@ async fn les_bans_de_la_draft_suivent_le_palier_sans_pagination_ni_filtre_de_rol
         .all(|b| b.rank == "GOLD" && b.draft_matches == 10));
     let meta = serde_json::to_value(&gold.meta).unwrap();
     assert_eq!(meta["ban_rank_basis"], "match_median");
+    // Le rang d'un ban est le palier de la partie, pas celui d'un joueur.
+    assert_eq!(meta["population_label"], "match_tier");
     assert_eq!(meta["coverage"].as_array().unwrap().len(), 1);
 
     let limited = bans(

@@ -870,6 +870,76 @@ fn une_couverture_publiee_avant_le_rang_fige_reste_lisible() {
     assert_eq!(coverage.rank_gap_max_hours, None);
 }
 
+#[test]
+fn la_couverture_publie_la_repartition_des_participations_par_palier() {
+    let mut g = game("EUW1_tiers");
+    for (i, tier) in ["GOLD", "GOLD", "MASTER", "IRON"].iter().enumerate() {
+        g.ranks.insert(
+            format!("fake-puuid-{i}"),
+            observed("ranked", Some(tier), 3600),
+        );
+    }
+    g.ranks
+        .insert("fake-puuid-4".into(), observed("unranked", None, 3600));
+    // Observation trop éloignée : participation UNKNOWN, jamais rangée dans un palier.
+    let too_old = u64::from(DEFAULT_RANK_MAX_AGE_HOURS) * 3600 + 1;
+    g.ranks.insert(
+        "fake-puuid-5".into(),
+        observed("ranked", Some("DIAMOND"), too_old),
+    );
+    let mut normal = game("EUW1_normal_tiers");
+    normal.queue_id = 400;
+    normal.detail["info"]["queueId"] = json!(400);
+    normal
+        .ranks
+        .insert("fake-puuid-0".into(), observed("ranked", Some("GOLD"), 60));
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&g);
+    acc.add(&normal);
+    let r = acc.finish();
+    let by_queue = |q: i32| {
+        &r.coverage
+            .iter()
+            .find(|c| c.scope.queue_id == q)
+            .unwrap()
+            .counts
+    };
+    let ranked = by_queue(420);
+    let expected: std::collections::BTreeMap<String, u64> = [
+        ("GOLD".to_owned(), 2),
+        ("IRON".to_owned(), 1),
+        ("MASTER".to_owned(), 1),
+    ]
+    .into();
+    assert_eq!(ranked.tier_participations, expected);
+    // Seuls les dix paliers Riot y figurent : la somme égale les participations classées.
+    assert_eq!(
+        ranked.tier_participations.values().sum::<u64>(),
+        ranked.ranked_participations
+    );
+    assert_eq!(
+        (
+            ranked.unranked_participations,
+            ranked.unknown_rank_participations
+        ),
+        (1, 5)
+    );
+    // Hors Solo/Flex, aucun palier n'est attribué : la répartition reste vide.
+    assert!(by_queue(400).tier_participations.is_empty());
+}
+
+#[test]
+fn une_couverture_publiee_avant_la_repartition_des_paliers_reste_lisible() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    legacy
+        .as_object_mut()
+        .unwrap()
+        .remove("tier_participations")
+        .unwrap();
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert!(coverage.tier_participations.is_empty());
+}
+
 fn stage_catalog(version: &str) -> super::stages::ItemCatalog {
     let item = |price: u32, tags: Value, from: Value| {
         let mut fields =
