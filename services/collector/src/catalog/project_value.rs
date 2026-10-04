@@ -204,6 +204,16 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Segments typés de l'infobulle, à côté du texte brut `tooltip` qui reste inchangé.
+    /// Le type vient des balises de dégâts de la source : transformation déterministe, donc `derived`.
+    pub fn tooltip_segments(&mut self, name: &str, path: &str) {
+        let Some(raw) = self.entry.pointer(path).and_then(Value::as_str) else {
+            return;
+        };
+        let segments = tooltip_segments(raw);
+        self.derived(name, json!(segments), path, None);
+    }
+
     pub fn name(&mut self, path: &str) {
         self.text("name", path);
         self.record.name = self
@@ -305,8 +315,16 @@ pub(super) fn positive_id(value: &Value) -> Option<String> {
         .map(|n| n.to_string())
 }
 
-/// Retire le balisage et les blocs actifs ; le résultat est exclusivement du texte.
-pub(super) fn plain_text(input: &str) -> String {
+/// Fragment lexical d'un texte balisé, une fois les entités décodées.
+enum Piece {
+    Text(String),
+    /// Séparation sans balise (`>` isolé, `<` non fermé, balise auto-fermante, bloc actif retiré).
+    Gap,
+    Open(String),
+    Close(String),
+}
+
+fn decode_entities(input: &str) -> String {
     let mut decoded = String::new();
     let mut rest = input;
     while !rest.is_empty() {
@@ -339,12 +357,21 @@ pub(super) fn plain_text(input: &str) -> String {
             rest = &rest[character.len_utf8()..];
         }
     }
-    let mut output = String::new();
-    let mut rest = decoded.as_str();
+    decoded
+}
+
+/// Découpe le texte décodé ; le contenu des blocs `script` et `style` est retiré.
+fn markup_pieces(decoded: &str) -> Vec<Piece> {
+    let mut pieces = Vec::new();
+    let mut text = String::new();
+    let mut rest = decoded;
     while !rest.is_empty() {
         if rest.starts_with('<') {
+            if !text.is_empty() {
+                pieces.push(Piece::Text(std::mem::take(&mut text)));
+            }
             let Some(end) = rest.find('>') else {
-                output.push(' ');
+                pieces.push(Piece::Gap);
                 rest = &rest[1..];
                 continue;
             };
@@ -353,9 +380,10 @@ pub(super) fn plain_text(input: &str) -> String {
                 .split_ascii_whitespace()
                 .next()
                 .unwrap_or_default()
-                .trim_end_matches('/');
+                .trim_end_matches('/')
+                .to_owned();
             rest = &rest[end + 1..];
-            if matches!(name, "script" | "style") {
+            if matches!(name.as_str(), "script" | "style") {
                 let close = format!("</{name}");
                 if let Some(index) = rest.to_ascii_lowercase().find(&close) {
                     rest = &rest[index..];
@@ -367,14 +395,110 @@ pub(super) fn plain_text(input: &str) -> String {
                 } else {
                     rest = "";
                 }
+                pieces.push(Piece::Gap);
+            } else if let Some(closed) = name.strip_prefix('/') {
+                pieces.push(Piece::Close(closed.to_owned()));
+            } else if tag.ends_with('/') || name.is_empty() {
+                pieces.push(Piece::Gap);
+            } else {
+                pieces.push(Piece::Open(name));
             }
-            output.push(' ');
             continue;
         }
         if let Some(character) = rest.chars().next() {
-            output.push(if character == '>' { ' ' } else { character });
+            if character == '>' {
+                if !text.is_empty() {
+                    pieces.push(Piece::Text(std::mem::take(&mut text)));
+                }
+                pieces.push(Piece::Gap);
+            } else {
+                text.push(character);
+            }
             rest = &rest[character.len_utf8()..];
+        }
+    }
+    if !text.is_empty() {
+        pieces.push(Piece::Text(text));
+    }
+    pieces
+}
+
+/// Retire le balisage et les blocs actifs ; le résultat est exclusivement du texte.
+pub(super) fn plain_text(input: &str) -> String {
+    let mut output = String::new();
+    for piece in markup_pieces(&decode_entities(input)) {
+        match piece {
+            Piece::Text(text) => output.push_str(&text),
+            _ => output.push(' '),
         }
     }
     output.split_whitespace().collect::<Vec<_>>().join(" ")
 }
+
+fn damage_type_of(tag: &str) -> Option<DamageType> {
+    match tag {
+        "physicaldamage" => Some(DamageType::Physical),
+        "magicdamage" => Some(DamageType::Magic),
+        "truedamage" => Some(DamageType::True),
+        _ => None,
+    }
+}
+
+/// Découpe une infobulle en fragments de texte typés par les balises de dégâts de Data Dragon.
+/// Le texte concaténé est exactement celui de `plain_text` ; seules les trois balises de dégâts
+/// donnent un type, les autres balises (`status`, `speed`, `scaleAP`…) n'en donnent pas et héritent
+/// de celui qui les entoure. Le type le plus interne l'emporte ; une fermeture orpheline est ignorée.
+pub(super) fn tooltip_segments(input: &str) -> Vec<TooltipSegment> {
+    let mut segments: Vec<TooltipSegment> = Vec::new();
+    let mut open: Vec<(String, Option<DamageType>)> = Vec::new();
+    // Espace en attente : écrit seulement devant le prochain caractère visible, avec le type en
+    // vigueur au dernier espace rencontré ; les espaces de tête et de queue disparaissent.
+    let mut pending: Option<Option<DamageType>> = None;
+    let current = |open: &[(String, Option<DamageType>)]| open.iter().rev().find_map(|(_, t)| *t);
+    for piece in markup_pieces(&decode_entities(input)) {
+        match piece {
+            Piece::Gap => pending = Some(current(&open)),
+            Piece::Open(name) => {
+                pending = Some(current(&open));
+                let kind = damage_type_of(&name);
+                open.push((name, kind));
+            }
+            Piece::Close(name) => {
+                if let Some(index) = open.iter().rposition(|(open_name, _)| *open_name == name) {
+                    open.truncate(index);
+                }
+                pending = Some(current(&open));
+            }
+            Piece::Text(text) => {
+                let kind = current(&open);
+                for character in text.chars() {
+                    if character.is_whitespace() {
+                        pending = Some(kind);
+                        continue;
+                    }
+                    if let Some(space_kind) = pending.take() {
+                        if !segments.is_empty() {
+                            push_segment(&mut segments, " ", space_kind);
+                        }
+                    }
+                    push_segment(&mut segments, character.encode_utf8(&mut [0; 4]), kind);
+                }
+            }
+        }
+    }
+    segments
+}
+
+fn push_segment(segments: &mut Vec<TooltipSegment>, text: &str, damage_type: Option<DamageType>) {
+    match segments.last_mut() {
+        Some(last) if last.damage_type == damage_type => last.text.push_str(text),
+        _ => segments.push(TooltipSegment {
+            text: text.into(),
+            damage_type,
+        }),
+    }
+}
+
+#[cfg(test)]
+#[path = "project_value_tests.rs"]
+mod tests;

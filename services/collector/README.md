@@ -113,6 +113,40 @@ L'ouverture des transactions est protégée contre l'annulation : si le résulta
 Cela contourne le [défaut SQLx 0.8.6](https://github.com/transact-rs/sqlx/pull/4394)
 sans requête supplémentaire sur les transactions terminées normalement.
 
+### Campagnes par file : ARAM, Swiftplay, Arena (#97)
+
+```sh
+cargo run -p olc-collector --release -- campaign-queues --hours 24
+cargo run -p olc-collector --release -- campaign-queues --queues 450,480,1700,1740,1750 --target-per-queue 500
+cargo run -p olc-collector --release -- campaign-report 2
+```
+
+La campagne historique part de toutes les files et n'oriente pas le volume : en
+recette, aucun mode hors Faille n'a atteint le seuil de publication. `campaign-queues`
+crée **une exécution par plateforme et par file** (ARAM 450, Swiftplay 480, Arena 1700 par
+défaut), chacune avec sa cible (`--target-per-queue`, 1000) et son budget d'appels
+(`--call-budget-per-queue`, 20 000). L'historique de chaque joueur est demandé avec le
+filtre `queue` de match-v5 ; les rotations, tranches de 15 minutes, échéance, reprise
+(`campaign-resume`) et codes de sortie sont ceux de `campaign`. L'ordre de rotation est
+plateforme puis file : une campagne écourtée couvre toutes les files des premières
+plateformes. Les observations de rang ne sont demandées que si une file classée (420, 440)
+est visée : les autres files sont agrégées en `UNRANKED_MODE`.
+
+- Seuls les identifiants de files identifiées (`queues.rs`) sont acceptés ; une liste vide,
+  dupliquée, nulle ou inconnue (par exemple 710 ou 3130) est refusée avant toute création.
+- Les seeds restent issus du classement Solo, comme pour les autres files non Flex : les
+  joueurs jamais classés ne sont pas atteints.
+- Arena est demandée sous 1700. La recette a observé des parties 1740 et 1750 (absentes du
+  catalogue Data Dragon) : ce sont des files distinctes, à ajouter explicitement dans
+  `--queues`. Le périmètre d'une exécution compare la file exactement ; si le filtre
+  `queue=1700` de Riot ne renvoie pas ces variantes, elles ne seront pas collectées. Cela
+  n'a pas pu être vérifié sans appel réel.
+- `campaign-report <id> [--json]` lit la base et donne, pour chaque plateforme et file,
+  la cible, les parties retenues (déjà présentes comprises), les appels et l'état. Une
+  ligne sous sa cible veut dire données non acquises, pas absence d'activité.
+- Aucun taux d'augment ni d'objet Arena n'est produit ; les politiques Riot citées plus
+  bas s'appliquent inchangées.
+
 La clé de développement Riot expire après 24 h depuis sa génération : elle peut
 expirer avant la fin d'une campagne. La remplacer dans l'environnement puis reprendre
 la campagne seulement tant que son échéance originale n'est pas dépassée.
@@ -196,7 +230,10 @@ Sources : [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon),
 
 Après `sync-static`, `cargo run -p olc-collector --release -- catalog --json`
 publie les deux patches du cache : objets enrichis, champions/compétences,
-runes/fragments, sorts et catalogues. Aucune clé Riot requise.
+runes/fragments, sorts, augments Arena et Mayhem (catalogue statique : noms FR/EN, description quand
+l'export `cdragon/arena` la publie, rareté, icône, modes qui les listent, #118) et catalogues. Aucune clé Riot requise. Une version déjà publiée
+n'a pas d'augments tant que `--refresh` n'a pas relu CommunityDragon ; `--rebuild` rejoue les
+archives antérieures sans augments. Aucune statistique d'augment n'est produite.
 `--community required|optional|off` fixe la politique du complément ;
 `--refresh` le revérifie, `--rebuild <publication_id>` reconstruit sans réseau.
 Les sources exactes sont archivées par empreinte et les fiches publiées atomiquement.
@@ -241,7 +278,10 @@ Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépend
 entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
 une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
 
-Les remakes et parties incohérentes sont exclus avant toute contribution. Les formats
+Les remakes et parties incohérentes sont exclus avant toute contribution. Une partie dont
+la file n'est pas identifiée (ni formats à deux camps, ni Arena, ni Swarm : par exemple 710
+ou 3130, dont le sens n'est pas vérifiable hors ligne) l'est aussi, sous la raison
+`unknown_queue` visible dans `exclusions` ; ses données brutes restent en base (#97). Les formats
 classiques contrôlent 5 participants par équipe et un vainqueur ; Arena contrôle les
 sous-équipes (duos, ou trios pour les files 1740/1750 observées). Swarm solo est supporté par
 une fixture synthétique, sans recette réelle revendiquée. En coop contre IA, les

@@ -7,27 +7,34 @@ use super::*;
 use crate::catalog::{CatalogValue, RecordCoverage, ValueSource, ValueStatus};
 use crate::static_data::{StaticError, StaticResponse, StaticTransport};
 
-const VERSION: &str = "16.19.1";
-const BUILD: &str = "16.19.8217343+branch.releases-16-19.content.release";
+pub(super) const VERSION: &str = "16.19.1";
+pub(super) const BUILD: &str = "16.19.8217343+branch.releases-16-19.content.release";
 
-fn source(key: &str, data: Value) -> CatalogSource {
+pub(super) fn source(key: &str, data: Value) -> CatalogSource {
     let (locale, path) = if let Some((locale, resource)) = key.split_once('/') {
         let language = if locale == "fr_FR" {
             "fr_fr"
         } else {
             "default"
         };
-        (
-            Some(locale),
-            format!("plugins/rcp-be-lol-game-data/global/{language}/v1/{resource}"),
-        )
+        // Les textes d'augments (#118) sortent d'un export généré de CommunityDragon, hors du
+        // schéma `plugins/rcp-be-lol-game-data` des autres ressources.
+        let path = if resource == "arena-augments.json" {
+            let file = if locale == "fr_FR" { "fr_fr" } else { "en_us" };
+            format!("cdragon/arena/{file}.json")
+        } else {
+            format!("plugins/rcp-be-lol-game-data/global/{language}/v1/{resource}")
+        };
+        (Some(locale), path)
     } else {
         (
             None,
-            if key == "items.bin" {
-                "game/items.cdtb.bin.json"
-            } else {
-                "content-metadata.json"
+            match key {
+                "items.bin" => "game/items.cdtb.bin.json",
+                "augment-lists.json" => {
+                    "plugins/rcp-be-lol-game-data/global/default/v1/augment-lists.json"
+                }
+                _ => "content-metadata.json",
             }
             .into(),
         )
@@ -44,7 +51,7 @@ fn source(key: &str, data: Value) -> CatalogSource {
     }
 }
 
-fn sources() -> Vec<CatalogSource> {
+pub(super) fn sources() -> Vec<CatalogSource> {
     let mut result = vec![
         source("content-metadata.json", json!({"version": BUILD})),
         source(
@@ -76,6 +83,7 @@ fn sources() -> Vec<CatalogSource> {
             {"id":8000,"name":"Precision","slots":[{"type":"kStatMod","slotLabel":"Offense","perks":[5007]}]}
         ]})));
     }
+    result.extend(super::augment_tests::augment_sources());
     result
 }
 
@@ -177,9 +185,12 @@ fn unknown_items_are_added_in_both_languages_without_raw_html() {
     enrich(VERSION, &mut records, &sources()).unwrap();
     assert_eq!(records.iter().filter(|r| r.kind == "item").count(), 2);
     assert!(records.iter().all(|r| r.namespace == "standard"));
-    assert!(records
-        .iter()
-        .all(|r| !r.description.as_ref().unwrap().contains('<')));
+    // Les augments Mayhem (#118) n'ont pas de description source : ils sont vérifiés à part.
+    assert!(records.iter().filter(|r| r.kind != "augment").all(|r| !r
+        .description
+        .as_ref()
+        .unwrap()
+        .contains('<')));
     assert_eq!(
         records
             .iter()
@@ -214,13 +225,13 @@ fn patch_mismatch_and_locale_mismatch_are_rejected_before_mutation() {
 }
 
 #[derive(Clone)]
-struct MockTransport {
-    responses: Arc<BTreeMap<String, StaticResponse>>,
-    requested: Arc<Mutex<Vec<String>>>,
+pub(super) struct MockTransport {
+    pub(super) responses: Arc<BTreeMap<String, StaticResponse>>,
+    pub(super) requested: Arc<Mutex<Vec<String>>>,
 }
 
 impl MockTransport {
-    fn valid() -> Self {
+    pub(super) fn valid() -> Self {
         Self {
             responses: Arc::new(
                 sources()
@@ -254,7 +265,7 @@ async fn fetch_pins_patch_and_checks_exact_build() {
     let fetched = fetch_sources_with(VERSION, transport.clone())
         .await
         .unwrap();
-    assert_eq!(fetched.len(), 8);
+    assert_eq!(fetched.len(), 13);
     assert!(fetched.iter().all(|s| s.version == BUILD));
     let requested = transport.requested.lock().unwrap();
     assert!(requested
@@ -374,10 +385,8 @@ fn real_bin_keys_and_mode_specific_values_are_not_mixed_with_base_values() {
     assert_eq!(records[0].stats["lethality"].value, 18);
     assert_eq!(records[0].stats["omnivamp"].value, 0.15);
     assert_eq!(records[0].stats["tenacity"].value, 0.3);
-    assert_eq!(
-        records[0].fields["mode_parameter_overrides"].status,
-        ValueStatus::Unsupported
-    );
+    // #116 : la surcharge ARAM est interprétée, jamais fondue dans la valeur de base.
+    assert!(!records[0].fields.contains_key("mode_parameter_overrides"));
     assert_eq!(
         records[0]
             .effects
@@ -388,6 +397,137 @@ fn real_bin_keys_and_mode_specific_values_are_not_mixed_with_base_values() {
             .value,
         1.5
     );
+    assert_eq!(
+        records[0]
+            .effects
+            .iter()
+            .find(|e| e.id == "cdragon_parameters:ARAM")
+            .unwrap()
+            .parameters["SpellbladeCooldown"]
+            .value,
+        3
+    );
+}
+
+fn with_override(raw: Value) -> Vec<CatalogRecord> {
+    let mut input = sources();
+    input[1].data["Items/3078"]["DataValuesModeOverride"] = raw;
+    let mut records = vec![record()];
+    enrich(VERSION, &mut records, &input).unwrap();
+    records
+}
+
+fn mode_effect<'a>(record: &'a CatalogRecord, mode: &str) -> Option<&'a CatalogEffect> {
+    record
+        .effects
+        .iter()
+        .find(|e| e.id == format!("cdragon_parameters:{mode}"))
+}
+
+#[test]
+fn aram_override_becomes_a_verified_effect_with_its_own_provenance() {
+    let records = with_override(json!({"ARAM": {"DataValues": [
+        {"mName": "SpellbladeCooldown", "mValue": 3.0, "__type": "ItemDataValue"},
+        {"mName": "BonusADRatio", "mValue": 1, "__type": "ItemDataValue"}
+    ], "__type": "ItemDataValues"}}));
+    let fr = &records[0];
+    let effect = mode_effect(fr, "ARAM").unwrap();
+    let cooldown = &effect.parameters["SpellbladeCooldown"];
+    assert_eq!(cooldown.value, 3.0);
+    assert_eq!(cooldown.status, ValueStatus::Verified);
+    assert_eq!(
+        cooldown.sources[0].pointer,
+        "/Items~13078/DataValuesModeOverride/ARAM/DataValues/0/mValue"
+    );
+    assert_eq!(effect.parameters["BonusADRatio"].value, 1);
+    assert!(!fr.fields.contains_key("mode_parameter_overrides"));
+    assert!(!fr
+        .coverage
+        .unmapped_fields
+        .iter()
+        .any(|field| field.contains("DataValuesModeOverride")));
+    assert!(!fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue.contains("mode_parameter_overrides")));
+}
+
+#[test]
+fn each_mode_gets_a_separate_effect_and_unresolved_keys_are_kept_and_reported() {
+    let records = with_override(json!({
+        "ARAM": {"DataValues": [{"mName": "A", "mValue": 1.0}]},
+        "cherry": {"DataValues": [{"mName": "A", "mValue": 2.0}]},
+        "{bffdf499}": {"DataValues": [{"mName": "A", "mValue": 4.0}]}
+    }));
+    let fr = &records[0];
+    assert_eq!(mode_effect(fr, "ARAM").unwrap().parameters["A"].value, 1.0);
+    assert_eq!(
+        mode_effect(fr, "cherry").unwrap().parameters["A"].value,
+        2.0
+    );
+    assert_eq!(
+        mode_effect(fr, "{bffdf499}").unwrap().parameters["A"].value,
+        4.0
+    );
+    assert!(fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue == "unresolved_mode_key:{bffdf499}"));
+    assert!(!fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue.starts_with("unresolved_mode_key:ARAM")));
+}
+
+#[test]
+fn a_non_numeric_mode_value_is_unsupported_and_a_duplicate_is_a_conflict() {
+    let records = with_override(json!({"ARAM": {"DataValues": [
+        {"mName": "Text", "mValue": "3"},
+        {"mName": "Empty", "mValue": null},
+        {"mName": "Twice", "mValue": 1.0},
+        {"mName": "Twice", "mValue": 2.0}
+    ]}}));
+    let fr = &records[0];
+    let effect = mode_effect(fr, "ARAM").unwrap();
+    assert_eq!(effect.parameters["Text"].status, ValueStatus::Unsupported);
+    assert_eq!(effect.parameters["Empty"].status, ValueStatus::Missing);
+    assert_eq!(effect.parameters["Twice"].status, ValueStatus::Conflict);
+    assert!(fr
+        .coverage
+        .issues
+        .iter()
+        .any(|issue| issue == "conflict:effect_parameter.ARAM.Twice"));
+    assert!(fr
+        .coverage
+        .unmapped_fields
+        .iter()
+        .any(|field| field.ends_with("/DataValuesModeOverride/ARAM/DataValues/0/mValue")));
+}
+
+#[test]
+fn an_unparseable_override_stays_unsupported_without_inventing_an_effect() {
+    for raw in [
+        json!({"ARAM": 3}),
+        json!({"ARAM": {"DataValues": []}}),
+        json!([1, 2]),
+        Value::Null,
+    ] {
+        let records = with_override(raw.clone());
+        let fr = &records[0];
+        assert_eq!(
+            fr.fields["mode_parameter_overrides"].status,
+            ValueStatus::Unsupported,
+            "{raw}"
+        );
+        assert_eq!(fr.fields["mode_parameter_overrides"].value, raw);
+        assert!(fr
+            .effects
+            .iter()
+            .all(|effect| !effect.id.starts_with("cdragon_parameters:")));
+    }
 }
 
 #[test]
@@ -489,7 +629,8 @@ fn reserved_item_without_name_is_retained_under_its_id() {
 fn community_only_names_and_ids_keep_direct_provenance() {
     let mut records = vec![];
     enrich(VERSION, &mut records, &sources()).unwrap();
-    for record in &records {
+    // Les augments (#118) lisent `nameTRA` : leur provenance est vérifiée dans leur propre module.
+    for record in records.iter().filter(|r| r.kind != "augment") {
         let name = &record.fields["community_name"];
         assert_eq!(name.value, record.name);
         assert_eq!(name.status, ValueStatus::Descriptive);
