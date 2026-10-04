@@ -8,6 +8,7 @@ fn main() {
             "export_diagnostics",
             "lcu_status",
             "lcu_session",
+            "client_patch",
             "friends_state",
             "community_builds",
             "publication_state",

@@ -11,6 +11,8 @@ use super::{
 #[path = "community_http.rs"]
 mod http;
 pub use http::{fetch_sources, fetch_sources_with};
+#[path = "community_augments.rs"]
+mod augments;
 #[path = "community_perks.rs"]
 mod perks;
 use super::normalize::plain_text;
@@ -48,14 +50,26 @@ fn validate_sources<'a>(
             return Err(CatalogError::InvalidSource);
         }
     }
-    if indexed.len() != http::RESOURCES.len() {
+    // Les augments (#118) sont tout ou rien : une archive antérieure n'en a aucun, un jeu partiel
+    // est un document manquant.
+    let with_augments = indexed.contains_key(http::AUGMENT_RESOURCES[0].0);
+    let augment_resources = http::AUGMENT_RESOURCES
+        .iter()
+        .filter(|_| with_augments)
+        .copied();
+    let expected: Vec<_> = http::RESOURCES
+        .iter()
+        .copied()
+        .chain(augment_resources)
+        .collect();
+    if indexed.len() != expected.len() {
         return Err(CatalogError::InvalidSource);
     }
     let metadata = indexed
         .get("content-metadata.json")
         .ok_or(CatalogError::InvalidSource)?;
     let build = http::build(patch, &metadata.data)?;
-    for (key, locale, path) in http::RESOURCES {
+    for (key, locale, path) in expected {
         let source = indexed.get(key).ok_or(CatalogError::InvalidSource)?;
         if source.version != build
             || source.locale.as_deref() != locale
@@ -97,6 +111,9 @@ fn validate_sources<'a>(
         return Err(CatalogError::InvalidSource);
     }
     perks::validate(&indexed)?;
+    if with_augments {
+        augments::validate(&indexed)?;
+    }
     Ok(indexed)
 }
 
@@ -453,6 +470,113 @@ const STATS: [(&str, &str, &str); 24] = [
     ("mFlatAttackRangeMod", "attack_range", "points"),
 ];
 
+/// Paramètres nommés d'une liste `mName`/`mValue` (`mDataValues` d'un objet ou `DataValues`
+/// d'une surcharge de mode) : ajoute chaque valeur à `parameters` avec sa provenance et
+/// range dans `mapped` les chemins effectivement interprétés. Retourne les noms en conflit ;
+/// l'appelant en tire ses propres signalements de couverture.
+fn data_values(
+    source: &CatalogSource,
+    values: &[Value],
+    array_pointer: &str,
+    parameters: &mut BTreeMap<String, CatalogValue>,
+    mapped: &mut BTreeSet<String>,
+) -> Vec<String> {
+    let mut conflicts = Vec::new();
+    for (index, parameter) in values.iter().enumerate() {
+        let (Some(name), Some(value)) = (
+            parameter.get("mName").and_then(Value::as_str),
+            parameter.get("mValue"),
+        ) else {
+            continue;
+        };
+        let prefix = format!("{array_pointer}/{index}");
+        let status = if value.is_null() {
+            ValueStatus::Missing
+        } else if value.is_number() {
+            ValueStatus::Verified
+        } else {
+            ValueStatus::Unsupported
+        };
+        if status == ValueStatus::Verified {
+            mapped.insert(format!("{prefix}/mName"));
+            mapped.insert(format!("{prefix}/mValue"));
+            if parameter.get("__type").and_then(Value::as_str) == Some("ItemDataValue") {
+                mapped.insert(format!("{prefix}/__type"));
+            }
+        }
+        let incoming = observed(
+            source,
+            format!("{prefix}/mValue"),
+            value.clone(),
+            None,
+            status,
+        );
+        if merge(parameters, name, incoming) {
+            conflicts.push(name.to_owned());
+        }
+    }
+    conflicts
+}
+
+/// Surcharges de valeurs par mode (`DataValuesModeOverride`, #116) : un effet
+/// `cdragon_parameters:{mode}` par mode, à côté des valeurs de base qui restent intactes.
+/// La clé de mode est conservée telle que la source la donne (`ARAM`, `cherry`…) : aucune
+/// correspondance mode/file n'est inventée, et une clé hachée non résolue est signalée.
+/// Retourne `false` sans rien modifier si la forme n'est pas celle observée dans l'export.
+fn mode_overrides(
+    record: &mut CatalogRecord,
+    source: &CatalogSource,
+    pointer: &str,
+    raw: &Value,
+    mapped: &mut BTreeSet<String>,
+) -> bool {
+    let Some(modes) = raw.as_object().filter(|modes| !modes.is_empty()) else {
+        return false;
+    };
+    let mut effects = Vec::new();
+    let mut issues = Vec::new();
+    let mut paths = BTreeSet::new();
+    for (mode, entry) in modes {
+        let Some(values) = entry
+            .get("DataValues")
+            .and_then(Value::as_array)
+            .filter(|values| !values.is_empty())
+        else {
+            return false;
+        };
+        let mode_pointer = format!("{pointer}/DataValuesModeOverride/{}", escape(mode));
+        let mut parameters = BTreeMap::new();
+        for name in data_values(
+            source,
+            values,
+            &format!("{mode_pointer}/DataValues"),
+            &mut parameters,
+            &mut paths,
+        ) {
+            issues.push(format!("conflict:effect_parameter.{mode}.{name}"));
+        }
+        if parameters.is_empty() {
+            return false;
+        }
+        if mode.starts_with('{') && mode.ends_with('}') {
+            issues.push(format!("unresolved_mode_key:{mode}"));
+        }
+        if entry.get("__type").and_then(Value::as_str) == Some("ItemDataValues") {
+            paths.insert(format!("{mode_pointer}/__type"));
+        }
+        effects.push(CatalogEffect {
+            id: format!("cdragon_parameters:{mode}"),
+            description: None,
+            parameters,
+            calculation: None,
+        });
+    }
+    record.effects.extend(effects);
+    record.coverage.issues.extend(issues);
+    mapped.extend(paths);
+    true
+}
+
 fn bin_item(record: &mut CatalogRecord, source: &CatalogSource, item: &Value) {
     let pointer = format!("/Items~1{}", record.id);
     let mut mapped: BTreeSet<_> = ["itemID", "__type"]
@@ -573,19 +697,6 @@ fn bin_item(record: &mut CatalogRecord, source: &CatalogSource, item: &Value) {
             ),
         );
     }
-    if let Some(raw) = item.get("DataValuesModeOverride") {
-        add_field(
-            record,
-            "mode_parameter_overrides",
-            observed(
-                source,
-                format!("{pointer}/DataValuesModeOverride"),
-                raw.clone(),
-                None,
-                ValueStatus::Unsupported,
-            ),
-        );
-    }
     if let Some(raw) = item.get("recipeItemLinks") {
         let value = ids(raw, "Items/");
         let status = if raw.is_null() {
@@ -612,44 +723,17 @@ fn bin_item(record: &mut CatalogRecord, source: &CatalogSource, item: &Value) {
     }
     let mut parameters = BTreeMap::new();
     if let Some(values) = item.get("mDataValues").and_then(Value::as_array) {
-        for (index, parameter) in values.iter().enumerate() {
-            let (Some(name), Some(value)) = (
-                parameter.get("mName").and_then(Value::as_str),
-                parameter.get("mValue"),
-            ) else {
-                continue;
-            };
-            let prefix = format!("{pointer}/mDataValues/{index}");
-            let status = if value.is_null() {
-                ValueStatus::Missing
-            } else if value.is_number() {
-                ValueStatus::Verified
-            } else {
-                ValueStatus::Unsupported
-            };
-            if status == ValueStatus::Verified {
-                mapped.insert(format!("{prefix}/mName"));
-                mapped.insert(format!("{prefix}/mValue"));
-                if parameter.get("__type").and_then(Value::as_str) == Some("ItemDataValue") {
-                    mapped.insert(format!("{prefix}/__type"));
-                }
-            }
-            if merge(
-                &mut parameters,
-                name,
-                observed(
-                    source,
-                    format!("{prefix}/mValue"),
-                    value.clone(),
-                    None,
-                    status,
-                ),
-            ) {
-                record
-                    .coverage
-                    .issues
-                    .push(format!("conflict:effect_parameter.{name}"));
-            }
+        for name in data_values(
+            source,
+            values,
+            &format!("{pointer}/mDataValues"),
+            &mut parameters,
+            &mut mapped,
+        ) {
+            record
+                .coverage
+                .issues
+                .push(format!("conflict:effect_parameter.{name}"));
         }
     }
     if !parameters.is_empty() {
@@ -659,6 +743,22 @@ fn bin_item(record: &mut CatalogRecord, source: &CatalogSource, item: &Value) {
             parameters,
             calculation: None,
         });
+    }
+    if let Some(raw) = item.get("DataValuesModeOverride") {
+        if !mode_overrides(record, source, &pointer, raw, &mut mapped) {
+            // Forme inattendue : la valeur brute reste visible mais n'est pas interprétée.
+            add_field(
+                record,
+                "mode_parameter_overrides",
+                observed(
+                    source,
+                    format!("{pointer}/DataValuesModeOverride"),
+                    raw.clone(),
+                    None,
+                    ValueStatus::Unsupported,
+                ),
+            );
+        }
     }
     if let Some(calculations) = item.get("mItemCalculations").and_then(Value::as_object) {
         for (name, calculation) in calculations {
@@ -735,9 +835,15 @@ pub fn enrich(
         }
     }
     perks::enrich(version, records, &sources);
+    if sources.contains_key(http::AUGMENT_RESOURCES[0].0) {
+        augments::enrich(version, records, &sources);
+    }
     Ok(())
 }
 
+#[cfg(test)]
+#[path = "community_augments_tests.rs"]
+mod augment_tests;
 #[cfg(test)]
 #[path = "community_tests.rs"]
 mod tests;

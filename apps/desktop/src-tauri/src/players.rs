@@ -71,7 +71,7 @@ fn local_error(error: LocalPlayerError) -> PlayerError {
         _ => PlayerError::Unavailable,
     }
 }
-async fn client() -> Result<lcu_connector::LcuClient, PlayerError> {
+pub(crate) async fn client() -> Result<lcu_connector::LcuClient, PlayerError> {
     tauri::async_runtime::spawn_blocking(|| {
         let credentials = lcu_connector::discover().map_err(|_| PlayerError::Unavailable)?;
         lcu_connector::LcuClient::new(&credentials).map_err(|_| PlayerError::Unavailable)

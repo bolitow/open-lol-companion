@@ -12,6 +12,7 @@ use tokio::time::Instant;
 
 use crate::collector::{collection_window, now_ms, Collector, CollectorError, StopReason};
 use crate::config::{queue_needs_ranks, RunParams, RuntimeOptions};
+use crate::queues;
 use crate::riot_client::Transport;
 use crate::storage::{RunStatus, Storage, StorageError};
 
@@ -56,6 +57,32 @@ pub struct CampaignOutcome {
     pub reason: String,
     pub completed_runs: usize,
     pub total_runs: usize,
+}
+
+/// Files visées par défaut par une campagne par file : ARAM, Swiftplay et Arena.
+/// Arena est demandée sous son identifiant 1700 ; les variantes 1740 et 1750 observées
+/// en recette sont des files distinctes, à ajouter explicitement.
+pub const DEFAULT_QUEUES: [i32; 3] = [450, 480, 1700];
+
+/// Une campagne par file ne vise que des files identifiées (voir `crate::queues`) :
+/// un identifiant inconnu serait collecté puis exclu des agrégats, au prix de quotas Riot.
+pub fn validate_queues(queues: &[i32]) -> Result<(), CampaignError> {
+    if queues.is_empty() {
+        return Err(CampaignError::Invalid("aucune file demandée"));
+    }
+    if queues.iter().collect::<BTreeSet<_>>().len() != queues.len() {
+        return Err(CampaignError::Invalid("files dupliquées"));
+    }
+    if queues.iter().any(|q| !queues::is_identified(*q)) {
+        return Err(CampaignError::Invalid("file inconnue ou nulle"));
+    }
+    Ok(())
+}
+
+/// Les observations de rang n'alimentent que les files classées (420, 440) : les autres
+/// files sont agrégées en `UNRANKED_MODE`. Les éviter économise un appel par joueur.
+pub fn needs_rank_observations(queues: &[i32]) -> bool {
+    queues.iter().any(|q| [420, 440].contains(q))
 }
 
 /// Crée toutes les exécutions dans une transaction, avec le même instant de fin.
@@ -104,6 +131,38 @@ pub async fn start_for_queues(
     // Le gabarit est conservé tel quel dans `params->'template'` à titre de trace : ses
     // champs `queue_id` et `collect_ranks` y sont ignorés, les files réelles sont dans
     // `params->'queues'` et dans les paramètres de chaque exécution.
+    create(
+        storage, platforms, queues, template, parameters, now_ms, duration,
+    )
+    .await
+}
+
+/// Comme [`start`], avec une exécution par couple (plateforme, file) parmi les files
+/// identifiées ([`validate_queues`]) : la cible du modèle et son budget d'appels
+/// s'appliquent à **chaque** exécution, sans répartition (#97, commande `campaign-queues`).
+/// L'ordre de rotation est plateforme puis file, pour qu'une campagne écourtée couvre
+/// toutes les files des premières plateformes. Pour la répartition du budget d'une
+/// plateforme entre ses files, voir [`start_for_queues`].
+pub async fn start_per_queue(
+    storage: &Storage,
+    platforms: &[String],
+    queues: &[i32],
+    template: &RunParams,
+    now_ms: i64,
+    duration: Duration,
+) -> Result<i64, CampaignError> {
+    validate_queues(queues)?;
+    check_platforms_and_duration(platforms, duration)?;
+    let mut parameters = Vec::with_capacity(platforms.len() * queues.len());
+    for platform in platforms {
+        for &queue_id in queues {
+            parameters.push(RunParams {
+                platform_id: platform.clone(),
+                queue_id,
+                ..template.clone()
+            });
+        }
+    }
     create(
         storage, platforms, queues, template, parameters, now_ms, duration,
     )
@@ -214,6 +273,110 @@ async fn create(
     }
     tx.commit().await?;
     Ok(id)
+}
+
+/// Avancement d'une exécution (une plateforme et une file) face à sa cible.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct QueueCoverage {
+    pub run_id: i64,
+    pub platform_id: String,
+    /// 0 : toutes les files (campagne historique).
+    pub queue_id: i32,
+    pub target: i64,
+    /// Parties retenues, déjà présentes en base comprises.
+    pub retained: i64,
+    pub calls_made: i64,
+    pub status: String,
+    pub status_reason: Option<String>,
+    /// `true` seulement si la cible est atteinte.
+    pub complete: bool,
+}
+
+/// Bilan d'une campagne : une ligne par plateforme et par file, dans l'ordre de rotation.
+/// Une file absente ou sous sa cible signifie données non acquises, pas absence d'activité.
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+pub struct CampaignCoverage {
+    pub campaign_id: i64,
+    pub status: String,
+    pub status_reason: Option<String>,
+    pub runs: Vec<QueueCoverage>,
+}
+
+impl CampaignCoverage {
+    /// Tableau lisible : cible et parties retenues par plateforme et par file.
+    pub fn render(&self) -> String {
+        let mut out = format!(
+            "Campagne {} : {}{}\n",
+            self.campaign_id,
+            self.status,
+            self.status_reason
+                .as_deref()
+                .map(|r| format!(" ({r})"))
+                .unwrap_or_default()
+        );
+        for run in &self.runs {
+            let queue = if run.queue_id == 0 {
+                "toutes".to_owned()
+            } else {
+                run.queue_id.to_string()
+            };
+            out.push_str(&format!(
+                "  {:<5} file {:<6} {:>6} / {:<6} parties, {} appels, {}{}\n",
+                run.platform_id,
+                queue,
+                run.retained,
+                run.target,
+                run.calls_made,
+                run.status,
+                if run.complete { ", cible atteinte" } else { "" }
+            ));
+        }
+        out
+    }
+}
+
+/// Lit l'avancement de chaque exécution depuis la base (exact après une reprise).
+pub async fn coverage(
+    storage: &Storage,
+    campaign_id: i64,
+) -> Result<CampaignCoverage, CampaignError> {
+    let head = sqlx::query("SELECT status, status_reason FROM collection_campaigns WHERE id=$1")
+        .bind(campaign_id)
+        .fetch_optional(storage.pool())
+        .await?
+        .ok_or(CampaignError::NotFound(campaign_id))?;
+    let rows = sqlx::query(
+        "SELECT r.id, r.platform_id, r.queue_id, r.target_matches, r.calls_made, r.status,
+                r.status_reason,
+                (SELECT count(*) FROM run_matches m WHERE m.run_id = r.id) AS retained
+         FROM campaign_runs c JOIN collection_runs r ON r.id = c.run_id
+         WHERE c.campaign_id = $1 ORDER BY c.ordinal",
+    )
+    .bind(campaign_id)
+    .fetch_all(storage.pool())
+    .await?;
+    let mut runs = Vec::with_capacity(rows.len());
+    for row in rows {
+        let target = i64::from(row.try_get::<i32, _>("target_matches")?);
+        let retained: i64 = row.try_get("retained")?;
+        runs.push(QueueCoverage {
+            run_id: row.try_get("id")?,
+            platform_id: row.try_get("platform_id")?,
+            queue_id: row.try_get("queue_id")?,
+            target,
+            retained,
+            calls_made: row.try_get("calls_made")?,
+            status: row.try_get("status")?,
+            status_reason: row.try_get("status_reason")?,
+            complete: retained >= target,
+        });
+    }
+    Ok(CampaignCoverage {
+        campaign_id,
+        status: head.try_get("status")?,
+        status_reason: head.try_get("status_reason")?,
+        runs,
+    })
 }
 
 /// Détient le verrou global du collecteur et partage un seul gouverneur entre les runs.
@@ -536,5 +699,27 @@ mod tests {
         };
         let runs = run_params_for_queues(&platforms(), &DEFAULT_CAMPAIGN_QUEUES, &exact).unwrap();
         assert!(runs.iter().all(|r| r.call_budget == 1));
+    }
+
+    #[test]
+    fn les_files_par_defaut_sont_aram_swiftplay_et_arena_et_sont_valides() {
+        assert_eq!(DEFAULT_QUEUES, [450, 480, 1700]);
+        assert!(validate_queues(&DEFAULT_QUEUES).is_ok());
+        assert!(validate_queues(&[420, 440, 1740, 1750]).is_ok());
+    }
+
+    #[test]
+    fn une_liste_de_files_vide_dupliquee_nulle_ou_inconnue_est_refusee() {
+        for queues in [&[][..], &[450, 450], &[0], &[-1], &[450, 710], &[3130]] {
+            assert!(validate_queues(queues).is_err(), "{queues:?}");
+        }
+    }
+
+    #[test]
+    fn seules_les_files_classees_demandent_les_observations_de_rang() {
+        assert!(!needs_rank_observations(&DEFAULT_QUEUES));
+        assert!(needs_rank_observations(&[450, 440]));
+        assert!(needs_rank_observations(&[420]));
+        assert!(!needs_rank_observations(&[]));
     }
 }
