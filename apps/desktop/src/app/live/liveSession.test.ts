@@ -2,7 +2,7 @@ import {describe, expect, it, vi} from 'vitest';
 import type {LiveSession} from '@olc/shared';
 import {connectLiveSession, type LiveConnectionState} from './liveSession';
 
-const session = (revision: number): LiveSession => ({revision, generation: 1, status: 'idle', context: null, game: null});
+const session = (revision: number): LiveSession => ({revision, generation: 1, status: 'idle', context: null, game: null, postgame: null});
 const flush = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
 
 describe('connexion Live', () => {

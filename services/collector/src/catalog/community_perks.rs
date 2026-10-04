@@ -60,7 +60,7 @@ pub(super) fn validate(sources: &Sources<'_>) -> Result<(), CatalogError> {
     Ok(())
 }
 
-fn icon_url(version: &str, path: &str) -> Option<String> {
+pub(super) fn icon_url(version: &str, path: &str) -> Option<String> {
     let path = path.strip_prefix("/lol-game-data/assets/")?;
     if !path
         .bytes()

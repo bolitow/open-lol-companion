@@ -19,6 +19,7 @@ Commandes depuis la racine ; migrations du collecteur appliquées au démarrage.
 | `OLC_API_BIND` | Écoute, défaut `127.0.0.1:3030` |
 | `OLC_API_ALLOWED_ORIGINS` | Origines web exactes, séparées par virgule ; aucune par défaut |
 | `RIOT_API_KEY` | Facultative : profils indisponibles sans clé, agrégats/statiques disponibles |
+| `OLC_API_PRIVACY_OPERATORS` | Sujets de jeton autorisés à l'export/effacement RGPD, séparés par virgule ; aucun par défaut |
 | `OLC_TEST_DATABASE_URL` | Base d'administration des tests PostgreSQL jetables |
 
 ```sh
@@ -51,7 +52,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/health` | Connectivité PostgreSQL, publique |
 | `/v1/tierlist` | Champions et bans de la page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
-| `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
+| `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés, avec victoires/défaites et drapeaux league-v4 |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
 | `/v1/static/{version}/{locale}/{resource}` | Document public, exemple `16.19.1/fr_FR/item.json` |
@@ -59,6 +60,21 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/v1/catalog/{version}/{locale}/{kind}` | Fiches paginées, recherche et filtres de statistiques/prix/disponibilité |
 | `/v1/catalog/{version}/{locale}/{kind}/{id}` | Fiche, valeurs sourcées et paramètres/limites des effets |
 | `/v1/catalog-diff?from=…&to=…&locale=…&kind=…` | Diff paginé entre deux empreintes de publication |
+
+### Données personnelles (#99)
+
+| Route POST | Effet |
+| --- | --- |
+| `/v1/privacy/export` | Données détenues pour un PUUID : joueurs de départ, rangs observés, découvertes, parties avec **sa seule** fiche de participant, timelines, travaux de collecte |
+| `/v1/privacy/erase` | Efface ce PUUID partout, en une transaction : lignes supprimées, identifiants retirés du JSONB des parties (les autres joueurs restent) |
+
+Corps : `{"puuid":"…"}` ; le PUUID n'apparaît jamais dans l'URL. Réservées aux
+sujets de `OLC_API_PRIVACY_OPERATORS` (sinon `forbidden`, avant toute requête SQL) :
+le sujet d'un jeton ne prouve pas la propriété d'un compte Riot, l'opérateur vérifie
+l'identité du demandeur hors de l'API puis obtient son PUUID par la route profil.
+Effacement idempotent ; `jobs_in_flight` > 0 signale un travail de collecte en cours,
+à relancer après la fin de la collecte. Pas de CORS : outil d'opérateur, pas du site.
+Rétention planifiée : `olc-collector purge` ([README du collecteur](../collector/README.md)).
 
 Les routes `catalog` sont publiques comme les statiques (ETag/304 et cache
 revalidable). Contrats Rust/TypeScript, paramètres précis, langues FR/EN et
@@ -107,7 +123,14 @@ filtrage indexé qu'après un nouveau calcul du collecteur. Mesures et non-régr
 account-v1 résout l'identité actuelle ; aucun annuaire de pseudos historiques.
 summoner-v4 et league-v4 complètent le profil, cache 5 minutes/1 024 entrées.
 Classement vide réussi : non classé ; panne : erreur, aucun rang fabriqué.
-Peak elo et parties live ne sont pas encore fournis.
+Chaque rang Solo/Flex porte aussi, quand league-v4 les renvoie, `wins`, `losses`,
+`hot_streak`, `veteran`, `fresh_blood` et `inactive` (`null` si non classé ou absent ;
+jamais déduits). Le peak de saison et le rang de fin de saison précédente ne sont pas
+fournis pour un tiers : league-v4 ne les expose pas et ils ne sont pas reconstruits.
+Ils ne sont disponibles que pour le compte actif, depuis le client LoL (partie desktop).
+Les parties live ne sont pas encore fournies. Le contrat JSON `Profile` a une seule
+référence, `packages/shared/src/contracts/profile.json`, relue par les tests de
+l'API, du client Rust (`olc-build-client`) et de `@olc/shared`.
 
 Historique : `start=0`, `count=10`, maximum 20, début limité à 10 000.
 `next_start` est le prochain index Riot, `null` en fin de liste ou à la borne
@@ -124,6 +147,22 @@ base** ; les outils tiers ne sont pas coordonnés. Une base représente un produ
 Riot ; aucun joueur ni clé dans les états. Les appels en vol non confirmés sont
 comptés prudemment pendant 60 s (timeout HTTP réel 15 s).
 
+Priorité : chaque transport déclare sa priorité à la construction (paramètre obligatoire,
+pas de valeur par défaut). L'API utilise `Interactive` (plafond complet de la clé) ; le
+collecteur utilise `Background` et ne consomme que 80 % de chaque fenêtre (au moins
+1 appel), soit 16 par seconde et 80 par 2 minutes avec les limites d'une clé de
+développement. Les 20 % restants forment une **réserve** que seul l'interactif peut
+consommer : elle réduit l'attente d'une recherche de profil pendant une rafale de
+collecte, mais **ne garantit ni réponse immédiate ni absence d'attente**. Limites :
+
+- la réserve est consommable : une fois ses appels utilisés (par l'API elle-même), une
+  recherche attend comme les autres, jusqu'à 20 s puis `riot_busy` ;
+- un 429 Riot, ou un autre outil qui consomme la même clé hors de cette base, bloque ou
+  vide le seau pour tout le monde, réserve comprise ;
+- une fenêtre d'un seul appel ne laisse aucune réserve ;
+- elle ne s'applique qu'aux processus qui partagent la même base ; le plafond global de
+  Riot n'est jamais dépassé et aucune seconde clé n'est utilisée.
+
 ### Cache et erreurs
 
 Statiques : `ETag` SHA-256 du contenu, `If-None-Match` et 304 vide. Manifeste :
@@ -133,7 +172,11 @@ en-têtes et cacher uniquement les routes statiques. Images sur les CDN Riot.
 Cette commande ne déploie ni CDN ni terminaison TLS.
 
 Erreurs JSON : `{"error":{"code":"…"}}`. Codes : `invalid_request` (400),
-`unauthorized` (401), `not_found` (404), `unavailable` (503), `rate_limited` (429).
+`unauthorized` (401), `forbidden` (403, sujet non habilité aux routes RGPD), `not_found` (404), `unavailable` (503), `rate_limited` (429, refus sans attente de quota : les 4 emplacements d'appels Riot de
+l'instance sont pleins, ou les 32 emplacements HTTP, ou les 128 emplacements WebSocket
+(refus de l'ouverture), ou Riot a lui-même répondu 429, propagé tel quel),
+`riot_busy` (503,
+aucun créneau de quota Riot obtenu en 20 s : réessayer plus tard, ce n'est pas une panne).
 Aucun corps brut Riot, URL sensible ou détail SQL. Le consommateur traduit ces
 codes en FR/EN. Durée HTTP maximale 45 s, appel Riot 20 s avec attente de quota ;
 maximum 4 appels Riot et 32 requêtes HTTP simultanés par instance.
@@ -151,6 +194,11 @@ les publications intermédiaires. Aucune donnée personnelle sur le flux.
 Une surveillance SQL commune toutes les 5 s. Maximum 128 sockets ; frames/messages
 8 Kio ; écritures 5 s ; ping 30 s. Fermeture sur expiration JWT, message invalide
 ou arrêt (Ctrl+C Windows/macOS, SIGTERM également sous Unix).
+
+Premier client : le cœur Rust du desktop (`crates/build-client`, #125). Il
+s'authentifie par le premier message, relit REST via un changement de `revision`
+exposé à l'interface, reconnecte avec un repli de 1 s à 60 s et cesse après une
+fermeture `1008` (jeton refusé ou expiré), le jeton du desktop étant fixe.
 
 ## Validation et sources
 

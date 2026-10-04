@@ -100,7 +100,11 @@ Le schéma LCU utilisé est [le dump public](https://raw.githubusercontent.com/K
   n'existe ; un refus du client (places pleines) ou une propriété ambiguë est
   signalé sans supprimer une page personnelle.
 - Objets : conserve les sets personnels et remplace uniquement l'UID réservé
-  au champion/carte ; mêmes conversions Larme que l'import manuel.
+  au champion/carte ; mêmes règles de forme achetable que l'import manuel (résolution par le
+  catalogue, objets sans équivalent retirés, #88). Le nombre d'objets remplacés et retirés est
+  affiché dans le statut « objets » du panneau (FR/EN), car l'inventaire observé diffère alors
+  du set envoyé à League. Une variante vide après retrait, ou au statut boutique illisible,
+  est écartée au profit de la variante éligible suivante.
 - Sorts d'invocateur : lorsque leur option est activée, réutilise le moteur #15,
   normalise Flash selon D/F et ne modifie que `spell1Id`/`spell2Id` via
   `/lol-champ-select/v1/session/my-selection`. Aucune modification du skin.

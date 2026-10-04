@@ -20,6 +20,8 @@ Les exemples ci-dessous sont exécutés depuis la racine du dépôt.
 | `DATABASE_URL` | Connexion PostgreSQL du service |
 | `RIOT_API_KEY` | Collecte authentifiée uniquement ; en-tête `X-Riot-Token`, jamais journalisé |
 | `RUST_LOG` | Facultatif, `info` par défaut ; `warn,sqlx=error` pour une longue recette |
+| `OLC_RETENTION_IDENTIFIER_DAYS` | Facultatif : conservation des PUUID, Riot ID et observations de rang, 30 jours par défaut (#99) |
+| `OLC_RETENTION_RAW_MATCH_DAYS` | Facultatif : conservation des parties brutes, 90 jours par défaut (#99) |
 | `OLC_TEST_DATABASE_URL` | Tests : base d'administration permettant de créer et supprimer des bases jetables |
 
 ```sh
@@ -57,7 +59,7 @@ SG2, TW2 et VN2, routées vers Europe, Americas, Asia ou SEA selon Riot.
 | Option de `run` | Défaut | Effet |
 | --- | --- | --- |
 | `--platform` | EUW1 | Plateforme de classement et des parties |
-| `--queue` | 420 | File exacte ; 0 = toutes les files retournées |
+| `--queue` | 420 | File exacte ; 0 = toutes les files retournées (commande `run` ; la campagne utilise `--queues`) |
 | `--patches` | Cache récent | Liste technique, par exemple `16.19,16.18` |
 | `--all-patches` | Désactivé | Tous les patches présents dans la fenêtre |
 | `--collect-ranks` | Désactivé | Rangs des participants, cache 24 h |
@@ -70,6 +72,31 @@ SG2, TW2 et VN2, routées vers Europe, Americas, Asia ou SEA selon Riot.
 | `--call-budget` | 3000 | Budget total, reprises et nouvelles tentatives comprises |
 | `--concurrency` | 2 | Requêtes simultanées, bornées à 16 |
 | `--max-duration-mins` | Aucune | Durée d'un lancement, reprise possible |
+
+Ordre de réservation des travaux d'une exécution : joueurs de départ, historiques,
+timelines, **détails de parties**, puis rangs. Les détails passent avant les rangs : un
+rang ne sert que pour une partie déjà retenue et ne doit pas consommer le budget qui
+permettrait de télécharger plus de parties (#90).
+
+**Cache négatif.** Une partie téléchargée puis exclue du périmètre (plateforme, file,
+patch ou fenêtre) est mémorisée dans `excluded_matches` : ses faits indexés seulement
+(file, patch, date, durée, remake), ni détail ni identifiant de joueur. Une autre
+exécution la rejuge sans appel si son périmètre l'exclut aussi ; si son périmètre
+l'accepte, elle est téléchargée normalement. Le verdict n'est donc jamais figé.
+
+**Maintenance des rangs inutiles.** Les demandes de rang créées avant le filtrage par
+file peuvent rester en attente pour des parties non classées :
+
+```sh
+cargo run -p olc-collector --release -- close-unserved-ranks            # simulation, ne modifie rien
+cargo run -p olc-collector --release -- close-unserved-ranks --apply    # ferme (outcome skipped:unserved_queue)
+```
+
+`--run-id <id>` limite l'opération à une exécution. Seules les demandes `pending` ou
+`retry_wait` sont fermées, et seulement si le joueur apparaît dans des parties retenues
+dont aucune n'est classée (420/440 hors remake) ; un joueur dont le détail est purgé ou
+caviardé est conservé. Commencer par la simulation, jamais sur une base de production
+sans sauvegarde.
 
 `resume <id> --call-budget <total>` relève le budget ; `--retry-failed` remet les
 travaux en échec en attente. `report <id> [--json]` donne le bilan. Une timeline
@@ -90,19 +117,33 @@ cargo run -p olc-collector --release -- campaign --hours 24
 cargo run -p olc-collector --release -- campaign-resume 1
 ```
 
-Par défaut : les 15 plateformes, toutes les files, les deux patches du cache,
+Par défaut : les 15 plateformes, les files Solo/Duo (420) et Flex (440), les deux patches du cache,
 Iron à Challenger, 5 seeds par strate, 100 historiques par seed, fenêtre de 28 jours,
 observations des rangs activées, cible de 10 000 parties et budget de 100 000 appels
 **par plateforme**, concurrence 4. Ce sont des plafonds/objectifs, pas une promesse
 de volume atteint en 24 h. Les options `--platforms`, `--patches`,
 `--target-per-platform`, `--seeds-per-division`, `--max-matches-per-seed`,
-`--call-budget-per-platform`, `--concurrency` les adaptent.
+`--call-budget-per-platform`, `--concurrency`, `--queues` les adaptent.
+
+**Files de la campagne** (décision du 4 octobre 2026, #90). `--queues` prend une liste
+séparée par des virgules ; par défaut `420,440` (Solo/Duo et Flex). ARAM, Swiftplay,
+Arena et les autres files restent possibles à la demande en les listant
+explicitement, par exemple `--queues 450,480,1700` ou `--queues 420,440,450`. Riot ne
+filtre l'historique que sur une file : la campagne crée donc **une exécution par
+plateforme et par file**. Le budget d'appels et la cible de parties « par plateforme »
+sont répartis également entre ses files (budget arrondi à l'inférieur, cible à la
+supérieure) ; avec une seule file, ils restent entiers, et un budget inférieur au nombre
+de files est refusé. Les parties des autres files
+ne sont jamais téléchargées. Les rangs ne sont observés que pour 0, 420 et 440 ;
+pour toute autre file, `collect_ranks` est coupé. `--queues 0` découvre toutes les
+files de l'historique (comportement historique) et ne se combine avec aucune autre.
 
 Une campagne crée atomiquement ses exécutions et conserve leur liste, leur fenêtre,
-leur ordre de rotation et son échéance. Chaque plateforme dispose d'une tranche de
-15 minutes ; les plateformes restant à traiter sont parcourues à tour de rôle.
+leur ordre de rotation et son échéance. Chaque exécution (une plateforme et une file)
+dispose d'une tranche de 15 minutes ; les exécutions restant à traiter sont parcourues
+à tour de rôle (30 tranches par rotation avec les deux files par défaut).
 Un seul collecteur et son gouverneur de quotas sont partagés. À l'échéance, plus
-aucune nouvelle plateforme n'est lancée ; les travaux en cours ont au maximum
+aucune nouvelle exécution n'est lancée ; les travaux en cours ont au maximum
 15 secondes pour terminer avant annulation et remise en attente. La reprise ne
 repousse pas cette échéance. Un refus 401/403 suspend toute la campagne, même si une limite est atteinte simultanément.
 La borne concerne les appels Riot ; une finalisation SQL bloquée peut retarder le retour
@@ -112,6 +153,40 @@ L'ouverture des transactions est protégée contre l'annulation : si le résulta
 `BEGIN` devient incertain, la connexion est fermée au lieu de retourner au pool.
 Cela contourne le [défaut SQLx 0.8.6](https://github.com/transact-rs/sqlx/pull/4394)
 sans requête supplémentaire sur les transactions terminées normalement.
+
+### Campagnes par file : ARAM, Swiftplay, Arena (#97)
+
+```sh
+cargo run -p olc-collector --release -- campaign-queues --hours 24
+cargo run -p olc-collector --release -- campaign-queues --queues 450,480,1700,1740,1750 --target-per-queue 500
+cargo run -p olc-collector --release -- campaign-report 2
+```
+
+La campagne historique part de toutes les files et n'oriente pas le volume : en
+recette, aucun mode hors Faille n'a atteint le seuil de publication. `campaign-queues`
+crée **une exécution par plateforme et par file** (ARAM 450, Swiftplay 480, Arena 1700 par
+défaut), chacune avec sa cible (`--target-per-queue`, 1000) et son budget d'appels
+(`--call-budget-per-queue`, 20 000). L'historique de chaque joueur est demandé avec le
+filtre `queue` de match-v5 ; les rotations, tranches de 15 minutes, échéance, reprise
+(`campaign-resume`) et codes de sortie sont ceux de `campaign`. L'ordre de rotation est
+plateforme puis file : une campagne écourtée couvre toutes les files des premières
+plateformes. Les observations de rang ne sont demandées que si une file classée (420, 440)
+est visée : les autres files sont agrégées en `UNRANKED_MODE`.
+
+- Seuls les identifiants de files identifiées (`queues.rs`) sont acceptés ; une liste vide,
+  dupliquée, nulle ou inconnue (par exemple 710 ou 3130) est refusée avant toute création.
+- Les seeds restent issus du classement Solo, comme pour les autres files non Flex : les
+  joueurs jamais classés ne sont pas atteints.
+- Arena est demandée sous 1700. La recette a observé des parties 1740 et 1750 (absentes du
+  catalogue Data Dragon) : ce sont des files distinctes, à ajouter explicitement dans
+  `--queues`. Le périmètre d'une exécution compare la file exactement ; si le filtre
+  `queue=1700` de Riot ne renvoie pas ces variantes, elles ne seront pas collectées. Cela
+  n'a pas pu être vérifié sans appel réel.
+- `campaign-report <id> [--json]` lit la base et donne, pour chaque plateforme et file,
+  la cible, les parties retenues (déjà présentes comprises), les appels et l'état. Une
+  ligne sous sa cible veut dire données non acquises, pas absence d'activité.
+- Aucun taux d'augment ni d'objet Arena n'est produit ; les politiques Riot citées plus
+  bas s'appliquent inchangées.
 
 La clé de développement Riot expire après 24 h depuis sa génération : elle peut
 expirer avant la fin d'une campagne. La remplacer dans l'environnement puis reprendre
@@ -130,6 +205,11 @@ hôte/méthode. Les en-têtes Riot remplacent les limites initiales prudentes d'
 clé de développement : 20 appels/s et 100/2 min. Les observations de rang ajoutent
 jusqu'à un appel par nouveau joueur d'une partie 420/440 hors remake, avec cache
 Solo/Flex de 24 h.
+
+Le seau est partagé avec l'API des profils : le collecteur n'en consomme que 80 %
+(16 appels/s et 80 par 2 min avec les limites ci-dessus, au moins 1 par fenêtre) ;
+le reste est réservé aux requêtes interactives de l'API. Voir
+[`services/api/README.md`](../api/README.md#profils-historique-et-quotas).
 
 | Situation | Comportement |
 | --- | --- |
@@ -192,7 +272,10 @@ Sources : [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon),
 
 Après `sync-static`, `cargo run -p olc-collector --release -- catalog --json`
 publie les deux patches du cache : objets enrichis, champions/compétences,
-runes/fragments, sorts et catalogues. Aucune clé Riot requise.
+runes/fragments, sorts, augments Arena et Mayhem (catalogue statique : noms FR/EN, description quand
+l'export `cdragon/arena` la publie, rareté, icône, modes qui les listent, #118) et catalogues. Aucune clé Riot requise. Une version déjà publiée
+n'a pas d'augments tant que `--refresh` n'a pas relu CommunityDragon ; `--rebuild` rejoue les
+archives antérieures sans augments. Aucune statistique d'augment n'est produite.
 `--community required|optional|off` fixe la politique du complément ;
 `--refresh` le revérifie, `--rebuild <publication_id>` reconstruit sans réseau.
 Les sources exactes sont archivées par empreinte et les fiches publiées atomiquement.
@@ -244,7 +327,10 @@ Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépend
 entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
 une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
 
-Les remakes et parties incohérentes sont exclus avant toute contribution. Les formats
+Les remakes et parties incohérentes sont exclus avant toute contribution. Une partie dont
+la file n'est pas identifiée (ni formats à deux camps, ni Arena, ni Swarm : par exemple 710
+ou 3130, dont le sens n'est pas vérifiable hors ligne) l'est aussi, sous la raison
+`unknown_queue` visible dans `exclusions` ; ses données brutes restent en base (#97). Les formats
 classiques contrôlent 5 participants par équipe et un vainqueur ; Arena contrôle les
 sous-équipes (duos, ou trios pour les files 1740/1750 observées). Swarm solo est supporté par
 une fixture synthétique, sans recette réelle revendiquée. En coop contre IA, les
@@ -325,10 +411,11 @@ Ctrl+C annule le calcul ou l'attente (0 en mode continu, 3 en ponctuel).
 Aucun superviseur système n'est installé par le binaire.
 
 Tables : `collection_runs`, `collection_jobs`, `seed_players`, `run_discoveries`,
-`run_matches`, `matches`, `match_timelines`, `participant_rank_observations`,
+`run_matches`, `matches`, `excluded_matches`, `match_timelines`, `participant_rank_observations`,
 `collection_campaigns`, `campaign_runs`, `static_data_releases`, `static_data_manifest`,
-`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB ; les
-observations de rang gardent leur historique daté.
+`champion_stats_snapshot`, `champion_stats_snapshot_chunks`. Les détails et timelines restent complets en JSONB, et
+les observations de rang gardent leur historique daté, pendant les durées de rétention
+ci-dessous.
 
 Les lots bornent les données brutes simultanément lues, **pas toute la mémoire** :
 les compteurs de variantes et événements restent en RAM jusqu'à la publication.
@@ -336,13 +423,56 @@ La recette mesure temps et mémoire ; un passage à très grande échelle néces
 une stratégie de calcul/pagination supplémentaire. Les groupes trop petits restent
 hors classement, même après une longue collecte.
 
+## Rétention des données personnelles (#99)
+
+```sh
+cargo run -p olc-collector --release -- purge --json
+cargo run -p olc-collector --release -- purge --watch   # immédiatement puis chaque heure
+```
+
+`purge` applique deux durées (celle des parties brutes vaut aussi pour le cache négatif `excluded_matches`), comptées depuis l'enregistrement de la donnée
+(`fetched_at`, `observed_at`, dernière activité de l'exécution). Valeurs par défaut
+**proposées, à valider** avant exploitation publique :
+
+| Donnée | Durée | Après expiration |
+| --- | --- | --- |
+| Parties brutes : `matches`, `match_timelines` et leurs liens `run_matches` | 90 jours (`--raw-match-days`, `OLC_RETENTION_RAW_MATCH_DAYS`) | Supprimées, sauf partie liée à une exécution `running` |
+| Identifiants et profil des participants (PUUID, Riot ID, icône, niveau) dans le JSONB des parties et timelines | 30 jours (`--identifier-days`, `OLC_RETENTION_IDENTIFIER_DAYS`) | `puuid`, `summonerId`, `summonerName`, `riotIdGameName`, `riotIdName`, `riotIdTagline`, `profileIcon`, `summonerLevel` retirés des participants ; `metadata.participants` remplacés par `""` |
+| `participant_rank_observations` | 30 jours | Supprimées |
+| `seed_players`, `run_discoveries`, `collection_jobs` d'une exécution sans activité depuis 30 jours | 30 jours | Supprimés ; `run_matches.seed_puuid` vidé |
+| `excluded_matches` (cache négatif, #90) | 90 jours comme les parties brutes (`--raw-match-days`), comptés depuis `excluded_at` | Supprimées par la même commande ; la partie, si elle est redécouverte, est retéléchargée puis rejugée. Faits de partie sans PUUID ni détail (identifiant de partie, file, patch, date, durée) : pas de donnée personnelle de joueur, mais la table ne grossit pas sans limite |
+
+Pourquoi ces valeurs : l'agrégation ne lit que les rangs observés depuis moins de
+24 h et ne recalcule par défaut que les deux derniers patches (environ 4 semaines) ;
+30 jours laissent la reprise d'une collecte et le contrôle d'une recette, 90 jours
+permettent de recalculer six patches après une correction de l'agrégation. Le niveau de compte
+(`summonerLevel`) part avec les identifiants : donnée de profil que l'agrégation ne lit pas. Les parties
+pseudonymisées restent agrégées (champions, rôles, objets, timelines) ; leur rang
+n'est plus attribuable, ce qui est déjà le cas après 24 h. Les bots (`BOT`, zéros)
+gardent leur marqueur, nécessaire au comptage des files coop.
+
+Conséquences : une exécution en pause depuis plus de 30 jours perd ses travaux ; sa
+reprise se termine aussitôt en `incomplete` ; `report <id>` d'une exécution purgée ne retrouve
+plus le détail de ses travaux (le bilan final reste dans `collection_runs.report`).
+Une partie supprimée peut être retéléchargée si une nouvelle collecte la redécouvre.
+La purge est idempotente, travaille par lots de 200 lignes et ne fait aucun appel
+Riot. La migration `0010` ajoute des index GIN sur les participants du JSONB : sur une
+base volumineuse, appliquer la première migration (premier lancement d'une commande
+ou de l'API) à un moment calme. `--watch` reprend l'ordonnanceur horaire d'`aggregate` ; aucun superviseur
+système n'est installé. Code de sortie 3 si Ctrl+C interrompt une purge ponctuelle.
+
+Export et effacement d'un joueur sur demande : routes authentifiées de l'API
+(`POST /v1/privacy/export` et `/v1/privacy/erase`, [README de l'API](../api/README.md)),
+implémentées dans `src/privacy.rs` et partagées avec la purge.
+
 ## Conformité, données personnelles et validation
 
 Clé côté service uniquement. PUUID/Riot ID restent dans la base privée, jamais dans
 les rapports publiables. Les données brutes ne sont pas un export public. Cette
 fonctionnalité exploite des parties terminées et des données statiques officielles,
-sans action dans le jeu. La conservation/suppression des données personnelles et la
-clé de production restent à traiter avant exploitation publique (#2).
+sans action dans le jeu. Rétention, export et effacement : section précédente (#99).
+Restent hors de ce service : CGU, politique de confidentialité, mentions légales,
+hébergement UE documenté et clé de production (#2).
 
 Open LoL Companion isn't endorsed by Riot Games and doesn't reflect the views or
 opinions of Riot Games or anyone officially involved in producing or managing Riot

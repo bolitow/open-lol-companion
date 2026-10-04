@@ -145,6 +145,7 @@ it('ne publie pas de variables de description non résolues',()=>{
  const r=record('9101','rune');
  expect(catalogDescription({...r,description:'Rend @HealAmount@ PV.'})).toBeNull();
  expect(catalogDescription({...r,description:'Rend {{ f1 }} PV.'})).toBeNull();
+ expect(catalogDescription({...r,description:'Vous gagnez une %i:Augment% optimisation or aléatoire.'})).toBeNull();
  expect(catalogDescription({...r,description:'Augmente de 30% la vitesse.'})).toBe('Augmente de 30% la vitesse.');
 });
 
