@@ -1,5 +1,6 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
+pub mod credentials;
 pub mod profiles;
 pub mod publications;
 
@@ -164,14 +165,6 @@ pub struct BuildClient {
 }
 
 impl BuildClient {
-    /// Charge uniquement les variables desktop ; ni clé Riot ni secret serveur JWT.
-    pub fn from_env() -> Result<Self, BuildError> {
-        Self::new(
-            std::env::var("OLC_API_URL").ok(),
-            std::env::var("OLC_API_TOKEN").ok(),
-        )
-    }
-
     /// URL d'origine HTTPS ou HTTP sur IP loopback. Redirections interdites.
     pub fn new(url: Option<String>, token: Option<String>) -> Result<Self, BuildError> {
         let (Some(url), Some(token)) = (url, token) else {
