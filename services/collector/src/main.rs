@@ -30,6 +30,26 @@ struct Cli {
     command: Command,
 }
 
+/// Mode de recalcul de `aggregate` (#89). Décision du 4 octobre 2026 : le recalcul
+/// horaire (`--watch`) est incrémental par défaut ; le ponctuel reste complet par défaut.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum AggregationMode {
+    Full,
+    Incremental,
+}
+
+impl AggregationMode {
+    /// `--full` et `--incremental` sont exclusifs (vérifié par clap). `--incremental` en
+    /// `--watch` ne change rien : c'est déjà le défaut.
+    fn resolve(watch: bool, incremental: bool, full: bool) -> Self {
+        if full || !(watch || incremental) {
+            Self::Full
+        } else {
+            Self::Incremental
+        }
+    }
+}
+
 #[derive(Subcommand)]
 enum Command {
     /// Normalise les catalogues en cache et archive les sources exactes (#61).
@@ -115,7 +135,19 @@ enum Command {
         /// Recalcule immédiatement puis chaque heure (Ctrl+C pour arrêter).
         #[arg(long)]
         watch: bool,
-        /// Rapport JSON complet ; une ligne par publication en mode continu.
+        /// Recalcul par lots patch/plateforme/file (#89) : seuls les lots modifiés depuis la
+        /// dernière publication sont relus ; même instantané publié que le recalcul complet.
+        /// Défaut de --watch ; en ponctuel, le recalcul complet reste le défaut et cette option
+        /// le remplace. Sans effet avec --watch (déjà incrémental).
+        #[arg(long, conflicts_with = "full")]
+        incremental: bool,
+        /// Force le recalcul complet : à chaque heure avec --watch (incrémental par défaut),
+        /// explicite mais sans effet en ponctuel (complet par défaut).
+        #[arg(long)]
+        full: bool,
+        /// Sortie JSON, une ligne par publication en mode continu. Recalcul complet : rapport
+        /// complet. Recalcul incrémental (défaut de --watch, hors --full) : bilan des lots et
+        /// en-tête publié, listes vides.
         #[arg(long)]
         json: bool,
     },
@@ -406,6 +438,8 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
             min_played_percent,
             keep_afk,
             watch,
+            incremental,
+            full,
             json,
             patches,
             all_stored,
@@ -438,6 +472,7 @@ async fn run(cli: Cli) -> Result<ExitCode, String> {
                 },
                 all_stored,
                 sync_static,
+                AggregationMode::resolve(watch, incremental, full),
             )
             .await
         }
@@ -739,6 +774,7 @@ async fn aggregate(
     filters: AggregationOptions,
     all_stored: bool,
     sync_static: bool,
+    mode: AggregationMode,
 ) -> Result<ExitCode, String> {
     let storage = connect(db_url, 2)
         .await
@@ -750,6 +786,27 @@ async fn aggregate(
         let mut selected = filters.clone();
         if selected.patches.is_empty() && !all_stored {
             selected.patches = static_data::cached_patches(&storage, 2).await?;
+        }
+        if mode == AggregationMode::Incremental {
+            let result = aggregation::recalculate_incremental(
+                &storage,
+                min_games,
+                rank_max_age_hours,
+                &selected,
+                &quality,
+            )
+            .await?;
+            if json {
+                println!("{}", serde_json::to_string(&result)?);
+            } else {
+                let report = &result.report;
+                println!("Agrégats publiés par lots : {} / {} parties retenues, {} lots (recalculés : {}, réutilisés : {}) (seuil {}).",
+                    report.included_matches, report.source_matches, result.lots, result.recomputed_lots, result.reused_lots, report.min_games);
+                for (reason, count) in &report.exclusions {
+                    println!("  Exclusions {reason} : {count}");
+                }
+            }
+            return Ok(());
         }
         let report = aggregation::recalculate_with_quality(
             &storage,
@@ -963,6 +1020,23 @@ async fn drive_campaign(
 mod tests {
     use super::*;
 
+    fn mode(args: &[&str]) -> Result<AggregationMode, clap::Error> {
+        let cli = Cli::try_parse_from(
+            ["olc-collector", "aggregate"]
+                .into_iter()
+                .chain(args.iter().copied()),
+        )?;
+        match cli.command {
+            Command::Aggregate {
+                watch,
+                incremental,
+                full,
+                ..
+            } => Ok(AggregationMode::resolve(watch, incremental, full)),
+            _ => unreachable!("la commande analysée est `aggregate`"),
+        }
+    }
+
     fn campaign_queues(args: &[&str]) -> Vec<i32> {
         let mut argv = vec!["olc-collector", "campaign"];
         argv.extend_from_slice(args);
@@ -970,6 +1044,48 @@ mod tests {
             Command::Campaign { queues, .. } => queues,
             _ => panic!("sous-commande campaign attendue"),
         }
+    }
+
+    #[test]
+    fn watch_sans_option_est_incremental() {
+        assert_eq!(mode(&["--watch"]).unwrap(), AggregationMode::Incremental);
+    }
+
+    #[test]
+    fn watch_full_force_le_recalcul_complet() {
+        assert_eq!(mode(&["--watch", "--full"]).unwrap(), AggregationMode::Full);
+    }
+
+    #[test]
+    fn watch_incremental_reste_incremental() {
+        assert_eq!(
+            mode(&["--watch", "--incremental"]).unwrap(),
+            AggregationMode::Incremental
+        );
+    }
+
+    #[test]
+    fn ponctuel_reste_complet_par_defaut() {
+        assert_eq!(mode(&[]).unwrap(), AggregationMode::Full);
+    }
+
+    #[test]
+    fn ponctuel_incremental_est_explicite() {
+        assert_eq!(
+            mode(&["--incremental"]).unwrap(),
+            AggregationMode::Incremental
+        );
+    }
+
+    #[test]
+    fn ponctuel_full_est_explicite_et_complet() {
+        assert_eq!(mode(&["--full"]).unwrap(), AggregationMode::Full);
+    }
+
+    #[test]
+    fn full_et_incremental_sont_exclusifs() {
+        assert!(mode(&["--full", "--incremental"]).is_err());
+        assert!(mode(&["--watch", "--full", "--incremental"]).is_err());
     }
 
     #[test]

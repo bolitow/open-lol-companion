@@ -383,6 +383,13 @@ Correctif #82 (étape immédiate) : `ALL` est un échantillon collecté non repo
 du ladder en attendant une collecte équilibrée par palier. La repondération et les
 quotas de seeds proportionnels restent à décider.
 
+Ticket #89 : recalcul par lots patch/plateforme/file ; un lot n'est relu que
+si ses parties, timelines, rangs observés proches, classement du catalogue d'objets
+ou paramètres changent, et la publication reste identique au recalcul complet. La
+mémoire est bornée par le plus gros lot. Décidé le 4 octobre 2026 : incrémental par
+défaut pour le recalcul horaire (`aggregate --watch`), `--full` force le recalcul
+complet ; l'`aggregate` ponctuel reste complet par défaut (`--incremental` pour les lots).
+
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
 CommunityDragon versionné des objets et fragments, sources immuables et
 reconstruction hors ligne. Les valeurs, unités, contradictions et champs non

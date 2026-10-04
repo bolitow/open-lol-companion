@@ -80,10 +80,11 @@ Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
 `campaign-resume <id>`. La campagne collecte Solo/Duo et Flex par défaut ; les autres files
 (ARAM, Swiftplay, Arena…) s'ajoutent avec `--queues`, par exemple `--queues 420,440,450`. Dans un autre terminal, `aggregate --sync-static --watch`
-vérifie les statiques et recalcule chaque heure. La campagne respecte les quotas,
-une échéance persistée et des tranches de 15 minutes par plateforme. Une clé de
-développement peut expirer avant la fin. Aucun superviseur ni service permanent
-n'est installé. Voir [le contrat et les options](../services/collector/README.md).
+vérifie les statiques et recalcule chaque heure (par lots modifiés ; `--full` force
+le recalcul complet). La campagne respecte les quotas, une échéance persistée et des
+tranches de 15 minutes par plateforme. Une clé de développement peut expirer avant
+la fin. Aucun superviseur ni service permanent n'est installé. Voir
+[le contrat et les options](../services/collector/README.md).
 
 Rétention des données personnelles (#99) : `cargo run -p olc-collector --release -- purge --watch`
 supprime les parties brutes (et le cache des parties exclues) après 90 jours et retire PUUID, Riot ID, icône et niveau de compte après 30 jours
