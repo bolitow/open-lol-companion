@@ -28,9 +28,15 @@ impl Transport for Recording {
         Ok(self.response.clone())
     }
 }
-async fn limit(db: &TestDb) {
+/// Fenêtre de quota des tests, bien plus longue que toute attente du test.
+const LONG_WINDOW_MS: u64 = 60_000;
+/// Délai d'une attente « doit finir » : large, il ne sert qu'à éviter un test suspendu.
+const GENEROUS: Duration = Duration::from_secs(30);
+
+/// Un seul appel par fenêtre de `period_ms` sur le seau de l'application.
+async fn limit(db: &TestDb, period_ms: u64) {
     sqlx::query("INSERT INTO riot_shared_quota(host,state) VALUES('europe.api.riotgames.com',$1)")
-        .bind(json!({"app":{"windows":[{"limit":1,"period_ms":300,"sent":[]}],"blocked_until":0},"methods":{}})).execute(db.storage.pool()).await.unwrap();
+        .bind(json!({"app":{"windows":[{"limit":1,"period_ms":period_ms,"sent":[]}],"blocked_until":0},"methods":{}})).execute(db.storage.pool()).await.unwrap();
 }
 
 #[tokio::test]
@@ -38,18 +44,36 @@ async fn deux_pools_partagent_les_reservations_avant_envoi() {
     let Some(db) = TestDb::create().await else {
         return;
     };
-    limit(&db).await;
+    // Un seul appel par fenêtre de 60 s : le second pool ne peut passer qu'après la fin du test.
+    limit(&db, LONG_WINDOW_MS).await;
     let fake = Recording::default();
-    let first = CoordinatedTransport::new(fake.clone(), db.storage.clone());
+    let first = CoordinatedTransport::new(fake.clone(), db.storage.clone(), Priority::Background);
     let other_storage = db.separate_storage().await;
-    let second = CoordinatedTransport::new(fake.clone(), other_storage.clone());
-    let request = Request::match_detail("EUW1_1");
-    let (a, b) = tokio::join!(first.send(&request), second.send(&request));
-    a.unwrap();
-    b.unwrap();
-    let sent = fake.sent.lock().unwrap().clone();
-    assert_eq!(sent.len(), 2);
-    assert!(sent[1].duration_since(sent[0]) >= Duration::from_millis(250));
+    let second =
+        CoordinatedTransport::new(fake.clone(), other_storage.clone(), Priority::Background);
+    let tasks = [
+        tokio::spawn(async move { first.send(&Request::match_detail("EUW1_1")).await }),
+        tokio::spawn(async move { second.send(&Request::match_detail("EUW1_2")).await }),
+    ];
+    let finished =
+        |tasks: &[tokio::task::JoinHandle<_>]| tasks.iter().filter(|t| t.is_finished()).count();
+    // Un seul des deux pools obtient la réservation et envoie ; la durée que cela prend
+    // n'a aucune importance, seul compte le dénombrement.
+    tokio::time::timeout(GENEROUS, async {
+        while finished(&tasks) < 1 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .unwrap();
+    // L'autre pool voit la réservation de son pair en base : il attend la fenêtre (60 s).
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert_eq!(finished(&tasks), 1);
+    assert_eq!(fake.sent.lock().unwrap().len(), 1);
+    for task in tasks {
+        task.abort();
+        let _ = task.await;
+    }
     other_storage.pool().close().await;
     db.cleanup().await;
 }
@@ -59,20 +83,24 @@ async fn annuler_un_envoi_ne_rend_pas_son_quota() {
     let Some(db) = TestDb::create().await else {
         return;
     };
-    limit(&db).await;
+    limit(&db, LONG_WINDOW_MS).await;
     let entered = Arc::new(Notify::new());
     let fake = Recording {
         entered: Some(entered.clone()),
         ..Recording::default()
     };
-    let first = CoordinatedTransport::new(fake.clone(), db.storage.clone());
+    let first = CoordinatedTransport::new(fake.clone(), db.storage.clone(), Priority::Background);
     let task = tokio::spawn(async move { first.send(&Request::match_detail("EUW1_1")).await });
-    tokio::time::timeout(Duration::from_secs(2), entered.notified())
+    tokio::time::timeout(GENEROUS, entered.notified())
         .await
         .unwrap();
     task.abort();
     let _ = task.await;
-    let second = CoordinatedTransport::new(Recording::default(), db.storage.clone());
+    let second = CoordinatedTransport::new(
+        Recording::default(),
+        db.storage.clone(),
+        Priority::Background,
+    );
     assert!(tokio::time::timeout(
         Duration::from_millis(50),
         second.send(&Request::match_detail("EUW1_2"))
@@ -98,17 +126,17 @@ async fn un_429_est_partage_avec_un_nouveau_processus() {
         response: RawResponse {
             status: 429,
             headers: vec![
-                ("retry-after".into(), "1".into()),
+                ("retry-after".into(), "60".into()),
                 ("x-rate-limit-type".into(), "application".into()),
             ],
             body: vec![],
         },
         ..Recording::default()
     };
-    let first = CoordinatedTransport::new(fake, db.storage.clone());
+    let first = CoordinatedTransport::new(fake, db.storage.clone(), Priority::Background);
     first.send(&Request::match_detail("EUW1_1")).await.unwrap();
     let next = Recording::default();
-    let second = CoordinatedTransport::new(next.clone(), db.storage.clone());
+    let second = CoordinatedTransport::new(next.clone(), db.storage.clone(), Priority::Background);
     assert!(tokio::time::timeout(
         Duration::from_millis(100),
         second.send(&Request::match_detail("EUW1_2"))
@@ -124,9 +152,10 @@ async fn une_requete_interactive_passe_pendant_une_rafale_du_collecteur() {
     let Some(db) = TestDb::create().await else {
         return;
     };
-    // 10 appels par 1,5 s : le collecteur plafonne à 8, deux appels restent réservés.
+    // 10 appels par fenêtre de 60 s : le collecteur plafonne à 8, deux appels restent réservés.
+    // La fenêtre est bien plus longue que le test : aucune marge temporelle ne dépend de la CI.
     sqlx::query("INSERT INTO riot_shared_quota(host,state) VALUES('europe.api.riotgames.com',$1)")
-        .bind(json!({"app":{"windows":[{"limit":10,"period_ms":1500,"sent":[]}],"blocked_until":0},"methods":{}}))
+        .bind(json!({"app":{"windows":[{"limit":10,"period_ms":LONG_WINDOW_MS,"sent":[]}],"blocked_until":0},"methods":{}}))
         .execute(db.storage.pool())
         .await
         .unwrap();
@@ -134,6 +163,7 @@ async fn une_requete_interactive_passe_pendant_une_rafale_du_collecteur() {
     let collector = Arc::new(CoordinatedTransport::new(
         background.clone(),
         db.storage.clone(),
+        Priority::Background,
     ));
     let burst: Vec<_> = (0..12)
         .map(|i| {
@@ -145,36 +175,45 @@ async fn une_requete_interactive_passe_pendant_une_rafale_du_collecteur() {
             })
         })
         .collect();
-    // La rafale a rempli la part du collecteur ; l'interactif arrive ensuite.
-    tokio::time::timeout(Duration::from_secs(1), async {
+    // La rafale a rempli la part du collecteur ; les quatre autres appels attendent la fenêtre.
+    tokio::time::timeout(GENEROUS, async {
         while background.sent.lock().unwrap().len() < 8 {
             tokio::time::sleep(Duration::from_millis(5)).await;
         }
     })
     .await
     .unwrap();
-    assert_eq!(background.sent.lock().unwrap().len(), 8);
     let interactive = Recording::default();
-    let api = CoordinatedTransport::new(interactive.clone(), db.storage.clone())
-        .with_priority(Priority::Interactive);
-    let started = Instant::now();
-    api.send(&Request::match_detail("EUW1_api")).await.unwrap();
-    // Sans part réservée, l'appel attendrait le glissement de la fenêtre (1,5 s).
-    assert!(started.elapsed() < Duration::from_millis(700));
-    assert_eq!(interactive.sent.lock().unwrap().len(), 1);
-    for task in burst {
-        task.await.unwrap().unwrap();
+    let api = CoordinatedTransport::new(
+        interactive.clone(),
+        db.storage.clone(),
+        Priority::Interactive,
+    );
+    // Sans part réservée, ces appels attendraient le glissement de la fenêtre (60 s) et le
+    // délai généreux expirerait : seul le contenu de la réserve les fait passer.
+    for i in 0..2 {
+        tokio::time::timeout(
+            GENEROUS,
+            api.send(&Request::match_detail(&format!("EUW1_api{i}"))),
+        )
+        .await
+        .expect("la réserve interactive doit répondre sans attendre la fenêtre")
+        .unwrap();
     }
-    // Le plafond global n'a jamais été dépassé : 10 appels maximum par fenêtre de 1,5 s.
-    let mut sent = background.sent.lock().unwrap().clone();
-    sent.extend(interactive.sent.lock().unwrap().iter().copied());
-    sent.sort();
-    for (i, at) in sent.iter().enumerate() {
-        let in_window = sent[i..]
-            .iter()
-            .take_while(|other| other.duration_since(*at) < Duration::from_millis(1490))
-            .count();
-        assert!(in_window <= 10, "plafond Riot dépassé");
+    assert_eq!(interactive.sent.lock().unwrap().len(), 2);
+    // Le plafond global de la clé est atteint : même l'interactif attend désormais.
+    assert!(tokio::time::timeout(
+        Duration::from_millis(200),
+        api.send(&Request::match_detail("EUW1_api_extra"))
+    )
+    .await
+    .is_err());
+    // La rafale n'a rien pu envoyer de plus : 10 appels au total, jamais davantage.
+    assert_eq!(background.sent.lock().unwrap().len(), 8);
+    assert_eq!(interactive.sent.lock().unwrap().len(), 2);
+    for task in burst {
+        task.abort();
+        let _ = task.await;
     }
     db.cleanup().await;
 }

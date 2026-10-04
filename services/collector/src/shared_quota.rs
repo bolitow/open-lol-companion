@@ -8,17 +8,16 @@ use std::collections::BTreeMap;
 use std::time::Duration;
 
 /// Part du seau Riot gardée pour les appels interactifs (en pourcentage de chaque limite).
-/// Le collecteur s'arrête avant : une recherche de profil n'attend pas la fin d'une rafale.
+/// Le collecteur s'arrête avant : l'attente d'une recherche de profil pendant une rafale est réduite, pas supprimée.
 const INTERACTIVE_RESERVE_PERCENT: u32 = 20;
 
 /// Priorité d'un appelant sur le seau partagé. Elle ne change jamais le plafond global :
 /// seule la part que le collecteur a le droit de consommer est réduite.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Priority {
     /// Requête déclenchée par un utilisateur (API des profils) : plafond complet de la clé.
     Interactive,
     /// Collecte de fond : plafond réduit de la part réservée à l'interactif.
-    #[default]
     Background,
 }
 impl Priority {
@@ -204,19 +203,15 @@ pub struct CoordinatedTransport<T> {
     priority: Priority,
 }
 impl<T> CoordinatedTransport<T> {
-    /// Transport de collecte de fond ([`Priority::Background`]) : c'est le défaut le plus prudent.
-    pub fn new(inner: T, storage: Storage) -> Self {
+    /// Transport d'un appelant de priorité `priority`. Elle est obligatoire : l'API des profils
+    /// passe [`Priority::Interactive`], le collecteur [`Priority::Background`]. Aucune valeur par
+    /// défaut, pour qu'un nouvel appelant ne retombe jamais silencieusement en arrière-plan.
+    pub fn new(inner: T, storage: Storage, priority: Priority) -> Self {
         Self {
             inner,
             storage,
-            priority: Priority::Background,
+            priority,
         }
-    }
-
-    /// Fixe la priorité de l'appelant (l'API des profils utilise [`Priority::Interactive`]).
-    pub fn with_priority(mut self, priority: Priority) -> Self {
-        self.priority = priority;
-        self
     }
 
     async fn change<R>(
