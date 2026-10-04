@@ -78,6 +78,10 @@ impl Exclusion {
     }
 }
 
+/// Files où le rang des participants est exploité (Solo/Duo et Flex) ; les autres
+/// modes n'ont pas de rang compétitif applicable, inutile de le demander (#90).
+pub const RANKED_QUEUE_IDS: [i32; 2] = [420, 440];
+
 /// Résultat du contrôle d'une réponse de détail.
 #[derive(Debug, Clone, PartialEq)]
 pub enum MatchCheck {

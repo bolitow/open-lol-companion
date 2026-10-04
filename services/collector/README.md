@@ -51,6 +51,8 @@ SG2, TW2 et VN2, routées vers Europe, Americas, Asia ou SEA selon Riot.
 4. Timelines complètes, avec réutilisation des réponses déjà présentes.
 5. Avec `--collect-ranks`, observations Solo et Flex de chaque participant disposant
    d'un PUUID, indépendamment du rang du joueur ayant servi à découvrir la partie.
+   Elles ne sont demandées que pour les parties des files 420 et 440 qui ne sont pas
+   des remakes : les autres modes n'ont jamais de rang applicable (`UNRANKED_MODE`).
 
 | Option de `run` | Défaut | Effet |
 | --- | --- | --- |
@@ -126,7 +128,8 @@ retéléchargée : unicité en base, pas garantie d'envoi exactement une fois.
 Les limites applicatives sont suivies par hôte, celles des méthodes par couple
 hôte/méthode. Les en-têtes Riot remplacent les limites initiales prudentes d'une
 clé de développement : 20 appels/s et 100/2 min. Les observations de rang ajoutent
-jusqu'à un appel par nouveau joueur, avec cache Solo/Flex de 24 h.
+jusqu'à un appel par nouveau joueur d'une partie 420/440 hors remake, avec cache
+Solo/Flex de 24 h.
 
 | Situation | Comportement |
 | --- | --- |

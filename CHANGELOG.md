@@ -83,6 +83,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Collecteur : les rangs des participants ne sont plus demandés que pour les parties des files 420 et 440 qui ne sont pas des remakes, ce qui économise le budget d'appels Riot (#90).
 - Réglages : panneau « Imports au prépick » déplacé dans les paramètres, avec son état d'activation ; le moteur reste actif pendant la navigation (#63).
 
 - Documents de planification `docs/superpowers/` exclus du suivi Git (#18).
