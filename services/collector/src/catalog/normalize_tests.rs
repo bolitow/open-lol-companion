@@ -184,6 +184,50 @@ fn champions_competences_et_namespace_classic_restent_distincts() {
 }
 
 #[test]
+fn infobulle_de_competence_expose_les_segments_types_a_cote_du_texte_brut() {
+    let mut data = champion("103", "Ahri");
+    data["data"]["Ahri"]["spells"][0]["tooltip"] =
+        json!("Inflige <magicDamage>{{ e1 }} dégâts magiques</magicDamage> puis <trueDamage>{{ e2 }}</trueDamage>.");
+    let records = normalize("16.19.1", &[source("fr_FR/champion/Ahri.json", data)]).unwrap();
+    let ability = record(&records, "ability", "103:Q");
+    assert_eq!(
+        ability.fields["tooltip"].value,
+        "Inflige {{ e1 }} dégâts magiques puis {{ e2 }} ."
+    );
+    let segments = &ability.fields["tooltip_segments"];
+    assert_eq!(
+        segments.value,
+        json!([
+            {"text":"Inflige ","damage_type":null},
+            {"text":"{{ e1 }} dégâts magiques","damage_type":"magic"},
+            {"text":" puis ","damage_type":null},
+            {"text":"{{ e2 }}","damage_type":"true"},
+            {"text":" .","damage_type":null},
+        ])
+    );
+    assert_eq!(segments.status, ValueStatus::Derived);
+    assert_eq!(segments.unit, None);
+    assert_eq!(segments.sources.len(), 1);
+    assert_eq!(
+        segments.sources[0].source_id,
+        "source:fr_FR/champion/Ahri.json"
+    );
+    assert_eq!(segments.sources[0].pointer, "/data/Ahri/spells/0/tooltip");
+    // Pas d'infobulle : pas de segments inventés, et le passif n'en porte pas non plus.
+    assert!(!record(&records, "ability", "103:W")
+        .fields
+        .contains_key("tooltip_segments"));
+    assert!(!record(&records, "ability", "103:passive")
+        .fields
+        .contains_key("tooltip_segments"));
+    assert!(!ability
+        .coverage
+        .unmapped_fields
+        .iter()
+        .any(|s| s.ends_with("/tooltip")));
+}
+
+#[test]
 fn index_et_fiche_champion_ne_creent_pas_doublon() {
     let details = champion("103", "Ahri");
     let index = source(
