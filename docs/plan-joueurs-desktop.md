@@ -24,7 +24,8 @@ aucune partie privée ; pas d’action de jeu. Aucune donnée fictive dans le pr
 Les essais avec League et sous Windows restent reportés par décision utilisateur.
 Rust utilise le même transport HTTP sur Windows et macOS, sans branche système nouvelle.
 Le navigateur est un aperçu du front desktop et indique l’absence du transport natif.
-Le service réel exige `OLC_API_URL` et `OLC_API_TOKEN`, déjà prévus pour les builds.
+Le service réel exige une URL et un jeton, comme les builds : variables `OLC_API_URL`
+et `OLC_API_TOKEN`, ou **Réglages → Accès à l’API** (trousseau du système, #98).
 
 Preuve attendue : recherche → profil → historique → champion → retour à la même
 position ; consulter B conserve A à l’accueil ; fermer League conserve A.
