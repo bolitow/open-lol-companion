@@ -114,10 +114,11 @@ async fn run(args: Args) -> Result<(), String> {
                     .with_max_response_bytes(8 * 1024 * 1024);
                 // L'API sert des requêtes d'utilisateurs : elle garde la part du quota Riot
                 // que le collecteur n'a pas le droit de consommer.
-                state.profiles = Some(Arc::new(Profiles::new(
-                    CoordinatedTransport::new(transport, storage.clone())
-                        .with_priority(Priority::Interactive),
-                )));
+                state.profiles = Some(Arc::new(Profiles::new(CoordinatedTransport::new(
+                    transport,
+                    storage.clone(),
+                    Priority::Interactive,
+                ))));
             }
             let listener = tokio::net::TcpListener::bind(bind)
                 .await
