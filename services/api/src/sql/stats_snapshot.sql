@@ -1,10 +1,11 @@
 -- Les clés constantes de la requête sélectionnent les morceaux par l'index GIN.
+-- Un patch nul (série entre patchs) est retiré du filtre : tous les patchs sont lus.
 -- Bans/couverture portent un périmètre ; les autres listes portent une population.
 WITH filters AS (
     SELECT
-        jsonb_build_array(jsonb_build_object(
+        jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
             'patch', $1::jsonb->'patch', 'platform_id', $1->'platform', 'queue_id', $1->'queue'
-        )) AS scope,
+        ))) AS scope,
         jsonb_build_array(jsonb_strip_nulls(jsonb_build_object(
             'patch', $1->'patch', 'platform_id', $1->'platform', 'queue_id', $1->'queue',
             'role', $1->'role', 'rank', $1->'rank', 'champion_id', $1->'champion'

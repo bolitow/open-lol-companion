@@ -3,8 +3,9 @@ mod common;
 
 use common::TestDb;
 use olc_api::error::ApiError;
-use olc_api::query::StatsQuery;
+use olc_api::query::{StatsQuery, TrendsQuery};
 use olc_api::stats::{builds, tierlist};
+use olc_api::trends::trends;
 use olc_collector::aggregation::AggregationReport;
 use serde_json::{json, Value};
 use sqlx::PgPool;
@@ -609,5 +610,235 @@ async fn builds_publie_les_etapes_d_achat_et_le_catalogue_du_patch() {
         .builds
         .iter()
         .all(|b| b.win_rate_lower_bound.is_none()));
+    db.cleanup().await;
+}
+
+fn trends_query() -> TrendsQuery {
+    TrendsQuery {
+        platform: "EUW1".into(),
+        queue: 420,
+        role: "TOP".into(),
+        rank: "ALL".into(),
+    }
+}
+
+/// Deux patchs publiés pour la même population, plus des entrées voisines à ne pas mélanger.
+fn trends_report() -> Value {
+    let mut source = report();
+    // La fixture porte déjà un groupe 16.18 TOP/ALL du champion 1 : on le précise.
+    let previous = source["groups"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|g| {
+            g["patch"] == "16.18"
+                && g["platform_id"] == "EUW1"
+                && g["queue_id"] == 420
+                && g["role"] == "TOP"
+                && g["rank"] == "ALL"
+        })
+        .unwrap();
+    previous["games"] = json!(250);
+    previous["wins"] = json!(120);
+    previous["losses"] = json!(130);
+    previous["population"] = json!(1000);
+    previous["win_rate"] = json!(48.0);
+    previous["pick_rate"] = json!(25.0);
+    // La fixture porte déjà la couverture et un ban 16.18 (autre patch, même population).
+    let previous_ban = source["bans"]
+        .as_array_mut()
+        .unwrap()
+        .iter_mut()
+        .find(|b| b["patch"] == "16.18" && b["platform_id"] == "EUW1" && b["queue_id"] == 420)
+        .unwrap();
+    previous_ban["banned_matches"] = json!(10);
+    previous_ban["ban_rate"] = json!(10.0);
+    source
+}
+
+/// Reproduit la publication en morceaux du collecteur (stockage v2) pour un rapport donné.
+async fn publish_chunked(pool: &PgPool, mut source: Value) {
+    publish(pool, source.clone()).await;
+    let sections = [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+    ];
+    for section in sections {
+        let items = source.as_object_mut().unwrap().remove(section).unwrap();
+        for (index, chunk) in items.as_array().unwrap().chunks(2).enumerate() {
+            sqlx::query("INSERT INTO champion_stats_snapshot_chunks (snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,$3)")
+                .bind(section).bind(index as i32).bind(json!(chunk)).execute(pool).await.unwrap();
+        }
+    }
+    sqlx::query("UPDATE champion_stats_snapshot SET storage_version=2,report=$1 WHERE id=1")
+        .bind(source)
+        .execute(pool)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn tendances_donnent_la_serie_du_champion_sur_les_patchs_publies_en_v1_comme_en_v2() {
+    let db = db_or_skip!();
+    let source = trends_report();
+    publish(db.storage.pool(), source.clone()).await;
+    let full = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    publish_chunked(db.storage.pool(), source.clone()).await;
+    let chunked = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    assert_eq!(
+        serde_json::to_value(&full).unwrap(),
+        serde_json::to_value(&chunked).unwrap()
+    );
+    assert_eq!(chunked.champion_id, 1);
+    assert_eq!(chunked.query, trends_query());
+    let patches: Vec<_> = chunked.points.iter().map(|p| p.patch.as_str()).collect();
+    assert_eq!(patches, ["16.18", "16.19"]);
+    let (old, new) = (&chunked.points[0], &chunked.points[1]);
+    // 16.19 : population TOP/ALL ; ni GOLD, ni JUNGLE, ni KR, ni file 440 ne s'y ajoutent.
+    assert_eq!((new.games, new.wins, new.population), (100, 60, 500));
+    assert_eq!((old.games, old.wins, old.population), (250, 120, 1000));
+    assert_eq!(new.win_rate, Some(60.0));
+    assert_eq!(new.pick_rate, Some(20.0));
+    assert_eq!((new.banned_matches, new.draft_matches), (20, 100));
+    assert_eq!(new.ban_rate, Some(20.0));
+    assert_eq!(new.delta_win_rate, Some(12.0));
+    assert_eq!(new.delta_pick_rate, Some(-5.0));
+    assert_eq!(new.delta_ban_rate, Some(10.0));
+    assert_eq!(old.delta_win_rate, None);
+    // La couverture annoncée porte tous les patchs de la plateforme et de la file.
+    let meta = serde_json::to_value(&chunked.meta).unwrap();
+    let scopes: Vec<_> = meta["coverage"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| c["patch"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(scopes.len(), 2);
+    assert!(scopes.contains(&"16.18".to_string()) && scopes.contains(&"16.19".to_string()));
+    assert!(meta["coverage"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|c| c["platform_id"] == "EUW1" && c["queue_id"] == 420));
+    // Un autre rang est une autre série.
+    let gold = trends(
+        db.storage.pool(),
+        TrendsQuery {
+            rank: "GOLD".into(),
+            ..trends_query()
+        },
+        1,
+    )
+    .await
+    .unwrap();
+    // 16.18 est observé mais sans ligne GOLD du champion : point vide, aucun écart.
+    assert_eq!(gold.points.len(), 2);
+    assert_eq!(
+        (gold.points[0].patch.as_str(), gold.points[0].games),
+        ("16.18", 0)
+    );
+    assert_eq!(
+        (gold.points[1].patch.as_str(), gold.points[1].games),
+        ("16.19", 200)
+    );
+    assert_eq!(gold.points[1].delta_win_rate, None);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn tendances_rejettent_les_requetes_invalides_et_signalent_l_absence_d_instantane() {
+    let db = db_or_skip!();
+    assert_eq!(
+        trends(db.storage.pool(), trends_query(), 1).await.err(),
+        Some(ApiError::Unavailable)
+    );
+    assert_eq!(
+        trends(db.storage.pool(), trends_query(), 0).await.err(),
+        Some(ApiError::InvalidRequest)
+    );
+    for invalid in [
+        TrendsQuery {
+            platform: "EUROPE".into(),
+            ..trends_query()
+        },
+        TrendsQuery {
+            queue: 0,
+            ..trends_query()
+        },
+        TrendsQuery {
+            role: "MID".into(),
+            ..trends_query()
+        },
+        TrendsQuery {
+            rank: "FAKE".into(),
+            ..trends_query()
+        },
+    ] {
+        assert_eq!(
+            trends(db.storage.pool(), invalid, 1).await.err(),
+            Some(ApiError::InvalidRequest)
+        );
+    }
+    publish(db.storage.pool(), trends_report()).await;
+    // Champion absent : série vide de parties, jamais celle d'un autre champion.
+    let unknown = trends(db.storage.pool(), trends_query(), 999_999)
+        .await
+        .unwrap();
+    assert!(unknown
+        .points
+        .iter()
+        .all(|p| p.games == 0 && p.win_rate.is_none()));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_serie_ne_parcourt_pas_les_morceaux_des_autres_champions_ni_les_builds() {
+    let db = db_or_skip!();
+    let source = trends_report();
+    publish_chunked(db.storage.pool(), source.clone()).await;
+    sqlx::query(
+        "INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items)
+        SELECT 1,'groups',100+n,jsonb_build_array($1::jsonb || jsonb_build_object('champion_id',1000+n))
+        FROM generate_series(1,2048) n",
+    )
+    .bind(&source["groups"][1])
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+    sqlx::query("ANALYZE champion_stats_snapshot_chunks")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    // Même requête SQL que l'API, avec un patch nul : tous les patchs, un seul champion.
+    let sql = format!(
+        "EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) {}",
+        include_str!("../src/sql/stats_snapshot.sql")
+    );
+    let vars =
+        json!({"patch":null,"platform":"EUW1","queue":420,"role":"TOP","rank":"ALL","champion":1});
+    let plan: Value = sqlx::query_scalar(&sql)
+        .bind(vars)
+        .bind("$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))")
+        .bind("$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue)")
+        .bind(false)
+        .fetch_one(db.storage.pool())
+        .await
+        .unwrap();
+    assert!(plan.to_string().contains("snapshot_chunk_populations_idx"));
+    let selected = selected_chunk_rows(&plan[0]["Plan"]);
+    assert!(
+        (1..=16).contains(&selected),
+        "{selected} morceaux lus pour 2048 morceaux voisins : {plan}"
+    );
+    let response = trends(db.storage.pool(), trends_query(), 1).await.unwrap();
+    assert_eq!(response.points.len(), 2);
     db.cleanup().await;
 }

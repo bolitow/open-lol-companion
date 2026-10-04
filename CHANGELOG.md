@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Tendances entre patchs : route `/v1/trends/{champion_id}` donnant, pour un champion, un rôle et un rang, la série winrate, pick, ban et effectif de chaque patch de l’instantané publié, avec les écarts au patch précédent ; patch vide ou taux sous le seuil laissés explicites (#110).
+
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
 
 - Revue de conformité Riot de tous les overlays et projections (panneau en partie, projection Live Client, sélection des champions, bilan, prototype) : rapport daté ligne à ligne, cas à soumettre à Riot et fonctions refusées complétés dans `rules/conformite-riot.md`, test de non-fuite des identités de la projection de sélection et filtre défensif des bans adverses (seuls les bans annoncés par une action terminée d'une cellule adverse sont projetés). Décisions du 4 octobre : objets, sorts, niveau et score de vision adverses refusés ; différence d'or par équipe seulement à soumettre à Riot, affichage prévu ; % de victoire estimé de la draft affiché dès maintenant, désactivable, conservé dans la liste soumise à Riot (#30, suites d'interface : #187).

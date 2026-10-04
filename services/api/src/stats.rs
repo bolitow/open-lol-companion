@@ -135,21 +135,52 @@ pub async fn builds(
     })
 }
 
+/// Population lue dans l'instantané ; `patch` absent sélectionne tous les patchs publiés.
+pub(crate) struct Selection<'a> {
+    pub patch: Option<&'a str>,
+    pub platform: &'a str,
+    pub queue: i32,
+    pub role: &'a str,
+    pub rank: &'a str,
+    pub champion_id: Option<u32>,
+    /// Charge aussi builds, compétences et achats du champion (inutile pour une série).
+    pub with_details: bool,
+}
+
 async fn load(
     pool: &PgPool,
     query: &StatsQuery,
     champion_id: Option<u32>,
 ) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
+    load_selection(
+        pool,
+        &Selection {
+            patch: Some(&query.patch),
+            platform: &query.platform,
+            queue: query.queue,
+            role: &query.role,
+            rank: &query.rank,
+            champion_id,
+            with_details: champion_id.is_some(),
+        },
+    )
+    .await
+}
+
+pub(crate) async fn load_selection(
+    pool: &PgPool,
+    selection: &Selection<'_>,
+) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
     // Une seule lecture cohérente : sélection indexée des morceaux avant le filtre JSON.
     // La tierlist ne charge pas les builds ni les événements de tous les champions.
-    let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":query.role,"rank":query.rank,"champion":champion_id});
-    let population = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
-    let scope = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)";
+    let vars = serde_json::json!({"patch":selection.patch,"platform":selection.platform,"queue":selection.queue,"role":selection.role,"rank":selection.rank,"champion":selection.champion_id});
+    let population = "$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
+    let scope = "$[*] ? (($patch == null || @.patch == $patch) && @.platform_id == $platform && @.queue_id == $queue)";
     let rows = sqlx::query(include_str!("sql/stats_snapshot.sql"))
         .bind(vars)
         .bind(population)
         .bind(scope)
-        .bind(champion_id.is_some())
+        .bind(selection.with_details)
         .fetch_all(pool)
         .await?;
     let row = rows.first().ok_or(ApiError::Unavailable)?;
@@ -190,7 +221,12 @@ async fn load(
         coverage: report
             .coverage
             .iter()
-            .filter(|c| scope_matches(&c.scope, query))
+            .filter(|c| {
+                selection.patch.is_none() || selection.patch == Some(c.scope.patch.as_str())
+            })
+            .filter(|c| {
+                c.scope.platform_id == selection.platform && c.scope.queue_id == selection.queue
+            })
             .cloned()
             .collect(),
     };
