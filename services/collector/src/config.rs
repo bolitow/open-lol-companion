@@ -21,6 +21,11 @@ pub const PLATFORMS: &[&str] = &[
     "TW2", "VN2",
 ];
 
+/// Files collectées par défaut par une campagne : Solo/Duo et Flex (décision du 4 octobre
+/// 2026, #90). ARAM, Swiftplay, Arena et les autres files restent possibles en les listant
+/// explicitement (`campaign --queues`).
+pub const DEFAULT_CAMPAIGN_QUEUES: [i32; 2] = RANKED_QUEUE_IDS;
+
 /// `true` si les rangs des participants servent pour cette file : 0 (toutes les files, dont
 /// les classées), Solo/Duo ou Flex. Ailleurs, les demander gaspillerait du budget (#90).
 pub fn queue_needs_ranks(queue_id: i32) -> bool {

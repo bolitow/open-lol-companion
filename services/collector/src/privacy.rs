@@ -158,6 +158,8 @@ pub struct PurgeReport {
     pub sampled_match_seeds_cleared: u64,
     pub jobs_deleted: u64,
     pub rank_observations_deleted: u64,
+    /// Lignes du cache négatif `excluded_matches` (#90) plus vieilles que `raw_match_days`.
+    pub excluded_matches_deleted: u64,
 }
 
 /// Classement d'un joueur de départ relevé par une exécution.
@@ -243,7 +245,9 @@ macro_rules! ms {
 ///
 /// 1. Parties brutes plus anciennes que `raw_match_days` : supprimées avec leur
 ///    timeline et leurs liens d'exécution, sauf si une collecte en cours les retient.
-/// 2. Identifiants plus anciens que `identifier_days` : joueurs de départ, découvertes
+/// 2. Cache négatif `excluded_matches` (#90) plus ancien que `raw_match_days`, même durée
+///    que les parties brutes.
+/// 3. Identifiants plus anciens que `identifier_days` : joueurs de départ, découvertes
 ///    et travaux des exécutions inactives supprimés, PUUID des liens vidés,
 ///    observations de rang supprimées, PUUID et Riot ID retirés du JSONB.
 pub async fn purge(storage: &Storage, policy: RetentionPolicy) -> Result<PurgeReport, sqlx::Error> {
@@ -290,6 +294,26 @@ pub async fn purge(storage: &Storage, policy: RetentionPolicy) -> Result<PurgeRe
                 .await?,
         );
         tx.commit().await?;
+    }
+
+    // Cache négatif des parties exclues : aligné sur la rétention des parties brutes.
+    loop {
+        let deleted = affected(
+            sqlx::query(
+                "DELETE FROM excluded_matches WHERE match_id IN (
+                    SELECT match_id FROM excluded_matches
+                    WHERE excluded_at < now() - make_interval(days => $1)
+                    ORDER BY match_id LIMIT $2)",
+            )
+            .bind(raw_days)
+            .bind(BATCH * 25)
+            .execute(storage.pool())
+            .await?,
+        );
+        if deleted == 0 {
+            break;
+        }
+        report.excluded_matches_deleted += deleted;
     }
 
     // Une exécution sans activité depuis la durée de rétention est terminée ou
