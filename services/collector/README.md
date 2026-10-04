@@ -254,9 +254,10 @@ sous-équipe porte une valeur unique et que les sous-équipes occupent des place
 1 à leur nombre ; sinon la partie reste comptée dans `games` mais sans placement
 (`unknown_placement_participations` dans la couverture). Le placement moyen par champion
 n'est ni un winrate d'objet ni un taux d'augment ; aucune statistique d'augment n'est
-calculée. Les variantes de builds hors objets (runes, sorts, ordre de compétences)
-gardent leur taux de victoire en Arena (voir plus bas). Les parties normales/PvE et Arena
-ne sont jamais mélangées à SoloQ.
+calculée. Les variantes de builds hors objets (liste fermée : runes, sorts, ordre de
+compétences) suivent la même règle en Arena : placement moyen au lieu du taux de
+victoire (voir plus bas). Les parties normales/PvE et Arena ne sont jamais
+mélangées à SoloQ.
 
 Les remakes et parties incohérentes sont exclus avant toute contribution. Les formats
 classiques contrôlent 5 participants par équipe et un vainqueur ; Arena contrôle les
@@ -276,7 +277,19 @@ pickrate et winrate de chaque variante. Exception imposée par la
 d'items Arena (`item`, `final_items`, `trinket`, `purchase_order` et les étapes
 `starter`, `boots`, `core`, `item_slot_4..6`) ne publient ni victoires, ni winrates, ni
 borne Wilson (`wins`/`win_rate`/`win_rate_lower_bound` nuls, `performance_available: false`) ; leur
-tri ne dépend pas des victoires. Aucun taux d'augment n'est produit. Au plus 20 variantes par catégorie/groupe sont
+tri ne dépend pas des victoires, et ils ne publient pas non plus de placement (#104). Aucun taux d'augment n'est produit.
+En Arena (#104), les catégories de la liste positive `ARENA_PLACEMENT_CATEGORIES` (`runes`,
+`summoner_spells`, `skill_order`, `special_skill_order`, et aucune autre : une catégorie
+nouvelle n'y publie rien tant qu'elle n'y est pas ajoutée) ne publient pas non plus de taux de victoire (`wins`/`win_rate`/
+`win_rate_lower_bound` nuls, `performance_available: false`) : le booléen `win` d'Arena n'est
+pas une première place. Elles publient `placement_games` (participations au placement valide,
+voir les règles de cohérence plus haut) et `average_placement` (placement moyen de la
+sous-équipe, 1 = première, nul sous le seuil). À effectif égal, le placement moyen croissant
+départage les variantes ; la publication des 20 variantes les plus fréquentes reste fondée sur
+la popularité. Aucun taux de première ou de deuxième place n'est publié pour les variantes
+(les objets n'en publient pas non plus), ni aucun placement par objet ou par augment. Hors
+Arena, ces catégories gardent victoires et taux de victoire, avec `placement_games` à 0 et
+`average_placement` nul. Au plus 20 variantes par catégorie/groupe sont
 publiées, par popularité, sans modifier leur dénominateur ; `omitted_build_variants`
 annonce les variantes supplémentaires conservées seulement dans les sources brutes.
 
@@ -296,7 +309,7 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 - `item_events` : achats, ventes, destructions et annulations regroupés par minute.
 
 Chaque variante publie aussi `win_rate_lower_bound`, borne inférieure de Wilson à 95 %
-bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena).
+bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena, toutes catégories).
 
 ### Étapes d'achat (#81)
 

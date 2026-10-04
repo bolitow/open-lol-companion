@@ -96,6 +96,10 @@ export interface BuildStats extends GroupKey {
   win_rate: number | null;
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
+  /** Arena, variantes hors objets : participations au placement valide ; 0 hors Arena et pour les objets. */
+  placement_games: number;
+  /** Arena, variantes hors objets : placement moyen (1 = première) ; nul sous le seuil, hors Arena et pour les objets. */
+  average_placement: number | null;
 }
 
 export interface SkillStats extends GroupKey {
