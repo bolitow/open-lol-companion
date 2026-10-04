@@ -2802,6 +2802,7 @@ dependencies = [
 name = "olc-build-client"
 version = "0.1.0"
 dependencies = [
+ "fs2",
  "futures-util",
  "keyring",
  "olc-catalog-cache",
@@ -2809,7 +2810,9 @@ dependencies = [
  "rustls",
  "serde",
  "serde_json",
+ "sha2",
  "tempfile",
+ "thiserror 2.0.21",
  "tokio",
  "tokio-tungstenite 0.28.0",
  "webpki-roots",
@@ -2858,6 +2861,8 @@ dependencies = [
  "lcu-connector",
  "objc2",
  "objc2-app-kit",
+ "objc2-foundation",
+ "objc2-web-kit",
  "olc-build-client",
  "olc-catalog-cache",
  "olc-desktop-support",
@@ -2870,7 +2875,10 @@ dependencies = [
  "tauri-plugin-autostart",
  "tauri-plugin-dialog",
  "tauri-plugin-global-shortcut",
+ "tempfile",
  "tokio",
+ "webview2-com",
+ "windows-core",
  "windows-sys 0.61.2",
 ]
 

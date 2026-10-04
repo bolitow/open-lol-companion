@@ -150,3 +150,37 @@ l’actualisation des autres données. Les CS exacts du HUD aux mêmes instants
 n’ont pas été consignés : voir la [recette macOS #23](recettes/2026-10-03-live-macos.md)
 et sa série anonymisée. Ce constat ne garantit pas le comportement des autres
 patchs ou modes de jeu.
+
+
+## Éditeur de placement — #28
+
+Le panneau existant se règle depuis **Réglages → Overlay → Modifier le placement**,
+ou via **Alt+B** (Option+B sur Mac). **Ctrl+Alt+²** utilise le code physique
+Backquote pour AZERTY ; son fonctionnement sur les dispositions réelles reste à
+recetter. Un second raccourci annule l'édition. Les icônes Déplacer et Redimensionner
+manipulent le panneau ; Enregistrer conserve le résultat, Annuler restaure la
+position et la taille antérieures. Les deux actions sont aussi accessibles dans
+les réglages de l'application.
+
+L'édition augmente temporairement l'opacité à 80 % minimum pour rendre les
+commandes visibles, même si le panneau est réglé à 0 %. Les gestes sont limités
+au cadre du jeu, coalescés côté interface et calculés dans Rust à partir du curseur
+système. La fenêtre reste non activante. Hors édition, elle laisse passer les
+clics. Aucune entrée n'est injectée dans League.
+
+Les réglages comprennent une hauteur relative (0 = hauteur automatique des
+anciennes préférences), le style Dark/Plein et l'opacité 0–100 %. Le minimum
+éditable est 160×120 unités logiques, borné au cadre, pour conserver les commandes
+avec une mise à l'échelle élevée. Dark utilise le matériau natif existant sur Mac ;
+**Windows conserve un repli sombre sans flou natif**. Plein couvre le fond d'une
+surface opaque ; le réglage d'opacité global reste applicable.
+
+La session expire après trois minutes sans validation. Perdre la fenêtre du jeu,
+changer son cadre ou terminer la partie annule les changements temporaires. Un
+aperçu commencé hors partie est interrompu à l'entrée en partie. Les commandes
+en retard d'une ancienne session sont refusées ; un échec d'écriture conserve le
+brouillon et permet de réessayer ou d'annuler. Aucun geste ne sauvegarde sur disque.
+
+Cette première tranche concerne **le seul panneau actuellement raccordé**. Elle
+ne crée pas les futurs modules indépendants du §6. Recette et limites :
+[contrôle du 4 octobre](recettes/2026-10-04-overlay-editor.md).

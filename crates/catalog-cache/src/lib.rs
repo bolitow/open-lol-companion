@@ -1,5 +1,6 @@
 //! Contrat d’instantané et stockage vérifié, partagé entre distributeur et desktop.
 mod catalog;
+pub mod cosmetics;
 mod storage;
 pub use catalog::validate_catalog;
 use serde::{Deserialize, Serialize};

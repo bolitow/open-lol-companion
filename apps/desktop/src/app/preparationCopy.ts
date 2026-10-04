@@ -19,6 +19,7 @@ export const preparationCopy = {
  },
 } as const;
 export const statLabels: Record<string, {fr:string;en:string}> = {
+ attack_range:{fr:'Portée d’attaque',en:'Attack range'},
  health:{fr:'PV',en:'Health'}, mana:{fr:'Mana',en:'Mana'}, armor:{fr:'Armure',en:'Armor'}, magic_resistance:{fr:'Résistance magique',en:'Magic resistance'},
  attack_damage:{fr:'Dégâts d’attaque',en:'Attack damage'}, ability_power:{fr:'Puissance',en:'Ability power'}, attack_speed:{fr:'Vitesse d’attaque',en:'Attack speed'},
  critical_strike_chance:{fr:'Chances de critique',en:'Critical strike chance'}, movement_speed:{fr:'Vitesse de déplacement',en:'Move speed'},

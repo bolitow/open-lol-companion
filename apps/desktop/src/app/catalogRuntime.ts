@@ -1,3 +1,4 @@
+import {parseCosmetics,type CosmeticsCatalog} from './cosmeticsContract';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {CatalogRuntimeState} from '@olc/shared';
 import embeddedDirectory from '../../public/game-data/champion-directory.json';
@@ -5,7 +6,7 @@ import embeddedIndex from '../../public/game-data/champions.json';
 export type RuntimeChampion=typeof embeddedDirectory.champions[number]&{image?:string};
 export type ChampionIndex=Record<string,{key:string;fr:string;en:string}>;
 type Active=CatalogRuntimeState&{snapshotId:string;version:string;assetBase:string};
-interface Snapshot {status:CatalogRuntimeState['status'];error:string|null;active:Active|null;generation:number;directory:{version:string;champions:RuntimeChampion[]};index:ChampionIndex}
+interface Snapshot {cosmetics:CosmeticsCatalog|null;status:CatalogRuntimeState['status'];error:string|null;active:Active|null;generation:number;directory:{version:string;champions:RuntimeChampion[]};index:ChampionIndex}
 const object=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 const localized=(v:unknown)=>object(v)&&typeof v.fr==='string'&&typeof v.en==='string';
 export function validCatalogPath(path:string){return /^(?:[a-zA-Z0-9_-]+\/)*[a-zA-Z0-9_-]+\.(?:json|png|jpg|webp)$/.test(path)}
@@ -19,7 +20,7 @@ function validate(directory:unknown,index:unknown,version:string):asserts direct
  if(Object.keys(index).length!==ids.size)throw Error('catalog-invalid');
 }
 export function createCatalogRuntime(transport:{read:(snapshotId:string,path:string)=>Promise<unknown>}){
- let current:Snapshot={status:'embedded',error:null,active:null,generation:0,directory:embeddedDirectory,index:embeddedIndex};
+ let current:Snapshot={cosmetics:null,status:'embedded',error:null,active:null,generation:0,directory:embeddedDirectory,index:embeddedIndex};
  let serial=0;const listeners=new Set<()=>void>();
  const publish=(next:Snapshot)=>{current=next;listeners.forEach(fn=>fn())};
  return {getSnapshot:()=>current,subscribe:(fn:()=>void)=>{listeners.add(fn);return()=>{listeners.delete(fn)}},
@@ -27,10 +28,11 @@ export function createCatalogRuntime(transport:{read:(snapshotId:string,path:str
   const request=++serial;
   if(!state.snapshotId||!state.version||!state.assetBase||state.snapshotId===current.active?.snapshotId){publish({...current,status:state.status,error:state.error});return}
   try{
-   const [directory,index]=await Promise.all([transport.read(state.snapshotId,'champion-directory.json'),transport.read(state.snapshotId,'champions.json')]);
+   const [directory,index,rawCosmetics]=await Promise.all([transport.read(state.snapshotId,'champion-directory.json'),transport.read(state.snapshotId,'champions.json'),transport.read(state.snapshotId,'cosmetics.json')]);
+   const cosmetics=parseCosmetics(rawCosmetics,state.version);
    validate(directory,index,state.version);
    if(request!==serial)return;
-   publish({status:state.status,error:state.error,active:state as Active,generation:current.generation+1,directory,index:index as ChampionIndex});
+   publish({cosmetics,status:state.status,error:state.error,active:state as Active,generation:current.generation+1,directory,index:index as ChampionIndex});
   }catch{if(request===serial)publish({...current,status:'error',error:'catalog-invalid'})}
  }};
 }

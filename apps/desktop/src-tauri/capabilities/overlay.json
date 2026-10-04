@@ -1,6 +1,6 @@
 {
   "identifier": "overlay",
-  "description": "Lecture des donn\u00e9es publiques par le panneau passif",
+  "description": "Lecture des données publiques par le panneau passif",
   "windows": [
     "game-overlay"
   ],
@@ -15,6 +15,7 @@
     "allow-publication-state",
     "allow-catalog-state",
     "allow-catalog-read",
-    "allow-catalog-sync"
+    "allow-catalog-sync",
+    "allow-overlay-edit"
   ]
 }

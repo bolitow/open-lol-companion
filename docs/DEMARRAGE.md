@@ -76,6 +76,11 @@ versionnées avec provenance et couverture, sans clé Riot. Reconstruction depui
 les archives : `catalog --rebuild <publication_id> --json` (sans réseau).
 Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
 
+Pour les vidéos de skins (#47), `scripts/catalog-skin-spotlights.py` prépare
+un catalogue candidat et un rapport de couverture depuis les métadonnées
+publiques, sans télécharger les vidéos. Paramètres, cache, arrêt sur refus
+fournisseur et revue avant copie : [maintenance SkinSpotlights](collection-skins.md#relancer-une-maintenance).
+
 Pour une campagne multirégion bornée :
 `cargo run -p olc-collector --release -- campaign --hours 24` ; reprendre avec
 `campaign-resume <id>`. La campagne collecte Solo/Duo et Flex par défaut ; les autres files
@@ -323,3 +328,11 @@ Les anciens rapports restent lisibles. Un ancien total global de variantes omise
 La préparation, les fiches champion et la vue en partie affichent le patch effectivement consulté, résolu depuis le client et le manifeste API. Un patch antérieur est signalé ; les imports communautaires sont suspendus tant que client, catalogue et données ne sont pas compatibles. La lecture est mutualisée et renouvelée sur sélection/publication, sans polling. Détails, replis et limites : [patch-client.md](patch-client.md).
 
 Pour distribuer les mises à jour du catalogue desktop depuis votre API, voir [catalogue-desktop.md](catalogue-desktop.md). Sans configuration, le catalogue embarqué reste utilisable.
+### Rechercher les vidéos encore manquantes
+
+Pour rechercher aussi une présentation récente des anciens skins sans référence, utiliser
+`--global-search-uncovered-skins` avec `scripts/catalog-skin-spotlights.py`.
+Les résultats sont filtrés sur la chaîne officielle et restent partiels. Le batch
+`scripts/update-skin-spotlights.py` accepte `--allow-title-variants` pour revalider
+les titres annotés et anciens noms Riot sourcés ; sans cette option, il reste strict.
+Voir [les règles et commandes de récupération](collection-skins.md#récupération-des-références-manquantes--3-octobre-2026).

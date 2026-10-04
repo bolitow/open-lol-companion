@@ -16,9 +16,12 @@ webpki-roots = "1"
 tokio = { workspace = true, features = ["sync", "time"] }
 tokio-tungstenite.workspace = true
 futures-util.workspace = true
+sha2 = "0.10"
+fs2 = "0.4.3"
+tempfile = "3"
+thiserror.workspace = true
 
 [dev-dependencies]
-tempfile = "3"
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util"] }
 
 # Trousseau natif du système pour le jeton d'accès desktop : Keychain sous macOS,

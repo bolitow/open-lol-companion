@@ -135,6 +135,7 @@ mod tests {
             platform: "EUW1".into(),
             game_name: "Alpha".into(),
             tag_line: "TEST".into(),
+            profile_icon_id: None,
         };
         let mut session = LcuSession::default();
         session.apply(LcuEvent::Connected { port: 1 });

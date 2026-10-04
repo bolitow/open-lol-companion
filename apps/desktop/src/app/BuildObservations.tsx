@@ -1,3 +1,4 @@
+import {SelectField} from '../ui/SelectField';
 import {useState} from 'react';
 import type {BuildReport,CatalogRecord} from '@olc/shared';
 import type {Locale} from './state';
@@ -27,7 +28,7 @@ export function ItemTimings({report,records,locale}:{report:BuildReport;records:
  const record=records.find(record=>record.kind==='item'&&record.id===String(item));
  const eventName=(value:string)=>t.itemEventNames[value as keyof typeof t.itemEventNames]??t.otherEvent;
  return <details className="build-observations"><summary>{t.itemTimings}</summary><p>{t.itemTimingsHint}</p>
- <div className="observation-controls">{record?.icon&&<img src={record.icon} width={32} height={32} alt=""/>}<select aria-label={t.observedItem} value={item} onChange={event=>{setSelected(Number(event.target.value));setPage(0)}}>{items.map(id=><option key={id} value={id}>{records.find(record=>record.kind==='item'&&record.id===String(id))?.name??`${t.unknown} · ${id}`}</option>)}</select><select aria-label={t.eventType} value={eventKind} onChange={event=>{setKind(event.target.value);setPage(0)}}>{kinds.map(value=><option key={value} value={value}>{eventName(value)}</option>)}</select></div>
+ <div className="observation-controls">{record?.icon&&<img src={record.icon} width={32} height={32} alt=""/>}<SelectField label={t.observedItem} value={String(item)} onChange={value=>{setSelected(Number(value));setPage(0)}} options={items.map(id=>({value:String(id),label:records.find(record=>record.kind==='item'&&record.id===String(id))?.name??`${t.unknown} · ${id}`}))}/><SelectField label={t.eventType} value={eventKind??''} onChange={value=>{setKind(value);setPage(0)}} options={kinds.map(value=>({value,label:eventName(value)}))}/></div>
  <div className="observation-scroll"><table><thead><tr><th>{t.minuteBucket}</th><th>{t.events}</th></tr></thead><tbody>{rows.slice(current*size,(current+1)*size).map(row=><tr key={row.minute}><td>{row.minute}–{row.minute+1} min</td><td>{new Intl.NumberFormat(locale).format(row.events)}</td></tr>)}</tbody></table></div>
  {last>0&&<div className="observation-controls"><button disabled={current===0} onClick={()=>setPage(current-1)}>{t.previous}</button><span>{current+1} / {last+1}</span><button disabled={current===last} onClick={()=>setPage(current+1)}>{t.next}</button></div>}
  {report.max_item_events!=null&&<p>{t.eventCap} : {report.max_item_events}{report.omitted_item_events!=null?` · ${t.eventsOmitted} : ${report.omitted_item_events}`:''}</p>}<p>{t.eventCapBias}</p></details>;

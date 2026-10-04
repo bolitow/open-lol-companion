@@ -1,5 +1,6 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
+pub mod cosmetic_images;
 pub mod credentials;
 pub mod desktop_catalog;
 mod observations;

@@ -196,3 +196,88 @@ TDD : trois tests de cohérence des fixtures et de traduction écrits en échec 
 Validation finale de cette tranche : `pnpm test` (63 tests), `pnpm lint`, build Vite et contrôle du diff réussis.
 
 Publication : version 4 sur le même site public, déploiement `appgdep_6abe4af6c1cc819189f96f50d4bc0fb8` confirmé `succeeded`.
+
+## Intégration au desktop — 2 octobre 2026 (#4)
+
+Le prototype reste la référence de direction visuelle. L’app Tauri utilise maintenant
+ses moteurs `BurnReveal`, `AmbientEmbers`, `PageFlame` et `BurnScars` via
+`app/ApplicationEffects.tsx`, sans importer ses données de démonstration ni son layout.
+`app/identity.css` porte les surfaces communes des écrans réels : accueil, champions,
+joueurs, draft et réglages. Les blocs sans backend restent dans leur état vide.
+
+- Au lancement : combustion centrale, seconde vague dans les interstices et lumière
+  sur les panneaux ; les traces persistent dans la carte d’accueil. Un clic ou une
+  touche écourte l’ouverture. Le conteneur attend sa ref avant de lancer le moteur.
+- Navigation : passage de feu de 800 ms ; arrivée automatique dans une nouvelle phase
+  visible de jeu : 1 100 ms. Un rafraîchissement de données ou un changement de phase
+  pendant la consultation des réglages ne relance pas l’effet.
+- Au repos : deux plans de particules, reflets locaux et crépitements sur trois surfaces
+  stables au maximum. Deux résolutions partagent un budget de 1,1 million de pixels,
+  avec dessins limités à 30 Hz et pause de la boucle lorsque la page est masquée.
+  L’ouverture et les transitions remplacent temporairement les particules ambiantes.
+- Le compagnon 3D reste monté dans la barre principale à chaque navigation. Son bouton
+  reste contenu dans son emplacement ; seul son canvas décoratif déborde. La marque
+  reste un accès séparé à l’accueil. Son interaction et son repli statique sont conservés.
+- Animations désactivées ou préférence système de réduction des mouvements : aucun
+  canvas d’effet plein écran, compagnon statique, matières et contrastes conservés.
+  Sans WebGL, l’interface reste utilisable avec son habillage statique.
+
+La palette ambiante suit le thème (braise sombre / bleu clair). Le personnage conserve
+sa couleur propre. Aucune nouvelle donnée de jeu, commande d’import, API ou fonction
+backend n’est ajoutée. Le passage réel de phase avec League et le rendu Windows restent
+à valider lors des essais dédiés ; les tests simulés ne remplacent pas cette validation.
+
+
+### Finition desktop : défilement et bibliothèque compacte (2 octobre 2026)
+
+- Le bouton Retour est une flèche dans la barre supérieure, avec nom accessible FR/EN et emplacement stable (désactivé si aucun historique). Il conserve les filtres, la sélection et la position des listes ; aucune ligne Retour dans le contenu.
+- La bibliothèque Champions commence directement par recherche, filtres, tri et cartes. Le titre reste dans la navigation/le nom accessible de la zone ; introduction et slogan sont retirés. Les filtres tiennent sur une ligne à partir de 680 px de largeur **du panneau**, sinon sur deux lignes. La fiche du champion reste à droite.
+- `overscroll-behavior: none` sur le document et les zones défilantes du shell désactive le rebond et la propagation au bord des zones. À la taille desktop (>=760 px), html/body/root sont bornés et non défilants. Les listes conservent `overflow:auto`, inertie et défilement clavier ; aucun gestionnaire `wheel` bloquant, aucune préférence macOS modifiée. Support WebKit documenté dans les [notes Safari 16.4](https://developer.apple.com/documentation/safari-release-notes/safari-16_4-release-notes).
+
+### Finition de la bibliothèque (2 octobre 2026 — #4, #61)
+
+Les portraits conservent le ratio 308/560 sans zoom au survol. Le cadre arrondi contient les filtres et le compteur, avec une marge autour des cartes. Les menus Classe/Tri et les quatre filtres de builds utilisent le même composant : flèches, Début/Fin, Entrée, Échap, Tab et recherche par lettres ; le menu sort du cadre défilant sans être coupé.
+
+Les compétences montrent d'abord les délais, coûts de ressource et portées vérifiés du catalogue, avec chaque rang et les constantes compactées. Le fonctionnement détaillé reste repliable ; les termes dégâts, boucliers et soins sont colorés et les nombres mis en avant. Les mêmes valeurs figurent dans les infobulles et détails. Le coût numérique n'est pas présenté comme un coût total : un supplément encore non résolu est signalé (ex. PV du Z de Soraka). Les portées sont les unités de la source, sans transformer une valeur technique en conseil.
+
+Limite du catalogue #61 : les formules de dégâts, boucliers et soins de nombreux sorts ne sont pas résolues ; aucune valeur ni ratio AP/AD n'est inventé. Leur affichage numérique complet nécessite cet enrichissement en amont. Le passif reste descriptif lorsqu'aucune statistique vérifiée n'existe.
+
+### Densité du panneau Compétences (2 octobre 2026 — #4)
+
+L'onglet Compétences utilise un en-tête de 72 px et regroupe touche, nom et statistiques de chaque sort en lignes compactes. Les statistiques générales disponibles et reconnues passent dans un composant Disclosure partagé et repliable, fermé initialement (11 pour Ahri, sans AP fictif ajouté). Les descriptions restent dépliables individuellement ; les valeurs par rang, notes de coût et accès aux détails des sorts sont conservés. Le texte ne diminue pas pour forcer l'affichage ; les métriques reviennent à la ligne et seul le corps de fiche défile quand nécessaire. Builds et Catalogue conservent leur présentation.
+
+Recette représentative actualisée : à 1280×720, Ahri affiche son passif et les paramètres de ses quatre sorts ; le bas de fiche reste accessible par défilement interne. À 960×600, les compétences, ouvertures de descriptions/statistiques et variations de ressource non chiffrées gardent un défilement interne, sans débordement global. Ce résultat ne garantit pas l'absence de défilement pour tous les noms, langues ou descriptions ouverts.
+
+### Icônes et couleurs des statistiques
+
+La famille des pictogrammes des infobulles League 16.19 est embarquée localement, avec rectangles et provenance dans `statIcons.json` et `public/game-data/stats/README.md`. AD orange, AP violet, armure or, RM cyan, PV vert, mana bleu ; les valeurs restent accompagnées des noms. Les glyphes clairs reposent sur un petit fond sombre dans le thème clair pour rester lisibles. Aucun appel réseau n'est nécessaire au rendu. Le formatage conserve trois décimales pour la vitesse d'attaque et reconnaît les unités de portée.
+
+Une expression comme `60 % AP`, uniquement lorsqu'elle est déjà écrite dans une description affichable, reçoit la couleur AP et son icône sans changer le texte ni calculer le coefficient. Les dommages magiques ne deviennent pas de l'AP. Les formules encore non résolues du catalogue #61 restent absentes : ce lot ne fournit pas de scalings manquants. Les statistiques inconnues conservent un affichage textuel, sans pictogramme arbitraire.
+
+Les paramètres d’un sort utilisent trois colonnes stables : pictogramme et libellé au-dessus, valeurs alignées sous le libellé. Les glyphes et leur atlas sont redimensionnés ensemble (14 px dans les paramètres et les mentions, 16 px par défaut). Le fonctionnement du sort reste dépliable. Le coût reçoit sa couleur uniquement si la ressource est explicitement rattachée à `{{ cost }}` ou si la référence générique peut être résolue avec la fiche du même champion : mana bleu, énergie jaune, PV vert. L’énergie n’a pas de pictogramme dans l’atlas actuel ; aucun substitut n’est inventé. Un coût inconnu reste neutre.
+
+Les mentions `/s` et `/ roquette` sont conservées lorsqu’elles qualifient directement le coût. Les formules restantes restent signalées par « Autre variation de ressource non chiffrée » : cela couvre aussi bien un supplément de PV (Soraka) qu’une restauration d’énergie (Akali), sans les transformer en valeurs connues. Le même composant sert à la fiche, aux infobulles et aux détails.
+
+
+### Contrôles partagés et transitions de panneaux — 2 octobre 2026
+
+`ui/SelectField` est le sélecteur unique : `label`, `value` et `onChange` contrôlés, `options` (`value`, `label`, `disabled` facultatif), avec `disabled`, `id`, `className` et `placeholder` optionnels. Les valeurs demeurent des chaînes ; les conversions métiers restent chez l’appelant. Il sert aux filtres Champions, régions/joueurs, réglages/imports, préparation, runes/sorts, variantes de builds et au prototype. Une garde de test refuse les sélecteurs HTML natifs dans les sources runtime. Les dialogues système restent gérés par l’OS.
+
+Le focus reste sur le bouton : flèches, Home/End, recherche par frappe, Entrée/Espace, Échap et Tab. Les options interdites ne peuvent être choisies à la souris ou au clavier. Valeur inconnue : placeholder, sans afficher arbitrairement la première option. Portail dans le dialogue actif pour respecter la modalité ; fermeture au clic extérieur, changement de taille ou défilement extérieur.
+
+La fiche champion distingue identité, onglets, statistiques générales repliables et cartes de compétences. Icône, touche et nom identifient chaque sort ; métriques colorées toujours visibles, explication secondaire dépliable avec `Disclosure`. La hauteur se développe et se replie, les parties cachées sont retirées de la navigation clavier.
+
+`usePresence` conserve les panneaux pendant leur sortie (180 ms), annulable à la réouverture. `useDialogMotion` garde les dialogues modaux jusqu’à la fin du fondu, neutralise les interactions durant la sortie et conserve la restitution du focus. Les fenêtres modales utilisent un fondu sans transform pour ne pas déplacer le repère des dropdowns portalisés. Fiche champion et menu latéral glissent légèrement ; compte et recherche apparaissent avec un mouvement bref. Aucun nouvel effet WebGL ni animation en boucle. Préférence de l’app et `prefers-reduced-motion` neutralisent ces mouvements.
+
+Le lien « Détails du champion » en bas de l’onglet Compétences est retiré : il doublonnait la fiche déjà ouverte. Les statistiques de base restent disponibles en haut du panneau et chaque icône de sort ouvre toujours ses détails.
+
+
+### Finition de la préparation réelle — 3 octobre 2026 (#4, #13)
+
+Le bloc de préparation réunit portrait, statut et sélecteur du champion. Le suivi affiche « Votre prépick » puis « Votre pick verrouillé » à partir du client. Une consultation reste indépendante des nouveaux picks ; son bouton retour affiche le champion actuellement annoncé et disparaît s’il n’y en a plus. Choisir son propre champion dans le sélecteur reprend le suivi. Aucun de ces contrôles ne sélectionne ou verrouille un champion dans League.
+
+Les cartes sont identifiées par joueur ; les emplacements vides utilisent des clés distinctes, y compris pour une équipe partielle. Le verrouillage conserve la carte et anime seulement contraste/opacité ; un nouvel artwork reçoit une arrivée brève. Les deux arbres de runes ont leur propre surface, les alternatives restent visibles et les rangées se réduisent selon l’espace réel. À petite hauteur, le panneau de runes équipé défile entièrement pour ne pas laisser les commandes comprimer l’arbre. Les objets observés gardent leur ordre et leurs numéros ; catalogue, composants et consommables restent disponibles sans être présentés comme des recommandations situationnelles.
+
+Le dépliant Compétences partage `Disclosure`, les panneaux et infobulles utilisent des fondus courts. Pas de nouvelle boucle ni de WebGL ajouté ; mouvements réduits système et application respectés. La recette isolée utilise les composants de production et des états de draft/statistiques fictifs explicitement signalés : suivi, retour, verrouillage sans remontage, FR/EN, thèmes, panneaux étroits et tailles 960×600, 1280×720, 1440×900. Elle ne valide pas une draft LCU réelle ni Windows ; ces essais restent différés.
+
+L’application Tauri macOS a été reconstruite et relancée : navigation Draft, sélection manuelle d’Ahri, accès au catalogue/runes et désactivation des imports hors draft vérifiés dans la fenêtre native. Les équipes restent vides avec le client déconnecté ; aucune simulation n’est embarquée dans le produit.

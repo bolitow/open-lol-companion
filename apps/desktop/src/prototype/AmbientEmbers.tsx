@@ -4,11 +4,11 @@ import {createEmberRenderer} from "./emberShader";
 import type {Theme} from "./model";
 
 /** Deux plans WebGL et des contacts locaux partagent une seule horloge suspendable. */
-export function AmbientEmbers({root,theme,enabled,scene}:{scene:string;root:RefObject<HTMLDivElement|null>;theme:Theme;enabled:boolean}) {
+export function AmbientEmbers({root,theme,enabled,scene,panelSelector=".profile-panel,.session-panel,.goals-panel,.suggestion-panel,.champion-preparation,.draft-build"}:{panelSelector?:string;scene:string;root:RefObject<HTMLDivElement|null>;theme:Theme;enabled:boolean}) {
   useEffect(()=>{
     const host=root.current;
     if(!host||!enabled)return;
-    const panels=[...host.querySelectorAll<HTMLElement>(".profile-panel,.session-panel,.goals-panel,.suggestion-panel,.champion-preparation,.draft-build")].filter(p=>!p.closest('.page-hidden,[aria-hidden="true"]')).slice(0,3);
+    const panels=[...host.querySelectorAll<HTMLElement>(panelSelector)].filter(p=>!p.closest('.page-hidden,[aria-hidden="true"]')).slice(0,3);
     if(!panels.length)return;
     const layers=(["back","front"] as EmberDepth[]).map(depth=>{
       const canvas=document.createElement("canvas");
@@ -79,14 +79,16 @@ export function AmbientEmbers({root,theme,enabled,scene}:{scene:string;root:RefO
     const contextLost=()=>{lost=true;loop.stop();disposeLayers();};
     const observer=new ResizeObserver(update);observer.observe(host);panels.forEach(panel=>observer.observe(panel));
     document.addEventListener("visibilitychange",visibility);
+    host.addEventListener("animationend",update);
     window.addEventListener("resize",update);window.addEventListener("scroll",update,{passive:true});
     layers.forEach(layer=>layer.canvas.addEventListener("webglcontextlost",contextLost));
     visibility();
     return()=>{
       loop.stop();observer.disconnect();document.removeEventListener("visibilitychange",visibility);
+      host.removeEventListener("animationend",update);
       window.removeEventListener("resize",update);window.removeEventListener("scroll",update);
       disposeLayers();
     };
-  },[root,theme,enabled,scene]);
+  },[root,theme,enabled,scene,panelSelector]);
   return null;
 }

@@ -5,6 +5,8 @@
 //! Un artwork manquant interrompt la publication, sans remplacement par une icône.
 #[path = "publish_desktop_catalog/artworks.rs"]
 mod artworks;
+#[path = "publish_desktop_catalog/cosmetics.rs"]
+mod cosmetics;
 use clap::Parser;
 use olc_catalog_cache::{digest, snapshot_id, Cache, FileEntry, Manifest};
 use serde_json::{json, Value};
@@ -215,6 +217,7 @@ async fn main() -> Result<()> {
     let names: Value = serde_json::from_slice(&files["champions.json"])?;
     let downloaded = artworks::download(&manifest.version, &names).await?;
     artworks::apply(&manifest.version, &mut files, downloaded)?;
+    files.extend(cosmetics::download(&manifest.version).await?);
     manifest.files = file_entries(&files);
     manifest.snapshot_id = snapshot_id(&manifest)?;
     olc_catalog_cache::validate_manifest(&manifest)?;

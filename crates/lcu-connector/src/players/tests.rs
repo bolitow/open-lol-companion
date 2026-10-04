@@ -12,6 +12,7 @@ fn expected_account() -> LcuAccount {
     LcuAccount {
         platform: "EUW1".into(),
         game_name: "Alpha".into(),
+        profile_icon_id: Some(7),
         tag_line: "TEST".into(),
     }
 }

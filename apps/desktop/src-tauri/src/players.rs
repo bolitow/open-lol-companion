@@ -217,6 +217,7 @@ mod tests {
         LcuAccount {
             platform: "EUW1".into(),
             game_name: name.into(),
+            profile_icon_id: None,
             tag_line: "TAG".into(),
         }
     }

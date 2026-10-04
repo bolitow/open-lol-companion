@@ -11,3 +11,7 @@ it('conserve la période des régénérations et masque une unité inconnue',()=
  expect(formatStat(15,null,'fr')).toBeNull();
  expect(formatStat(NaN,'points','fr')).toBeNull();
 });
+it('conserve la précision de la vitesse d’attaque et reconnaît les unités de portée',()=>{
+ expect(formatStat(.668,'attacks_per_second','fr')).toBe('0,668 / s');
+ expect(formatStat(550,'game_units','en')).toBe('550');
+});

@@ -140,13 +140,23 @@ pub async fn catalog_read(
     let directory = root(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         let cache = Cache::reader(&directory).map_err(|_| "catalog_storage")?;
-        let bytes = cache
-            .read(&snapshot_id, &path)
-            .map_err(|_| "catalog_invalid")?;
-        serde_json::from_slice(&bytes).map_err(|_| "catalog_invalid")
+        read_json(&cache, &snapshot_id, &path)
     })
     .await
     .map_err(|_| "catalog_storage")?
+}
+fn read_json(cache: &Cache, snapshot: &str, path: &str) -> Result<serde_json::Value, &'static str> {
+    if path == "cosmetics.json"
+        && !cache
+            .manifest(snapshot)
+            .map_err(|_| "catalog_invalid")?
+            .files
+            .contains_key(path)
+    {
+        return Ok(serde_json::Value::Null);
+    }
+    let bytes = cache.read(snapshot, path).map_err(|_| "catalog_invalid")?;
+    serde_json::from_slice(&bytes).map_err(|_| "catalog_invalid")
 }
 #[tauri::command]
 pub async fn catalog_sync(app: tauri::AppHandle) -> CatalogRuntimeState {
@@ -307,6 +317,38 @@ pub fn protocol(
 mod tests {
     use super::*;
     use std::sync::Arc;
+    #[test]
+    fn cosmetiques_absents_acceptes_mais_fichier_corrompu_refuse() {
+        use olc_catalog_cache::{digest, snapshot_id, FileEntry};
+        let tmp = tempfile::tempdir().unwrap();
+        let mut cache = Cache::open(tmp.path()).unwrap();
+        let bytes = b"{}";
+        let file = FileEntry {
+            bytes: 2,
+            sha256: digest(bytes),
+            media_type: "application/json".into(),
+        };
+        let mut m = Manifest {
+            schema_version: 1,
+            version: "16.19.1".into(),
+            normalizer_version: 1,
+            snapshot_id: String::new(),
+            files: std::collections::BTreeMap::from([("other.json".into(), file.clone())]),
+        };
+        cache.put(&file, bytes).unwrap();
+        m.snapshot_id = snapshot_id(&m).unwrap();
+        cache.save(&m).unwrap();
+        assert_eq!(
+            read_json(&cache, &m.snapshot_id, "cosmetics.json"),
+            Ok(serde_json::Value::Null)
+        );
+        assert!(read_json(&cache, &m.snapshot_id, "missing.json").is_err());
+        m.files.insert("cosmetics.json".into(), file.clone());
+        m.snapshot_id = snapshot_id(&m).unwrap();
+        cache.save(&m).unwrap();
+        std::fs::write(cache.object_path(&file.sha256), b"xx").unwrap();
+        assert!(read_json(&cache, &m.snapshot_id, "cosmetics.json").is_err());
+    }
     #[tokio::test]
     async fn toutes_les_fenetres_attendent_la_meme_initialisation() {
         let service = Arc::new(CatalogService::default());

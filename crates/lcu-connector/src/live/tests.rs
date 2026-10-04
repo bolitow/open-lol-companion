@@ -99,6 +99,7 @@ fn draft_session() -> crate::LcuSession {
         account: Some(crate::LcuAccount {
             platform: "EUW1".into(),
             game_name: "Private".into(),
+            profile_icon_id: None,
             tag_line: "TAG".into(),
         }),
     });

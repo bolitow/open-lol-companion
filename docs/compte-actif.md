@@ -30,6 +30,14 @@ Recette visuelle isolée : états actif, compte indisponible, déconnecté et se
 
 Hors périmètre : authentification du profil app, vérification de propriété, comptes liés publiquement, suivi d’amis, import automatique #63, modification de la draft.
 
+
+### Avatar et connexion dans la navigation (#4, #65)
+
+Le bandeau de connexion et le footer permanent sont remplacés par l’avatar du compte, en haut à droite. Un clic ouvre son Riot ID, la région, l’état du client et les actions profil/session ou réessayer. La pastille verte indique uniquement la connexion au client League ; jaune indique attente/recherche et rouge une erreur de suivi. L’aperçu navigateur est gris. Le statut est aussi lisible par les lecteurs d’écran et dans le panneau. Échap, un clic extérieur ou la sortie du focus ferment le panneau.
+
+`LcuAccount.profile_icon_id` projette uniquement `profileIconId` du `current-summoner` déjà lu par Rust (entier public positif ou nul). Aucun appel local supplémentaire et aucun secret ne transitent dans React. Le dernier identifiant d’icône est mémorisé avec l’identité locale existante, remplacé au changement de compte et effacé avec « oublier ». Il reste distinct des paramètres `PlayerRequest` envoyés au service de profils.
+
+L’image vient du CDN HTTPS public [Data Dragon](https://developer.riotgames.com/docs/lol#data-dragon_other), version 16.19.1 du catalogue actuel. Pas de téléchargement ni de cache fichier spécifique : le cache HTTP du WebView s’applique. Une icône récente absente de cette version, une erreur réseau ou un identifiant manquant donnent une silhouette neutre, jamais l’avatar d’un autre compte. Le service de profils peut fournir l’icône en repli pour le même compte. Les mentions Riot restent visibles dans le menu principal.
 ## Profil, historique local et amis — complément du 2 octobre 2026
 
 Le profil actif utilise désormais `GET /lol-ranked/v1/current-ranked-stats` pour les rangs et `GET /lol-match-history/v1/products/lol/current-summoner/matches?begIndex=…&endIndex=…` pour les parties. Le PUUID est utilisé seulement dans Rust pour retrouver la participation locale, par jointure `participantId`, et vérifier le compte avant/après. Les réponses tardives d'une ancienne connexion sont rejetées même après A→B→A. La lecture complète est bornée à dix secondes. Le DTO desktop ne transmet plus de PUUID, quelle que soit la source.
@@ -41,3 +49,24 @@ Recette réelle macOS : profil local avec niveau et deux rangs ; dix parties loc
 Amis : voir [contrat #71](amis-client.md). Les données client restent séparées du collecteur Riot et des agrégats de builds.
 
 Recette finale du bundle macOS : profil actif, niveau, rangs Solo/Flex et source client LoL visibles, dix parties (dont les personnalisées récentes) dans l'accueil. Les amis sont chargés simultanément, sans appel à l'API publique pour ces lectures. La pagination au-delà de cette première page reste dépendante du service/cache LCU ; ne pas annoncer cinquante parties validées.
+
+
+### Finition Accueil / Joueurs — 3 octobre 2026 (#4)
+
+Le bloc de préparation de l’accueil est raccourci pour donner davantage de hauteur aux dernières parties. La fiche partagée Accueil/Joueurs affiche l’avatar public (initiales en repli si l’image manque), un Riot ID compact et les deux rangs. Une valeur de PL absente reste « — », jamais zéro par défaut.
+
+L’historique distingue le chargement du profil, son indisponibilité et une page effectivement vide. Les matchs déjà reçus restent visibles pendant un échec d’actualisation. Le repère V/D et sa barre à deux segments représentent uniquement les parties affichées, sans extrapolation de niveau ou de saison, et restent bornés après pagination. Les données gardent leur source client/API et leur horodatage.
+
+Contrôle de présentation avec fixtures explicitement signalées : 1000 × 650 en sombre, 1280 × 800 en clair ; défilement interne, aucun dropdown natif. Parcours profil → champion Ahri → retour : même Riot ID, défilement conservé à 300 px. Cette recette visuelle ne prouve pas une lecture LCU réelle. Le module Amis et les transports existants sont conservés ; aucune nouvelle recommandation implémentée.
+
+Bundle Tauri macOS reconstruit et relancé : avatar du compte conservé, état déconnecté et historique indisponible vérifiés sur Accueil puis Joueurs, avec retour fonctionnel. League fermé et service public non configuré pendant ce contrôle : rangs et parties remplis vérifiés uniquement avec les fixtures. `pnpm test` : 854 tests réussis, deux tests Rust ignorés ; `pnpm lint` et revue stricte OK. Test manuel Windows non exécuté.
+
+### Ajustements de l’accueil après retour visuel (#4)
+
+Les amis occupent une ligne : avatar Data Dragon issu de `icon_id`, nom et pastille de présence sur l’avatar. Le Riot ID, la région et le statut restent dans le titre au survol et le nom accessible ; les identités incomplètes restent sans action. Une icône absente ou en erreur revient aux initiales. La liste continue de défiler à l’intérieur de sa carte.
+
+Les dix emblèmes officiels Riot sont embarqués dans `apps/desktop/public/game-data/ranks` (provenance documentée dans ce dossier), affichés sur l’accueil et le profil. Aucun emblème de rang n’est attribué aux données absentes ou non classées.
+
+Le texte « Compte actif dans League » est retiré de l’accueil. Les états déconnecté/compte indisponible restent explicites. Actualiser et Voir le profil sont regroupés près de l’identité avec libellés accessibles ; Retirer de l’accueil n’apparaît que hors connexion. Les actions n’occupent plus un pied de carte susceptible de déborder sous les rangs.
+
+Recette de cette passe : 857 tests réussis (deux tests Rust ignorés), lint et build macOS OK ; revue stricte OK après ajout du rôle accessible aux amis sans profil. En 1000 × 650, sombre et clair, la carte et les actions restent contenues, les lignes d’amis mesurent 46 px. Sur le bundle natif connecté à League, avatars réels des amis et deux emblèmes Or visibles. Une réponse d’historique refusée comme incohérente a été observée après reconnexion, puis après Réessayer/Actualiser ; ce parcours de données n’a pas été modifié dans cette passe et nécessite une investigation distincte. Aucun test Windows exécuté.

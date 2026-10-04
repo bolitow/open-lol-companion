@@ -33,10 +33,12 @@ describe('réglages natifs visibles',()=>{
  });
 });
 
-it('conserve les réglages overlay dans les résultats défilants et la recherche',()=>{
+it('rend les commandes overlay dans les résultats recherchables avec leur état desktop',()=>{
  const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'overlay',category:'league'}} update={()=>{}}/></SettingsProvider>);
  expect(html).toContain('overlay-settings-title');
- expect(html).not.toContain('Aucun réglage trouvé.');
+ expect(html).not.toContain('Aucun réglage trouvé');
+ expect(html).toContain('fieldset disabled');
+ expect(html).not.toContain('setting-theme');
 });
 
 it('trouve l’accès à l’API par la recherche et masque la saisie du jeton',()=>{

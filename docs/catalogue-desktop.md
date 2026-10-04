@@ -36,8 +36,18 @@ Revalidation : démarrage/session, publication serveur, retour au premier plan a
 
 ## Limites et recette
 
-Les séries/images de skins, vidéos et icônes de profil ne font pas partie de ce paquet. Les effets présents dans les fiches gardent leur provenance et leur statut ; aucune valeur manquante n’est inventée. Le ticket #93 reste ouvert pour les autres familles et les manifestes régionaux.
+`cosmetics.json` contient les identifiants d’icônes de profil, les séries FR/EN et les chemins des miniatures/splashs de skins. Ces métadonnées versionnées sont vérifiées et activées avec le reste du catalogue. Les images cosmétiques ne gonflent pas le paquet obligatoire : le protocole local `cosmetic` les résout par snapshot/type/identifiant déclaré et Rust les télécharge à la demande depuis les CDN publics au patch explicite, sans redirection ni URL libre venant de l’interface.
+
+Le cache indépendant `cosmetic-images-v1` est limité à 128 Mio et 4 096 entrées, avec 8 Mio maximum par image. MIME, signature et empreinte locale sont vérifiés ; les écritures sont atomiques et les entrées les moins récemment utilisées sont évincées. Le transport est sérialisé pour dédupliquer les demandes et limiter la charge. L’empreinte locale détecte une corruption du cache, mais n’est pas une empreinte des octets d’image annoncée par le serveur : la provenance repose sur HTTPS et l’URL du CDN versionné. Une correction upstream à URL identique attend l’éviction du cache pour être relue.
+
+Un ancien paquet sans `cosmetics.json` reste accepté : les séries embarquées et les images historiques servent de repli. Les URL de skins issues du client sont alors épinglées au patch LCU ; si ce patch n’est pas lisible, l’image est absente plutôt que suivie via `latest`. Les vidéos restent dans leur catalogue distinct. Les effets présents dans les fiches gardent leur provenance et leur statut ; aucune valeur manquante n’est inventée. Le ticket #93 reste ouvert pour les manifestes régionaux et les validations restantes.
 
 Recette Windows manuelle encore à effectuer. Tests de verrou/écriture et chemins partagés couvrent les deux plateformes au niveau du code ; cela ne remplace pas une exécution Windows. Les logs de recette locale Mac et les fixtures de cette passe sont conservés dans `work/catalog-93/`, sans secret.
 
 Les primitives utilisées sont documentées par [fs2 FileExt](https://docs.rs/fs2/0.4.3/fs2/trait.FileExt.html) et [tempfile NamedTempFile::persist](https://docs.rs/tempfile/latest/tempfile/struct.NamedTempFile.html#method.persist). Le fichier est synchronisé avant remplacement ; le répertoire est également synchronisé sur Unix. La résistance aux coupures matérielles dépend du système de fichiers.
+
+## Intégration des branches
+
+Le raccord des consommateurs Collection/avatars dépend des PR #77, #174, #175 et du catalogue #191 (lui-même basé sur #190). La branche d’intégration conserve les deux ensembles ; aucune de ces PR n’est fusionnée automatiquement sur main. Les données de possession/souhaits continuent de venir du client et du stockage par compte, sans collecte cosmétique privée côté serveur.
+
+Recette d’intégration : [macOS et limites de validation](recette-catalogue-cosmetique-93.md).

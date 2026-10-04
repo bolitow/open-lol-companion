@@ -7,6 +7,7 @@ pub struct LcuAccount {
     pub platform: String,
     pub game_name: String,
     pub tag_line: String,
+    pub profile_icon_id: Option<u32>,
 }
 
 impl LcuAccount {
@@ -50,6 +51,10 @@ impl LcuAccount {
             platform: platform.into(),
             game_name: game_name.into(),
             tag_line: tag_line.into(),
+            profile_icon_id: summoner
+                .get("profileIconId")
+                .and_then(Value::as_u64)
+                .and_then(|id| u32::try_from(id).ok()),
         })
     }
 }
@@ -124,9 +129,31 @@ mod tests {
             LcuAccount::parse(&value, &json!({"region":"EUW", "locale":"en_US"})).unwrap();
         assert_eq!(
             serde_json::to_value(account).unwrap(),
-            json!({"platform":"EUW1","game_name":"First Player","tag_line":"NA1"})
+            json!({"platform":"EUW1","game_name":"First Player","tag_line":"NA1","profile_icon_id":null})
         );
     }
+    #[test]
+    fn conserve_uniquement_une_icone_publique_valide() {
+        for (value, expected) in [
+            (json!(0), Some(0)),
+            (json!(42), Some(42)),
+            (json!(-1), None),
+            (json!(4294967296u64), None),
+            (json!("42"), None),
+            (Value::Null, None),
+        ] {
+            let account = LcuAccount::parse(
+                &json!({"gameName":"Name","tagLine":"TAG","profileIconId":value}),
+                &json!({"region":"EUW"}),
+            )
+            .unwrap();
+            assert_eq!(
+                serde_json::to_value(account).unwrap()["profile_icon_id"],
+                json!(expected)
+            );
+        }
+    }
+
     #[test]
     fn refuse_les_donnees_incompletes_et_regions_non_prises_en_charge() {
         for value in [

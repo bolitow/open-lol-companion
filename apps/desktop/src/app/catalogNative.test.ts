@@ -8,6 +8,7 @@ const directory={version:'16.19.1',champions:[{id:103,key:'Ahri',names:{fr:'Ahri
 const base={locale:'fr_FR',namespace:'standard',description:null,fields:{},stats:{},coverage:{},effects:[]};
 it('épingle racine, fiche et images au même snapshot ; une ancienne racine ne lit jamais la nouvelle fiche',async()=>{
  invoke.mockImplementation(async(_command,args)=>{
+  if(args.path==='cosmetics.json')return null;
   if(args.path==='champions.json')return {'103':{key:'Ahri',fr:'Ahri',en:'Ahri'}};
   if(args.path==='champion-directory.json')return directory;
   return {version:'16.19.1',records:[{...base,id:args.path.includes('/champions/')?'103:Q':'1001',name:'Test',kind:args.path.includes('/champions/')?'ability':'item',icon:'/game-data/catalog/icons/item/1001.png'}]};

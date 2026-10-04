@@ -43,6 +43,9 @@ fn record(r: &Value, locale: &str, m: &Manifest) -> Result<()> {
 /// Vérifie le contrat métier avant l’activation ; les hashes seuls ne prouvent pas la cohérence.
 pub fn validate_catalog(c: &Cache, m: &Manifest) -> Result<()> {
     c.verify(m)?;
+    if m.files.contains_key("cosmetics.json") {
+        crate::cosmetics::Cosmetics::parse(&c.read(&m.snapshot_id, "cosmetics.json")?, &m.version)?;
+    }
     let directory = json(c, m, "champion-directory.json")?;
     if directory["version"] != m.version {
         return Err(Error::Invalid);

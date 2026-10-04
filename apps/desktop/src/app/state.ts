@@ -1,7 +1,7 @@
 import { screenForPhase, type AppScreen, type LcuSession, type Role } from '@olc/shared';
 import {rankForQueue} from './buildRanks';
 import {draftDefaults} from './buildContext';
-export type Screen = AppScreen | 'settings' | 'champions' | 'players';
+export type Screen = AppScreen | 'settings' | 'champions' | 'players' | 'collection';
 export type Locale = 'fr' | 'en';
 export interface Preferences {
     theme: 'dark' | 'light';
