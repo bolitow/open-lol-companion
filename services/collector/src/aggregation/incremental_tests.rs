@@ -226,7 +226,9 @@ fn le_cumul_des_lots_reproduit_exactement_le_recalcul_complet() {
     // Le corpus exerce bien chaque section et chaque compteur.
     assert!(full.omitted_build_variants > 0);
     assert!(full.exclusions.len() >= 4, "{:?}", full.exclusions);
-    assert!(full.groups.iter().any(|g| g.tier.is_some()));
+    // Le classement est exercé par la position ; le tier (#85) demande 20 champions par
+    // compartiment, que ce corpus n'atteint pas.
+    assert!(full.groups.iter().any(|g| g.position.is_some()));
     assert!(full.bans.iter().any(|b| b.rank == "GOLD"));
     assert!(!full.skill_levels.is_empty() && !full.item_events.is_empty());
     assert!(full.builds.iter().any(|b| b.category == "core"));
@@ -272,6 +274,7 @@ fn les_compteurs_relus_d_un_lot_reconstituent_l_en_tete_du_recalcul_complet() {
     expected.builds.clear();
     expected.skill_levels.clear();
     expected.item_events.clear();
+    expected.splits.clear();
     // Chemin publié : seuls les compteurs de chaque lot, stockés en JSON, rejoignent l'en-tête.
     let mut head = settings.accumulator(catalogs.clone()).unwrap().finish();
     for (scope, lot) in &lots {
