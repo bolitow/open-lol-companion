@@ -93,7 +93,11 @@ le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
 un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées. Les groupes Arena (#104) portent
 `placement_games`, `average_placement`, `top1_rate` et `top2_rate` (`null`/`0` hors Arena ou
 pour un instantané antérieur), leurs `win_rate` et `win_rate_lower_bound` sont `null` ; la
-couverture ajoute `unknown_placement_participations`.
+couverture ajoute `unknown_placement_participations`. En Arena, les variantes de builds hors
+objets (runes, sorts, ordre de compétences) publient `placement_games` et `average_placement`
+au lieu des victoires (`wins`, `win_rate`, `win_rate_lower_bound` nuls,
+`performance_available: false`) ; les objets Arena ne publient ni victoires ni placement ;
+hors Arena, rien ne change (`placement_games` à 0, `average_placement` nul, ancien instantané compris).
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
 du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le
