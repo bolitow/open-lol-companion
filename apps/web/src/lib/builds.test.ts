@@ -14,7 +14,7 @@ function build(category: string, selection: number[], games: number): BuildStats
     selection,
     games,
     wins: null,
-    performance_available: false,
+    omitted_variants:null,performance_available: false,
     population: 500,
     pick_rate: null,
     win_rate: null,

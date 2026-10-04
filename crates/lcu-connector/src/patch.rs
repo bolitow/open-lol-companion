@@ -30,7 +30,7 @@ impl ClientPatch {
     /// reste conservée telle quelle, mais bornée et sans espace ni caractère de contrôle.
     pub fn parse(value: &Value) -> Option<Self> {
         let raw = value.as_str()?;
-        if raw.is_empty() || raw.len() > 64 || !raw.bytes().all(|b| b.is_ascii_graphic()) {
+        if raw.is_empty() || raw.len() > 256 || !raw.bytes().all(|b| b.is_ascii_graphic()) {
             return None;
         }
         let mut parts = raw.split('.');
@@ -87,6 +87,7 @@ mod tests {
             ("16.19.715.1234", "16.19"),
             ("16.20.1.1", "16.20"),
             ("16.1", "16.1"),
+            ("16.19.8230722+branch.releases-16-19.code.public.content.release.anticheat.vanguard", "16.19"),
         ] {
             assert_eq!(
                 ClientPatch::parse(&json!(raw)),
@@ -128,7 +129,7 @@ mod tests {
             json!(" 16.19.1"),
             json!("16.19.1\n"),
             json!("99999999999.1"),
-            json!(format!("16.19.{}", "1".repeat(64))),
+            json!(format!("16.19.{}", "1".repeat(256))),
         ] {
             assert!(ClientPatch::parse(&value).is_none(), "accepté : {value}");
         }

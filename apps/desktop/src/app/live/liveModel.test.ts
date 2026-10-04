@@ -11,7 +11,7 @@ const ready: LiveSession = {
 describe('contexte réel en partie', () => {
   it('associe le champion live au catalogue avant de demander les statistiques', () => {
     expect(liveChampion(ready, 'en')).toEqual({id: 432, name: 'Bard', image: '/game-data/champions/432.jpg'});
-    expect(liveBuildRequest(ready, '16.19.1')).toEqual({champion_id: 432, patch: '16.19', platform: 'EUW1', queue: 420, role: 'UTILITY', rank: 'ALL'});
+    expect(liveBuildRequest(ready, '16.19.1')).toEqual({champion_id: 432, patch: '16.19', platform: 'EUW1', queue: 420, role: 'UTILITY', rank: 'EMERALD_PLUS'});
   });
 
   it('reconnaît la clé publique brute du champion', () => {
@@ -57,4 +57,9 @@ describe('contexte réel en partie', () => {
     expect(formatLiveTime(3661)).toBe('61:01');
     expect(formatLiveTime(Number.NaN)).toBe('—');
   });
+});
+
+it('respecte le rang explicite et le neutralise hors classé',()=>{
+ expect(liveBuildRequest(ready,'16.19.1','GOLD')?.rank).toBe('GOLD');
+ expect(liveBuildRequest({...ready,context:{...ready.context!,queue:400}},'16.19.1','GOLD')?.rank).toBe('ALL');
 });

@@ -1,12 +1,19 @@
 //! Lecture des builds communautaires, sans transport de données LCU.
 
 pub mod credentials;
+mod observations;
+pub use observations::{BuildDetails, BuildSummary, ItemObservation, SkillObservation};
 pub mod profiles;
 pub mod publications;
 
 use reqwest::{header::HeaderValue, Url};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, net::IpAddr, sync::Arc, time::Duration};
+use std::{
+    collections::{BTreeMap, HashSet},
+    net::IpAddr,
+    sync::Arc,
+    time::Duration,
+};
 
 const PAGE_SIZE: usize = 200;
 const MAX_VARIANTS: usize = 1_000;
@@ -89,11 +96,78 @@ pub enum BuildError {
 }
 
 /// Métadonnées affichées avec les statistiques (miroir BuildReport.meta).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct BuildMeta {
     pub source_snapshot_at: String,
     pub published_at: String,
     pub min_games: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub population_label: Option<String>,
+    #[serde(default)]
+    pub coverage: Vec<BuildPopulationCoverage>,
+}
+
+/// Répartition du périmètre entier, tous rôles confondus ; projection de ScopeCoverage.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct BuildPopulationCoverage {
+    pub patch: String,
+    pub platform_id: String,
+    pub queue_id: u32,
+    pub ranked_participations: u64,
+    #[serde(default)]
+    pub tier_participations: BTreeMap<String, u64>,
+    #[serde(default)]
+    pub apex_share: Option<f64>,
+    #[serde(default)]
+    pub high_elo_biased: bool,
+}
+impl BuildMeta {
+    fn check_population(&self, request: &BuildRequest) -> Result<(), BuildError> {
+        if self
+            .population_label
+            .as_ref()
+            .is_some_and(|label| label.len() > 64)
+            || self.coverage.len() > 1
+        {
+            return Err(BuildError::InvalidResponse);
+        }
+        for scope in &self.coverage {
+            if scope.patch != request.patch
+                || scope.platform_id != request.platform
+                || scope.queue_id != request.queue
+                || scope.ranked_participations > 9_007_199_254_740_991
+                || scope
+                    .apex_share
+                    .is_some_and(|share| !share.is_finite() || !(0.0..=1.0).contains(&share))
+                || scope.tier_participations.iter().any(|(tier, count)| {
+                    ![
+                        "IRON",
+                        "BRONZE",
+                        "SILVER",
+                        "GOLD",
+                        "PLATINUM",
+                        "EMERALD",
+                        "DIAMOND",
+                        "MASTER",
+                        "GRANDMASTER",
+                        "CHALLENGER",
+                    ]
+                    .contains(&tier.as_str())
+                        || *count > 9_007_199_254_740_991
+                })
+                || (!scope.tier_participations.is_empty()
+                    && scope
+                        .tier_participations
+                        .values()
+                        .try_fold(0_u64, |sum, count| sum.checked_add(*count))
+                        != Some(scope.ranked_participations))
+            {
+                return Err(BuildError::InvalidResponse);
+            }
+        }
+        // Le drapeau publié fait foi ; aucun seuil de biais n’est recalculé ici.
+        Ok(())
+    }
 }
 
 /// Fiabilité d'un taux au regard de son effectif (#91), miroir de `Reliability` (@olc/shared).
@@ -119,6 +193,8 @@ pub struct BuildVariant {
     pub wins: Option<u64>,
     pub performance_available: bool,
     pub population: u64,
+    #[serde(default)]
+    pub omitted_variants: Option<u64>,
     pub pick_rate: Option<f64>,
     pub win_rate: Option<f64>,
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
@@ -154,6 +230,9 @@ impl BuildVariant {
             || self.rank != request.rank
             || self.category.len() > 64
             || self.selection.len() > 4096
+            || self
+                .omitted_variants
+                .is_some_and(|n| n > 9_007_199_254_740_991)
             || self.games > self.population
             || self.wins.is_some_and(|wins| wins > self.games)
             || [
@@ -209,6 +288,8 @@ pub struct BuildReport {
     pub request: BuildRequest,
     pub meta: BuildMeta,
     pub builds: Vec<BuildVariant>,
+    #[serde(flatten)]
+    pub details: BuildDetails,
 }
 
 #[derive(Deserialize)]
@@ -218,6 +299,8 @@ struct Page {
     champion_id: u32,
     total: usize,
     builds: Vec<BuildVariant>,
+    #[serde(flatten)]
+    details: BuildDetails,
 }
 
 /// Client du serveur interne. Configuration et autorisation restent en Rust.
@@ -305,6 +388,7 @@ impl BuildClient {
         let mut rows = vec![];
         let mut publication = None;
         let mut total = None;
+        let mut observations = None;
         let mut seen = HashSet::new();
         loop {
             let offset = rows.len();
@@ -364,6 +448,9 @@ impl BuildClient {
             }
             if publication.as_ref().is_some_and(|meta| meta != &page.meta)
                 || total.is_some_and(|value| value != page.total)
+                || observations
+                    .as_ref()
+                    .is_some_and(|details| details != &page.details)
             {
                 return Err(BuildError::ChangedSnapshot);
             }
@@ -375,6 +462,9 @@ impl BuildClient {
             {
                 return Err(BuildError::InvalidResponse);
             }
+            meta.check_population(&request)?;
+            observations = Some(page.details.clone());
+            page.details.check(&request, meta.min_games)?;
             for row in &mut page.builds {
                 row.check(&request, meta.min_games)?;
                 if !seen.insert((row.category.clone(), row.selection.clone())) {
@@ -387,6 +477,7 @@ impl BuildClient {
                     request,
                     meta,
                     builds: rows,
+                    details: page.details,
                 });
             }
             total = Some(page.total);

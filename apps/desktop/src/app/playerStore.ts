@@ -17,7 +17,7 @@ export function parseHomePlayer(raw:string|null):PlayerRequest|null {
 }
 export const playerKey=(player:PlayerRequest)=>JSON.stringify([player.platform,player.game_name.toLowerCase(),player.tag_line.toLowerCase()]);
 export const playerIdentity=(player:PlayerRequest):PlayerRequest=>({platform:player.platform,game_name:player.game_name,tag_line:player.tag_line});
-const knownErrors:PlayerError[]=['not_configured','invalid_configuration','invalid_request','unauthorized','not_found','unavailable','rate_limited','invalid_response','desktop_required'];
+const knownErrors:PlayerError[]=['not_configured','invalid_configuration','invalid_request','unauthorized','not_found','unavailable','riot_busy','rate_limited','invalid_response','desktop_required'];
 const cleanError=(error:unknown):PlayerError=>knownErrors.includes(error as PlayerError)?error as PlayerError:'unavailable';
 export interface PlayerTransport {profile:(request:PlayerRequest)=>Promise<PlayerProfile>;matches:(request:PlayerHistoryRequest)=>Promise<PlayerHistory>}
 export interface PlayerEntry {identity:PlayerRequest;profile:PlayerProfile|null;loading:boolean;error:PlayerError|null;matches:PlayerMatchView[];historyLoading:boolean;historyRefresh:boolean;historyError:PlayerError|null;next:number|null;omitted:number;historyFetchedAt:number|null;historySource:'lcu'|'api'|null;scrollTop:number}

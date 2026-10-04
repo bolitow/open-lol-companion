@@ -1,5 +1,6 @@
 import {OverlaySettings} from './overlay/OverlaySettings';
 import {DiagnosticsExport} from './DiagnosticsExport';
+import {ClientPatchSettings} from './ClientPatchSettings';
 import {ApiAccessSettings} from './ApiAccessSettings';
 import {useEffect,useRef} from 'react';
 import {Icon} from '../ui/Icon';
@@ -28,7 +29,7 @@ export function SettingsScreen({reduced,view,update}:{reduced:boolean;view:Setti
   <div className="settings-search surface" role="search"><Icon name="search"/><label htmlFor="settings-search">{t.search}</label><input ref={search} id="settings-search" type="search" value={view.query} placeholder={t.placeholder} onChange={e=>update({query:e.target.value})} autoComplete="off" spellCheck={false}/>{view.query&&<button className="icon-button" aria-label={t.clear} onClick={()=>{update({query:''});search.current?.focus()}}><Icon name="close" size={16}/></button>}</div>
   <div className="settings-filters"><div role="group" aria-label={t.categories}>{(['all','app','league'] as const).map(category=><button key={category} aria-pressed={view.category===category} onClick={()=>update({category})}>{t[category]}</button>)}</div><span role="status">{results.length} {results.length===1?t.result:t.results}</span></div>
   <div className="settings-results" role="region" aria-label={t.search} tabIndex={0}>
-   {results.map(key=>key==='overlay'?<OverlaySettings key={key} locale={v.locale}/>:key==='apiAccess'?<ApiAccessSettings key={key} locale={v.locale}/>:<section className="surface setting-card" key={key} aria-labelledby={`setting-${key}`}>
+   {results.map(key=>key==='clientPatch'?<ClientPatchSettings key={key} locale={v.locale}/>:key==='overlay'?<OverlaySettings key={key} locale={v.locale}/>:key==='apiAccess'?<ApiAccessSettings key={key} locale={v.locale}/>:<section className="surface setting-card" key={key} aria-labelledby={`setting-${key}`}>
     <header><span className="setting-symbol"><Icon name={icons[key]} size={21}/></span><div><span className="setting-path">{t.paths[key]}</span><h2 id={`setting-${key}`}>{t.names[key]}</h2></div>{state.recent.slice(0,2).some(recent=>recent===key)&&<span className="setting-recent" title={t.recent}><Icon name="check" size={13}/><span>{t.recent}</span></span>}</header>
     <p>{t.descriptions[key]}</p>
     <div className="setting-control">

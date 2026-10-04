@@ -115,3 +115,9 @@
 .game-tooltip .tooltip-stats b{color:var(--text)}
 @media(min-width:960px) and (max-height:680px){.build-context>img{width:25px;height:29px}.build-context .return-pick{font-size:8px}.build-toolbar{min-height:45px}}
 @media(min-width:760px){.desktop-app .live-champion-card .card-badges>span{display:inline;font-size:7px;margin-right:auto}.desktop-app .live-champion-card .card-badges{justify-content:space-between}}
+
+.build-matchup{display:flex;align-items:center;gap:12px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}.build-matchup small{color:var(--muted);flex:1}.build-matchup .icon-button{margin-left:auto}
+
+.build-population{font-size:11px;min-width:0}.build-population summary{cursor:pointer;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.build-population p{color:var(--muted);margin:8px 0}.build-population table{border-collapse:collapse;width:100%;max-width:440px}.build-population th,.build-population td{padding:4px 8px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.build-population th:first-child{text-align:left}.population-bias{border:1px solid var(--line-strong);border-radius:6px;padding:2px 6px;color:var(--accent)}
+
+.build-observations{font-size:11px;margin-top:10px;min-width:0}.build-observations summary{cursor:pointer}.build-observations p{color:var(--muted);line-height:1.5}.observation-scroll{max-height:220px;overflow:auto;overscroll-behavior:contain}.build-observations table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.build-observations td,.build-observations th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line)}.observation-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0}.observation-controls select{max-width:100%;min-width:0}.observation-controls button{padding:5px 8px;border:1px solid var(--line);border-radius:6px}.observation-controls button:disabled{opacity:.4}

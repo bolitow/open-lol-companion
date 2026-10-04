@@ -469,3 +469,182 @@ fn with(field: &str, value: f64) -> Value {
     row[field] = json!(value);
     row
 }
+
+#[tokio::test]
+async fn transmet_population_et_couverture_avec_label_inconnu_tolerant() {
+    let mut value = page(0, 0, vec![]);
+    value["meta"]["population_label"] = json!("unknown_match_tier");
+    value["meta"]["coverage"] = json!([{"patch":"16.19","platform_id":"EUW1","queue_id":420,"ranked_participations":100,"tier_participations":{"GOLD":8,"MASTER":92},"apex_share":0.92,"high_elo_biased":true}]);
+    let (url, job) = server(vec![(200, value)]).await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let result = serde_json::to_value(client.builds(request()).await.unwrap()).unwrap();
+    assert_eq!(result["meta"]["population_label"], "unknown_match_tier");
+    assert_eq!(
+        result["meta"]["coverage"][0]["tier_participations"]["MASTER"],
+        92
+    );
+    assert_eq!(result["meta"]["coverage"][0]["high_elo_biased"], true);
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn valide_effectifs_et_perimetre_sans_recalculer_le_biais() {
+    let scope = json!({"patch":"16.19","platform_id":"EUW1","queue_id":420,"ranked_participations":100,"tier_participations":{"GOLD":100},"apex_share":0.0,"high_elo_biased":true});
+    for (field, value, valid) in [
+        ("tier_participations", json!({}), true),
+        ("tier_participations", json!({"GOLD":99}), false),
+        (
+            "ranked_participations",
+            json!(9_007_199_254_740_992_u64),
+            false,
+        ),
+        ("queue_id", json!(440), false),
+        ("apex_share", json!(1.01), false),
+        ("apex_share", json!(null), true),
+    ] {
+        let mut row = scope.clone();
+        row[field] = value;
+        let mut value = page(0, 0, vec![]);
+        value["meta"]["coverage"] = json!([row]);
+        let (url, job) = server(vec![(200, value)]).await;
+        let result = BuildClient::new(Some(url), Some("test-token".into()))
+            .unwrap()
+            .builds(request())
+            .await;
+        assert_eq!(result.is_ok(), valid, "{field}");
+        job.await.unwrap();
+    }
+}
+
+fn observation_details(value: &mut Value) {
+    let key = json!({"champion_id":103,"patch":"16.19","platform_id":"EUW1","queue_id":420,"role":"MIDDLE","rank":"ALL"});
+    let mut summary = key.clone();
+    summary.as_object_mut().unwrap().extend(json!({"games":120,"wins":60,"losses":60,"population":200,"win_rate":50.0,"pick_rate":60.0}).as_object().unwrap().clone());
+    let mut skill = key.clone();
+    skill.as_object_mut().unwrap().extend(
+        json!({"point":1,"slot":1,"games":120,"mean_timestamp_ms":45000.0})
+            .as_object()
+            .unwrap()
+            .clone(),
+    );
+    let mut item = key;
+    item.as_object_mut().unwrap().extend(
+        json!({"event":"ITEM_PURCHASED","item_id":1001,"minute":3,"events":150})
+            .as_object()
+            .unwrap()
+            .clone(),
+    );
+    value["summary"] = summary;
+    value["skill_levels"] = json!([skill]);
+    value["item_events"] = json!([item]);
+    value["omitted_build_variants"] = json!(3);
+    value["omitted_build_variants_by_category"] = json!([{"category":"runes","omitted":3}]);
+    value["max_item_events"] = json!(2000);
+    value["omitted_item_events"] = json!(7);
+}
+#[tokio::test]
+async fn conserve_les_observations_une_seule_fois_apres_pagination() {
+    let rows = (1..=200).map(|id| variant("item", vec![id])).collect();
+    let mut first = page(0, 201, rows);
+    observation_details(&mut first);
+    let mut second = page(200, 201, vec![variant("item", vec![201])]);
+    observation_details(&mut second);
+    let (url, job) = server(vec![(200, first), (200, second)]).await;
+    let result = BuildClient::new(Some(url), Some("test-token".into()))
+        .unwrap()
+        .builds(request())
+        .await
+        .unwrap();
+    let result = serde_json::to_value(result).unwrap();
+    assert_eq!(result["summary"]["games"], 120);
+    assert_eq!(result["skill_levels"].as_array().unwrap().len(), 1);
+    assert_eq!(result["item_events"].as_array().unwrap().len(), 1);
+    assert_eq!(result["omitted_build_variants"], 3);
+    assert_eq!(result["omitted_item_events"], 7);
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn refuse_changement_des_observations_et_les_lignes_hors_groupe() {
+    let mut first = page(
+        0,
+        201,
+        (1..=200).map(|id| variant("item", vec![id])).collect(),
+    );
+    observation_details(&mut first);
+    let mut second = page(200, 201, vec![variant("item", vec![201])]);
+    observation_details(&mut second);
+    second["skill_levels"][0]["mean_timestamp_ms"] = json!(46000);
+    let (url, job) = server(vec![(200, first), (200, second)]).await;
+    assert!(matches!(
+        BuildClient::new(Some(url), Some("test-token".into()))
+            .unwrap()
+            .builds(request())
+            .await,
+        Err(BuildError::ChangedSnapshot)
+    ));
+    job.await.unwrap();
+    for (field, key, value) in [
+        ("skill_levels", "champion_id", json!(86)),
+        ("skill_levels", "slot", json!(5)),
+        ("skill_levels", "mean_timestamp_ms", json!(-1)),
+        ("item_events", "role", json!("TOP")),
+        ("item_events", "events", json!(9_007_199_254_740_992_u64)),
+    ] {
+        let mut payload = page(0, 0, vec![]);
+        observation_details(&mut payload);
+        payload[field][0][key] = value;
+        let (url, job) = server(vec![(200, payload)]).await;
+        assert!(
+            matches!(
+                BuildClient::new(Some(url), Some("test-token".into()))
+                    .unwrap()
+                    .builds(request())
+                    .await,
+                Err(BuildError::InvalidResponse)
+            ),
+            "{field}.{key}"
+        );
+        job.await.unwrap();
+    }
+}
+#[tokio::test]
+async fn respecte_le_plafond_et_ne_presente_pas_un_ancien_compteur_global() {
+    let mut payload = page(0, 0, vec![]);
+    observation_details(&mut payload);
+    payload["max_item_events"] = json!(0);
+    let (url, job) = server(vec![(200, payload)]).await;
+    assert!(matches!(
+        BuildClient::new(Some(url), Some("test-token".into()))
+            .unwrap()
+            .builds(request())
+            .await,
+        Err(BuildError::InvalidResponse)
+    ));
+    job.await.unwrap();
+    let mut legacy = page(0, 0, vec![]);
+    legacy["omitted_build_variants"] = json!(35339);
+    let (url, job) = server(vec![(200, legacy)]).await;
+    let report = BuildClient::new(Some(url), Some("test-token".into()))
+        .unwrap()
+        .builds(request())
+        .await
+        .unwrap();
+    assert_eq!(report.details.omitted_build_variants, None);
+    job.await.unwrap();
+}
+
+#[tokio::test]
+async fn accepte_des_omissions_partiellement_connues_sans_total_invente() {
+    let mut value = page(0, 0, vec![]);
+    observation_details(&mut value);
+    value["omitted_build_variants"] = Value::Null;
+    let (url, job) = server(vec![(200, value)]).await;
+    let result = BuildClient::new(Some(url), Some("test-token".into()))
+        .unwrap()
+        .builds(request())
+        .await;
+    assert!(result.is_ok());
+    assert_eq!(result.unwrap().details.omitted_build_variants, None);
+    job.await.unwrap();
+}

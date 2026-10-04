@@ -76,6 +76,12 @@ pub fn restart(
     Some(tauri::async_runtime::spawn(async move {
         client
             .watch_publications(ReconnectPolicy::default(), |event| {
+                if matches!(
+                    event,
+                    PublicationEvent::Status(PublicationStatus::Unauthorized)
+                ) {
+                    crate::api_access::report_rejection(&app, &client);
+                }
                 apply(&app, generation, event)
             })
             .await;

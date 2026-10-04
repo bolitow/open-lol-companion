@@ -1,3 +1,4 @@
+import {rankLabel} from '../buildRanks';
 import type {BuildReport, CatalogRecord} from '@olc/shared';
 import type {Locale} from '../state';
 import {CommunityBuildPanels} from '../BuildPreparation';
@@ -12,7 +13,7 @@ export function LiveBuilds({report, records, locale, customGame, onOpen}: {repor
   return <div className="live-builds">
     <div className="live-build-scope">
       <strong>{liveCopy[locale].readOnly}</strong>
-      <span>{request.platform} · {queue} · {t.roles[request.role]} · {t.all} · {t.patch} {request.patch}</span>
+      <span>{request.platform} · {queue} · {t.roles[request.role]} · {rankLabel(report.request.rank,locale)} · {t.patch} {request.patch}</span>
       {customGame && <p>{liveCopy[locale].customSource}</p>}
     </div>
     {report.builds.length

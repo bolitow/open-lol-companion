@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Desktop : résumé de champion, temps des points de compétence, événements d’objets par minute et variantes omises du groupe relayés depuis l’API, vérifiés entre les pages puis consultables dans les détails des builds. Plafond d’événements explicite, ancien compteur global masqué, aucune médiane ou recommandation temporelle inventée (#113).
+
 - Modèle de draft, première version : chaque champion disponible noté par la borne basse de Wilson publiée à son poste, part du rôle et estimation du draft explicitement descriptive (moyenne des taux publiés de chaque camp, couverture exposée) ; aucun choix imposé, aucun poste adverse attribué, matchups et synergies signalés comme non disponibles (#39).
 
 - Site web Next.js (FR/EN) : tierlist par rôle avec filtres rang, région, file et patch, page champion (runes, sorts, ordre des compétences, objets finaux et objets les plus fréquents, totem), profil joueur avec rangs et historique paginé, recherche Ctrl+K des champions et des Riot ID ; données lues côté serveur dans l’API publiée, aucun jeton dans le navigateur (#20).
@@ -161,7 +163,15 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
-- Variantes de builds non affichées : `omitted_build_variants` n’est plus le total global du snapshot (35 339 à la recette, étranger au champion consulté) mais le nombre de variantes coupées pour le groupe demandé, avec le détail par catégorie (`omitted_build_variants_by_category`) ; le collecteur le calcule par (groupe, catégorie) à la finalisation (`omitted_variants` sur chaque variante), `null` pour un instantané antérieur. Les `item_events` servis sont plafonnés à 2 000 lignes par groupe (`max_item_events`, `omitted_item_events`). Affichage desktop restant à livrer (#113).
+- Recette macOS : suffixe long de version Riot accepté sans inventer de patch ; poste implicite de la fiche champion remis à inconnu quand la nouvelle draft ne le fournit pas (#186, #92).
+
+- Desktop : filtre de rang désactivé hors classé, défaut issu du profil local (repli Émeraude+), menu partagé des huit paliers cumulés et simples, étiquette « Échantillon collecté », répartition et badge de biais publiés conservés et affichés sans recalcul du drapeau serveur (#105, #180).
+
+- Préparation desktop : région/file de la draft, poste allié connu et poste des personnalisées partagés avec les imports ; matchup local limité aux ennemis verrouillés, filtres explicites conservés dans la draft et aucun réimport après simple changement de population (#92).
+
+- Les profils distinguent « Riot occupé » d’une panne ; les réglages signalent un jeton refusé ou expiré et affichent le patch du client au format du jeu, avec actualisation explicite et messages FR/EN (#186).
+
+- Variantes de builds non affichées : `omitted_build_variants` n’est plus le total global du snapshot (35 339 à la recette, étranger au champion consulté) mais le nombre de variantes coupées pour le groupe demandé, avec le détail par catégorie (`omitted_build_variants_by_category`) ; le collecteur le calcule par (groupe, catégorie) à la finalisation (`omitted_variants` sur chaque variante), `null` pour un instantané antérieur. Les `item_events` servis sont plafonnés à 2 000 lignes par groupe (`max_item_events`, `omitted_item_events`). Ces limites sont maintenant relayées et consultables dans le desktop (#113).
 - Rang figé à la partie : la borne d'écart est exacte (arrondi à la seconde supérieure, 48 h + 400 ms n'est plus retenue pour 48 h) et la recherche de l'observation la plus proche s'appuie sur l'index, avec deux lectures bornées au lieu d'un tri de tout l'historique du joueur ; recette chiffrée avant/après et relecture d'un instantané ancien sans les indicateurs de rang (#80).
 - Borne Wilson publiée bornée à 0–100 dans la tierlist et les builds : une variante ou un champion sans victoire n'affiche plus un résidu flottant négatif, qui faisait rejeter toute la page de builds par le client desktop (#81).
 - Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).

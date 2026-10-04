@@ -1,3 +1,5 @@
+import {rankLabel} from '../buildRanks';
+import {usePreparation} from '../PreparationContext';
 import {memo, useEffect, useState} from 'react';
 import type {BuildReport, BuildStats, CatalogRecord, LiveSession} from '@olc/shared';
 import type {Locale} from '../state';
@@ -73,7 +75,8 @@ function LiveBuildSummaryLoader({session, locale, championId}: {session: LiveSes
   const [catalogState, setCatalogState] = useState<LiveCatalogState>({catalog: null, abilities: [], error: false});
   useEffect(() => connectLiveCatalog(locale, championId, setCatalogState), [locale, championId]);
   const catalog = catalogState.catalog;
-  const request = catalog ? liveBuildRequest(session, catalog.version) : null;
+  const {value:preparation,defaultRank='EMERALD_PLUS'}=usePreparation();
+  const request = catalog ? liveBuildRequest(session, catalog.version,preparation.rankOverride??defaultRank) : null;
   const {state} = useBuilds(request);
   if (!catalog) return <p className="live-build-compact-status" role="status">{catalogState.error ? liveCopy[locale].catalogError : liveCopy[locale].catalogLoading}</p>;
   if (state?.status !== 'ready') return <p className="live-build-compact-status" role="status">{state?.status === 'error' ? buildCopy[locale].errors[state.error] : buildCopy[locale].loading}</p>;

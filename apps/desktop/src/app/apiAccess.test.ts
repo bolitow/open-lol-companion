@@ -2,8 +2,8 @@ import {describe,it,expect} from 'vitest';
 import type {ApiAccessInput,ApiAccessStatus} from '@olc/shared';
 import {canSaveApiAccess,createApiAccessStore} from './apiAccess';
 
-const empty:ApiAccessStatus={source:null,url:null,error:null};
-const saved:ApiAccessStatus={source:'keychain',url:'https://api.example.com',error:null};
+const empty:ApiAccessStatus={authorizationRejected:false,source:null,url:null,error:null};
+const saved:ApiAccessStatus={authorizationRejected:false,source:'keychain',url:'https://api.example.com',error:null};
 const fake=(initial:ApiAccessStatus=empty)=>{
  let status=initial,failure:unknown=null;const inputs:ApiAccessInput[]=[];let calls=0;
  return {native:true,inputs,calls:()=>calls,fail:(error:unknown)=>{failure=error},
@@ -35,7 +35,7 @@ describe('accès à l’API desktop',()=>{
  it('refuse une saisie vide et laisse les variables d’environnement prioritaires',async()=>{
   expect(canSaveApiAccess(' ','jeton')).toBe(false);expect(canSaveApiAccess('https://api.example.com','  ')).toBe(false);
   expect(canSaveApiAccess('https://api.example.com','jeton')).toBe(true);
-  const adapter=fake({source:'environment',url:'http://127.0.0.1:3030',error:null}),store=createApiAccessStore(adapter);await store.load();
+  const adapter=fake({authorizationRejected:false,source:'environment',url:'http://127.0.0.1:3030',error:null}),store=createApiAccessStore(adapter);await store.load();
   expect(await store.save('https://api.example.com','jeton-de-test')).toBe(false);await store.clear();
   expect(adapter.inputs).toEqual([]);expect(adapter.calls()).toBe(1);
  });
@@ -47,4 +47,13 @@ describe('accès à l’API desktop',()=>{
   const store=createApiAccessStore({...fake(),read:async()=>{throw 'unexpected'}});await store.load();
   expect(store.getSnapshot()).toMatchObject({status:null,error:'read_failed'});
  });
+});
+
+it('relit un refus survenu pendant une lecture au lieu de perdre la notification',async()=>{
+ let resolve!:(status:ApiAccessStatus)=>void,reads=0;
+ const adapter={...fake(saved),read:async()=>{reads++;return reads===1?new Promise<ApiAccessStatus>(r=>{resolve=r}):{...saved,authorizationRejected:true}}};
+ const store=createApiAccessStore(adapter);
+ const first=store.load();await store.load();resolve(saved);await first;
+ await new Promise(resolve=>setTimeout(resolve,0));
+ expect(reads).toBe(2);expect(store.getSnapshot().status?.authorizationRejected).toBe(true);
 });

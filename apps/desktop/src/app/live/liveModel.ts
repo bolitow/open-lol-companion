@@ -1,3 +1,4 @@
+import {rankForQueue} from '../buildRanks';
 import type {BuildRequest, LiveSession} from '@olc/shared';
 import championIndex from '../../../public/game-data/champions.json';
 import type {Locale} from '../state';
@@ -12,7 +13,7 @@ export function liveChampion(session: LiveSession | null, locale: Locale): {id: 
 /** Le contexte provient de la draft réelle ; aucun poste ni file par défaut. */
 export type LiveBuildContext = Omit<BuildRequest, 'patch'>;
 
-export function liveBuildContext(session: LiveSession | null): LiveBuildContext | null {
+export function liveBuildContext(session: LiveSession | null, rank='EMERALD_PLUS'): LiveBuildContext | null {
   const champion = liveChampion(session, 'en');
   const context = session?.context;
   if (!champion || !context || context.championId !== champion.id
@@ -24,12 +25,12 @@ export function liveBuildContext(session: LiveSession | null): LiveBuildContext 
     platform: context.platform,
     queue: context.customGame ? 420 : context.queue!,
     role: context.role,
-    rank: 'ALL',
+    rank: rankForQueue(context.customGame?420:context.queue!,rank),
   };
 }
 
-export function liveBuildRequest(session: LiveSession | null, version: string): BuildRequest | null {
-  const context = liveBuildContext(session);
+export function liveBuildRequest(session: LiveSession | null, version: string, rank='EMERALD_PLUS'): BuildRequest | null {
+  const context = liveBuildContext(session,rank);
   return context && /^\d+\.\d+\.\d+$/.test(version)
     ? {...context, patch: version.split('.').slice(0, 2).join('.')}
     : null;

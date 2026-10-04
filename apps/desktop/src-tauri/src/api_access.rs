@@ -6,13 +6,23 @@ use olc_build_client::{
     credentials::{self, ApiAccessStatus, CredentialError, KeyringStore, LoadedAccess},
     BuildClient, BuildError,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex, RwLock};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 struct Current {
     client: Result<Arc<BuildClient>, BuildError>,
     status: ApiAccessStatus,
+    rejected: bool,
+}
+
+/// Projection sans jeton, miroir de `ApiAccessStatus` côté interface.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiAccessView {
+    #[serde(flatten)]
+    status: ApiAccessStatus,
+    authorization_rejected: bool,
 }
 
 /// État partagé des commandes builds, profils et publications.
@@ -29,6 +39,7 @@ impl Default for ApiState {
     fn default() -> Self {
         Self {
             current: RwLock::new(Current {
+                rejected: false,
                 client: Err(BuildError::NotConfigured),
                 status: ApiAccessStatus {
                     source: None,
@@ -57,10 +68,28 @@ impl ApiState {
         current.client.clone()
     }
 
-    async fn status(&self) -> ApiAccessStatus {
+    async fn status(&self) -> ApiAccessView {
         self.wait_loaded().await;
         let current = self.current.read().unwrap_or_else(|e| e.into_inner());
-        current.status.clone()
+        ApiAccessView {
+            status: current.status.clone(),
+            authorization_rejected: current.rejected,
+        }
+    }
+
+    // Un retour tardif ne doit pas invalider le jeton qui vient d'être remplacé.
+    fn reject(&self, client: &Arc<BuildClient>) -> bool {
+        let mut current = self.current.write().unwrap_or_else(|e| e.into_inner());
+        if current
+            .client
+            .as_ref()
+            .is_ok_and(|active| Arc::ptr_eq(active, client))
+            && !current.rejected
+        {
+            current.rejected = true;
+            return true;
+        }
+        false
     }
 
     /// Remplace la configuration ; renvoie le client à écouter et l'état affichable.
@@ -69,10 +98,18 @@ impl ApiState {
         let listen = client.as_ref().ok().cloned();
         *self.current.write().unwrap_or_else(|e| e.into_inner()) = Current {
             client,
+            rejected: false,
             status: loaded.status.clone(),
         };
         self.loaded.send_replace(true);
         (listen, loaded.status)
+    }
+}
+
+/// Signale un refus provenant du client courant, sans transporter sa réponse ni son jeton.
+pub fn report_rejection(app: &AppHandle, client: &Arc<BuildClient>) {
+    if app.state::<ApiState>().reject(client) {
+        let _ = app.emit_to("main", "api-access-rejected", ());
     }
 }
 
@@ -128,7 +165,7 @@ pub struct ApiAccessInput {
 #[tauri::command]
 pub async fn api_access_status(
     state: tauri::State<'_, ApiState>,
-) -> Result<ApiAccessStatus, CredentialError> {
+) -> Result<ApiAccessView, CredentialError> {
     Ok(state.status().await)
 }
 
@@ -137,7 +174,7 @@ pub async fn api_access_status(
 pub async fn save_api_access(
     app: AppHandle,
     access: ApiAccessInput,
-) -> Result<ApiAccessStatus, CredentialError> {
+) -> Result<ApiAccessView, CredentialError> {
     let state = app.state::<ApiState>();
     let _guard = state.writes.lock().await;
     let loaded = tauri::async_runtime::spawn_blocking(move || {
@@ -146,12 +183,16 @@ pub async fn save_api_access(
     })
     .await
     .map_err(|_| CredentialError::WriteFailed)??;
-    Ok(apply(&app, loaded))
+    let status = apply(&app, loaded);
+    Ok(ApiAccessView {
+        status,
+        authorization_rejected: false,
+    })
 }
 
 /// Retire le jeton du trousseau ; les variables d'environnement éventuelles restent actives.
 #[tauri::command]
-pub async fn clear_api_access(app: AppHandle) -> Result<ApiAccessStatus, CredentialError> {
+pub async fn clear_api_access(app: AppHandle) -> Result<ApiAccessView, CredentialError> {
     let state = app.state::<ApiState>();
     let _guard = state.writes.lock().await;
     let loaded = tauri::async_runtime::spawn_blocking(|| {
@@ -160,7 +201,11 @@ pub async fn clear_api_access(app: AppHandle) -> Result<ApiAccessStatus, Credent
     })
     .await
     .map_err(|_| CredentialError::WriteFailed)??;
-    Ok(apply(&app, loaded))
+    let status = apply(&app, loaded);
+    Ok(ApiAccessView {
+        status,
+        authorization_rejected: false,
+    })
 }
 
 #[cfg(test)]
@@ -213,5 +258,20 @@ mod tests {
             tauri::async_runtime::block_on(state.client()),
             Err(BuildError::NotConfigured)
         ));
+    }
+    #[test]
+    fn le_refus_appartient_au_client_courant_et_disparait_au_remplacement() {
+        let state = ApiState::default();
+        let (old, _) = state.replace(configured());
+        let old = old.unwrap();
+        assert!(state.reject(&old));
+        assert!(tauri::async_runtime::block_on(state.status()).authorization_rejected);
+        let (new, _) = state.replace(configured());
+        assert!(!state.reject(&old));
+        assert!(!tauri::async_runtime::block_on(state.status()).authorization_rejected);
+        assert!(state.reject(&new.unwrap()));
+        let view = serde_json::to_value(tauri::async_runtime::block_on(state.status())).unwrap();
+        assert_eq!(view["authorizationRejected"], true);
+        assert!(!view.to_string().contains("test-token"));
     }
 }

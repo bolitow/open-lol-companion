@@ -41,10 +41,16 @@ type SessionState = Arc<Mutex<LcuSession>>;
 
 #[tauri::command]
 async fn community_builds(
+    app: tauri::AppHandle,
     request: olc_build_client::BuildRequest,
     state: tauri::State<'_, api_access::ApiState>,
 ) -> Result<olc_build_client::BuildReport, olc_build_client::BuildError> {
-    state.client().await?.builds(request).await
+    let client = state.client().await?;
+    let result = client.builds(request).await;
+    if matches!(result, Err(olc_build_client::BuildError::Unauthorized)) {
+        api_access::report_rejection(&app, &client);
+    }
+    result
 }
 
 #[tauri::command]

@@ -1,3 +1,4 @@
+import {usePreparation} from '../PreparationContext';
 import {useEffect, useState} from 'react';
 import type {CatalogRecord, LiveSession} from '@olc/shared';
 import type {Locale} from '../state';
@@ -19,7 +20,8 @@ function LiveBuildWorkspace({session, locale, championId}: {session: LiveSession
   const [detail, setDetail] = useState<CatalogRecord | null>(null);
   useEffect(() => connectLiveCatalog(locale, championId, setCatalogState), [locale, championId, attempt]);
   const catalog = catalogState.catalog;
-  const request = catalog ? liveBuildRequest(session, catalog.version) : null;
+  const {value:preparation,defaultRank='EMERALD_PLUS'}=usePreparation();
+  const request = catalog ? liveBuildRequest(session, catalog.version,preparation.rankOverride??defaultRank) : null;
   const {state, retry} = useBuilds(request);
   const records = catalog ? [...catalog.records, ...catalogState.abilities] : [];
   const t = buildCopy[locale];

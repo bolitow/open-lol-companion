@@ -62,6 +62,7 @@ pub enum PlayerError {
     NotFound,
     Unavailable,
     RateLimited,
+    RiotBusy,
     InvalidResponse,
 }
 impl From<BuildError> for PlayerError {
@@ -277,6 +278,7 @@ impl BuildClient {
                 401 | 403 => return Err(PlayerError::Unauthorized),
                 404 => return Err(PlayerError::NotFound),
                 429 => return Err(PlayerError::RateLimited),
+                503 => return Err(service_unavailable(response).await),
                 _ => return Err(PlayerError::Unavailable),
             }
             if response
@@ -300,5 +302,27 @@ impl BuildClient {
         })
         .await
         .map_err(|_| PlayerError::Unavailable)?
+    }
+}
+
+// Ne conserver que le code public, avec une borne plus stricte que les profils.
+async fn service_unavailable(mut response: reqwest::Response) -> PlayerError {
+    const LIMIT: usize = 4096;
+    if response.content_length().is_some_and(|n| n > LIMIT as u64) {
+        return PlayerError::Unavailable;
+    }
+    let mut bytes = Vec::new();
+    loop {
+        match response.chunk().await {
+            Ok(Some(chunk)) if bytes.len() + chunk.len() <= LIMIT => {
+                bytes.extend_from_slice(&chunk)
+            }
+            Ok(None) => break,
+            _ => return PlayerError::Unavailable,
+        }
+    }
+    match serde_json::from_slice::<serde_json::Value>(&bytes) {
+        Ok(value) if value["error"]["code"].as_str() == Some("riot_busy") => PlayerError::RiotBusy,
+        _ => PlayerError::Unavailable,
     }
 }

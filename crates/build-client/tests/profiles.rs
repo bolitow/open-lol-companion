@@ -183,3 +183,22 @@ async fn erreurs_http_stables_sans_corps_prive() {
         task.await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn distingue_riot_occupe_des_autres_erreurs_sans_exposer_le_corps() {
+    for (status, body, expected) in [
+        (503, json!({"error":{"code":"riot_busy"}}), "riot_busy"),
+        (503, json!({"error":{"code":"unavailable"}}), "unavailable"),
+        (
+            503,
+            json!({"error":{"code":"riot_busy","private":"ignored"},"padding":"x".repeat(5000)}),
+            "unavailable",
+        ),
+        (500, json!({"error":{"code":"riot_busy"}}), "unavailable"),
+    ] {
+        let (client, task) = server(status, body).await;
+        let error = client.player_profile(request()).await.unwrap_err();
+        assert_eq!(serde_json::to_value(error).unwrap(), json!(expected));
+        task.await.unwrap();
+    }
+}
