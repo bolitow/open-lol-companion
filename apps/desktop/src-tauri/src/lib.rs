@@ -5,6 +5,7 @@ mod imports;
 mod live;
 mod overlay;
 mod players;
+mod publications;
 use lcu_connector::LcuSession;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -104,6 +105,7 @@ pub fn run() {
             overlay::setup(app.handle());
             live::setup(app.handle());
             friends::setup(app.handle());
+            publications::setup(app.handle());
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -157,6 +159,7 @@ pub fn run() {
             lcu_status,
             lcu_session,
             community_builds,
+            publications::publication_state,
             players::player_profile,
             players::player_matches,
             imports::import_runes,

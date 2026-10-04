@@ -10,6 +10,7 @@ fn main() {
             "lcu_session",
             "friends_state",
             "community_builds",
+            "publication_state",
             "player_profile",
             "player_matches",
             "import_runes",

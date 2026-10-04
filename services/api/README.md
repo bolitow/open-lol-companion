@@ -159,6 +159,11 @@ Une surveillance SQL commune toutes les 5 s. Maximum 128 sockets ; frames/messag
 8 Kio ; écritures 5 s ; ping 30 s. Fermeture sur expiration JWT, message invalide
 ou arrêt (Ctrl+C Windows/macOS, SIGTERM également sous Unix).
 
+Premier client : le cœur Rust du desktop (`crates/build-client`, #125). Il
+s'authentifie par le premier message, relit REST via un changement de `revision`
+exposé à l'interface, reconnecte avec un repli de 1 s à 60 s et cesse après une
+fermeture `1008` (jeton refusé ou expiré), le jeton du desktop étant fixe.
+
 ## Validation et sources
 
 `pnpm test` inclut l'API. Définir `OLC_TEST_DATABASE_URL` pour les lecteurs SQL et

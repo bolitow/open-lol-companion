@@ -2766,11 +2766,13 @@ dependencies = [
 name = "olc-build-client"
 version = "0.1.0"
 dependencies = [
+ "futures-util",
  "reqwest 0.12.28",
  "rustls",
  "serde",
  "serde_json",
  "tokio",
+ "tokio-tungstenite 0.28.0",
  "webpki-roots",
 ]
 
