@@ -81,9 +81,10 @@ fn is_bot_marker(value: &str) -> bool {
     value == "BOT" || (!value.is_empty() && value.bytes().all(|b| b == b'0'))
 }
 
-/// Champs qui identifient un joueur dans `info.participants` (détail et timeline).
-/// Aucun n'est lu par l'agrégation.
-const IDENTIFIER_FIELDS: [&str; 7] = [
+/// Champs qui identifient ou profilent un joueur dans `info.participants` (détail et
+/// timeline). Aucun n'est lu par l'agrégation. `summonerLevel` (niveau du compte) en
+/// fait partie : il caractérise le joueur, pas la partie.
+const IDENTIFIER_FIELDS: [&str; 8] = [
     "puuid",
     "summonerId",
     "summonerName",
@@ -91,6 +92,7 @@ const IDENTIFIER_FIELDS: [&str; 7] = [
     "riotIdName",
     "riotIdTagline",
     "profileIcon",
+    "summonerLevel",
 ];
 
 /// Un identifiant est à effacer s'il appartient à un humain et, en mode ciblé, au sujet.
@@ -156,6 +158,8 @@ pub struct PurgeReport {
     pub sampled_match_seeds_cleared: u64,
     pub jobs_deleted: u64,
     pub rank_observations_deleted: u64,
+    /// Lignes du cache négatif `excluded_matches` (#90) plus vieilles que `raw_match_days`.
+    pub excluded_matches_deleted: u64,
 }
 
 /// Classement d'un joueur de départ relevé par une exécution.
@@ -241,7 +245,9 @@ macro_rules! ms {
 ///
 /// 1. Parties brutes plus anciennes que `raw_match_days` : supprimées avec leur
 ///    timeline et leurs liens d'exécution, sauf si une collecte en cours les retient.
-/// 2. Identifiants plus anciens que `identifier_days` : joueurs de départ, découvertes
+/// 2. Cache négatif `excluded_matches` (#90) plus ancien que `raw_match_days`, même durée
+///    que les parties brutes.
+/// 3. Identifiants plus anciens que `identifier_days` : joueurs de départ, découvertes
 ///    et travaux des exécutions inactives supprimés, PUUID des liens vidés,
 ///    observations de rang supprimées, PUUID et Riot ID retirés du JSONB.
 pub async fn purge(storage: &Storage, policy: RetentionPolicy) -> Result<PurgeReport, sqlx::Error> {
@@ -288,6 +294,26 @@ pub async fn purge(storage: &Storage, policy: RetentionPolicy) -> Result<PurgeRe
                 .await?,
         );
         tx.commit().await?;
+    }
+
+    // Cache négatif des parties exclues : aligné sur la rétention des parties brutes.
+    loop {
+        let deleted = affected(
+            sqlx::query(
+                "DELETE FROM excluded_matches WHERE match_id IN (
+                    SELECT match_id FROM excluded_matches
+                    WHERE excluded_at < now() - make_interval(days => $1)
+                    ORDER BY match_id LIMIT $2)",
+            )
+            .bind(raw_days)
+            .bind(BATCH * 25)
+            .execute(storage.pool())
+            .await?,
+        );
+        if deleted == 0 {
+            break;
+        }
+        report.excluded_matches_deleted += deleted;
     }
 
     // Une exécution sans activité depuis la durée de rétention est terminée ou
@@ -738,6 +764,12 @@ mod tests {
         detail["info"]["participants"][0]["summonerName"] = json!("Nom");
         detail["info"]["participants"][0]["riotIdTagline"] = json!("EUW");
         detail["info"]["participants"][0]["profileIcon"] = json!(29);
+        // Décision du 4 octobre (#99) : le niveau de compte est un profil, pas une donnée d'agrégation.
+        for participant in detail["info"]["participants"].as_array_mut().unwrap() {
+            participant["summonerLevel"] = json!(312);
+            participant["kills"] = json!(7);
+            participant["item0"] = json!(3078);
+        }
         let before = detail.clone();
         assert!(redact_identifiers(&mut detail, None));
         let text = detail.to_string();
@@ -748,6 +780,7 @@ mod tests {
             "Nom",
             "riotIdTagline",
             "profileIcon",
+            "summonerLevel",
         ] {
             assert!(!text.contains(private), "{private} encore présent");
         }
@@ -765,6 +798,8 @@ mod tests {
                 "teamId",
                 "teamPosition",
                 "win",
+                "kills",
+                "item0",
             ] {
                 assert_eq!(after[field], before[field], "{field}");
             }
@@ -789,6 +824,9 @@ mod tests {
     #[test]
     fn l_effacement_cible_ne_touche_que_le_joueur_demande() {
         let mut detail = match_detail("EUW1_1", "EUW1", 420, 1_000_000);
+        for participant in detail["info"]["participants"].as_array_mut().unwrap() {
+            participant["summonerLevel"] = json!(312);
+        }
         assert!(redact_identifiers(&mut detail, Some("fake-puuid-3")));
         assert!(!detail.to_string().contains("fake-puuid-3\""));
         assert!(!detail.to_string().contains("Joueur3"));
@@ -798,6 +836,19 @@ mod tests {
             detail["info"]["participants"][4]["riotIdGameName"],
             "Joueur4"
         );
+        // Le niveau de compte disparaît chez le sujet effacé, et seulement chez lui.
+        assert!(detail["info"]["participants"][3]
+            .get("summonerLevel")
+            .is_none());
+        for (index, participant) in detail["info"]["participants"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| *index != 3)
+        {
+            assert_eq!(participant["summonerLevel"], 312, "participant {index}");
+        }
         assert_eq!(detail["info"]["participants"][3]["championId"], 4);
         assert!(!redact_identifiers(&mut detail, Some("fake-puuid-3")));
         assert!(!redact_identifiers(&mut detail, Some("absent")));

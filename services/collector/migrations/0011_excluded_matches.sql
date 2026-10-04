@@ -14,3 +14,5 @@ CREATE TABLE excluded_matches (
     data_version     TEXT,
     excluded_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+-- La purge supprime les lignes plus anciennes que la rétention des parties brutes (#99).
+CREATE INDEX excluded_matches_excluded_at_idx ON excluded_matches (excluded_at);

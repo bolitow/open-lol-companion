@@ -295,7 +295,7 @@ async fn la_purge_applique_les_deux_durees_sans_toucher_aux_donnees_recentes() {
             "matches_redacted": 0, "timelines_redacted": 0,
             "seed_players_deleted": 0, "discoveries_deleted": 0,
             "sampled_match_seeds_cleared": 0, "jobs_deleted": 0,
-            "rank_observations_deleted": 0
+            "rank_observations_deleted": 0, "excluded_matches_deleted": 0
         }),
         "une deuxième purge n'a plus rien à faire"
     );
@@ -432,5 +432,48 @@ async fn l_effacement_retire_le_joueur_partout_et_laisse_les_autres() {
         erase_subject(&db.storage, "").await,
         Err(PrivacyError::InvalidSubject)
     ));
+    db.cleanup().await;
+}
+
+/// Ligne du cache négatif (#90) mémorisée il y a `age_days` jours.
+async fn excluded(db: &TestDb, id: &str, age_days: i32) {
+    sqlx::query(
+        "INSERT INTO excluded_matches (match_id, platform_id, queue_id, game_version, patch,
+            game_start, game_duration_s, is_remake, excluded_at)
+         VALUES ($1, 'EUW1', 450, '15.19.715.1234', '15.19', to_timestamp(1000), 1800, false,
+            now() - make_interval(days => $2))",
+    )
+    .bind(id)
+    .bind(age_days)
+    .execute(db.storage.pool())
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn la_purge_aligne_le_cache_negatif_sur_la_retention_des_parties_brutes() {
+    let db = db_or_skip!();
+    excluded(&db, "EUW1_old", 100).await;
+    excluded(&db, "EUW1_edge", 89).await;
+    excluded(&db, "EUW1_new", 1).await;
+
+    // La durée des identifiants (30 j) ne s'applique pas : seule celle des parties brutes.
+    let report = purge(&db.storage, RetentionPolicy::new(30, 90).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(report.excluded_matches_deleted, 1);
+    let left: Vec<String> =
+        sqlx::query_scalar("SELECT match_id FROM excluded_matches ORDER BY match_id")
+            .fetch_all(db.storage.pool())
+            .await
+            .unwrap();
+    assert_eq!(left, ["EUW1_edge", "EUW1_new"]);
+
+    // Une durée plus courte des parties brutes purge davantage de lignes.
+    let short = purge(&db.storage, RetentionPolicy::new(7, 7).unwrap())
+        .await
+        .unwrap();
+    assert_eq!(short.excluded_matches_deleted, 1);
+    assert_eq!(count(&db, "SELECT count(*) FROM excluded_matches").await, 1);
     db.cleanup().await;
 }
