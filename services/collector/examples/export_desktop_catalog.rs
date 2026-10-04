@@ -193,7 +193,13 @@ fn select_desktop_records(
                 && record.namespace == "standard"
                 && matches!(
                     record.kind.as_str(),
-                    "item" | "rune" | "rune_shard" | "champion" | "ability" | "summoner_spell"
+                    "item"
+                        | "rune"
+                        | "rune_shard"
+                        | "champion"
+                        | "ability"
+                        | "summoner_spell"
+                        | "augment"
                 )
         })
         .cloned()
@@ -877,6 +883,34 @@ mod tests {
         assert_eq!(selected[0], records[1]);
         assert_eq!(selected[2], records[0]);
         assert_eq!(selected[7], records[3]);
+    }
+
+    #[test]
+    fn le_catalogue_desktop_garde_les_augments_a_la_racine_sans_les_autres_familles() {
+        // #118 : augments Arena et Mayhem (données statiques), exportés avec leur langue.
+        let mut records = Vec::new();
+        for (kind, id, locale) in [
+            ("augment", "1205", "fr_FR"),
+            ("augment", "1205", "en_US"),
+            ("augment", "341", "fr_FR"),
+            ("queue", "1700", "fr_FR"),
+        ] {
+            let mut record = item(id, Some(true), &[]);
+            record.kind = kind.into();
+            record.locale = locale.into();
+            records.push(record);
+        }
+        let (selected, _) = select_desktop_records(&records, "fr_FR");
+        assert_eq!(
+            selected
+                .iter()
+                .map(|r| (r.kind.as_str(), r.id.as_str()))
+                .collect::<Vec<_>>(),
+            [("augment", "1205"), ("augment", "341")]
+        );
+        let partition = partition_champions(selected).unwrap();
+        assert_eq!(partition.root.len(), 2);
+        assert!(partition.champions.is_empty());
     }
 
     fn ability(champion_id: &str, slot: &str) -> CatalogRecord {

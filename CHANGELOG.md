@@ -6,6 +6,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Catalogue : augments Arena et Mayhem en données statiques (noms FR/EN, description, rareté, icône), exposés par l'API du référentiel et l'export desktop ; sans statistique, popularité ni tier, catalogue publié non régénéré (#118).
 - Catalogue : les surcharges de valeurs par mode des objets (ARAM, Arena, URF…) sont interprétées en effets `cdragon_parameters:{mode}` avec provenance, sans toucher aux valeurs de base ; types partagés correspondants (#116).
 - Collecteur : commande `campaign-queues` (ARAM, Swiftplay et Arena par défaut) avec une cible et un budget d'appels par plateforme et par file, et `campaign-report` pour suivre les parties retenues face à ces cibles ; les files inconnues sont refusées au lancement (#97).
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).

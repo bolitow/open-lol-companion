@@ -3,8 +3,12 @@ import type {
   CatalogChange, CatalogDetail, CatalogEffect, CatalogManifest,
   CatalogPage, CatalogRecord, CatalogValue, CatalogValueStatus, CatalogLocale, CatalogNamespace, SourceInventory, RawBranch, JsonValue,
   CatalogModeEffectId, DesktopCatalogItemFilter, CatalogItemMapId,
+  CatalogAugmentRarity, CatalogAugmentRecord, CatalogAugmentField,
 } from "./index";
-import { CATALOG_MODE_EFFECT_PREFIX } from "./index";
+import {
+  CATALOG_MODE_EFFECT_PREFIX, CATALOG_AUGMENT_KIND, CATALOG_AUGMENT_RARITIES,
+  CATALOG_AUGMENT_FIELDS,
+} from "./index";
 
 describe("contrats JSON du catalogue", () => {
   it("préserve les valeurs absentes, zéro, faux et les sources multiples", () => {
@@ -47,5 +51,48 @@ describe("contrats JSON du catalogue", () => {
     // @ts-expect-error l'effet de base n'est pas un effet de mode
     const base: CatalogModeEffectId = "cdragon_parameters";
     expect(base).toBe("cdragon_parameters");
+  });
+
+  it("décrit les augments Arena et Mayhem comme catalogue statique sans statistique (#118)", () => {
+    expect(CATALOG_AUGMENT_KIND).toBe("augment");
+    expect(CATALOG_AUGMENT_RARITIES).toEqual(["kSilver", "kGold", "kPrismatic", "kEventChoice"]);
+    expectTypeOf<CatalogAugmentRarity>().toEqualTypeOf<"kSilver" | "kGold" | "kPrismatic" | "kEventChoice">();
+    expectTypeOf<CatalogAugmentRecord["kind"]>().toEqualTypeOf<"augment">();
+    expectTypeOf<CatalogAugmentRecord["description"]>().toEqualTypeOf<string | null>();
+    expectTypeOf<CatalogAugmentRecord["stats"]>().toEqualTypeOf<Record<string, never>>();
+    expectTypeOf<CatalogAugmentRecord["effects"]>().toEqualTypeOf<never[]>();
+    expectTypeOf<keyof CatalogAugmentRecord["fields"]>().toEqualTypeOf<CatalogAugmentField>();
+    // Riot : aucun taux de victoire, de sélection, de popularité ni tier d'augment.
+    for (const field of CATALOG_AUGMENT_FIELDS) {
+      expect(field).not.toMatch(/win|pick|tier|popular|rate|games/i);
+    }
+    expect(CATALOG_AUGMENT_FIELDS).toContain("community_description");
+    // Description présente (export Arena) ou absente (Mayhem) : jamais une chaîne inventée.
+    const described: CatalogAugmentRecord = {
+      kind: "augment", id: "93", namespace: "standard", locale: "fr_FR", name: "Échauffement",
+      description: "Vous obtenez le sort d'invocateur Échauffement . (jusqu'à @MaxStacks@% max).",
+      icon: null,
+      fields: {
+        community_description: { value: "Vous obtenez le sort d'invocateur Échauffement . (jusqu'à @MaxStacks@% max).", unit: null, status: "descriptive", sources: [] },
+      },
+      stats: {}, effects: [],
+      coverage: { source_fields: 20, normalized_fields: 10, unmapped_fields: [], issues: ["unresolved_placeholder:description"] },
+    };
+    expect(described.coverage.issues).not.toContain("missing:description");
+    const augment: CatalogAugmentRecord = {
+      kind: "augment", id: "1205", namespace: "standard", locale: "fr_FR", name: "Adaptation",
+      description: null, icon: "/game-data/catalog/icons/a.png",
+      fields: {
+        technical_id: { value: "ARAM_ADAPt", unit: null, status: "verified", sources: [] },
+        rarity: { value: "kSilver", unit: null, status: "verified", sources: [] },
+        modes: { value: ["KIWI", "KIWI_JADE"], unit: null, status: "derived", sources: [] },
+      },
+      stats: {}, effects: [],
+      coverage: { source_fields: 6, normalized_fields: 6, unmapped_fields: [], issues: ["missing:description"] },
+    };
+    expect(JSON.parse(JSON.stringify(augment)).fields.modes.value).toEqual(["KIWI", "KIWI_JADE"]);
+    // @ts-expect-error un augment n'a ni statistique ni champ de popularité
+    const forbidden: CatalogAugmentRecord["fields"] = { pick_rate: augment.fields.rarity };
+    expect(forbidden).toBeDefined();
   });
 });

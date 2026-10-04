@@ -11,6 +11,8 @@ use super::{
 #[path = "community_http.rs"]
 mod http;
 pub use http::{fetch_sources, fetch_sources_with};
+#[path = "community_augments.rs"]
+mod augments;
 #[path = "community_perks.rs"]
 mod perks;
 use super::normalize::plain_text;
@@ -48,14 +50,26 @@ fn validate_sources<'a>(
             return Err(CatalogError::InvalidSource);
         }
     }
-    if indexed.len() != http::RESOURCES.len() {
+    // Les augments (#118) sont tout ou rien : une archive antérieure n'en a aucun, un jeu partiel
+    // est un document manquant.
+    let with_augments = indexed.contains_key(http::AUGMENT_RESOURCES[0].0);
+    let augment_resources = http::AUGMENT_RESOURCES
+        .iter()
+        .filter(|_| with_augments)
+        .copied();
+    let expected: Vec<_> = http::RESOURCES
+        .iter()
+        .copied()
+        .chain(augment_resources)
+        .collect();
+    if indexed.len() != expected.len() {
         return Err(CatalogError::InvalidSource);
     }
     let metadata = indexed
         .get("content-metadata.json")
         .ok_or(CatalogError::InvalidSource)?;
     let build = http::build(patch, &metadata.data)?;
-    for (key, locale, path) in http::RESOURCES {
+    for (key, locale, path) in expected {
         let source = indexed.get(key).ok_or(CatalogError::InvalidSource)?;
         if source.version != build
             || source.locale.as_deref() != locale
@@ -97,6 +111,9 @@ fn validate_sources<'a>(
         return Err(CatalogError::InvalidSource);
     }
     perks::validate(&indexed)?;
+    if with_augments {
+        augments::validate(&indexed)?;
+    }
     Ok(indexed)
 }
 
@@ -824,9 +841,15 @@ pub fn enrich(
         }
     }
     perks::enrich(version, records, &sources);
+    if sources.contains_key(http::AUGMENT_RESOURCES[0].0) {
+        augments::enrich(version, records, &sources);
+    }
     Ok(())
 }
 
+#[cfg(test)]
+#[path = "community_augments_tests.rs"]
+mod augment_tests;
 #[cfg(test)]
 #[path = "community_tests.rs"]
 mod tests;

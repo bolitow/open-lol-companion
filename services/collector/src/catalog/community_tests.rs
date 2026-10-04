@@ -7,27 +7,34 @@ use super::*;
 use crate::catalog::{CatalogValue, RecordCoverage, ValueSource, ValueStatus};
 use crate::static_data::{StaticError, StaticResponse, StaticTransport};
 
-const VERSION: &str = "16.19.1";
-const BUILD: &str = "16.19.8217343+branch.releases-16-19.content.release";
+pub(super) const VERSION: &str = "16.19.1";
+pub(super) const BUILD: &str = "16.19.8217343+branch.releases-16-19.content.release";
 
-fn source(key: &str, data: Value) -> CatalogSource {
+pub(super) fn source(key: &str, data: Value) -> CatalogSource {
     let (locale, path) = if let Some((locale, resource)) = key.split_once('/') {
         let language = if locale == "fr_FR" {
             "fr_fr"
         } else {
             "default"
         };
-        (
-            Some(locale),
-            format!("plugins/rcp-be-lol-game-data/global/{language}/v1/{resource}"),
-        )
+        // Les textes d'augments (#118) sortent d'un export généré de CommunityDragon, hors du
+        // schéma `plugins/rcp-be-lol-game-data` des autres ressources.
+        let path = if resource == "arena-augments.json" {
+            let file = if locale == "fr_FR" { "fr_fr" } else { "en_us" };
+            format!("cdragon/arena/{file}.json")
+        } else {
+            format!("plugins/rcp-be-lol-game-data/global/{language}/v1/{resource}")
+        };
+        (Some(locale), path)
     } else {
         (
             None,
-            if key == "items.bin" {
-                "game/items.cdtb.bin.json"
-            } else {
-                "content-metadata.json"
+            match key {
+                "items.bin" => "game/items.cdtb.bin.json",
+                "augment-lists.json" => {
+                    "plugins/rcp-be-lol-game-data/global/default/v1/augment-lists.json"
+                }
+                _ => "content-metadata.json",
             }
             .into(),
         )
@@ -44,7 +51,7 @@ fn source(key: &str, data: Value) -> CatalogSource {
     }
 }
 
-fn sources() -> Vec<CatalogSource> {
+pub(super) fn sources() -> Vec<CatalogSource> {
     let mut result = vec![
         source("content-metadata.json", json!({"version": BUILD})),
         source(
@@ -76,6 +83,7 @@ fn sources() -> Vec<CatalogSource> {
             {"id":8000,"name":"Precision","slots":[{"type":"kStatMod","slotLabel":"Offense","perks":[5007]}]}
         ]})));
     }
+    result.extend(super::augment_tests::augment_sources());
     result
 }
 
@@ -177,9 +185,12 @@ fn unknown_items_are_added_in_both_languages_without_raw_html() {
     enrich(VERSION, &mut records, &sources()).unwrap();
     assert_eq!(records.iter().filter(|r| r.kind == "item").count(), 2);
     assert!(records.iter().all(|r| r.namespace == "standard"));
-    assert!(records
-        .iter()
-        .all(|r| !r.description.as_ref().unwrap().contains('<')));
+    // Les augments Mayhem (#118) n'ont pas de description source : ils sont vérifiés à part.
+    assert!(records.iter().filter(|r| r.kind != "augment").all(|r| !r
+        .description
+        .as_ref()
+        .unwrap()
+        .contains('<')));
     assert_eq!(
         records
             .iter()
@@ -214,13 +225,13 @@ fn patch_mismatch_and_locale_mismatch_are_rejected_before_mutation() {
 }
 
 #[derive(Clone)]
-struct MockTransport {
-    responses: Arc<BTreeMap<String, StaticResponse>>,
-    requested: Arc<Mutex<Vec<String>>>,
+pub(super) struct MockTransport {
+    pub(super) responses: Arc<BTreeMap<String, StaticResponse>>,
+    pub(super) requested: Arc<Mutex<Vec<String>>>,
 }
 
 impl MockTransport {
-    fn valid() -> Self {
+    pub(super) fn valid() -> Self {
         Self {
             responses: Arc::new(
                 sources()
@@ -254,7 +265,7 @@ async fn fetch_pins_patch_and_checks_exact_build() {
     let fetched = fetch_sources_with(VERSION, transport.clone())
         .await
         .unwrap();
-    assert_eq!(fetched.len(), 8);
+    assert_eq!(fetched.len(), 13);
     assert!(fetched.iter().all(|s| s.version == BUILD));
     let requested = transport.requested.lock().unwrap();
     assert!(requested
@@ -618,7 +629,8 @@ fn reserved_item_without_name_is_retained_under_its_id() {
 fn community_only_names_and_ids_keep_direct_provenance() {
     let mut records = vec![];
     enrich(VERSION, &mut records, &sources()).unwrap();
-    for record in &records {
+    // Les augments (#118) lisent `nameTRA` : leur provenance est vérifiée dans leur propre module.
+    for record in records.iter().filter(|r| r.kind != "augment") {
         let name = &record.fields["community_name"];
         assert_eq!(name.value, record.name);
         assert_eq!(name.status, ValueStatus::Descriptive);

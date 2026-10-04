@@ -73,6 +73,42 @@ export interface DesktopCatalogItemFilter {
   by_map: Record<CatalogItemMapId, number>;
 }
 
+/** Famille des augments Arena et Mayhem (#118) : catalogue statique, jamais une statistique. */
+export const CATALOG_AUGMENT_KIND = "augment";
+
+/** Raretés de la source CommunityDragon ; toute autre valeur y reste `unsupported`. */
+export const CATALOG_AUGMENT_RARITIES = ["kSilver", "kGold", "kPrismatic", "kEventChoice"] as const;
+export type CatalogAugmentRarity = (typeof CATALOG_AUGMENT_RARITIES)[number];
+
+/**
+ * Seuls champs de `fields` d'une fiche `augment`. `modes` liste les clés de mode des listes du jeu
+ * qui contiennent l'augment (`CHERRY`, `KIWI`, `KIWI_JADE` sur le patch 16.19) telles que la source
+ * les donne, sans correspondance inventée avec une file ; une liste vide signifie « aucune liste ».
+ * `technical_id` est l'identifiant de jeu (`ARAM_ADAPt`) ; `community_short_name` et
+ * `community_description` n'existent que si la source les renseigne. Aucun taux de victoire, de sélection, de popularité ni tier d'augment.
+ */
+export const CATALOG_AUGMENT_FIELDS = [
+  "community_name", "community_id", "technical_id", "community_short_name",
+  "community_description", "rarity", "community_icon_path", "modes",
+] as const;
+export type CatalogAugmentField = (typeof CATALOG_AUGMENT_FIELDS)[number];
+
+/**
+ * Fiche `augment` (#118) : `id` est l'identifiant numérique en chaîne, `namespace` vaut `standard`,
+ * `icon` est le chemin local exporté (ou l'URL publique côté API). `description` est le texte brut
+ * de l'export CommunityDragon `cdragon/arena` (225 augments sur 16.19), dans la langue de la fiche ;
+ * les placeholders (`@MaxStacks@`, `{{ clé }}`) et jetons d'icône du client (`%i:Augment%`) restent non résolus dans le texte et sont signalés par
+ * `unresolved_placeholder:description` dans `coverage.issues`. Les autres augments, Mayhem, n'ont
+ * aucune description publiée : `description` vaut `null`, signalé par `missing:description`.
+ */
+export interface CatalogAugmentRecord extends CatalogRecord {
+  kind: typeof CATALOG_AUGMENT_KIND;
+  description: string | null;
+  fields: Partial<Record<CatalogAugmentField, CatalogValue>>;
+  stats: Record<string, never>;
+  effects: never[];
+}
+
 export interface CatalogRecordCoverage {
   source_fields: number;
   normalized_fields: number;

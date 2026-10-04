@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-pub const NORMALIZER_VERSION: u32 = 1;
+/// 2 : ajout de la famille `augment` (#118), qui change la projection des sources CommunityDragon.
+pub const NORMALIZER_VERSION: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogSource {
@@ -71,7 +72,7 @@ pub struct RecordCoverage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogRecord {
-    /// item, champion, ability, rune, rune_shard, summoner_spell, map, queue, mode, game_type, profile_icon.
+    /// item, champion, ability, rune, rune_shard, summoner_spell, augment, map, queue, mode, game_type, profile_icon.
     pub kind: String,
     pub id: String,
     pub namespace: String,

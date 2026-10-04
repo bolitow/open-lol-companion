@@ -30,6 +30,8 @@ Chaque document, racine ou détail, a la forme `{ "version": "16.19.1", "records
 
 `name`, `description` et `icon` se lisent directement sur la fiche ; les autres valeurs citées sont dans `fields`. Pour présenter les compétences d'un champion, utiliser explicitement l'ordre Q/W/E/R et les IDs correspondants : le tri des fiches JSON est lexical et ne représente ni cet ordre, ni un ordre de montée conseillé. Les délais sont en secondes, les portées en unités du jeu, les coûts en points de ressource et les rangs en `rank`. Un passif peut ne pas définir ces valeurs.
 
+**Augments (#118).** L'export garde aussi les fiches `augment` Arena et Mayhem (noms FR/EN, description pour les 225 augments couverts par `cdragon/arena`, absente pour les autres augments Mayhem, rareté, icône, modes, sans statistique), à la racine du document de chaque langue, icônes PNG comprises ; `loadCatalog` du desktop accepte ce kind (test `catalog.test.ts`), les autres familles restent lisibles et l'interface ne présente pas encore les augments. Après régénération, la racine ne compte donc plus 458 fiches mais 458 plus le nombre d'augments par langue (`locales[locale].records` du manifeste et les tailles de racine sont à relire à ce moment-là, pas avant). **La publication versionnée dans `catalog/` n'a pas été régénérée : elle ne contient pas d'augments** ; la republier est une étape explicite.
+
 Régénération (sortie absente ou vide, aucun écrasement) :
 
 ```sh
