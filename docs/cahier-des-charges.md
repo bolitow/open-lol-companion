@@ -341,6 +341,9 @@ représentatif ; les seeds restent issus du classement. Les modes non classés n
 reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
 Voir [le contrat complet](../services/collector/README.md) et
 [la recette étendue](recettes/2026-10-01-agregation-complete.md).
+Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
+proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
+l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.
 
 Sous-ticket #61 : référentiel normalisé FR/EN par publication, enrichissement
 CommunityDragon versionné des objets et fragments, sources immuables et

@@ -104,6 +104,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Statistiques par rang stables d'un recalcul à l'autre : le rang de chaque participation est l'observation la plus proche du début de la partie (écart maximal réglable, 7 jours par défaut) et non plus le rang des dernières 24 h au moment du calcul ; part `UNKNOWN` et écarts partie → observation publiés dans la couverture (#80).
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).
 
 - Compteur CS en partie : précision de la source LoL indiquée en FR/EN ; tests garantissant que chaque valeur reçue est transmise sans arrondi ni seuil de dix (#23).

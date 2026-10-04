@@ -215,9 +215,16 @@ calcul ; un échec conserve l'ancien instantané et arrête le processus.
 
 Le rapport JSON `schema_version: 2` sépare patch, plateforme, file, rôle et rang.
 Chaque participation entre dans `ALL` et dans son rang observé : ne pas additionner
-ces populations. Les files 420/440 utilisent leur propre classement récent (24 h
-au début du calcul) ; les autres ont `UNRANKED_MODE`. `UNKNOWN` et `UNRANKED` restent
-distincts. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
+ces populations. Les files 420/440 utilisent le classement de la même file, figé à la
+partie (#80) : l'observation la plus proche du début de partie, si l'écart ne dépasse
+pas `--rank-max-age-hours` (168 h par défaut, 1 à 8 760). L'heure du calcul
+n'intervient pas : recalculer des données inchangées redonne les mêmes rangs. Ce palier
+observé n'est ni un MMR ni le rang exact au lancement de la partie. Les autres files
+ont `UNRANKED_MODE`. `UNKNOWN` (aucune observation assez proche) et `UNRANKED` restent
+distincts. `rank_scope` vaut `observed_rank_nearest_to_game_start_of_same_ranked_queue` ;
+chaque couverture publie `unknown_rank_rate` (part `UNKNOWN` des participations
+Solo/Flex, en %) et les écarts médian/maximal retenus (`rank_gap_median_hours`,
+`rank_gap_max_hours`), nuls hors files classées ou sans observation. Les rôles sont `TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY/UNKNOWN` ; aucun rôle n'est
 inventé à partir des objets ou du rang.
 
 | Mesure | Définition et limites |

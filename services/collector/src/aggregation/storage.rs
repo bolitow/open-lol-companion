@@ -9,13 +9,20 @@ pub async fn recalculate(
     storage: &Storage,
     min_games: u32,
 ) -> Result<AggregationReport, AggregationError> {
-    recalculate_filtered(storage, min_games, &super::AggregationOptions::default()).await
+    recalculate_filtered(
+        storage,
+        min_games,
+        super::DEFAULT_RANK_MAX_AGE_HOURS,
+        &super::AggregationOptions::default(),
+    )
+    .await
 }
 
 /// Recalcule et publie atomiquement une sélection explicite, sans appel réseau.
 pub async fn recalculate_filtered(
     storage: &Storage,
     min_games: u32,
+    rank_max_age_hours: u32,
     filters: &super::AggregationOptions,
 ) -> Result<AggregationReport, AggregationError> {
     if filters
@@ -35,6 +42,7 @@ pub async fn recalculate_filtered(
         return Err(AggregationError::InvalidFilters);
     }
     let mut accumulator = Accumulator::new(min_games)?;
+    accumulator.set_rank_max_age_hours(rank_max_age_hours)?;
     accumulator.set_filters(filters.clone());
     let mut connection = storage.transaction_connection().await?;
     let mut tx = connection.begin().await?;
@@ -52,18 +60,20 @@ pub async fn recalculate_filtered(
     }
 
     let mut last_id: Option<String> = None;
+    // Rang figé à la partie (#80) : observation la plus proche du début, quelle que soit
+    // l'heure du calcul ; à écart égal, la plus ancienne. L'écart maximal est appliqué
+    // par l'accumulateur pour que la règle reste unique et testable sans base.
     loop {
         // Pagination par clé unique, dans le même instantané : mémoire des détails bornée.
         let rows = sqlx::query(
             "SELECT m.match_id,m.platform_id,m.queue_id,m.patch,m.is_remake,m.detail,t.timeline,
-            COALESCE((SELECT jsonb_object_agg(p->>'puuid',jsonb_build_object('status',r.status,'tier',r.tier))
+            COALESCE((SELECT jsonb_object_agg(p->>'puuid',jsonb_build_object('status',r.status,'tier',r.tier,'gap_s',r.gap_s))
                 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(m.detail#>'{info,participants}')='array'
                     THEN m.detail#>'{info,participants}' ELSE '[]'::jsonb END) p
-                JOIN LATERAL (SELECT status,tier FROM participant_rank_observations o
+                JOIN LATERAL (SELECT status,tier,round(abs(extract(epoch FROM o.observed_at-m.game_start)))::bigint AS gap_s
+                    FROM participant_rank_observations o
                     WHERE o.platform_id=m.platform_id AND o.queue_id=m.queue_id AND o.puuid=p->>'puuid'
-                    AND o.observed_at <= transaction_timestamp()
-                    AND o.observed_at >= transaction_timestamp()-interval '24 hours'
-                    ORDER BY o.observed_at DESC,o.id DESC LIMIT 1) r ON true), '{}'::jsonb) AS ranks
+                    ORDER BY abs(extract(epoch FROM o.observed_at-m.game_start)),o.observed_at,o.id DESC LIMIT 1) r ON true), '{}'::jsonb) AS ranks
             FROM matches m LEFT JOIN match_timelines t ON t.match_id=m.match_id AND t.status='available'
             WHERE ($1::text IS NULL OR m.match_id > $1)
                 AND (cardinality($2::text[])=0 OR m.patch=ANY($2))

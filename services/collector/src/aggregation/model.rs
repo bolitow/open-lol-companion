@@ -7,6 +7,11 @@ use super::builds::{self, BuildObservation};
 use super::AggregationError;
 use crate::model::patch_from_version;
 
+/// Écart maximal par défaut entre le début de la partie et l'observation de rang retenue.
+pub const DEFAULT_RANK_MAX_AGE_HOURS: u32 = 168;
+/// Borne haute de l'écart configurable : au-delà, le rang ne décrit plus la partie.
+pub const MAX_RANK_MAX_AGE_HOURS: u32 = 8760;
+
 /// Rôle fourni par Riot ; UNKNOWN conserve les participations sans rôle exploitable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -125,6 +130,15 @@ pub struct Coverage {
     pub invalid_timeline_participations: u64,
     pub unidentified_item_undos: u64,
     pub draft_matches: u64,
+    /// Part des participations Solo/Flex sans rang attribuable (%), nulle hors files classées.
+    #[serde(default)]
+    pub unknown_rank_rate: Option<f64>,
+    /// Écart médian, en heures, entre début de partie et observation de rang retenue.
+    #[serde(default)]
+    pub rank_gap_median_hours: Option<f64>,
+    /// Écart maximal retenu, en heures ; toujours inférieur ou égal à `rank_max_age_hours`.
+    #[serde(default)]
+    pub rank_gap_max_hours: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -135,7 +149,8 @@ pub struct ScopeCoverage {
     pub counts: Coverage,
 }
 
-/// Instantané publiable, exclusivement agrégé. Les rangs reflètent une observation récente.
+/// Instantané publiable, exclusivement agrégé. Le rang d'une participation est l'observation
+/// la plus proche du début de sa partie, dans la limite de `rank_max_age_hours`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct AggregationReport {
     pub schema_version: u32,
@@ -162,6 +177,8 @@ pub struct AggregationReport {
 pub(super) struct ObservedRank {
     pub status: String,
     pub tier: Option<String>,
+    /// Écart absolu, en secondes, entre le début de la partie et cette observation.
+    pub gap_s: u64,
 }
 
 pub(super) struct StoredMatch {
@@ -194,6 +211,8 @@ pub(super) struct Accumulator {
     build_populations: BTreeMap<(GroupKey, String), u64>,
     skills: BTreeMap<(GroupKey, u32, u32), (u64, u128)>,
     events: BTreeMap<(GroupKey, String, u32, u32), u64>,
+    /// Écarts partie → observation des rangs retenus, en secondes, par périmètre.
+    rank_gaps: BTreeMap<ScopeKey, Vec<u64>>,
 }
 
 impl Accumulator {
@@ -203,8 +222,8 @@ impl Accumulator {
         }
         Ok(Self {
             report: AggregationReport {
-                schema_version: 2, rank_scope: "observed_current_rank_of_same_ranked_queue".into(),
-                rank_max_age_hours: 24,
+                schema_version: 2, rank_scope: "observed_rank_nearest_to_game_start_of_same_ranked_queue".into(),
+                rank_max_age_hours: DEFAULT_RANK_MAX_AGE_HOURS,
                 pick_rate_definition: "champion_participations / bucket_participations * 100".into(),
                 tier_method: "Wilson95 lower bound; S/A/B/C/D percentiles 10/30/60/90/100; at least 5 eligible champions".into(),
                 min_games, filters: AggregationOptions::default(), source_matches: 0,
@@ -214,8 +233,16 @@ impl Accumulator {
             },
             counts:BTreeMap::new(), arena_scopes:BTreeSet::new(), populations:BTreeMap::new(), coverage:BTreeMap::new(),
             bans:BTreeMap::new(), builds:BTreeMap::new(), build_populations:BTreeMap::new(),
-            skills:BTreeMap::new(), events:BTreeMap::new(),
+            skills:BTreeMap::new(), events:BTreeMap::new(), rank_gaps:BTreeMap::new(),
         })
+    }
+
+    pub fn set_rank_max_age_hours(&mut self, hours: u32) -> Result<(), AggregationError> {
+        if !(1..=MAX_RANK_MAX_AGE_HOURS).contains(&hours) {
+            return Err(AggregationError::InvalidRankMaxAge);
+        }
+        self.report.rank_max_age_hours = hours;
+        Ok(())
     }
 
     pub fn set_filters(&mut self, filters: AggregationOptions) {
@@ -261,7 +288,11 @@ impl Accumulator {
                     .excluded_bot_participations += 1;
                 continue;
             }
-            let rank = rank_for(game, &p.raw);
+            let max_age_s = u64::from(self.report.rank_max_age_hours) * 3600;
+            let (rank, gap) = rank_for(game, &p.raw, max_age_s);
+            if let Some(gap) = gap {
+                self.rank_gaps.entry(scope.clone()).or_default().push(gap);
+            }
             let coverage = self.coverage.entry(scope.clone()).or_default();
             coverage.participations += 1;
             match rank.as_str() {
@@ -522,10 +553,20 @@ impl Accumulator {
                 events,
             })
             .collect();
+        let mut rank_gaps = self.rank_gaps;
         self.report.coverage = self
             .coverage
             .into_iter()
-            .map(|(scope, counts)| ScopeCoverage { scope, counts })
+            .map(|(scope, mut counts)| {
+                let ranked_queue = counts.participations - counts.unranked_mode_participations;
+                counts.unknown_rank_rate =
+                    rate(counts.unknown_rank_participations, ranked_queue, 1);
+                let mut gaps = rank_gaps.remove(&scope).unwrap_or_default();
+                gaps.sort_unstable();
+                counts.rank_gap_median_hours = median(&gaps).map(|s| s / 3600.0);
+                counts.rank_gap_max_hours = gaps.last().map(|s| *s as f64 / 3600.0);
+                ScopeCoverage { scope, counts }
+            })
             .collect();
         self.report
     }
@@ -533,6 +574,15 @@ impl Accumulator {
 
 fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
     (d >= min && d > 0).then(|| 100.0 * n as f64 / d as f64)
+}
+/// Médiane d'une liste triée ; moyenne des deux valeurs centrales si l'effectif est pair.
+fn median(sorted: &[u64]) -> Option<f64> {
+    let mid = sorted.len() / 2;
+    match sorted.len() {
+        0 => None,
+        n if n % 2 == 1 => Some(sorted[mid] as f64),
+        _ => Some((sorted[mid - 1] as f64 + sorted[mid] as f64) / 2.0),
+    }
 }
 fn wilson(wins: u64, games: u64) -> f64 {
     let n = games as f64;
@@ -564,20 +614,24 @@ fn is_ranked_tier(tier: &str) -> bool {
             | "CHALLENGER"
     )
 }
-fn rank_for(game: &StoredMatch, raw: &Value) -> String {
+/// Rang figé à la partie : l'observation la plus proche du début, si son écart reste
+/// dans la limite. L'heure du calcul n'intervient pas. Renvoie aussi l'écart retenu.
+fn rank_for(game: &StoredMatch, raw: &Value, max_age_s: u64) -> (String, Option<u64>) {
     if ![420, 440].contains(&game.queue_id) {
-        return "UNRANKED_MODE".into();
+        return ("UNRANKED_MODE".into(), None);
     }
-    let observed = raw["puuid"].as_str().and_then(|id| game.ranks.get(id));
-    match observed {
-        Some(r) if r.status == "unranked" => "UNRANKED".into(),
-        Some(r) if r.status == "ranked" => r
-            .tier
-            .as_ref()
-            .filter(|t| is_ranked_tier(t))
-            .cloned()
-            .unwrap_or_else(|| "UNKNOWN".into()),
-        _ => "UNKNOWN".into(),
+    let observed = raw["puuid"]
+        .as_str()
+        .and_then(|id| game.ranks.get(id))
+        .filter(|r| r.gap_s <= max_age_s);
+    let rank = match observed {
+        Some(r) if r.status == "unranked" => Some("UNRANKED".to_owned()),
+        Some(r) if r.status == "ranked" => r.tier.clone().filter(|t| is_ranked_tier(t)),
+        _ => None,
+    };
+    match rank {
+        Some(rank) => (rank, observed.map(|r| r.gap_s)),
+        None => ("UNKNOWN".into(), None),
     }
 }
 struct Participant {

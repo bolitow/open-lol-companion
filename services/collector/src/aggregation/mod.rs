@@ -8,7 +8,8 @@ mod storage;
 
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
-    ItemEventStats, Role, ScopeCoverage, ScopeKey, SkillStats,
+    ItemEventStats, Role, ScopeCoverage, ScopeKey, SkillStats, DEFAULT_RANK_MAX_AGE_HOURS,
+    MAX_RANK_MAX_AGE_HOURS,
 };
 pub use scheduler::run_periodic;
 pub use storage::{recalculate, recalculate_filtered};
@@ -22,6 +23,8 @@ pub enum AggregationError {
     InvalidFilters,
     #[error("le seuil minimal doit être strictement positif")]
     InvalidThreshold,
+    #[error("l'écart maximal du rang doit être compris entre 1 et 8760 heures")]
+    InvalidRankMaxAge,
     #[error("un autre calcul utilise déjà cette base")]
     Busy,
     #[error("élément d'agrégation trop volumineux ; l'ancien instantané est conservé")]

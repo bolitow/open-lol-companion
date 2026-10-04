@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 
-use super::model::{Accumulator, StoredMatch};
-use super::{AggregationError, Role};
+use super::model::{Accumulator, ObservedRank, StoredMatch};
+use super::{AggregationError, Role, DEFAULT_RANK_MAX_AGE_HOURS};
 use crate::model::fixtures::match_detail;
 
 fn game(id: &str) -> StoredMatch {
@@ -14,6 +14,14 @@ fn game(id: &str) -> StoredMatch {
         detail: match_detail(id, "EUW1", 420, 1_000_000),
         timeline: None,
         ranks: Default::default(),
+    }
+}
+
+fn observed(status: &str, tier: Option<&str>, gap_s: u64) -> ObservedRank {
+    ObservedRank {
+        status: status.into(),
+        tier: tier.map(Into::into),
+        gap_s,
     }
 }
 
@@ -45,8 +53,9 @@ fn calcule_deux_victoires_sur_trois_sans_donnees_personnelles() {
     }
     assert_eq!(
         report.rank_scope,
-        "observed_current_rank_of_same_ranked_queue"
+        "observed_rank_nearest_to_game_start_of_same_ranked_queue"
     );
+    assert_eq!(report.rank_max_age_hours, DEFAULT_RANK_MAX_AGE_HOURS);
 }
 
 #[test]
@@ -292,18 +301,10 @@ fn les_rangs_individuels_ne_se_propagant_pas_aux_autres_participants() {
     let mut g = game("EUW1_ranks");
     g.ranks.insert(
         "fake-puuid-0".into(),
-        super::model::ObservedRank {
-            status: "ranked".into(),
-            tier: Some("GOLD".into()),
-        },
+        observed("ranked", Some("GOLD"), 3600),
     );
-    g.ranks.insert(
-        "fake-puuid-5".into(),
-        super::model::ObservedRank {
-            status: "unranked".into(),
-            tier: None,
-        },
-    );
+    g.ranks
+        .insert("fake-puuid-5".into(), observed("unranked", None, 3600));
     let mut acc = Accumulator::new(1).unwrap();
     acc.add(&g);
     let r = acc.finish();
@@ -612,4 +613,123 @@ fn la_seconde_file_arena_trio_est_reconnue_sans_game_mode() {
     let r = acc.finish();
     assert_eq!(r.included_matches, 1);
     assert!(r.builds.iter().all(|b| !b.performance_available));
+}
+
+#[test]
+fn le_rang_depend_de_l_ecart_a_la_partie_avec_une_borne_incluse() {
+    let max = u64::from(DEFAULT_RANK_MAX_AGE_HOURS) * 3600;
+    assert_eq!(DEFAULT_RANK_MAX_AGE_HOURS, 168);
+    let mut g = game("EUW1_gap");
+    g.ranks.insert(
+        "fake-puuid-0".into(),
+        observed("ranked", Some("GOLD"), 7200),
+    );
+    g.ranks.insert(
+        "fake-puuid-1".into(),
+        observed("ranked", Some("DIAMOND"), max),
+    );
+    g.ranks.insert(
+        "fake-puuid-2".into(),
+        observed("ranked", Some("SILVER"), max + 1),
+    );
+    g.ranks
+        .insert("fake-puuid-3".into(), observed("unranked", None, 36_000));
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&g);
+    let r = acc.finish();
+    let ranks: Vec<_> = r.groups.iter().map(|g| g.key.rank.as_str()).collect();
+    assert!(ranks.contains(&"GOLD") && ranks.contains(&"DIAMOND"));
+    assert!(!ranks.contains(&"SILVER"));
+    let c = &r.coverage[0].counts;
+    assert_eq!(
+        (
+            c.ranked_participations,
+            c.unranked_participations,
+            c.unknown_rank_participations
+        ),
+        (2, 1, 7)
+    );
+    assert_eq!(c.unknown_rank_rate, Some(70.0));
+    // Écarts retenus : 2 h, 10 h et 168 h ; l'observation trop éloignée est ignorée.
+    assert_eq!(c.rank_gap_median_hours, Some(10.0));
+    assert_eq!(c.rank_gap_max_hours, Some(168.0));
+}
+
+#[test]
+fn l_age_maximal_est_configurable_et_borne() {
+    let mut acc = Accumulator::new(1).unwrap();
+    for invalid in [0, 8761] {
+        assert!(matches!(
+            acc.set_rank_max_age_hours(invalid),
+            Err(AggregationError::InvalidRankMaxAge)
+        ));
+    }
+    acc.set_rank_max_age_hours(3).unwrap();
+    let mut g = game("EUW1_custom_age");
+    g.ranks.insert(
+        "fake-puuid-0".into(),
+        observed("ranked", Some("GOLD"), 7200),
+    );
+    g.ranks.insert(
+        "fake-puuid-1".into(),
+        observed("ranked", Some("GOLD"), 3600),
+    );
+    g.ranks.insert(
+        "fake-puuid-2".into(),
+        observed("ranked", Some("DIAMOND"), 3 * 3600 + 1),
+    );
+    acc.add(&g);
+    let r = acc.finish();
+    assert_eq!(r.rank_max_age_hours, 3);
+    assert!(!r.groups.iter().any(|g| g.key.rank == "DIAMOND"));
+    let c = &r.coverage[0].counts;
+    assert_eq!(c.ranked_participations, 2);
+    assert_eq!(c.rank_gap_median_hours, Some(1.5));
+    assert_eq!(c.rank_gap_max_hours, Some(2.0));
+}
+
+#[test]
+fn les_files_non_classees_et_sans_observation_n_inventent_ni_part_ni_ecart() {
+    let mut normal = game("EUW1_normal");
+    normal.queue_id = 400;
+    normal.detail["info"]["queueId"] = json!(400);
+    normal
+        .ranks
+        .insert("fake-puuid-0".into(), observed("ranked", Some("GOLD"), 60));
+    let mut acc = Accumulator::new(1).unwrap();
+    acc.add(&normal);
+    acc.add(&game("EUW1_unobserved"));
+    let r = acc.finish();
+    let by_queue = |q: i32| {
+        &r.coverage
+            .iter()
+            .find(|c| c.scope.queue_id == q)
+            .unwrap()
+            .counts
+    };
+    let normal = by_queue(400);
+    assert_eq!(normal.unranked_mode_participations, 10);
+    assert_eq!(normal.unknown_rank_rate, None);
+    assert_eq!(normal.rank_gap_median_hours, None);
+    let ranked = by_queue(420);
+    assert_eq!(ranked.unknown_rank_rate, Some(100.0));
+    assert_eq!(
+        (ranked.rank_gap_median_hours, ranked.rank_gap_max_hours),
+        (None, None)
+    );
+}
+
+#[test]
+fn une_couverture_publiee_avant_le_rang_fige_reste_lisible() {
+    let mut legacy = serde_json::to_value(super::Coverage::default()).unwrap();
+    for field in [
+        "unknown_rank_rate",
+        "rank_gap_median_hours",
+        "rank_gap_max_hours",
+    ] {
+        legacy.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    let coverage: super::Coverage = serde_json::from_value(legacy).unwrap();
+    assert_eq!(coverage.unknown_rank_rate, None);
+    assert_eq!(coverage.rank_gap_max_hours, None);
 }
