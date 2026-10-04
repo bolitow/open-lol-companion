@@ -382,7 +382,10 @@ la popularité. Aucun taux de première ou de deuxième place n'est publié pour
 Arena, ces catégories gardent victoires et taux de victoire, avec `placement_games` à 0 et
 `average_placement` nul. Au plus 20 variantes par catégorie/groupe sont
 publiées, par popularité, sans modifier leur dénominateur ; `omitted_build_variants`
-annonce les variantes supplémentaires conservées seulement dans les sources brutes.
+annonce, pour diagnostic, le total **global** des variantes supplémentaires conservées
+seulement dans les sources brutes (tous groupes confondus, donc sans sens pour une fiche).
+Chaque variante publiée porte `omitted_variants` (#113) : le nombre de variantes coupées
+dans son propre (groupe, catégorie), calculé à la finalisation ; `null` dans un rapport antérieur.
 
 - `final_items` : ensemble trié d'items distincts des slots 0–5 ; `item` donne chaque
   item individuel, au plus une fois par participation ; `trinket` correspond au slot 6.

@@ -96,6 +96,12 @@ export interface BuildStats extends GroupKey {
   win_rate: number | null;
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
+  /**
+   * Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique pour
+   * toutes ses variantes ; nul pour un instantané antérieur, où le compte est inconnu. Absent
+   * de `BuildReport` tant que le client Rust du desktop ne le relaie pas (hors périmètre #113).
+   */
+  omitted_variants?: number | null;
   /** Arena, variantes hors objets : participations au placement valide ; 0 hors Arena et pour les objets. */
   placement_games: number;
   /** Arena, variantes hors objets : placement moyen (1 = première) ; nul sous le seuil, hors Arena et pour les objets. */
@@ -259,6 +265,12 @@ export interface TierlistResponse {
   bans: BanStats[];
 }
 
+/** Variantes de builds coupées par le plafond de publication dans une catégorie (#113). */
+export interface OmittedBuildVariants {
+  category: string;
+  omitted: number;
+}
+
 export interface BuildsResponse {
   meta: SnapshotMeta;
   query: StatsQuery;
@@ -271,7 +283,18 @@ export interface BuildsResponse {
   /** Tranches de durée puis côtés du champion (#119) ; vide pour un instantané antérieur. */
   splits: SplitStats[];
   max_build_variants_per_category: number;
-  omitted_build_variants: number;
+  /**
+   * Variantes non publiées pour le seul groupe demandé (#113) : somme de
+   * `omitted_build_variants_by_category`, jamais le compteur global du snapshot. Nul pour un
+   * instantané antérieur, où ce compte est inconnu.
+   */
+  omitted_build_variants: number | null;
+  /** Variantes non publiées par catégorie du groupe demandé ; vide si le compte est inconnu. */
+  omitted_build_variants_by_category: OmittedBuildVariants[];
+  /** Plafond d'`item_events` servis pour le groupe demandé. */
+  max_item_events: number;
+  /** Lignes d'`item_events` du groupe retirées par ce plafond (les moins fréquentes). */
+  omitted_item_events: number;
   /** Règles des étapes d'achat ; vide pour un instantané antérieur à #81. */
   build_stage_method: string;
   /** Version du catalogue d'objets jointe au patch demandé ; null sans étapes. */
