@@ -172,7 +172,7 @@ l'écran build appartient à #13.
 | `packages/shared` | Types et utilitaires partagés (phases, Data Dragon) | TypeScript |
 | `services/collector` | Collecte Riot multirégion, Data Dragon et agrégats PostgreSQL | Rust |
 | `services/api` | REST/JWT, WebSocket, profils et cache statique | Rust |
-| `apps/web` | Site (pas encore initialisé) | — |
+| `apps/web` | Site Next.js : tierlist, page champion, profil, recherche Ctrl+K ([README](../apps/web/README.md)) | TypeScript |
 
 Règle d'or : ce qui touche au système (fichiers, processus, réseau local, secrets) vit en Rust ; l'interface appelle des commandes Tauri (`invoke("…")`) et ne voit jamais de mot de passe.
 
