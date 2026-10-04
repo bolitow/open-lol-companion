@@ -63,6 +63,21 @@ pub struct PerformanceResponse {
     /// Définitions publiées avec l'instantané ; vide pour un instantané antérieur.
     pub performance_method: String,
 }
+/// Matchups de lane d'un champion (#123) : agrégats seulement, sans recommandation.
+#[derive(Serialize)]
+pub struct MatchupsResponse {
+    pub meta: SnapshotMeta,
+    pub query: StatsQuery,
+    pub champion_id: u32,
+    pub summary: Option<ChampionStats>,
+    /// Adversaires publiés pour la population, avant pagination.
+    pub total: usize,
+    /// Parties du champion appariées à un adversaire de lane, avant pagination.
+    pub paired_games: u64,
+    pub matchups: Vec<MatchupStats>,
+    /// Définitions publiées avec l'instantané ; vide pour un instantané antérieur.
+    pub matchup_method: String,
+}
 /// Tierlist filtrée sur une population explicite, triée selon le rang publié.
 pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
     query.validate().map_err(|_| ApiError::InvalidRequest)?;
@@ -177,6 +192,49 @@ pub async fn performance(
         summary,
         performance,
         performance_method: report.performance_method,
+    })
+}
+
+/// Adversaires de lane du champion dans la population demandée, lus sans recalcul.
+/// Seul le rang `ALL` est publié : un rang observé renvoie une liste vide.
+pub async fn matchups(
+    pool: &PgPool,
+    query: StatsQuery,
+    champion_id: u32,
+) -> Result<MatchupsResponse, ApiError> {
+    query.validate().map_err(|_| ApiError::InvalidRequest)?;
+    if champion_id == 0 {
+        return Err(ApiError::InvalidRequest);
+    }
+    let (meta, report) = load(pool, &query, Some(champion_id)).await?;
+    let selected = |key: &GroupKey| key.champion_id == champion_id && matches(key, &query);
+    let summary = report.groups.into_iter().find(|g| selected(&g.key));
+    let mut rows: Vec<_> = report
+        .matchups
+        .into_iter()
+        .filter(|m| selected(&m.key))
+        .collect();
+    rows.sort_by(|a, b| {
+        b.games
+            .cmp(&a.games)
+            .then(a.opponent_champion_id.cmp(&b.opponent_champion_id))
+    });
+    let total = rows.len();
+    let paired_games = rows.iter().map(|m| m.games).sum();
+    let matchups = rows
+        .into_iter()
+        .skip(query.offset)
+        .take(query.limit)
+        .collect();
+    Ok(MatchupsResponse {
+        meta,
+        query,
+        champion_id,
+        summary,
+        total,
+        paired_games,
+        matchups,
+        matchup_method: report.matchup_method,
     })
 }
 

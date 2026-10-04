@@ -53,6 +53,7 @@ pub fn router(state: AppState) -> Router {
         .route("/v1/tierlist", get(tierlist))
         .route("/v1/builds/{champion_id}", get(builds))
         .route("/v1/performance/{champion_id}", get(performance))
+        .route("/v1/matchups/{champion_id}", get(matchups))
         .route("/v1/profiles/{platform}/{name}/{tag}", get(profile))
         .route("/v1/profiles/{platform}/{name}/{tag}/matches", get(history))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
@@ -166,6 +167,20 @@ async fn performance(
         .await?,
     ))
 }
+async fn matchups(
+    State(state): State<AppState>,
+    path: Result<Path<u32>, PathRejection>,
+    query: Result<Query<StatsQuery>, QueryRejection>,
+) -> Result<Json<crate::stats::MatchupsResponse>, ApiError> {
+    Ok(Json(
+        crate::stats::matchups(
+            &state.pool,
+            query.map_err(|_| ApiError::InvalidRequest)?.0,
+            path.map_err(|_| ApiError::InvalidRequest)?.0,
+        )
+        .await?,
+    ))
+}
 type ProfilePath = Result<Path<(String, String, String)>, PathRejection>;
 async fn profile(
     State(state): State<AppState>,
@@ -268,6 +283,7 @@ mod tests {
             "/v1/tierlist",
             "/v1/builds/1",
             "/v1/performance/1",
+            "/v1/matchups/1",
             "/v1/profiles/EUW1/name/tag",
             "/v1/profiles/EUW1/name/tag/matches",
         ] {
@@ -297,6 +313,7 @@ mod tests {
             ("/v1/tierlist?patch=invalid", true),
             ("/v1/builds/not-an-id", true),
             ("/v1/performance/not-an-id", true),
+            ("/v1/matchups/not-an-id", true),
             ("/v1/static/no-version/fr_FR/item.json", false),
         ] {
             let mut builder = Request::builder().uri(path);

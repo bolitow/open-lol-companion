@@ -12,7 +12,7 @@ WITH filters AS (
 )
 SELECT s.source_snapshot_at::text, s.published_at::text, s.storage_version,
     CASE WHEN s.storage_version=1 THEN
-        (s.report - ARRAY['groups','bans','builds','skill_levels','item_events','coverage','performance']) ||
+        (s.report - ARRAY['groups','bans','builds','skill_levels','item_events','coverage','performance','matchups']) ||
         jsonb_build_object(
             'groups', jsonb_path_query_array(s.report->'groups',$2::jsonpath,$1),
             'bans', jsonb_path_query_array(s.report->'bans',$3::jsonpath,$1),
@@ -20,11 +20,12 @@ SELECT s.source_snapshot_at::text, s.published_at::text, s.storage_version,
             'builds', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'builds',$2::jsonpath,$1) ELSE '[]'::jsonb END,
             'skill_levels', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'skill_levels',$2::jsonpath,$1) ELSE '[]'::jsonb END,
             'item_events', CASE WHEN $4 THEN jsonb_path_query_array(s.report->'item_events',$2::jsonpath,$1) ELSE '[]'::jsonb END,
-            'performance', CASE WHEN $4 THEN jsonb_path_query_array(COALESCE(s.report->'performance','[]'::jsonb),$2::jsonpath,$1) ELSE '[]'::jsonb END
+            'performance', CASE WHEN $4 THEN jsonb_path_query_array(COALESCE(s.report->'performance','[]'::jsonb),$2::jsonpath,$1) ELSE '[]'::jsonb END,
+            'matchups', CASE WHEN $4 THEN jsonb_path_query_array(COALESCE(s.report->'matchups','[]'::jsonb),$2::jsonpath,$1) ELSE '[]'::jsonb END
         )
     ELSE s.report || jsonb_build_object('groups','[]'::jsonb,'bans','[]'::jsonb,
         'coverage','[]'::jsonb,'builds','[]'::jsonb,'skill_levels','[]'::jsonb,'item_events','[]'::jsonb,
-        'performance','[]'::jsonb)
+        'performance','[]'::jsonb,'matchups','[]'::jsonb)
     END AS report, c.section,
     CASE WHEN c.section IN ('coverage','bans') THEN jsonb_path_query_array(c.items,$3::jsonpath,$1)
         ELSE jsonb_path_query_array(c.items,$2::jsonpath,$1) END AS items
@@ -41,7 +42,8 @@ LEFT JOIN champion_stats_snapshot_chunks c
             jsonb_build_object('builds', f.population),
             jsonb_build_object('skill_levels', f.population),
             jsonb_build_object('item_events', f.population),
-            jsonb_build_object('performance', f.population)
+            jsonb_build_object('performance', f.population),
+            jsonb_build_object('matchups', f.population)
         ] ELSE ARRAY[]::jsonb[] END
     )
 WHERE s.id=1

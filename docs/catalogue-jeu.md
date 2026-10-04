@@ -171,7 +171,7 @@ Aucune fiche descriptive n’est recopiée dans les groupes statistiques.
 | Étapes d’achat | #81 : départ, bottes, core ordonné, objets 4–6, joints aux objets du catalogue du patch (prix, achat, boutique, recettes, `special_recipe`) | Catalogue du patch requis ; fenêtre de départ 1 min 30 approximative ; core/emplacements biaisés par la durée |
 | Stats descriptives d’objet | #61 : valeurs explicites, recettes, paramètres, provenance par version | Des formules complexes restent non interprétées ; puissance théorique ≠ winrate |
 | Dégâts/minute, CS/minute, vision, objectifs, écarts or/XP | Données Match-v5/timeline déjà archivables ; indicateurs supplémentaires à produire | #41/#26 : définitions, dénominateurs et couverture à fixer avant calcul ; APM exhaustif non promis |
-| Matchups, synergies, maîtrise et suggestions | Référentiel prêt pour les jointures | #39/#42 : agrégations/modèles supplémentaires à construire |
+| Matchups, synergies, maîtrise et suggestions | #123 : matchups de lane (même rôle, Solo/Duo et Flex, rang `ALL`) avec effectif, winrate et borne Wilson ; référentiel prêt pour les autres jointures | Synergies de duo, rang de partie et appariement hors classé à construire ; #39/#42 : modèles supplémentaires |
 | Historique joueur, rang et LP | #19 : lecture des parties/rangs observés | #20 : suivi temporel ; aucun passé inventé |
 | Live, collection, pros, leaderboards, esports | Référentiel réutilisable | #23, #47–50 : sources/contrats et fonctionnalités propres |
 

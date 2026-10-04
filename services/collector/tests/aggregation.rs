@@ -80,6 +80,7 @@ async fn published(db: &TestDb) -> Value {
             "skill_levels",
             "item_events",
             "performance",
+            "matchups",
         ] {
             report[section] = json!([]);
         }
@@ -150,6 +151,13 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
             > 0
     );
     assert!(!report.performance_method.is_empty());
+    // Matchups de lane (#123) : section propre, publiée dans la même transaction.
+    assert!(
+        db.scalar("SELECT count(*) FROM champion_stats_snapshot_chunks WHERE section='matchups'")
+            .await
+            > 0
+    );
+    assert!(!report.matchup_method.is_empty());
     let complete = serde_json::to_value(report).unwrap();
     for section in [
         "coverage",
@@ -159,6 +167,7 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
         "skill_levels",
         "item_events",
         "performance",
+        "matchups",
     ] {
         assert!(
             !complete[section].as_array().unwrap().is_empty(),

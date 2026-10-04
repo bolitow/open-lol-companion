@@ -1,6 +1,7 @@
 //! Agrégats par champion, rôle, patch, plateforme, file et rang observé (#18).
 
 mod builds;
+mod matchups;
 mod model;
 mod performance;
 mod scheduler;
@@ -8,6 +9,7 @@ mod snapshot;
 mod stages;
 mod storage;
 
+pub use matchups::MatchupStats;
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,
     ItemCatalogRef, ItemEventStats, QualityThresholds, Role, ScopeCoverage, ScopeKey, SkillStats,

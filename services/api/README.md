@@ -52,6 +52,7 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | `/v1/tierlist` | Champions et bans de la page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
 | `/v1/performance/{champion_id}` | Moyennes de performance du champion dans la population (#100) |
+| `/v1/matchups/{champion_id}` | Résultats du champion contre ses adversaires de lane (#123) |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
 | `/v1/static/manifest` | Versions et catalogues publics |
@@ -104,6 +105,15 @@ CS/min, or/min, vision et frames à 10 et 15 min, avec `participations` et `game
 dans la population ou pour un instantané antérieur ; les moyennes sous seuil sont `null`.
 Agrégats seulement : aucune note, aucun benchmark. Définitions détaillées :
 [README du collecteur](../collector/README.md#moyennes-de-performance-100).
+
+`/v1/matchups/{champion_id}` (#123) prend les mêmes paramètres et renvoie `summary`,
+`matchups` (adversaire de lane, `games`, `wins`, `losses`, `win_rate` et borne Wilson,
+nuls sous `min_games`), triés par effectif décroissant puis adversaire, paginés par
+`offset`/`limit`, avec `total` et `paired_games` calculés avant pagination, et
+`matchup_method`. Seuls les rangs `ALL` et les files 420/440 sont publiés : un autre
+rang renvoie une liste vide. La couverture ajoute `lane_matchup_participations`.
+Agrégats seulement : aucun conseil de pick. Définitions :
+[README du collecteur](../collector/README.md#matchups-de-lane-123).
 
 La lecture accepte les instantanés historiques complets et le stockage en morceaux
 du collecteur. Tête et morceaux sont lus dans une seule requête cohérente. Pour le

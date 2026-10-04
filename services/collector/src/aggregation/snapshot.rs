@@ -30,6 +30,7 @@ struct Metadata<'a> {
     build_stage_method: &'a str,
     item_catalogs: &'a [super::ItemCatalogRef],
     performance_method: &'a str,
+    matchup_method: &'a str,
 }
 
 /// La transaction du calcul possède déjà le verrou et l'instantané REPEATABLE READ.
@@ -57,6 +58,7 @@ pub(super) async fn publish(
         build_stage_method: &report.build_stage_method,
         item_catalogs: &report.item_catalogs,
         performance_method: &report.performance_method,
+        matchup_method: &report.matchup_method,
     };
     // Premier verrou d'écriture : un instantané devenu ancien échoue avant de toucher
     // aux morceaux. Tête, suppression et nouveaux morceaux sont validés ensemble.
@@ -79,6 +81,7 @@ pub(super) async fn publish(
     write_section(tx, "skill_levels", &report.skill_levels).await?;
     write_section(tx, "item_events", &report.item_events).await?;
     write_section(tx, "performance", &report.performance).await?;
+    write_section(tx, "matchups", &report.matchups).await?;
     Ok(())
 }
 
