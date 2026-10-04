@@ -28,12 +28,29 @@ const DOCUMENT_CONCURRENCY: usize = 4;
 const MAX_ICON_BYTES: usize = 2 * 1024 * 1024;
 const MAX_JSON_BYTES: usize = 16 * 1024 * 1024;
 
+/// Cartes dont les objets sont exportés (#116) : Faille (11), ARAM (12) et Arena (30).
+/// La disponibilité par carte reste dans `fields.maps` de chaque objet ; elle ne dit pas
+/// qu'un objet est achetable dans chaque file, ce que le front vérifie avec `in_store`.
+const ITEM_MAPS: [&str; 3] = ["11", "12", "30"];
+
 #[derive(Debug, Serialize)]
 struct ItemSelection {
     #[serde(skip)]
     ids: BTreeSet<String>,
     mode: &'static str,
     reason: Option<&'static str>,
+    maps: [&'static str; 3],
+    /// Objets conservés disponibles sur chaque carte ; un objet commun à deux cartes compte deux fois.
+    by_map: BTreeMap<String, usize>,
+}
+
+fn on_map(record: &CatalogRecord, map: &str) -> bool {
+    record
+        .fields
+        .get("maps")
+        .and_then(|maps| maps.value.get(map))
+        .and_then(Value::as_bool)
+        == Some(true)
 }
 
 fn public_url(url: &str) -> Result<Url, ExportError> {
@@ -68,11 +85,23 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
         .filter(|record| record.kind == "item")
         .map(|record| (record.id.clone(), record))
         .collect();
-    let all = |reason| ItemSelection {
-        ids: items.keys().cloned().collect(),
-        mode: "all_items",
-        reason: Some(reason),
+    let selection = |ids: BTreeSet<String>, mode, reason| ItemSelection {
+        by_map: ITEM_MAPS
+            .iter()
+            .map(|map| {
+                let count = ids
+                    .iter()
+                    .filter(|id| items.get(*id).is_some_and(|item| on_map(item, map)))
+                    .count();
+                (map.to_string(), count)
+            })
+            .collect(),
+        ids,
+        mode,
+        reason,
+        maps: ITEM_MAPS,
     };
+    let all = |reason| selection(items.keys().cloned().collect(), "all_items", Some(reason));
     let mut selected = BTreeSet::new();
     for (id, record) in &items {
         let Some(maps) = record.fields.get("maps") else {
@@ -81,12 +110,17 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
         if !matches!(maps.status, ValueStatus::Verified | ValueStatus::Derived) {
             return all("uncertain_map");
         }
-        match maps.value.get("11").and_then(Value::as_bool) {
-            Some(true) => {
-                selected.insert(id.clone());
+        // Une carte exportée absente ou non booléenne rend la disponibilité incertaine :
+        // mieux vaut tout garder que perdre un objet propre à l'ARAM ou à l'Arena.
+        let mut available = false;
+        for map in ITEM_MAPS {
+            match maps.value.get(map).and_then(Value::as_bool) {
+                Some(on_map) => available |= on_map,
+                None => return all("unknown_map"),
             }
-            Some(false) => {}
-            None => return all("unknown_map"),
+        }
+        if available {
+            selected.insert(id.clone());
         }
     }
     // Une recette peut inclure un composant réservé : garder sa fiche même si sa
@@ -117,11 +151,7 @@ fn select_items(records: &[CatalogRecord]) -> ItemSelection {
             }
         }
     }
-    ItemSelection {
-        ids: selected,
-        mode: "map_11_with_components",
-        reason: None,
-    }
+    selection(selected, "maps_11_12_30_with_components", None)
 }
 
 fn champion_resources(index: &Value) -> Result<Vec<String>, ExportError> {
@@ -590,12 +620,22 @@ mod tests {
     use std::collections::BTreeMap;
 
     fn item(id: &str, map: Option<bool>, components: &[&str]) -> CatalogRecord {
+        // Les trois cartes exportées sont toujours présentes dans Data Dragon ; un test
+        // qui ne s'intéresse qu'à la Faille laisse donc l'ARAM et l'Arena à faux.
+        item_on(
+            id,
+            map.map(|map| json!({"11": map, "12": false, "30": false})),
+            components,
+        )
+    }
+
+    fn item_on(id: &str, maps: Option<Value>, components: &[&str]) -> CatalogRecord {
         let mut fields = BTreeMap::new();
-        if let Some(map) = map {
+        if let Some(maps) = maps {
             fields.insert(
                 "maps".into(),
                 CatalogValue {
-                    value: json!({"11": map}),
+                    value: maps,
                     unit: None,
                     status: ValueStatus::Verified,
                     sources: vec![],
@@ -659,8 +699,85 @@ mod tests {
             item("400", Some(false), &[]),
         ];
         let result = select_items(&records);
-        assert_eq!(result.mode, "map_11_with_components");
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
         assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+    }
+
+    #[test]
+    fn garde_les_objets_propres_a_laram_et_a_larena_sans_les_autres_cartes() {
+        let maps = |rift, aram, arena, other| {
+            Some(json!({"11": rift, "12": aram, "30": arena, "453": other}))
+        };
+        let records = vec![
+            item_on("100", maps(true, false, false, false), &[]),
+            item_on("200", maps(false, true, false, false), &[]),
+            item_on("300", maps(false, false, true, false), &[]),
+            item_on("400", maps(false, false, false, true), &[]),
+            item_on("500", maps(false, false, false, false), &[]),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.mode, "maps_11_12_30_with_components");
+        assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+        assert_eq!(result.maps, ["11", "12", "30"]);
+        assert_eq!(
+            result.by_map,
+            [("11", 1), ("12", 1), ("30", 1)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+    }
+
+    #[test]
+    fn le_decompte_par_carte_inclut_les_objets_presents_sur_plusieurs_cartes() {
+        let records = vec![
+            item_on(
+                "100",
+                Some(json!({"11": true, "12": true, "30": false})),
+                &["200"],
+            ),
+            item_on(
+                "200",
+                Some(json!({"11": false, "12": false, "30": false})),
+                &[],
+            ),
+            item_on(
+                "300",
+                Some(json!({"11": false, "12": true, "30": true})),
+                &[],
+            ),
+        ];
+        let result = select_items(&records);
+        assert_eq!(result.ids, ["100", "200", "300"].map(String::from).into());
+        // Le composant 200 est conservé pour la recette mais n'est disponible sur aucune carte.
+        assert_eq!(
+            result.by_map,
+            [("11", 1), ("12", 2), ("30", 1)]
+                .map(|(map, n)| (map.to_string(), n))
+                .into()
+        );
+    }
+
+    #[test]
+    fn une_carte_exportee_absente_ou_non_booleenne_conserve_tous_les_objets() {
+        for maps in [
+            json!({"11": true, "12": false}),
+            json!({"11": false, "30": true}),
+            json!({"12": true, "30": false}),
+            json!({"11": true, "12": "true", "30": false}),
+        ] {
+            let records = vec![
+                item_on(
+                    "100",
+                    Some(json!({"11": true, "12": false, "30": false})),
+                    &[],
+                ),
+                item_on("200", Some(maps), &[]),
+            ];
+            let result = select_items(&records);
+            assert_eq!(result.mode, "all_items");
+            assert_eq!(result.reason, Some("unknown_map"));
+            assert_eq!(result.ids, ["100", "200"].map(String::from).into());
+        }
     }
 
     #[test]
@@ -740,7 +857,7 @@ mod tests {
         records.push(item("1002", Some(false), &[]));
         records.push(item("1003", Some(false), &[]));
         let (selected, filter) = select_desktop_records(&records, "fr_FR");
-        assert_eq!(filter.mode, "map_11_with_components");
+        assert_eq!(filter.mode, "maps_11_12_30_with_components");
         assert_eq!(
             selected
                 .iter()

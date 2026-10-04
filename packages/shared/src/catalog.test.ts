@@ -2,7 +2,9 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
   CatalogChange, CatalogDetail, CatalogEffect, CatalogManifest,
   CatalogPage, CatalogRecord, CatalogValue, CatalogValueStatus, CatalogLocale, CatalogNamespace, SourceInventory, RawBranch, JsonValue,
+  CatalogModeEffectId, DesktopCatalogItemFilter, CatalogItemMapId,
 } from "./index";
+import { CATALOG_MODE_EFFECT_PREFIX } from "./index";
 
 describe("contrats JSON du catalogue", () => {
   it("préserve les valeurs absentes, zéro, faux et les sources multiples", () => {
@@ -30,5 +32,20 @@ describe("contrats JSON du catalogue", () => {
     expectTypeOf<CatalogPage["records"][number]>().toEqualTypeOf<CatalogDetail["record"]>();
     expectTypeOf<CatalogChange["change"]>().toEqualTypeOf<"added" | "removed" | "modified">();
     expectTypeOf<CatalogChange["sections"][number]>().toEqualTypeOf<"fields" | "stats" | "effects" | "text" | "source" | "coverage">();
+  });
+
+  it("décrit les objets par carte et les surcharges de valeurs par mode (#116)", () => {
+    const filter: DesktopCatalogItemFilter = {
+      mode: "maps_11_12_30_with_components", reason: null,
+      maps: ["11", "12", "30"], by_map: { "11": 316, "12": 404, "30": 232 },
+    };
+    expect(JSON.parse(JSON.stringify(filter)).by_map["12"]).toBe(404);
+    expectTypeOf<DesktopCatalogItemFilter["maps"][number]>().toEqualTypeOf<CatalogItemMapId>();
+    expectTypeOf<CatalogItemMapId>().toEqualTypeOf<"11" | "12" | "30">();
+    const aram: CatalogModeEffectId = `${CATALOG_MODE_EFFECT_PREFIX}ARAM`;
+    expect(aram).toBe("cdragon_parameters:ARAM");
+    // @ts-expect-error l'effet de base n'est pas un effet de mode
+    const base: CatalogModeEffectId = "cdragon_parameters";
+    expect(base).toBe("cdragon_parameters");
   });
 });
