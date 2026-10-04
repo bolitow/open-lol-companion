@@ -9,7 +9,7 @@ const report: BuildReport = {
 };
 function variant(category: string, selection: number[], games: number, wins: number): BuildStats {
   return {patch: '16.19', platform_id: 'EUW1', queue_id: 420, role: 'UTILITY', rank: 'ALL', champion_id: 432,
-    category, selection, games, wins, population: 500, performance_available: true, pick_rate: games / 5, win_rate: wins / games * 100, win_rate_lower_bound: null};
+    category, selection, games, wins, population: 500, performance_available: true, pick_rate: games / 5, win_rate: wins / games * 100, win_rate_lower_bound: null, conditional_rate: null};
 }
 function record(id: number, kind: string, name: string, locale = 'en_US'): CatalogRecord {
   return {id: String(id), kind, name, locale, namespace: 'standard', description: null, icon: null, fields: {}, stats: {}, effects: [], coverage: {source_fields: 0, normalized_fields: 0, unmapped_fields: [], issues: []}};

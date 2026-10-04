@@ -105,6 +105,9 @@ pub struct BuildVariant {
     /// Borne inférieure de Wilson à 95 % (#81) ; absente des instantanés antérieurs.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Taux conditionnel des runes (#86), en pourcentage (0 à 100, comme `pick_rate`) ; absent des instantanés antérieurs.
+    #[serde(default)]
+    pub conditional_rate: Option<f64>,
 }
 impl BuildVariant {
     fn check(&mut self, request: &BuildRequest, min_games: u32) -> Result<(), BuildError> {
@@ -122,6 +125,9 @@ impl BuildVariant {
                 .into_iter()
                 .flatten()
                 .any(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
+            || self
+                .conditional_rate
+                .is_some_and(|v| !v.is_finite() || !(0.0..=100.0).contains(&v))
         {
             return Err(BuildError::InvalidResponse);
         }
@@ -129,6 +135,7 @@ impl BuildVariant {
             self.pick_rate = None;
             self.win_rate = None;
             self.win_rate_lower_bound = None;
+            self.conditional_rate = None;
         }
         if !self.performance_available {
             self.win_rate = None;

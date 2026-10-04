@@ -139,6 +139,11 @@ pub struct BuildStats {
     /// Borne inférieure de Wilson à 95 %, nulle sous le seuil ou sans performance publiable.
     #[serde(default)]
     pub win_rate_lower_bound: Option<f64>,
+    /// Taux conditionnel (#86), en pourcentage (0 à 100) : `games` ÷ parties du choix parent dans le
+    /// même groupe. Parent : la clé de voûte (`rune_slot_1..3`) ou l'arbre secondaire
+    /// (`rune_secondary_pair`). `null` sans parent, parent absent ou nul, ou sous le seuil.
+    #[serde(default)]
+    pub conditional_rate: Option<f64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -609,10 +614,26 @@ impl Accumulator {
                 }
             })
             .collect();
+        // Dénominateurs des taux conditionnels, pris avant le plafond de variantes : une clé de
+        // voûte peu jouée garde son dénominateur même si ses lignes d'emplacement sont coupées.
+        let parents: BTreeMap<BuildKey, u64> = self
+            .builds
+            .iter()
+            .filter(|((_, category, _), _)| PARENT_CATEGORIES.contains(&category.as_str()))
+            .map(|(build_key, c)| (build_key.clone(), c.games))
+            .collect();
         let mut builds: Vec<_> = self
             .builds
             .into_iter()
             .map(|((key, category, selection), c)| {
+                let conditional_rate = conditional_parent(&category, &selection).and_then(
+                    |(parent_category, parent_selection)| {
+                        let parent_games = parents
+                            .get(&(key.clone(), parent_category.into(), parent_selection))
+                            .copied();
+                        conditional_rate(c.games, parent_games, minimum)
+                    },
+                );
                 let population = self.build_populations[&(key.clone(), category.clone())];
                 let performance_available = !(self.arena_scopes.contains(&scope_of(&key))
                     && (matches!(
@@ -635,6 +656,7 @@ impl Accumulator {
                     },
                     win_rate_lower_bound: (performance_available && c.games >= minimum)
                         .then(|| wilson(c.wins, c.games)),
+                    conditional_rate,
                 }
             })
             .collect();
@@ -700,6 +722,29 @@ impl Accumulator {
 
 fn rate(n: u64, d: u64, min: u64) -> Option<f64> {
     (d >= min && d > 0).then(|| 100.0 * n as f64 / d as f64)
+}
+
+/// Catégories qui servent de dénominateur à un taux conditionnel (#86).
+const PARENT_CATEGORIES: [&str; 2] = ["rune_keystone", "rune_secondary_style"];
+
+/// Choix parent (catégorie, sélection) dont dépend une ligne de runes dans le même groupe :
+/// la clé de voûte pour `rune_slot_1..3` (`[clé, rune]`), l'arbre secondaire pour
+/// `rune_secondary_pair` (`[arbre, rune, rune]`). Les autres catégories n'ont pas de parent
+/// dans leur sélection.
+fn conditional_parent(category: &str, selection: &[u32]) -> Option<(&'static str, Vec<u32>)> {
+    let parent = match category {
+        "rune_slot_1" | "rune_slot_2" | "rune_slot_3" => "rune_keystone",
+        "rune_secondary_pair" => "rune_secondary_style",
+        _ => return None,
+    };
+    Some((parent, vec![*selection.first()?]))
+}
+
+/// Parties du choix ÷ parties du choix parent, en pourcentage (0 à 100) ; `None` si le parent est
+/// absent ou nul, ou si l'effectif est sous le seuil minimal (comme `pick_rate`).
+pub(super) fn conditional_rate(games: u64, parent_games: Option<u64>, min: u64) -> Option<f64> {
+    let parent_games = parent_games.filter(|d| *d > 0)?;
+    (games >= min).then(|| games as f64 * 100.0 / parent_games as f64)
 }
 /// Médiane d'une liste triée ; moyenne des deux valeurs centrales si l'effectif est pair.
 fn median(sorted: &[u64]) -> Option<f64> {
