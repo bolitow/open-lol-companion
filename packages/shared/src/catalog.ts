@@ -109,6 +109,26 @@ export interface CatalogAugmentRecord extends CatalogRecord {
   effects: never[];
 }
 
+/** Nom du champ des fiches `ability` et `summoner_spell` qui porte les segments typés de `tooltip` (#107). */
+export const CATALOG_TOOLTIP_SEGMENTS_FIELD = "tooltip_segments";
+
+/** Types de dégâts des balises `physicalDamage`, `magicDamage` et `trueDamage` des infobulles Data Dragon. */
+export const CATALOG_DAMAGE_TYPES = ["physical", "magic", "true"] as const;
+export type CatalogDamageType = (typeof CATALOG_DAMAGE_TYPES)[number];
+
+/**
+ * Fragment d'une infobulle (#107) : texte seul, jamais de balisage. `damage_type` vient de la balise
+ * de la source, pas de la formulation du texte, donc il vaut dans toutes les langues ; `null` hors balise
+ * de dégâts. Les balises imbriquées (`scaleAP`…) héritent du type qui les entoure, les placeholders
+ * (`{{ e1 }}`) restent non résolus. Dans `CatalogValue.value` du champ `tooltip_segments`, ce sont des
+ * `CatalogTooltipSegment[]` (statut `derived`, provenance `…/tooltip`) dont les textes concaténés
+ * sont exactement le champ `tooltip` ; l'absence d'infobulle donne l'absence du champ.
+ */
+export interface CatalogTooltipSegment {
+  text: string;
+  damage_type: CatalogDamageType | null;
+}
+
 export interface CatalogRecordCoverage {
   source_fields: number;
   normalized_fields: number;

@@ -4,10 +4,11 @@ import type {
   CatalogPage, CatalogRecord, CatalogValue, CatalogValueStatus, CatalogLocale, CatalogNamespace, SourceInventory, RawBranch, JsonValue,
   CatalogModeEffectId, DesktopCatalogItemFilter, CatalogItemMapId,
   CatalogAugmentRarity, CatalogAugmentRecord, CatalogAugmentField,
+  CatalogDamageType, CatalogTooltipSegment,
 } from "./index";
 import {
   CATALOG_MODE_EFFECT_PREFIX, CATALOG_AUGMENT_KIND, CATALOG_AUGMENT_RARITIES,
-  CATALOG_AUGMENT_FIELDS,
+  CATALOG_AUGMENT_FIELDS, CATALOG_DAMAGE_TYPES, CATALOG_TOOLTIP_SEGMENTS_FIELD,
 } from "./index";
 
 describe("contrats JSON du catalogue", () => {
@@ -94,5 +95,23 @@ describe("contrats JSON du catalogue", () => {
     // @ts-expect-error un augment n'a ni statistique ni champ de popularité
     const forbidden: CatalogAugmentRecord["fields"] = { pick_rate: augment.fields.rarity };
     expect(forbidden).toBeDefined();
+  });
+
+  it("décrit les segments typés d'infobulle, miroir du JSON Rust (#107)", () => {
+    expect(CATALOG_TOOLTIP_SEGMENTS_FIELD).toBe("tooltip_segments");
+    expect(CATALOG_DAMAGE_TYPES).toEqual(["physical", "magic", "true"]);
+    expectTypeOf<CatalogDamageType>().toEqualTypeOf<"physical" | "magic" | "true">();
+    expectTypeOf<CatalogTooltipSegment["damage_type"]>().toEqualTypeOf<CatalogDamageType | null>();
+    expectTypeOf<CatalogTooltipSegment["text"]>().toEqualTypeOf<string>();
+    const segments: CatalogTooltipSegment[] = [
+      { text: "Inflige ", damage_type: null },
+      { text: "{{ e1 }} dégâts magiques", damage_type: "magic" },
+    ];
+    const value: CatalogValue = {
+      value: segments as unknown as JsonValue, unit: null, status: "derived",
+      sources: [{ source_id: "source:fr_FR/champion/Ahri.json", pointer: "/data/Ahri/spells/0/tooltip" }],
+    };
+    expect(JSON.parse(JSON.stringify(value)).value[1].damage_type).toBe("magic");
+    expect(JSON.parse(JSON.stringify(value)).value[0].damage_type).toBeNull();
   });
 });

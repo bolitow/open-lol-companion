@@ -38,7 +38,7 @@ n’est installé : lancer `catalog` après la synchronisation voulue.
 | --- | --- | --- |
 | `item` | Noms/descriptions FR/EN, icônes, prix total/combinaison/revente, recettes, cartes, catégories, achat/magasin, piles, conditions, statistiques explicites BIN | Disponibilité par carte ≠ disponibilité par file ; paramètres conditionnels séparés ; IDs réservés conservés ; calculs moteur et variantes de paramètres non exécutés |
 | `champion` | ID numérique/technique, titre, ressource, attributs de base et croissance, classes | Standard et Classic ont des espaces distincts ; attributs hors dictionnaire restent bruts |
-| `ability` | Passif/Q/W/E/R, coût, portée, délai et valeurs structurées par rang | Identifiant `<champion_id>:Q`… ; placeholders, `effect`, `vars`, `leveltip` ne deviennent pas des formules vérifiées |
+| `ability` | Passif/Q/W/E/R, coût, portée, délai et valeurs structurées par rang | Identifiant `<champion_id>:Q`… ; placeholders, `effect`, `vars`, `leveltip` ne deviennent pas des formules vérifiées ; `tooltip_segments` type les dégâts de l'infobulle (#107), ratios et autres balises non typés |
 | `rune` | Arbres, emplacements, textes et icônes, identifiants supplémentaires CommunityDragon | `rune_kind` distingue arbre/rune Data Dragon ; présence dans les styles exposée ; effets textuels non convertis en ratios |
 | `augment` | Augments Arena et Mayhem (#118) : ID numérique, `technical_id` (`ARAM_ADAPt`), noms FR/EN, description, rareté source (`kSilver`, `kGold`, `kPrismatic`, `kEventChoice`), icône, `modes` (listes du jeu qui les contiennent) | Description (`desc` de `cdragon/arena`, texte brut) pour 225 augments sur 16.19, placeholders `@…@` / `{{ … }}` et jetons d'icône `%i:…%` non résolus et signalés (`unresolved_placeholder:description`) ; les autres, Mayhem, n'en ont pas publiée : `description` reste `null` et `missing:description` est signalé ; aucune statistique, popularité ni tier ; clés de mode brutes (`CHERRY`, `KIWI`, `KIWI_JADE`), non reliées à une file ; `modes: []` = absent des listes (par exemple choix d'événement) |
 | `rune_shard` | Fragments identifiés par `kStatMod` ou chemin officiel `StatMods`, emplacements et descriptions FR/EN | Anciens fragments conservés ; paramètres numériques structurés manquants signalés |
@@ -108,10 +108,40 @@ Les clés de mode sont celles de la source : aucune correspondance avec une file
 inventée (`CHERRY` est le nom de code interne d'Arena dans les files, `KIWI` n'est pas confirmé par une
 source collectée). `NORMALIZER_VERSION` passe à 2 : une reconstruction produit une nouvelle publication.
 
+## Infobulles et type de dégâts (#107)
+
+`plain_text` retire le balisage des infobulles de compétences, mais les balises de type de dégâts de
+Data Dragon portent une information que le texte seul perd. Vérifié le 4 octobre 2026 sur les
+infobulles `en_US` de 16.19.1 (Ahri, Draven, Garen) : `<physicalDamage>`, `<magicDamage>` et
+`<trueDamage>` entourent le chiffre et son libellé ; d'autres balises (`status`, `speed`, `keywordMajor`,
+`scaleArmor`, `scaleMR`, `recast`, `spellName`…) coexistent. Sur les compétences, le champ `tooltip`
+reste le texte brut (statut `descriptive`) et un champ voisin `tooltip_segments` le découpe en
+fragments `{text, damage_type}` :
+
+- `damage_type` vaut `physical`, `magic` ou `true` à l'intérieur de la balise correspondante, `null`
+  ailleurs. Il vient de la balise, jamais de la formulation : il vaut donc dans les sept langues, y compris
+  celles que l'app n'expédie pas encore.
+- Seules ces trois balises donnent un type. Les autres balises n'en donnent pas et héritent de celui qui
+  les entoure (`<magicDamage>10 <scaleAP>(+ 50 % AP)</scaleAP></magicDamage>` reste un seul fragment
+  `magic`). Le type le plus interne l'emporte ; une balise de dégâts non fermée court jusqu'à la fin ;
+  une fermeture orpheline est ignorée.
+- Les textes concaténés des fragments sont exactement `tooltip` (même entités décodées, même
+  espaces compactés, même retrait des blocs actifs) ; les fragments voisins de même type sont fusionnés.
+  Les placeholders (`{{ totaldamage }}`) restent non résolus.
+- Statut `derived` (transformation déterministe d'une balise de la source), sans unité, provenance
+  `…/tooltip`. Une infobulle absente ou `null` ne produit pas le champ ; les passifs, qui n'ont pas de
+  `tooltip` dans Data Dragon, non plus. Les sorts d'invocateur passent par le même code et
+  l'obtiennent si leur source porte un `tooltip`.
+
+Limites : les ratios (PV, armure, résistance magique) et les valeurs des blocs `effect`, `vars` et
+`leveltip` ne sont pas interprétés, l'interprète d'effets du BIN reste propre au desktop, et la regex de
+`abilityPresentation.ts` n'est pas supprimée par ce lot (côté desktop). Le catalogue publié et l'export
+desktop ne contiennent ce champ qu'après une nouvelle publication (`NORMALIZER_VERSION` passe à 3).
+
 ## Contrat, provenance et couverture
 
 Contrats Rust dans `catalog/model.rs`, miroirs TypeScript dans
-[`catalog.ts`](../packages/shared/src/catalog.ts). Une fiche est identifiée par
+[`catalog.ts`](../packages/shared/src/catalog.ts) (dont `CatalogTooltipSegment`, #107). Une fiche est identifiée par
 publication + kind + namespace + locale + id. Une `CatalogValue` porte `value`,
 `unit`, `status` et des références `{source_id,pointer}` (JSON Pointer).
 Le manifeste résout chaque source vers son fournisseur, URL, version exacte et date
