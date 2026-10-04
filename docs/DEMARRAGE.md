@@ -85,7 +85,7 @@ développement peut expirer avant la fin. Aucun superviseur ni service permanent
 n'est installé. Voir [le contrat et les options](../services/collector/README.md).
 
 Rétention des données personnelles (#99) : `cargo run -p olc-collector --release -- purge --watch`
-supprime les parties brutes après 90 jours et retire PUUID et Riot ID après 30 jours
+supprime les parties brutes après 90 jours et retire PUUID, Riot ID, icône et niveau de compte après 30 jours
 (valeurs proposées, réglables par `OLC_RETENTION_*`). Détails dans le
 [README du collecteur](../services/collector/README.md#rétention-des-données-personnelles-99).
 
