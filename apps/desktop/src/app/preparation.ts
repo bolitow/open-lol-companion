@@ -111,7 +111,7 @@ export function displayedRuneStyles(styles:readonly CatalogRecord[],page:import(
 /** Une variable non résolue n'est ni une valeur zéro ni un conseil exploitable. */
 export function catalogDescription(record:CatalogRecord):string|null{
     const text=record.description;
-    return text&& !/@[^@\n]+@|\{\{[^}]*\}\}/.test(text)?text:null;
+    return text&& !/@[^@\n]+@|\{\{[^}]*\}\}|%i:[^%\s]+%/.test(text)?text:null;
 }
 
 /** Une page contrôlée garde la priorité sur une exploration locale antérieure. */
