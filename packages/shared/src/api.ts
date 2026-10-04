@@ -44,12 +44,22 @@ export interface ChampionStats extends GroupKey {
   wins: number;
   losses: number;
   population: number;
+  /** Nul en Arena : le booléen de victoire n'y désigne pas une première place. */
   win_rate: number | null;
   pick_rate: number | null;
+  /** Nul en Arena, comme `win_rate`. */
   win_rate_lower_bound: number | null;
   position: number | null;
   tier: string | null;
   most_picked_rank: string | null;
+  /** Arena : participations au placement de sous-équipe valide ; 0 hors Arena. */
+  placement_games: number;
+  /** Arena : placement moyen de la sous-équipe (1 = première) ; nul sous le seuil et hors Arena. */
+  average_placement: number | null;
+  /** Arena : part (%) des participations classées première ; nulle sous le seuil et hors Arena. */
+  top1_rate: number | null;
+  /** Arena : part (%) des participations classées première ou deuxième ; nulle sous le seuil et hors Arena. */
+  top2_rate: number | null;
 }
 
 /** Les bans concernent la draft entière, sans rang ni rôle individuel. */
@@ -86,6 +96,10 @@ export interface BuildStats extends GroupKey {
   win_rate: number | null;
   /** Borne inférieure de Wilson à 95 % ; nulle sous le seuil ou sans performance publiable. */
   win_rate_lower_bound: number | null;
+  /** Arena, variantes hors objets : participations au placement valide ; 0 hors Arena et pour les objets. */
+  placement_games: number;
+  /** Arena, variantes hors objets : placement moyen (1 = première) ; nul sous le seuil, hors Arena et pour les objets. */
+  average_placement: number | null;
 }
 
 export interface SkillStats extends GroupKey {
@@ -127,6 +141,8 @@ export interface Coverage {
   item_stage_participations: number;
   /** Participations à achats nets connus mais sans catalogue d'objets pour leur patch. */
   missing_item_catalog_participations: number;
+  /** Participations Arena sans placement de sous-équipe valide, comptées dans `games`. */
+  unknown_placement_participations: number;
 }
 
 export interface ScopeCoverage extends ScopeKey, Coverage {}

@@ -314,18 +314,30 @@ inventé à partir des objets ou du rang.
 | --- | --- |
 | `games`, `wins`, `losses` | Participations, pas toujours matchs distincts : les modes autorisant plusieurs exemplaires d'un champion peuvent contribuer plusieurs fois par match |
 | `population` | Toutes les participations du même patch/plateforme/file/rôle/rang |
-| `win_rate` | Victoires / participations du champion × 100 |
+| `win_rate` | Victoires / participations du champion × 100 ; nul en Arena (voir ci-dessous) |
 | `pick_rate` | Participations du champion / population × 100 ; part des sélections dans ce groupe |
-| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
-| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
+| `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) ; nulle en Arena |
+| `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe. En Arena : placement moyen croissant, puis effectif décroissant et ID ; le ratio brut de victoires n'intervient jamais |
+| `placement_games`, `average_placement`, `top1_rate`, `top2_rate` | Arena seulement (#104) : participations au placement valide, placement moyen de la sous-équipe (1 = première), part (%) des participations classées première, puis première ou deuxième. Nuls hors Arena et sous le seuil (`placement_games` reste visible) |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file : matchs bannissant le champion / drafts complètes ; un double ban ne compte qu'une fois |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
 visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
 Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances
-entre parties d'un même joueur. Le booléen `win` d'Arena ne signifie pas nécessairement
-une première place. Les parties normales/PvE et Arena ne sont jamais mélangées à SoloQ.
+entre parties d'un même joueur. Le booléen `win` d'Arena ne désigne pas une première
+place (sur les files 1740/1750 observées, il vaut vrai pour les trois meilleures des six
+sous-équipes) : les groupes Arena ne publient donc ni `win_rate` ni borne de Wilson, et
+leurs `wins`/`losses` bruts ne servent à aucun classement. Le placement est lu dans
+`subteamPlacement`, à défaut `placement` (0 = absent). Il n'est retenu que si chaque
+sous-équipe porte une valeur unique et que les sous-équipes occupent des places distinctes de
+1 à leur nombre ; sinon la partie reste comptée dans `games` mais sans placement
+(`unknown_placement_participations` dans la couverture). Le placement moyen par champion
+n'est ni un winrate d'objet ni un taux d'augment ; aucune statistique d'augment n'est
+calculée. Les variantes de builds hors objets (liste fermée : runes, sorts, ordre de
+compétences) suivent la même règle en Arena : placement moyen au lieu du taux de
+victoire (voir plus bas). Les parties normales/PvE et Arena ne sont jamais
+mélangées à SoloQ.
 
 Les remakes et parties incohérentes sont exclus avant toute contribution. Une partie dont
 la file n'est pas identifiée (ni formats à deux camps, ni Arena, ni Swarm : par exemple 710
@@ -348,7 +360,19 @@ pickrate et winrate de chaque variante. Exception imposée par la
 d'items Arena (`item`, `final_items`, `trinket`, `purchase_order` et les étapes
 `starter`, `boots`, `core`, `item_slot_4..6`) ne publient ni victoires, ni winrates, ni
 borne Wilson (`wins`/`win_rate`/`win_rate_lower_bound` nuls, `performance_available: false`) ; leur
-tri ne dépend pas des victoires. Aucun taux d'augment n'est produit. Au plus 20 variantes par catégorie/groupe sont
+tri ne dépend pas des victoires, et ils ne publient pas non plus de placement (#104). Aucun taux d'augment n'est produit.
+En Arena (#104), les catégories de la liste positive `ARENA_PLACEMENT_CATEGORIES` (`runes`,
+`summoner_spells`, `skill_order`, `special_skill_order`, et aucune autre : une catégorie
+nouvelle n'y publie rien tant qu'elle n'y est pas ajoutée) ne publient pas non plus de taux de victoire (`wins`/`win_rate`/
+`win_rate_lower_bound` nuls, `performance_available: false`) : le booléen `win` d'Arena n'est
+pas une première place. Elles publient `placement_games` (participations au placement valide,
+voir les règles de cohérence plus haut) et `average_placement` (placement moyen de la
+sous-équipe, 1 = première, nul sous le seuil). À effectif égal, le placement moyen croissant
+départage les variantes ; la publication des 20 variantes les plus fréquentes reste fondée sur
+la popularité. Aucun taux de première ou de deuxième place n'est publié pour les variantes
+(les objets n'en publient pas non plus), ni aucun placement par objet ou par augment. Hors
+Arena, ces catégories gardent victoires et taux de victoire, avec `placement_games` à 0 et
+`average_placement` nul. Au plus 20 variantes par catégorie/groupe sont
 publiées, par popularité, sans modifier leur dénominateur ; `omitted_build_variants`
 annonce les variantes supplémentaires conservées seulement dans les sources brutes.
 
@@ -368,7 +392,7 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
 - `item_events` : achats, ventes, destructions et annulations regroupés par minute.
 
 Chaque variante publie aussi `win_rate_lower_bound`, borne inférieure de Wilson à 95 %
-bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena).
+bornée à 0–100 (le client desktop rejette toute page hors de cet intervalle), nulle sous le seuil ou sans performance publiable (Arena, toutes catégories).
 
 ### Étapes d'achat (#81)
 
