@@ -276,3 +276,5 @@ mod tests {
         }
     }
 }
+
+pub mod overlay_editor;

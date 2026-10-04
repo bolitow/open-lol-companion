@@ -32,7 +32,8 @@
     "allow-skin-spotlight-state",
     "allow-skin-spotlight-media",
     "allow-skin-spotlight-control",
-    "allow-skin-spotlight-layout"
+    "allow-skin-spotlight-layout",
+    "allow-overlay-edit"
   ],
   "webviews": [
     "main"

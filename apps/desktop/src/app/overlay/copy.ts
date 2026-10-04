@@ -1,5 +1,6 @@
 export const overlayCopy = {
     fr: {
+        edit:'Modifier le placement', cancel:'Annuler', move:'Déplacer', resize:'Redimensionner', editing:'Édition · Alt+B pour annuler', editHint:'Alt+B ou Ctrl+Alt+² : modifier le panneau. Enregistrer pour conserver, Annuler pour revenir. L’édition expire après 3 minutes sans validation.', style:'Style', dark:'Dark', solid:'Plein', height:'Hauteur (%) — 0 : automatique',
         title: 'Overlay en partie', enable: 'Activer le panneau en partie',
         description: 'Un panneau passif affiche les informations de votre personnage. Il laisse passer les clics vers le jeu.',
         exclusive: 'Je joue en plein écran exclusif', exclusiveHint: 'Le plein écran exclusif masque l’overlay. Utilisez le mode fenêtré ou sans bordure pour l’afficher.',
@@ -15,6 +16,7 @@ export const overlayCopy = {
         previewTitle: 'Aperçu de l’overlay', previewBody: 'Aucune partie simulée. Vos informations apparaîtront ici lorsque LoL les rendra disponibles.',
     },
     en: {
+        edit:'Edit placement', cancel:'Cancel', move:'Move', resize:'Resize', editing:'Editing · Alt+B to cancel', editHint:'Alt+B or Ctrl+Alt+Backquote: edit the panel. Save to keep changes, Cancel to restore. Editing expires after 3 minutes without confirmation.', style:'Style', dark:'Dark', solid:'Solid', height:'Height (%) — 0: automatic',
         title: 'In-game overlay', enable: 'Enable the in-game panel',
         description: 'A passive panel shows your character’s information. Clicks pass through to the game.',
         exclusive: 'I play in exclusive fullscreen', exclusiveHint: 'Exclusive fullscreen hides the overlay. Use windowed or borderless mode to show it.',

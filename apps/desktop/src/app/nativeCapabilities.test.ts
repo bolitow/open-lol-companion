@@ -15,7 +15,7 @@ it('déclare et autorise les commandes système dans la fenêtre principale apr�
 it('limite le panneau passif à ses commandes de lecture et de taille',()=>{
  const overlay=JSON.parse(nativeFile('capabilities/overlay.json'));
  expect(overlay.windows).toEqual(['game-overlay']);
- expect(overlay.permissions).toEqual(['core:event:allow-listen','core:event:allow-unlisten','allow-live-session','allow-overlay-state','allow-community-builds','allow-overlay-content-height']);
+ expect(overlay.permissions).toEqual(['core:event:allow-listen','core:event:allow-unlisten','allow-live-session','allow-overlay-state','allow-community-builds','allow-overlay-content-height','allow-overlay-edit']);
 });
 
 it('isole le shell vidéo et ne donne aucun droit à la Webview YouTube',()=>{

@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Éditeur du panneau d’overlay : déplacement et redimensionnement relatifs, session Alt+B / Ctrl+Alt+², validation ou annulation, styles Dark/Plein et opacité 0–100 %. Les clics redeviennent traversants hors édition ; recette native en jeu et flou Windows à compléter (#28).
+
 - Collection : cartes agrandies et légendes amincies, informations de fiche regroupées ; lecture directement dans la fiche, agrandissement/réduction sans recréer le lecteur, passages visuels et commande Recharger ; masquage sous les menus et protection contre une ouverture tardive après fermeture (#47).
 - Collection : filtres regroupés selon la largeur réelle de la galerie, compteurs et actions sur une ligne, illustration de fiche agrandie et souhaits compacts avec libellés accessibles FR/EN ; cadre conservé entre deux skins et fondu limité à l’illustration, avec mouvements réduits respectés ; zone vidéo réductible pour conserver les commandes du lecteur à petite hauteur (#47).
 

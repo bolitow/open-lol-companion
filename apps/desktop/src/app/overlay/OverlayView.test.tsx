@@ -4,7 +4,7 @@ import type {LiveSession, OverlayState} from '@olc/shared';
 import {OverlayView} from './OverlayView';
 import {defaultOverlayPreferences} from './preferences';
 
-const state: OverlayState = {material: 'solid', revision: 1, preferences: {...defaultOverlayPreferences, enabled: true}, available: true, visible: true, preview: false, error: null};
+const state: OverlayState = {material: 'solid', revision: 1, preferences: {...defaultOverlayPreferences, enabled: true}, available: true, visible: true, preview: false, editSession: null, error: null};
 const session: LiveSession = {revision: 1, generation: 1, status: 'ready', context: null, game: {gameTime: 123, gameMode: 'CLASSIC', mapNumber: 11, player: {championKey: 'Bard', level: 3, kills: 1, deaths: 0, assists: 2, creepScore: 7, items: []}, events: []}};
 
 it('applique l’opacité en CSS seulement au fond solide, les matériaux Mac ont une opacité native', () => {
@@ -35,4 +35,9 @@ it('retire le contenu dès que le moteur masque le panneau ou interdit le plein 
     for (const hidden of [{...state, visible: false}, {...state, available: false}, {...state, preferences: {...state.preferences, enabled: false}}, {...state, preview: true, preferences: {...state.preferences, exclusiveFullscreen: true}}]) {
         expect(renderToStaticMarkup(<OverlayView state={hidden} session={session}/>)).toBe('');
     }
+});
+
+it('réserve les poignées et commandes à la session d’édition',()=>{
+ const html=renderToStaticMarkup(<OverlayView state={{...state,editSession:4}} session={session}/>);
+ expect(html).toContain('Déplacer');expect(html).toContain('Redimensionner');expect(html).toContain('Annuler');
 });

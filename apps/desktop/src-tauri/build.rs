@@ -29,6 +29,7 @@ fn main() {
             "live_session",
             "live_custom_role",
             "overlay_state",
+            "overlay_edit",
             "overlay_content_height",
             "overlay_locale",
             "overlay_configure",

@@ -162,6 +162,7 @@ pub fn run() {
             live::live_session,
             live::live_custom_role,
             overlay::overlay_state,
+            overlay::overlay_edit,
             overlay::overlay_content_height,
             overlay::overlay_locale,
             overlay::overlay_configure,

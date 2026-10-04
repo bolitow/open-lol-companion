@@ -222,3 +222,38 @@ mod content_tests {
         assert!(fit_content(frame, 0.1, 0.1, 0.2, f64::NAN, 1.0).is_err());
     }
 }
+
+/// Hauteur explicite relative, sans la borne destinée aux mesures DOM automatiques.
+pub fn fit_relative(
+    frame: Rect,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<Rect, PlacementError> {
+    if !(0.1..=0.8).contains(&height) {
+        return Err(PlacementError::Frame);
+    }
+    let mut rect = placement(frame, x, y, width)?;
+    rect.height = frame.height * height;
+    rect.y = frame.y + frame.height * y.clamp(0.0, 1.0 - height);
+    Ok(rect)
+}
+#[cfg(test)]
+mod editor_tests {
+    use super::*;
+    #[test]
+    fn hauteur_explicite_non_tronquee_en_4k() {
+        let frame = Rect {
+            x: 0.0,
+            y: 0.0,
+            width: 3840.0,
+            height: 2160.0,
+            physical: true,
+        };
+        let rect = fit_relative(frame, 0.1, 0.2, 0.3, 0.8).unwrap();
+        assert_eq!(rect.height, 1728.0);
+        assert!((rect.y - 432.0).abs() < 1e-6);
+        assert!(fit_relative(frame, 0.0, 0.0, 0.2, f64::NAN).is_err());
+    }
+}

@@ -20,6 +20,7 @@ pub fn create(app: &AppHandle) -> Result<super::OverlayMaterial, ()> {
         .decorations(false)
         .shadow(false)
         .resizable(false)
+        .accept_first_mouse(true)
         .focused(false)
         .focusable(false)
         .always_on_top(true)
@@ -70,9 +71,15 @@ pub fn create(app: &AppHandle) -> Result<super::OverlayMaterial, ()> {
     Ok(super::OverlayMaterial::Solid)
 }
 /// Position, NSPanel et visibilité sont toujours commandés sur le thread principal.
-pub fn apply(app: &AppHandle, target: Option<GameWindow>, opacity: f64) -> Result<(), ()> {
+pub fn apply(
+    app: &AppHandle,
+    target: Option<GameWindow>,
+    opacity: f64,
+    editing: bool,
+) -> Result<(), ()> {
     let rect = target.map(|window| window.rect);
     let window = app.get_webview_window(LABEL).ok_or(())?;
+    window.set_ignore_cursor_events(!editing).map_err(|_| ())?;
     if let Some(rect) = rect {
         if rect.physical {
             window
@@ -95,12 +102,12 @@ pub fn apply(app: &AppHandle, target: Option<GameWindow>, opacity: f64) -> Resul
                 .set_position(LogicalPosition::new(rect.x, rect.y))
                 .map_err(|_| ())?;
         }
-        window.set_ignore_cursor_events(true).map_err(|_| ())?;
     }
     #[cfg(target_os = "macos")]
     {
         use tauri_nspanel::ManagerExt;
         let panel = app.get_webview_panel(LABEL).map_err(|_| ())?;
+        panel.set_ignores_mouse_events(!editing);
         panel.set_alpha_value(opacity);
         panel.set_level(target.map_or(3, |window| window.overlay_level) as _);
         if rect.is_some() {
