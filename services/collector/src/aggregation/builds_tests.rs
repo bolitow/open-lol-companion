@@ -58,13 +58,56 @@ fn extrait_les_categories_completes_et_omet_toute_donnee_joueur() {
 }
 
 #[test]
+fn derive_les_categories_de_runes_de_la_page_exacte() {
+    let result = extract_detail(&participant());
+    let v = &result.variants;
+    assert_eq!(v["rune_keystone"], vec![8005]);
+    assert_eq!(v["rune_primary_style"], vec![8000]);
+    assert_eq!(v["rune_secondary_style"], vec![8200]);
+    assert_eq!(v["rune_secondary_pair"], vec![8200, 8224, 8234]);
+    // Chaque rune d'emplacement est conditionnée à sa clé de voûte.
+    assert_eq!(v["rune_slot_1"], vec![8005, 9111]);
+    assert_eq!(v["rune_slot_2"], vec![8005, 9104]);
+    assert_eq!(v["rune_slot_3"], vec![8005, 8014]);
+    assert_eq!(v["rune_shard_offense"], vec![5005]);
+    assert_eq!(v["rune_shard_flex"], vec![5008]);
+    assert_eq!(v["rune_shard_defense"], vec![5011]);
+    // La page exacte reste publiée telle quelle.
+    assert_eq!(v["runes"].len(), 11);
+}
+
+#[test]
+fn la_paire_secondaire_est_independante_de_l_ordre_transmis() {
+    let mut source = participant();
+    source["perks"]["styles"][0]["selections"] = json!([{"perk": 8234},{"perk": 8224}]);
+    assert_eq!(
+        extract_detail(&source).variants["rune_secondary_pair"],
+        vec![8200, 8224, 8234]
+    );
+}
+
+#[test]
+fn une_page_de_runes_incomplete_ne_produit_aucune_categorie_derivee() {
+    let mut source = participant();
+    source["perks"]["statPerks"]["flex"] = json!(0);
+    let result = extract_detail(&source);
+    assert!(!result.variants.keys().any(|c| c.starts_with("rune")));
+}
+
+#[test]
 fn une_categorie_incomplete_ne_contamine_pas_les_autres() {
     let mut source = participant();
     source.as_object_mut().unwrap().remove("item2");
     source["summoner1Id"] = json!(-1);
     source["item6"] = json!(-1);
     let result = extract_detail(&source);
-    assert_eq!(result.variants.len(), 1);
+    // Seules les catégories de runes subsistent (page exacte et ses dérivées).
+    assert!(result
+        .variants
+        .keys()
+        .all(|category| category == "runes" || category.starts_with("rune_")));
+    // Page exacte et ses dix dérivées : aucune catégorie dérivée ne doit disparaître.
+    assert_eq!(result.variants.len(), 11);
     assert!(result.variants.contains_key("runes"));
     source["perks"]["styles"][1]["selections"] = json!([]);
     assert!(extract_detail(&source).variants.is_empty());

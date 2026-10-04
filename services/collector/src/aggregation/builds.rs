@@ -66,9 +66,41 @@ pub(super) fn extract_detail(participant: &Value) -> BuildObservation {
         result.variants.insert("summoner_spells".into(), spells);
     }
     if let Some(runes) = extract_runes(&participant["perks"]) {
+        result.variants.extend(derive_rune_choices(&runes));
         result.variants.insert("runes".into(), runes);
     }
     result
+}
+
+/// Choix de runes (#86) dérivés de la page exacte de 11 identifiants, sans nouvelle
+/// collecte : la page exacte fragmente la population dès qu'un fragment diffère, ces
+/// catégories donnent à chaque choix son propre effectif. Les runes d'emplacement
+/// portent leur clé de voûte pour rester conditionnelles ; la paire secondaire est triée,
+/// l'ordre transmis par Riot n'étant pas un choix du joueur.
+fn derive_rune_choices(page: &[u32]) -> BTreeMap<String, Vec<u32>> {
+    // Ordre de `extract_runes` : arbre principal, 4 runes, arbre secondaire, 2 runes, 3 fragments.
+    let [primary, keystone, slot_1, slot_2, slot_3, secondary, first, second, offense, flex, defense] =
+        *page
+    else {
+        return BTreeMap::new();
+    };
+    let mut pair = [first, second];
+    pair.sort_unstable();
+    BTreeMap::from([
+        ("rune_keystone".into(), vec![keystone]),
+        ("rune_primary_style".into(), vec![primary]),
+        ("rune_secondary_style".into(), vec![secondary]),
+        (
+            "rune_secondary_pair".into(),
+            vec![secondary, pair[0], pair[1]],
+        ),
+        ("rune_slot_1".into(), vec![keystone, slot_1]),
+        ("rune_slot_2".into(), vec![keystone, slot_2]),
+        ("rune_slot_3".into(), vec![keystone, slot_3]),
+        ("rune_shard_offense".into(), vec![offense]),
+        ("rune_shard_flex".into(), vec![flex]),
+        ("rune_shard_defense".into(), vec![defense]),
+    ])
 }
 
 /// Schéma match-v5, champs spécialisés confirmés sur la recette du 1er octobre 2026.

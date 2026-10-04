@@ -298,7 +298,16 @@ annonce les variantes supplémentaires conservées seulement dans les sources br
   item individuel, au plus une fois par participation ; `trinket` correspond au slot 6.
 - `summoner_spells` : paire d'identifiants, indépendante de l'ordre D/F.
 - `runes` : 11 identifiants ordonnés — arbre principal, 4 runes principales, arbre
-  secondaire, 2 runes secondaires, fragments offense/flex/défense.
+  secondaire, 2 runes secondaires, fragments offense/flex/défense. Page exacte,
+  conservée comme preuve et pour l'import : un fragment différent crée une autre variante.
+- Choix de runes (#86), dérivés de la page exacte sans nouvelle collecte, chacun avec sa
+  propre population (parties à page complète), son effectif, son winrate et sa borne
+  Wilson : `rune_keystone`, `rune_primary_style`, `rune_secondary_style` (`[id]`),
+  `rune_secondary_pair` (`[arbre, rune, rune]`, paire triée), `rune_slot_1..3`
+  (`[clé de voûte, rune]` : la rune de l'emplacement est conditionnée à sa clé de voûte ;
+  taux conditionnel = `games` ÷ `games` de `rune_keystone` pour cette clé, le `pick_rate`
+  publié étant le taux conjoint) et `rune_shard_offense|flex|defense` (`[fragment]`).
+  Ces catégories ne sont pas des recommandations : aucun assemblage de page n'est fait ici.
 - `skill_order` : points Q/W/E/R normaux dans l'ordre temporel ; `special_skill_order`
   sépare les évolutions. `skill_levels` expose l'ordre du point investi et son temps
   moyen, pas le niveau du champion (les points peuvent être gardés).

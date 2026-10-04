@@ -482,6 +482,80 @@ fn les_builds_ont_leurs_denominateurs_et_leurs_victoires_propres() {
     );
 }
 
+/// Page de runes complète : clé de voûte, trois runes, arbre secondaire et fragments.
+fn with_runes(mut g: StoredMatch, keystone: u32, shard: u32, win: bool) -> StoredMatch {
+    if !win {
+        reverse_winner(&mut g);
+    }
+    g.detail["info"]["participants"][0]["perks"] = json!({
+        "styles": [
+            {"description":"primaryStyle","style":8000,
+             "selections":[{"perk":keystone},{"perk":9111},{"perk":9104},{"perk":8014}]},
+            {"description":"subStyle","style":8200,
+             "selections":[{"perk":8224},{"perk":8234}]}
+        ],
+        "statPerks": {"offense": 5005, "flex": 5008, "defense": shard}
+    });
+    g
+}
+
+fn rune_rows<'a>(r: &'a super::AggregationReport, category: &str) -> Vec<&'a super::BuildStats> {
+    r.builds
+        .iter()
+        .filter(|b| b.key.rank == "ALL" && b.key.champion_id == 1 && b.category == category)
+        .collect()
+}
+
+#[test]
+fn les_runes_sont_agregees_par_cle_de_voute_arbre_emplacement_et_fragment() {
+    let mut acc = Accumulator::new(1).unwrap();
+    // Trois pages exactes différentes par leur seul fragment défense : la clé de voûte
+    // 8005 regroupe 3 parties alors que chaque page exacte n'en compte que 1 ou 2.
+    for (n, (keystone, shard, win)) in [
+        (8005, 5011, true),
+        (8005, 5011, false),
+        (8005, 5001, true),
+        (8010, 5001, true),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        acc.add(&with_runes(
+            game(&format!("EUW1_rune{n}")),
+            keystone,
+            shard,
+            win,
+        ));
+    }
+    let r = acc.finish();
+    let keystones = rune_rows(&r, "rune_keystone");
+    assert_eq!(
+        keystones
+            .iter()
+            .map(|b| (b.selection.clone(), b.games, b.wins, b.population))
+            .collect::<Vec<_>>(),
+        vec![(vec![8005], 3, Some(2), 4), (vec![8010], 1, Some(1), 4)]
+    );
+    assert_eq!(keystones[0].pick_rate, Some(75.0));
+    assert!(keystones[0].win_rate_lower_bound.is_some());
+    // Rune d'emplacement conditionnée à la clé de voûte, dénominateur = pages complètes.
+    let slot = rune_rows(&r, "rune_slot_1");
+    assert_eq!(slot[0].selection, vec![8005, 9111]);
+    assert_eq!((slot[0].games, slot[0].population), (3, 4));
+    // Fragments : une ligne par choix, sans fragmenter avec les autres lignes.
+    let shards = rune_rows(&r, "rune_shard_defense");
+    assert_eq!(
+        shards
+            .iter()
+            .map(|b| (b.selection[0], b.games))
+            .collect::<Vec<_>>(),
+        vec![(5001, 2), (5011, 2)]
+    );
+    assert_eq!(rune_rows(&r, "rune_shard_offense").len(), 1);
+    // La page exacte reste publiée, plus fragmentée.
+    assert_eq!(rune_rows(&r, "runes").len(), 3);
+}
+
 #[test]
 fn les_variantes_builds_sont_bornees_sans_modifier_leur_population() {
     let mut acc = Accumulator::new(1).unwrap();

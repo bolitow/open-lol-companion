@@ -74,8 +74,30 @@ export type BuildStageCategory =
   | "item_slot_5"
   | "item_slot_6";
 
+/**
+ * Choix de runes (#86), dérivés de la page exacte `runes` (11 identifiants) pour que
+ * chaque choix ait son propre effectif et sa propre borne Wilson. Population : parties
+ * avec une page complète. `selection` :
+ * - `rune_keystone`, `rune_primary_style`, `rune_secondary_style` : `[id]` ;
+ * - `rune_secondary_pair` : `[arbre secondaire, rune, rune]`, paire triée ;
+ * - `rune_slot_1..3` : `[clé de voûte, rune]` (rune de l'emplacement, conditionnée à la
+ *   clé de voûte : taux conditionnel = `games` / `games` de `rune_keystone` pour la clé) ;
+ * - `rune_shard_offense`, `rune_shard_flex`, `rune_shard_defense` : `[fragment]`.
+ */
+export type BuildRuneCategory =
+  | "rune_keystone"
+  | "rune_primary_style"
+  | "rune_secondary_style"
+  | "rune_secondary_pair"
+  | "rune_slot_1"
+  | "rune_slot_2"
+  | "rune_slot_3"
+  | "rune_shard_offense"
+  | "rune_shard_flex"
+  | "rune_shard_defense";
+
 export interface BuildStats extends GroupKey {
-  /** Empreintes exactes (`final_items`, `purchase_order`…) ou `BuildStageCategory`. */
+  /** Empreintes exactes (`final_items`, `runes`…), `BuildStageCategory` ou `BuildRuneCategory`. */
   category: string;
   selection: number[];
   games: number;

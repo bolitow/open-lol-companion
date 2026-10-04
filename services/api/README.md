@@ -82,7 +82,9 @@ du périmètre et fenêtre calculée. `rank_scope` et `rank_max_age_hours` décr
 rang figé à la partie (#80) ; la couverture ajoute la part `UNKNOWN`
 (`unknown_rank_rate`) et les écarts partie → observation (`rank_gap_median_hours`,
 `rank_gap_max_hours`), `null` pour un instantané antérieur. Les builds incluent les étapes
-d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`) et chaque variante
+d'achat (#81 : `starter`, `boots`, `core` ordonné, `item_slot_4..6`), les choix de runes
+(#86 : `rune_keystone`, `rune_primary_style`, `rune_secondary_style`, `rune_secondary_pair`,
+`rune_slot_1..3` conditionnées à la clé de voûte, `rune_shard_*`) et chaque variante
 porte `win_rate_lower_bound` (Wilson 95 %). La réponse builds ajoute `build_stage_method`
 et `item_catalog_version` (catalogue #61 joint au patch demandé, `null` sans étapes) ; la
 couverture ajoute `item_stage_participations` et `missing_item_catalog_participations`
