@@ -28,6 +28,9 @@
     "allow-desktop-settings",
     "allow-set-desktop-setting",
     "allow-set-desktop-locale",
-    "allow-export-diagnostics"
+    "allow-export-diagnostics",
+    "allow-api-access-status",
+    "allow-save-api-access",
+    "allow-clear-api-access"
   ]
 }

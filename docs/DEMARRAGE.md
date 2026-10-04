@@ -103,12 +103,25 @@ Routes, variables, cache, WebSocket et PowerShell : [contrat API](../services/ap
 
 ### Relier la préparation desktop aux builds (#13)
 
-Le cœur Rust lit `OLC_API_URL` (origine du serveur, sans chemin) et
-`OLC_API_TOKEN` (jeton de lecture émis par le serveur) dans **l’environnement du
-processus qui lance `pnpm dev`**. Le front ne reçoit aucun jeton ; ne pas utiliser
-un préfixe `VITE_`, ne pas embarquer de jeton dans le bundle et ne pas transmettre
-le secret JWT du serveur ni une clé Riot au desktop. Ces variables ne sont pas
-chargées automatiquement depuis le `.env` du backend.
+Le cœur Rust a besoin d’une URL (origine du serveur, sans chemin) et d’un jeton de
+lecture émis par le serveur. Deux sources, dans cet ordre (#98) :
+
+1. `OLC_API_URL` et `OLC_API_TOKEN`, **toutes deux** présentes dans l’environnement du
+   processus qui lance `pnpm dev` (raccordement développeur, prioritaire) ;
+2. sinon **Réglages → Accès à l’API** : l’URL et le jeton saisis y sont validés par le
+   cœur Rust puis gardés dans le trousseau du système (Keychain sous macOS,
+   Gestionnaire d’identifiants sous Windows ; service
+   `io.github.bolitow.openlolcompanion`, compte `api-access`). Le changement
+   s’applique sans redémarrage (builds, profils, canal des publications) ; « Retirer
+   le jeton » supprime l’entrée. Le jeton n’est ni journalisé, ni renvoyé à
+   l’interface, ni réaffiché après saisie ; seule l’URL est relue.
+
+Le front ne garde aucun jeton ; ne pas utiliser un préfixe `VITE_`, ne pas embarquer
+de jeton dans le bundle et ne pas transmettre le secret JWT du serveur ni une clé
+Riot au desktop. Les variables ne sont pas chargées automatiquement depuis le `.env`
+du backend. Sous macOS, une version recompilée ou non signée peut déclencher une
+demande d’accès au trousseau au démarrage : la fenêtre reste utilisable, les builds
+et profils attendent la réponse.
 
 - Développement local : `OLC_API_URL=http://127.0.0.1:3030` ; définir le jeton
   temporaire dans le terminal de lancement, puis `pnpm dev`. Sous PowerShell,
@@ -124,8 +137,10 @@ chargées automatiquement depuis le `.env` du backend.
   affiche la cause ou l’état vide. Le catalogue local et les runes équipées
   restent accessibles. L’aperçu navigateur ne dispose pas de ce transport natif.
 
-Il s’agit d’un raccordement développeur : distribution des accès utilisateurs,
-connexion publique et déploiement ne sont pas encore fournis par ce lot. Les
+La saisie dans les réglages permet d’utiliser une app installée lancée depuis le
+Finder ou le menu Démarrer, mais la distribution des jetons reste manuelle : aucun
+endpoint public d’émission ni rafraîchissement n’existe encore, et un jeton
+`olc-api token` expire au plus tard après 24 h (#98). Les
 catégories sont indépendantes, triées par fréquence, et ne constituent ni un
 build conjoint gagnant ni une recommandation matchup/pro. Voir
 [le suivi de validation](integration-front.md).
@@ -136,7 +151,8 @@ jeton dans le premier message (jamais dans l’URL) et reçoit les dates de publ
 des statistiques et des données statiques. Une coupure déclenche une reconnexion avec
 attente doublée de 1 s à 60 s ; un jeton refusé ou expiré (fermeture `1008`, ou 401/403 d’un proxy
 d’authentification) arrête les tentatives
-(état `unauthorized`, relancer l’app avec un nouveau jeton). L’état est lu par la
+(état `unauthorized` : enregistrer un nouveau jeton dans les réglages relance
+l’écoute sans redémarrage, ou relancer l’app avec de nouvelles variables). L’état est lu par la
 commande `publication_state` et émis avec l’événement `publication-state`.
 
 ## 4. Où coder quoi

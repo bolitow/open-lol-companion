@@ -105,7 +105,7 @@ fn public_profile(profile: olc_build_client::profiles::Profile) -> PlayerProfile
 #[tauri::command]
 pub async fn player_profile(
     request: PlayerRequest,
-    state: tauri::State<'_, super::BuildState>,
+    state: tauri::State<'_, crate::api_access::ApiState>,
     local: tauri::State<'_, LocalState>,
 ) -> Result<PlayerProfile, PlayerError> {
     request.validate()?;
@@ -117,9 +117,9 @@ pub async fn player_profile(
         local.require_current(&context)?;
         return Ok(result);
     }
-    match state.inner() {
+    match state.client().await {
         Ok(client) => client.player_profile(request).await.map(public_profile),
-        Err(error) => Err((*error).into()),
+        Err(error) => Err(error.into()),
     }
 }
 /// La pagination conserve sa source : fermer League ne mélange jamais historique local et public.
@@ -134,7 +134,7 @@ pub struct HistoryRequest {
 #[tauri::command]
 pub async fn player_matches(
     request: HistoryRequest,
-    state: tauri::State<'_, super::BuildState>,
+    state: tauri::State<'_, crate::api_access::ApiState>,
     local: tauri::State<'_, LocalState>,
 ) -> Result<PlayerHistory, PlayerError> {
     request.player.validate()?;
@@ -161,9 +161,9 @@ pub async fn player_matches(
         start: request.start,
         count: request.count,
     };
-    let page = match state.inner() {
+    let page = match state.client().await {
         Ok(client) => client.player_matches(request).await?,
-        Err(error) => return Err((*error).into()),
+        Err(error) => return Err(error.into()),
     };
     Ok(PlayerHistory {
         platform: page.platform,
