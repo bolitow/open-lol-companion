@@ -146,6 +146,7 @@ fn ranked_game(id: &str, kills: u64, deaths: u64, assists: u64) -> StoredMatch {
         patch: "15.19".into(),
         is_remake: false,
         game_duration_s: 1800,
+        game_start_ms: 1_000_000,
         detail,
         timeline: None,
         ranks: [(

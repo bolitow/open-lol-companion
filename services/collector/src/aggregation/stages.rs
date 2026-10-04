@@ -5,6 +5,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 
 pub(super) use super::builds::Purchase;
 
@@ -125,6 +126,23 @@ impl ItemCatalog {
             }
         }
         catalog
+    }
+
+    /// Empreinte du classement (#89) : version et ensembles qui décident des étapes. Une
+    /// même version republiée avec d'autres fiches (`catalog --refresh` ou `--rebuild`,
+    /// complément CommunityDragon) change d'empreinte dès qu'une étape peut changer ; une
+    /// republication sans effet sur le classement la garde. Déstructuration exhaustive,
+    /// sans `..` : un champ ajouté au catalogue ne compile plus tant qu'il n'est pas ici.
+    pub(super) fn fingerprint(&self) -> String {
+        let Self {
+            version,
+            completed,
+            boots,
+            trinkets,
+            canonical,
+        } = self;
+        let text = format!("{version}\n{completed:?}\n{boots:?}\n{trinkets:?}\n{canonical:?}");
+        format!("{:x}", Sha256::digest(text.as_bytes()))
     }
 
     /// Objet d'origine d'une transformation (Muramana → Manamune), sinon l'objet lui-même.
