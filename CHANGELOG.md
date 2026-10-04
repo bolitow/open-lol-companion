@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Modèle de draft, première version : chaque champion disponible noté par la borne basse de Wilson publiée à son poste, part du rôle et estimation du draft explicitement descriptive (moyenne des taux publiés de chaque camp, couverture exposée) ; aucun choix imposé, aucun poste adverse attribué, matchups et synergies signalés comme non disponibles (#39).
+
 - Site web Next.js (FR/EN) : tierlist par rôle avec filtres rang, région, file et patch, page champion (runes, sorts, ordre des compétences, objets finaux et objets les plus fréquents, totem), profil joueur avec rangs et historique paginé, recherche Ctrl+K des champions et des Riot ID ; données lues côté serveur dans l’API publiée, aucun jeton dans le navigateur (#20).
 
 - Revue de conformité Riot de tous les overlays et projections (panneau en partie, projection Live Client, sélection des champions, bilan, prototype) : rapport daté ligne à ligne, cas à soumettre à Riot et fonctions refusées complétés dans `rules/conformite-riot.md`, test de non-fuite des identités de la projection de sélection (#30).
