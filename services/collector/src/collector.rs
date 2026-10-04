@@ -424,6 +424,15 @@ impl<T: Transport> Collector<T> {
                     }
                     return Ok(JobEffect::Continue);
                 }
+                // Cache négatif : une partie déjà téléchargée puis exclue l'est de nouveau
+                // sans appel si ce périmètre la rejette aussi. Dans un périmètre qui
+                // l'accepterait, on la télécharge comme n'importe quelle partie (#90).
+                if let Some(facts) = self.storage.find_excluded_match(&p.match_id).await? {
+                    if let Err(ex) = run.scope.check_stored(&facts) {
+                        self.storage.exclude_match(&job, ex, 0).await?;
+                        return Ok(JobEffect::Continue);
+                    }
+                }
                 match self
                     .client
                     .get(&Request::match_detail_for(
@@ -438,8 +447,10 @@ impl<T: Transport> Collector<T> {
                             info!(match_id = %p.match_id, "partie enregistrée");
                             Ok(JobEffect::Continue)
                         }
-                        Ok(MatchCheck::Excluded(ex)) => {
-                            self.storage.exclude_match(&job, ex, 1).await?;
+                        Ok(MatchCheck::Excluded(ex, facts)) => {
+                            self.storage
+                                .exclude_downloaded_match(&job, ex, &facts)
+                                .await?;
                             info!(match_id = %p.match_id, reason = ex.outcome(), "partie exclue");
                             Ok(JobEffect::Continue)
                         }

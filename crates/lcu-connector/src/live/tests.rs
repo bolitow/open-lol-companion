@@ -15,13 +15,14 @@ fn ne_projette_que_le_joueur_local_et_les_evenements_publics_retenus() {
     let game = project(payload()).unwrap();
     assert_eq!(game.player.champion_key, "Bard");
     assert_eq!(game.player.assists, 12);
-    assert_eq!(game.events.len(), 1);
+    // GameStart et ChampionKill (réduit à des booléens) sont retenus ; aucun nom.
+    assert_eq!(game.events.len(), 2);
     let serialized = serde_json::to_string(&game).unwrap();
     for forbidden in [
         "Enemy",
         "Local#",
         "riotId",
-        "currentGold",
+        "9999",
         "KillerName",
         "old-name",
     ] {
@@ -84,7 +85,7 @@ fn deduplique_les_evenements_et_detecte_une_nouvelle_horloge() {
     };
     tracker.accept(Ok(project(payload()).unwrap()));
     tracker.accept(Ok(project(payload()).unwrap()));
-    assert_eq!(tracker.snapshot.game.as_ref().unwrap().events.len(), 1);
+    assert_eq!(tracker.snapshot.game.as_ref().unwrap().events.len(), 2);
     let before = tracker.snapshot.generation;
     let mut data = payload();
     data["gameData"]["gameTime"] = json!(0.0);
@@ -471,4 +472,340 @@ fn projette_la_capture_reelle_macos_sans_identite_et_sans_alterer_les_valeurs() 
     for identity in ["fixture-local", "riotId", "summonerName", "puuid"] {
         assert!(!projected.contains(identity));
     }
+}
+
+/// Charge complète, au format de la Live Client Data API, où chaque objet porte un champ
+/// sentinelle hors liste blanche. La valeur « CANARY » ne doit jamais ressortir.
+fn full_payload() -> Value {
+    let canary = "CANARY";
+    json!({
+      "activePlayer":{"riotId":"Local#EUW","summonerName":"Local","currentGold":742.5,
+        "abilities":{"Q":{"abilityLevel":3,"displayName":canary},"W":{"abilityLevel":1},
+          "E":{"abilityLevel":0},"R":{"abilityLevel":1},"Passive":{"displayName":canary}},
+        "championStats":{"attackDamage":canary},"fullRunes":{"keystone":canary},
+        "teamRelativeColors":canary,"level":9},
+      "allPlayers":[
+        {"riotId":"Local#EUW","riotIdGameName":"Local","riotIdTagLine":"EUW","summonerName":"Local",
+         "puuid":canary,"rawChampionName":"game_character_displayname_Bard","championName":canary,
+         "level":9,"team":"ORDER","position":"UTILITY","isDead":true,"respawnTimer":12.5,
+         "isBot":false,"skinID":7,"runes":{"keystone":canary},
+         "summonerSpells":{"summonerSpellOne":{"displayName":canary}},
+         "scores":{"kills":2,"deaths":1,"assists":9,"creepScore":30,"wardScore":18.5},
+         "items":[{"itemID":3009,"count":1,"slot":0,"price":canary,"displayName":canary}]},
+        {"riotId":"Mate#EUW","riotIdGameName":"Mate","summonerName":"Mate","rawChampionName":"game_character_displayname_Ahri",
+         "level":8,"team":"ORDER","position":"MIDDLE","isDead":false,"respawnTimer":0.0,
+         "summonerSpells":{"summonerSpellOne":{"displayName":canary}},
+         "scores":{"kills":4,"deaths":2,"assists":3,"creepScore":150,"wardScore":3.0},
+         "items":[{"itemID":1056}]},
+        {"riotId":"Foe#EUW","riotIdGameName":"Foe","summonerName":"Foe","rawChampionName":"game_character_displayname_Zed",
+         "level":10,"team":"CHAOS","position":"TOP","isDead":true,"respawnTimer":33.0,"currentGold":canary,
+         "summonerSpells":{"summonerSpellOne":{"displayName":"Flash"}},
+         "scores":{"kills":5,"deaths":4,"assists":1,"creepScore":170,"wardScore":9.0},
+         "items":[{"itemID":3157,"price":3000}]},
+        {"riotId":"Foe2#EUW","riotIdGameName":"Foe2","summonerName":"Foe2","rawChampionName":"game_character_displayname_Lux",
+         "level":7,"team":"CHAOS","position":"UTILITY",
+         "scores":{"kills":1,"deaths":6,"assists":2,"creepScore":20,"wardScore":22.0},"items":[]}],
+      "gameData":{"gameTime":901.5,"gameMode":"CLASSIC","mapNumber":11,"mapName":canary,"mapTerrain":canary},
+      "events":{"Events":[
+        {"EventID":0,"EventName":"GameStart","EventTime":0.0},
+        {"EventID":1,"EventName":"FirstBlood","EventTime":200.0,"Recipient":"Foe"},
+        {"EventID":2,"EventName":"ChampionKill","EventTime":200.0,"KillerName":"Foe","VictimName":"Mate","Assisters":["Foe2"]},
+        {"EventID":3,"EventName":"ChampionKill","EventTime":300.0,"KillerName":"Mate","VictimName":"Foe","Assisters":["Local"]},
+        {"EventID":4,"EventName":"DragonKill","EventTime":400.0,"DragonType":canary,"Stolen":"False","KillerName":"Mate","Assisters":[]},
+        {"EventID":5,"EventName":"HeraldKill","EventTime":500.0,"KillerName":"Foe","Assisters":[]},
+        {"EventID":6,"EventName":"BaronKill","EventTime":600.0,"KillerName":"Local","Assisters":[]},
+        {"EventID":7,"EventName":"TurretKilled","EventTime":650.0,"TurretKilled":canary,"KillerName":"Minion_T200L0S1","Assisters":[]},
+        {"EventID":8,"EventName":"InhibKilled","EventTime":700.0,"InhibKilled":canary,"KillerName":"Foe2","Assisters":[]},
+        {"EventID":9,"EventName":"Ace","EventTime":800.0,"Acer":"Mate","AcingTeam":"ORDER"},
+        {"EventID":10,"EventName":"Multikill","EventTime":810.0,"KillerName":"Mate","KillStreak":2},
+        {"EventID":11,"EventName":"HordeKill","EventTime":820.0,"KillerName":"Mate"},
+        {"EventID":12,"EventName":"FirstBrick","EventTime":830.0,"KillerName":"Mate"}]}})
+}
+
+fn collect_keys(value: &Value, keys: &mut std::collections::BTreeSet<String>) {
+    match value {
+        Value::Object(map) => {
+            for (key, inner) in map {
+                keys.insert(key.clone());
+                collect_keys(inner, keys);
+            }
+        }
+        Value::Array(items) => items.iter().for_each(|item| collect_keys(item, keys)),
+        _ => {}
+    }
+}
+
+#[test]
+fn un_champ_hors_liste_blanche_n_est_jamais_projete() {
+    let game = project(full_payload()).unwrap();
+    let value = serde_json::to_value(&game).unwrap();
+    let serialized = value.to_string();
+    for forbidden in [
+        "CANARY",
+        "\"Local\"",
+        "Local#",
+        "Mate",
+        "Foe",
+        "puuid",
+        "riotId",
+        "summonerName",
+        "KillerName",
+        "VictimName",
+        "Assisters",
+        "Recipient",
+        "Acer",
+        "Flash",
+        "Zed",
+        "Lux",
+        "Ahri",
+        "price",
+        "skin",
+        "3157",
+        "Minion_",
+    ] {
+        assert!(
+            !serialized.contains(forbidden),
+            "{forbidden} ne doit pas sortir de Rust : {serialized}"
+        );
+    }
+    // Preuve structurelle : toute nouvelle clé projetée doit être ajoutée ici à dessein.
+    let mut keys = std::collections::BTreeSet::new();
+    collect_keys(&value, &mut keys);
+    let allowed: std::collections::BTreeSet<String> = [
+        "gameTime",
+        "gameMode",
+        "mapNumber",
+        "player",
+        "events",
+        "teams",
+        "allies",
+        "enemies",
+        "championKey",
+        "level",
+        "kills",
+        "deaths",
+        "assists",
+        "creepScore",
+        "items",
+        "currentGold",
+        "wardScore",
+        "isDead",
+        "respawnTimer",
+        "abilityLevels",
+        "team",
+        "position",
+        "q",
+        "w",
+        "e",
+        "r",
+        "id",
+        "name",
+        "time",
+        "ally",
+        "involvesLocalPlayer",
+    ]
+    .into_iter()
+    .map(String::from)
+    .collect();
+    assert_eq!(keys, allowed);
+    // Les agrégats ne portent que ce que le tableau des scores montre : pas d'or, de sorts ni de vision adverse.
+    let enemies = &value["teams"]["enemies"];
+    let mut enemy_keys: Vec<_> = enemies.as_object().unwrap().keys().cloned().collect();
+    enemy_keys.sort();
+    assert_eq!(enemy_keys, ["assists", "creepScore", "deaths", "kills"]);
+}
+
+#[test]
+fn projette_les_champs_du_joueur_local() {
+    let player = project(full_payload()).unwrap().player;
+    assert_eq!(player.current_gold, Some(742.5));
+    assert_eq!(player.ward_score, Some(18.5));
+    assert_eq!(player.is_dead, Some(true));
+    assert_eq!(player.respawn_timer, Some(12.5));
+    assert_eq!(player.team, Some(LiveSide::Order));
+    assert_eq!(player.position.as_deref(), Some("UTILITY"));
+    let levels = player.ability_levels.unwrap();
+    assert_eq!((levels.q, levels.w, levels.e, levels.r), (3, 1, 0, 1));
+}
+
+#[test]
+fn les_champs_locaux_ajoutes_sont_optionnels_et_jamais_devines() {
+    // Charge historique : ni or, ni compétences, ni équipe. Elle reste valide.
+    let game = project(payload()).unwrap();
+    let player = &game.player;
+    assert_eq!(player.current_gold, None);
+    assert_eq!(player.ward_score, None);
+    assert_eq!(player.is_dead, None);
+    assert_eq!(player.respawn_timer, None);
+    assert_eq!(player.team, None);
+    assert!(player.ability_levels.is_none());
+    assert!(game.teams.is_none());
+    // Position hors rôles (ARAM : « NONE ») ou valeur négative : rien n'est inventé.
+    let mut data = full_payload();
+    data["allPlayers"][0]["position"] = json!("NONE");
+    data["activePlayer"]["currentGold"] = json!(-1.0);
+    data["allPlayers"][0]["respawnTimer"] = json!("x");
+    let player = project(data).unwrap().player;
+    assert_eq!(player.position, None);
+    assert_eq!(player.current_gold, None);
+    assert_eq!(player.respawn_timer, None);
+}
+
+#[test]
+fn agrege_les_equipes_visibles_au_tableau_des_scores() {
+    let teams = project(full_payload()).unwrap().teams.unwrap();
+    assert_eq!(
+        (
+            teams.allies.kills,
+            teams.allies.deaths,
+            teams.allies.assists,
+            teams.allies.creep_score
+        ),
+        (6, 3, 12, 180)
+    );
+    assert_eq!(
+        (
+            teams.enemies.kills,
+            teams.enemies.deaths,
+            teams.enemies.assists,
+            teams.enemies.creep_score
+        ),
+        (6, 10, 3, 190)
+    );
+    // Un joueur dont les scores manquent rend l'agrégat inconnu plutôt que faux.
+    let mut data = full_payload();
+    data["allPlayers"][3]["scores"] = json!({});
+    assert!(project(data).unwrap().teams.is_none());
+    // Équipe locale inconnue : pas d'agrégat relatif.
+    let mut data = full_payload();
+    data["allPlayers"][0]["team"] = json!("NONE");
+    assert!(project(data).unwrap().teams.is_none());
+}
+
+#[test]
+fn reduit_les_evenements_publics_a_des_booleens_sans_nom_de_joueur() {
+    let game = project(full_payload()).unwrap();
+    let view: Vec<_> = game
+        .events
+        .iter()
+        .map(|e| (e.id, e.name.as_str(), e.ally, e.involves_local_player))
+        .collect();
+    assert_eq!(
+        view,
+        [
+            (0, "GameStart", None, false),
+            (1, "FirstBlood", Some(false), false),
+            (2, "ChampionKill", Some(false), false),
+            // Assistant local : le kill implique le joueur local.
+            (3, "ChampionKill", Some(true), true),
+            (4, "DragonKill", Some(true), false),
+            (5, "HeraldKill", Some(false), false),
+            (6, "BaronKill", Some(true), true),
+            // Tourelle détruite par un sbire : aucun camp attribuable.
+            (7, "TurretKilled", None, false),
+            (8, "InhibKilled", Some(false), false),
+            (9, "Ace", Some(true), false),
+        ]
+    );
+}
+
+#[test]
+fn un_nom_d_evenement_ambigu_n_est_attribue_a_personne() {
+    let mut data = full_payload();
+    // Deux joueurs de camps opposés portent le même nom court : aucune attribution.
+    data["allPlayers"][2]["riotIdGameName"] = json!("Local");
+    data["allPlayers"][2]["summonerName"] = json!("Local");
+    let game = project(data).unwrap();
+    let baron = game.events.iter().find(|e| e.name == "BaronKill").unwrap();
+    assert_eq!((baron.ally, baron.involves_local_player), (None, false));
+}
+
+#[test]
+fn borne_le_journal_des_evenements_publics_aux_plus_recents() {
+    let mut data = full_payload();
+    let events: Vec<_> = (0..400)
+        .map(|id| json!({"EventID":id,"EventName":"TurretKilled","EventTime":id as f64,"KillerName":"Mate"}))
+        .collect();
+    data["events"]["Events"] = json!(events);
+    let game = project(data).unwrap();
+    assert_eq!(game.events.len(), MAX_EVENTS);
+    assert_eq!(game.events.last().unwrap().id, 399);
+}
+
+fn in_game_tracker() -> (LiveTracker, crate::LcuSession) {
+    let mut tracker = LiveTracker::default();
+    let mut lcu = crate::LcuSession::default();
+    lcu.apply(crate::LcuEvent::Connected { port: 1 });
+    lcu.apply(crate::LcuEvent::PhaseChanged {
+        phase: crate::GameflowPhase::InProgress,
+    });
+    tracker.observe(&lcu);
+    (tracker, lcu)
+}
+fn phase(tracker: &mut LiveTracker, lcu: &mut crate::LcuSession, phase: crate::GameflowPhase) {
+    lcu.apply(crate::LcuEvent::PhaseChanged { phase });
+    tracker.observe(lcu);
+}
+
+#[test]
+fn conserve_la_derniere_lecture_valide_jusqu_au_bilan_puis_la_purge() {
+    use crate::GameflowPhase::*;
+    let (mut tracker, mut lcu) = in_game_tracker();
+    assert!(tracker.snapshot.postgame.is_none());
+    tracker.accept(project(full_payload()));
+    // Le jeu s'arrête avant le changement de phase : la dernière lecture est une erreur.
+    tracker.accept(Err(LiveError::Unavailable));
+    assert!(tracker.snapshot.game.is_none());
+    phase(&mut tracker, &mut lcu, WaitingForStats);
+    assert_eq!(tracker.snapshot.status, LiveStatus::Idle);
+    assert!(tracker.snapshot.game.is_none());
+    let kept = tracker.snapshot.postgame.as_ref().expect("bilan conservé");
+    assert_eq!(kept.game_time, 901.5);
+    assert_eq!(kept.events.len(), 10);
+    // Le passage synthétique à une session vide (changement d'époque) ne purge pas.
+    tracker.observe(&crate::LcuSession::default());
+    assert!(tracker.snapshot.postgame.is_some());
+    phase(&mut tracker, &mut lcu, PreEndOfGame);
+    phase(&mut tracker, &mut lcu, EndOfGame);
+    assert!(tracker.snapshot.postgame.is_some());
+    // Retour au salon : le bilan est purgé.
+    phase(&mut tracker, &mut lcu, Lobby);
+    assert!(tracker.snapshot.postgame.is_none());
+}
+
+#[test]
+fn une_nouvelle_partie_purge_le_bilan_precedent() {
+    use crate::GameflowPhase::*;
+    let (mut tracker, mut lcu) = in_game_tracker();
+    tracker.accept(project(full_payload()));
+    phase(&mut tracker, &mut lcu, EndOfGame);
+    assert!(tracker.snapshot.postgame.is_some());
+    phase(&mut tracker, &mut lcu, InProgress);
+    assert!(tracker.snapshot.postgame.is_none());
+    // Une partie jamais lue n'invente pas de bilan.
+    phase(&mut tracker, &mut lcu, EndOfGame);
+    assert!(tracker.snapshot.postgame.is_none());
+}
+
+#[test]
+fn une_annulation_sans_lecture_ou_vers_le_salon_ne_laisse_aucun_bilan() {
+    use crate::GameflowPhase::*;
+    let (mut tracker, mut lcu) = in_game_tracker();
+    tracker.accept(project(full_payload()));
+    // Reprise directe vers le salon (remake) : rien à montrer ensuite.
+    phase(&mut tracker, &mut lcu, Lobby);
+    assert!(tracker.snapshot.postgame.is_none());
+}
+
+#[test]
+fn une_victime_locale_implique_le_joueur_local() {
+    let mut data = full_payload();
+    data["events"]["Events"] = json!([
+        {"EventID":0,"EventName":"ChampionKill","EventTime":10.0,"KillerName":"Foe","VictimName":"Local","Assisters":[]}
+    ]);
+    let event = project(data).unwrap().events.remove(0);
+    assert_eq!(
+        (event.ally, event.involves_local_player),
+        (Some(false), true)
+    );
 }

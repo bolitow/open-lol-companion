@@ -26,6 +26,36 @@ async fn conserve_un_solde_de_lp_negatif_accepte_par_api() {
     );
     task.await.unwrap();
 }
+/// Contrat partagé avec `@olc/shared` et `olc-api` : le miroir ne doit rien perdre en route.
+#[test]
+fn le_miroir_du_profil_suit_le_contrat_partage() {
+    let golden: Value = serde_json::from_str(include_str!(
+        "../../../packages/shared/src/contracts/profile.json"
+    ))
+    .unwrap();
+    let profile: olc_build_client::profiles::Profile =
+        serde_json::from_value(golden.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&profile).unwrap(), golden);
+}
+
+#[tokio::test]
+async fn lit_victoires_defaites_et_drapeaux_envoyes_par_api() {
+    let mut data = profile();
+    data["ranks"] = json!([{"queue_id":420,"status":"ranked","tier":"GOLD","division":"IV","league_points":10,
+        "wins":3,"losses":2,"hot_streak":true,"veteran":false,"fresh_blood":false,"inactive":false}]);
+    let (client, task) = server(200, data).await;
+    let rank = client
+        .player_profile(request())
+        .await
+        .unwrap()
+        .ranks
+        .remove(0);
+    assert_eq!((rank.wins, rank.losses), (Some(3), Some(2)));
+    assert_eq!(rank.hot_streak, Some(true));
+    assert_eq!(rank.veteran, Some(false));
+    task.await.unwrap();
+}
+
 fn profile() -> Value {
     json!({"platform":"EUW1","game_name":"A / B?","tag_line":"TEST","puuid":"synthetic","profile_icon_id":1,"summoner_level":42,"ranks":[{"queue_id":420,"status":"unranked","tier":null,"division":null,"league_points":null}],"fetched_at":1})
 }

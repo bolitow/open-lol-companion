@@ -7,7 +7,7 @@ use std::time::Duration;
 use common::{fast_options, status, FakeRiot, TestDb, DAY_MS};
 use olc_collector::campaign::{self, CampaignStatus};
 use olc_collector::collector::now_ms;
-use olc_collector::config::{Division, RunParams, Tier};
+use olc_collector::config::{Division, RunParams, Tier, DEFAULT_CAMPAIGN_QUEUES};
 use olc_collector::riot_client::{Endpoint, RawResponse, Request, Transport, TransportError};
 
 fn params() -> RunParams {
@@ -499,5 +499,70 @@ async fn le_refus_auth_prime_sur_la_fin_de_tranche() {
     .unwrap();
     assert_eq!(result.reason, "riot_auth_rejected");
     assert_eq!(fake.calls(Endpoint::LeagueEntries), 1);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn une_campagne_cree_une_execution_par_plateforme_et_par_file() {
+    let Some(db) = TestDb::create().await else {
+        return;
+    };
+    let now = now_ms();
+    let hour = Duration::from_secs(3600);
+    // Défaut : Solo et Flex, rangs observés, budget de la plateforme réparti.
+    let id = campaign::start_for_queues(
+        &db.storage,
+        &platforms(),
+        &DEFAULT_CAMPAIGN_QUEUES,
+        &params(),
+        now,
+        hour,
+    )
+    .await
+    .unwrap();
+    assert_eq!(db.scalar("SELECT count(*) FROM campaign_runs").await, 4);
+    for queue in [420, 440] {
+        let runs: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM collection_runs
+             WHERE queue_id = $1 AND (params->>'collect_ranks')::boolean AND (params->>'call_budget')::bigint = 50",
+        )
+        .bind(queue)
+        .fetch_one(db.storage.pool())
+        .await
+        .unwrap();
+        assert_eq!(runs, 2, "file {queue}");
+    }
+    let stored: serde_json::Value =
+        sqlx::query_scalar("SELECT params FROM collection_campaigns WHERE id = $1")
+            .bind(id)
+            .fetch_one(db.storage.pool())
+            .await
+            .unwrap();
+    assert_eq!(stored["queues"], serde_json::json!([420, 440]));
+
+    // Une file explicite hors Solo/Flex est acceptée : pas de rangs, budget entier.
+    campaign::start_for_queues(&db.storage, &platforms(), &[450], &params(), now, hour)
+        .await
+        .unwrap();
+    let aram: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM collection_runs
+         WHERE queue_id = 450 AND NOT (params->>'collect_ranks')::boolean AND (params->>'call_budget')::bigint = 100",
+    )
+    .fetch_one(db.storage.pool())
+    .await
+    .unwrap();
+    assert_eq!(aram, 2);
+
+    // Liste incohérente : aucune exécution créée.
+    let before = db.scalar("SELECT count(*) FROM collection_runs").await;
+    assert!(
+        campaign::start_for_queues(&db.storage, &platforms(), &[0, 420], &params(), now, hour)
+            .await
+            .is_err()
+    );
+    assert_eq!(
+        db.scalar("SELECT count(*) FROM collection_runs").await,
+        before
+    );
     db.cleanup().await;
 }

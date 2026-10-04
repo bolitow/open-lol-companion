@@ -7,7 +7,9 @@ use olc_api::{
     server::{router, AppState},
 };
 use olc_collector::{
-    config::ApiKey, riot_client::HttpsTransport, shared_quota::CoordinatedTransport,
+    config::ApiKey,
+    riot_client::HttpsTransport,
+    shared_quota::{CoordinatedTransport, Priority},
     storage::Storage,
 };
 use std::{net::SocketAddr, process::ExitCode, sync::Arc, time::Duration};
@@ -96,15 +98,26 @@ async fn run(args: Args) -> Result<(), String> {
                     .allowed_origins
                     .push(origin.parse().map_err(|_| "origine CORS invalide")?);
             }
+            // Sujets de jeton habilités à l'export et à l'effacement RGPD ; vide par défaut.
+            state.privacy_operators = std::env::var("OLC_API_PRIVACY_OPERATORS")
+                .unwrap_or_default()
+                .split(',')
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .map(str::to_owned)
+                .collect();
             if let Ok(key) = std::env::var("RIOT_API_KEY") {
                 let key =
                     ApiKey::from_env_value(Some(key)).map_err(|_| "configuration Riot invalide")?;
                 let transport = HttpsTransport::new(&key, Duration::from_secs(15))
                     .map_err(|_| "transport Riot indisponible")?
                     .with_max_response_bytes(8 * 1024 * 1024);
+                // L'API sert des requêtes d'utilisateurs : elle garde la part du quota Riot
+                // que le collecteur n'a pas le droit de consommer.
                 state.profiles = Some(Arc::new(Profiles::new(CoordinatedTransport::new(
                     transport,
                     storage.clone(),
+                    Priority::Interactive,
                 ))));
             }
             let listener = tokio::net::TcpListener::bind(bind)
