@@ -61,8 +61,9 @@ Aucune valeur spéciale n'est codée pour Bard : même parcours pour tout champi
   `summoner_spells`. Les sorts doivent être deux identifiants distincts du
   catalogue CLASSIC. Si la paire retenue contient Flash, attendre sa préférence
   D/F sans choisir à sa place une autre paire moins jouée. Sans Flash, conserver
-  l’ordre de la paire statistique ; cet ordre ne représente pas un choix D/F du
-  joueur et n’enregistre pas de préférence Flash.
+  l’ordre de la paire statistique, soit l’orientation D/F la plus fréquente observée
+  pour cette paire ; cet ordre ne représente pas un choix D/F du joueur et
+  n’enregistre pas de préférence Flash.
   Les égalités suivent l'ordre numérique des sélections. Le catalogue valide
   les identifiants et positions ; une variante invalide est ignorée.
 - Le minimum concerne chaque variante, pas le total de matchs du champion.
@@ -100,7 +101,11 @@ Le schéma LCU utilisé est [le dump public](https://raw.githubusercontent.com/K
   n'existe ; un refus du client (places pleines) ou une propriété ambiguë est
   signalé sans supprimer une page personnelle.
 - Objets : conserve les sets personnels et remplace uniquement l'UID réservé
-  au champion/carte ; mêmes conversions Larme que l'import manuel.
+  au champion/carte ; mêmes règles de forme achetable que l'import manuel (résolution par le
+  catalogue, objets sans équivalent retirés, #88). Le nombre d'objets remplacés et retirés est
+  affiché dans le statut « objets » du panneau (FR/EN), car l'inventaire observé diffère alors
+  du set envoyé à League. Une variante vide après retrait, ou au statut boutique illisible,
+  est écartée au profit de la variante éligible suivante.
 - Sorts d'invocateur : lorsque leur option est activée, réutilise le moteur #15,
   normalise Flash selon D/F et ne modifie que `spell1Id`/`spell2Id` via
   `/lol-champ-select/v1/session/my-selection`. Aucune modification du skin.

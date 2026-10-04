@@ -6,7 +6,7 @@ use std::time::Duration;
 use common::TestDb;
 use olc_collector::aggregation::{
     recalculate, recalculate_filtered, recalculate_with_quality, AggregationError,
-    AggregationOptions, QualityThresholds, DEFAULT_RANK_MAX_AGE_HOURS,
+    AggregationOptions, AggregationReport, QualityThresholds, DEFAULT_RANK_MAX_AGE_HOURS,
 };
 use olc_collector::config::RunParams;
 use olc_collector::model::fixtures::match_detail;
@@ -79,6 +79,7 @@ async fn published(db: &TestDb) -> Value {
             "builds",
             "skill_levels",
             "item_events",
+            "splits",
         ] {
             report[section] = json!([]);
         }
@@ -148,6 +149,7 @@ async fn aggregation_stocke_ses_listes_en_morceaux_sans_perdre_de_donnees() {
         "builds",
         "skill_levels",
         "item_events",
+        "splits",
     ] {
         assert!(
             !complete[section].as_array().unwrap().is_empty(),
@@ -779,6 +781,174 @@ async fn aggregation_cli_configure_les_seuils_de_qualite() {
     ] {
         assert_eq!(aggregate(&bad).status.code(), Some(2), "{bad:?}");
     }
+    db.cleanup().await;
+}
+
+/// Rang attribué au champion `champion_id` (participant `fake-puuid-{champion_id-1}`) :
+/// hors rang agrégé « ALL », la partie de test n'a qu'un rang par champion.
+fn rank_of(report: &AggregationReport, champion_id: u32) -> Option<String> {
+    let mut ranks: Vec<_> = report
+        .groups
+        .iter()
+        .filter(|g| g.key.champion_id == champion_id && g.key.rank != "ALL")
+        .map(|g| g.key.rank.clone())
+        .collect();
+    ranks.dedup();
+    assert!(ranks.len() <= 1, "rangs multiples : {ranks:?}");
+    ranks.pop()
+}
+
+#[tokio::test]
+async fn la_borne_d_ecart_est_incluse_exactement_et_l_arrondi_ne_la_depasse_pas() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_bound").await;
+    // Borne fixée à 48 h. Pile 48 h : retenue. 48 h + 400 ms : refusée (un arrondi au plus
+    // proche la ramènerait à 48 h et la ferait passer).
+    sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES
+        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '48 hours'),
+        ('EUW1','fake-puuid-1',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)-interval '48 hours 400 milliseconds');")
+        .execute(db.storage.pool()).await.unwrap();
+    let r = recalculate_filtered(&db.storage, 1, 48, &AggregationOptions::default())
+        .await
+        .unwrap();
+    assert_eq!(rank_of(&r, 1).as_deref(), Some("GOLD"));
+    assert_eq!(rank_of(&r, 2).as_deref(), Some("UNKNOWN"));
+    assert!(!r.groups.iter().any(|g| g.key.rank == "DIAMOND"));
+    assert_eq!(r.coverage[0].counts.rank_gap_max_hours, Some(48.0));
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_couverture_publie_les_dates_reelles_des_parties_incluses() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_early").await;
+    insert_match(&db, run_id, "EUW1_late").await;
+    sqlx::query("UPDATE matches SET game_start=to_timestamp(5000.25) WHERE match_id='EUW1_late'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    let r = recalculate(&db.storage, 1).await.unwrap();
+    let c = &r.coverage[0].counts;
+    assert_eq!(
+        (c.first_game_start_ms, c.last_game_start_ms),
+        (Some(1_000_000), Some(5_000_250))
+    );
+    // Les dates sont lues dans la couverture publiée, pas recalculées par le lecteur.
+    let stored = published(&db).await;
+    assert_eq!(stored["coverage"][0]["first_game_start_ms"], 1_000_000);
+    assert_eq!(stored["coverage"][0]["last_game_start_ms"], 5_000_250);
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn les_tranches_de_duree_viennent_de_la_colonne_normalisee_et_sont_publiees() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_long").await;
+    // Le JSON brut dit 1 800 s ; la colonne, normalisée à l'ingestion, fait foi (#119).
+    sqlx::query("UPDATE matches SET game_duration_s=2500 WHERE match_id='EUW1_long'")
+        .execute(db.storage.pool())
+        .await
+        .unwrap();
+    let report = recalculate(&db.storage, 1).await.unwrap();
+    let champion = report
+        .splits
+        .iter()
+        .filter(|s| s.key.champion_id == 1 && s.key.rank == "ALL")
+        .map(|s| serde_json::to_value(s.bucket).unwrap())
+        .collect::<Vec<_>>();
+    assert_eq!(champion, [json!("gte_40"), json!("blue")]);
+    assert_eq!(
+        serde_json::to_value(&report.splits).unwrap(),
+        published(&db).await["splits"]
+    );
+    assert_eq!(
+        report.coverage[0].counts.blue_side_matches, 1,
+        "le côté est compté dans la couverture publiée"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_section_des_splits_s_ajoute_sans_retirer_les_sections_existantes() {
+    let db = db_or_skip!();
+    sqlx::query("INSERT INTO champion_stats_snapshot(id,source_snapshot_at,published_at,report) VALUES (1,now(),now(),'{}')")
+        .execute(db.storage.pool()).await.unwrap();
+    for (index, section) in [
+        "coverage",
+        "groups",
+        "bans",
+        "builds",
+        "skill_levels",
+        "item_events",
+        "splits",
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        sqlx::query("INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items) VALUES (1,$1,$2,'[]')")
+            .bind(section).bind(index as i32)
+            .execute(db.storage.pool()).await
+            .unwrap_or_else(|e| panic!("{section} : {e}"));
+    }
+    assert!(
+        sqlx::query("INSERT INTO champion_stats_snapshot_chunks(snapshot_id,section,chunk_index,items) VALUES (1,'inconnue',0,'[]')")
+            .execute(db.storage.pool()).await.is_err(),
+        "une section inconnue reste refusée"
+    );
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn la_recherche_de_l_observation_la_plus_proche_choisit_entre_avant_et_apres() {
+    let db = db_or_skip!();
+    let run_id = run(&db).await;
+    insert_match(&db, run_id, "EUW1_nearest").await;
+    // game_start = to_timestamp(1000). Chaque participant isole un cas de départage.
+    sqlx::raw_sql("INSERT INTO participant_rank_observations(platform_id,puuid,queue_id,tier,division,league_points,status,observed_at) VALUES
+        -- 0 : l'après est plus proche que l'avant
+        ('EUW1','fake-puuid-0',420,'SILVER','I',10,'ranked',to_timestamp(1000)-interval '3 hours'),
+        ('EUW1','fake-puuid-0',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '2 hours'),
+        -- 1 : égalité d'écart, la plus ancienne l'emporte
+        ('EUW1','fake-puuid-1',420,'EMERALD','I',10,'ranked',to_timestamp(1000)+interval '2 hours'),
+        ('EUW1','fake-puuid-1',420,'PLATINUM','I',10,'ranked',to_timestamp(1000)-interval '2 hours'),
+        -- 2 : seulement avant
+        ('EUW1','fake-puuid-2',420,'BRONZE','I',10,'ranked',to_timestamp(1000)-interval '10 hours'),
+        ('EUW1','fake-puuid-2',420,'IRON','I',10,'ranked',to_timestamp(1000)-interval '20 hours'),
+        -- 3 : seulement après
+        ('EUW1','fake-puuid-3',420,'IRON','I',10,'ranked',to_timestamp(1000)+interval '6 hours'),
+        ('EUW1','fake-puuid-3',420,'MASTER','I',10,'ranked',to_timestamp(1000)+interval '40 hours'),
+        -- 4 : observation exactement à l'heure de la partie
+        ('EUW1','fake-puuid-4',420,'CHALLENGER','I',10,'ranked',to_timestamp(1000)),
+        ('EUW1','fake-puuid-4',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        -- 5 : même instant, deux lignes : la plus récemment insérée (id le plus grand) l'emporte
+        ('EUW1','fake-puuid-5',420,'GOLD','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        ('EUW1','fake-puuid-5',420,'SILVER','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        -- 6 : la seule observation dépasse la borne par défaut (168 h) : inconnu
+        ('EUW1','fake-puuid-6',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '170 hours'),
+        -- 7 : autre file (440) et autre plateforme ne comptent pas
+        ('EUW1','fake-puuid-7',440,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '1 hour'),
+        ('KR','fake-puuid-7',420,'DIAMOND','I',10,'ranked',to_timestamp(1000)+interval '1 hour');")
+        .execute(db.storage.pool()).await.unwrap();
+    let r = recalculate(&db.storage, 1).await.unwrap();
+    let ranks: Vec<_> = (1..=10).map(|c| rank_of(&r, c).unwrap()).collect();
+    assert_eq!(
+        ranks,
+        [
+            "GOLD",
+            "PLATINUM",
+            "BRONZE",
+            "IRON",
+            "CHALLENGER",
+            "SILVER",
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN",
+            "UNKNOWN"
+        ]
+    );
     db.cleanup().await;
 }
 

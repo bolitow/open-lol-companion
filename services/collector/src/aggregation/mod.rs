@@ -1,6 +1,7 @@
 //! Agrégats par champion, rôle, patch, plateforme, file et rang observé (#18).
 
 mod builds;
+mod context;
 mod cumulative;
 mod match_tier;
 mod model;
@@ -9,6 +10,7 @@ mod snapshot;
 mod stages;
 mod storage;
 
+pub use context::{FirstObjectiveStats, SplitBucket, SplitDimension, SplitStats};
 pub use cumulative::CUMULATIVE_RANKS;
 pub use model::{
     AggregationOptions, AggregationReport, BanStats, BuildStats, ChampionStats, Coverage, GroupKey,

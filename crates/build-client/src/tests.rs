@@ -332,3 +332,58 @@ async fn transmet_borne_haute_et_fiabilite_et_masque_la_borne_sous_le_seuil() {
     );
     job.await.unwrap();
 }
+
+#[tokio::test]
+async fn transmet_le_placement_moyen_des_variantes_arena_hors_objets() {
+    // Contrat avec le collecteur (#104) : en Arena, runes et sorts publient le placement
+    // moyen et aucun taux de victoire ; sous le seuil, le placement est masqué.
+    let mut arena = variant("runes", vec![8000, 8005]);
+    arena["performance_available"] = json!(false);
+    arena["wins"] = json!(null);
+    arena["win_rate"] = json!(null);
+    arena["placement_games"] = json!(120);
+    arena["average_placement"] = json!(3.5);
+    let mut low = arena.clone();
+    low["selection"] = json!([8100, 8105]);
+    low["games"] = json!(2);
+    low["placement_games"] = json!(2);
+    // Assez de parties jouées mais pas assez avec placement : masqué, comme au collecteur.
+    let mut partial = arena.clone();
+    partial["selection"] = json!([8200, 8205]);
+    partial["placement_games"] = json!(2);
+    partial["average_placement"] = json!(3.0);
+    let legacy = variant("summoner_spells", vec![4, 14]);
+    let (url, job) = server(vec![
+        (200, page(0, 4, vec![arena, low, partial, legacy])),
+        (
+            200,
+            page(
+                0,
+                1,
+                vec![{
+                    let mut invalid = variant("runes", vec![1]);
+                    invalid["average_placement"] = json!(0.5);
+                    invalid
+                }],
+            ),
+        ),
+    ])
+    .await;
+    let client = BuildClient::new(Some(url), Some("test-token".into())).unwrap();
+    let report = client.builds(request()).await.unwrap();
+    let placements: Vec<_> = report
+        .builds
+        .iter()
+        .map(|b| (b.placement_games, b.average_placement))
+        .collect();
+    assert_eq!(
+        placements,
+        vec![(120, Some(3.5)), (2, None), (2, None), (0, None)]
+    );
+    assert_eq!(report.builds[0].win_rate, None);
+    assert_eq!(
+        client.builds(request()).await.unwrap_err(),
+        BuildError::InvalidResponse
+    );
+    job.await.unwrap();
+}

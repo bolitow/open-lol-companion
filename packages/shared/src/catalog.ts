@@ -49,6 +49,91 @@ export interface CatalogEffect {
   calculation: CatalogValue | null;
 }
 
+/**
+ * Préfixe de l'effet qui porte les valeurs d'un objet pour un mode (#116) : l'identifiant est
+ * `cdragon_parameters:{clé de mode}`, la clé étant celle de la source (`ARAM`, `cherry`…) ou
+ * un hachage non résolu (`{bffdf499}`, signalé par `unresolved_mode_key:` dans `coverage.issues`).
+ * L'effet `cdragon_parameters` sans suffixe garde les valeurs de base, jamais remplacées.
+ */
+export const CATALOG_MODE_EFFECT_PREFIX = "cdragon_parameters:";
+export type CatalogModeEffectId = `${typeof CATALOG_MODE_EFFECT_PREFIX}${string}`;
+
+/** Cartes dont l'export desktop garde les objets : Faille, ARAM, Arena. */
+export type CatalogItemMapId = "11" | "12" | "30";
+
+/**
+ * Miroir de `item_filter` dans le manifeste de l'export desktop (#116). `maps` est la liste
+ * exportée ; `by_map` compte les objets conservés disponibles sur chaque carte.
+ * Le repli `all_items` garde tous les objets quand la disponibilité par carte est incertaine.
+ */
+export interface DesktopCatalogItemFilter {
+  mode: "maps_11_12_30_with_components" | "all_items";
+  reason: string | null;
+  maps: CatalogItemMapId[];
+  by_map: Record<CatalogItemMapId, number>;
+  /**
+   * Objets dont la disponibilité sur la carte n'a pas pu être lue, par carte. N'apparaît qu'en
+   * repli `all_items` ; omis (jamais `{}` ni `null`) quand le filtre par carte a pu s'appliquer.
+   */
+  unreadable_by_map?: Partial<Record<CatalogItemMapId, number>>;
+}
+
+/** Famille des augments Arena et Mayhem (#118) : catalogue statique, jamais une statistique. */
+export const CATALOG_AUGMENT_KIND = "augment";
+
+/** Raretés de la source CommunityDragon ; toute autre valeur y reste `unsupported`. */
+export const CATALOG_AUGMENT_RARITIES = ["kSilver", "kGold", "kPrismatic", "kEventChoice"] as const;
+export type CatalogAugmentRarity = (typeof CATALOG_AUGMENT_RARITIES)[number];
+
+/**
+ * Seuls champs de `fields` d'une fiche `augment`. `modes` liste les clés de mode des listes du jeu
+ * qui contiennent l'augment (`CHERRY`, `KIWI`, `KIWI_JADE` sur le patch 16.19) telles que la source
+ * les donne, sans correspondance inventée avec une file ; une liste vide signifie « aucune liste ».
+ * `technical_id` est l'identifiant de jeu (`ARAM_ADAPt`) ; `community_short_name` et
+ * `community_description` n'existent que si la source les renseigne. Aucun taux de victoire, de sélection, de popularité ni tier d'augment.
+ */
+export const CATALOG_AUGMENT_FIELDS = [
+  "community_name", "community_id", "technical_id", "community_short_name",
+  "community_description", "rarity", "community_icon_path", "modes",
+] as const;
+export type CatalogAugmentField = (typeof CATALOG_AUGMENT_FIELDS)[number];
+
+/**
+ * Fiche `augment` (#118) : `id` est l'identifiant numérique en chaîne, `namespace` vaut `standard`,
+ * `icon` est le chemin local exporté (ou l'URL publique côté API). `description` est le texte brut
+ * de l'export CommunityDragon `cdragon/arena` (225 augments sur 16.19), dans la langue de la fiche ;
+ * les placeholders (`@MaxStacks@`, `{{ clé }}`) et jetons d'icône du client (`%i:Augment%`) restent non résolus dans le texte et sont signalés par
+ * `unresolved_placeholder:description` dans `coverage.issues`. Les autres augments, Mayhem, n'ont
+ * aucune description publiée : `description` vaut `null`, signalé par `missing:description`.
+ */
+export interface CatalogAugmentRecord extends CatalogRecord {
+  kind: typeof CATALOG_AUGMENT_KIND;
+  description: string | null;
+  fields: Partial<Record<CatalogAugmentField, CatalogValue>>;
+  stats: Record<string, never>;
+  effects: never[];
+}
+
+/** Nom du champ des fiches `ability` et `summoner_spell` qui porte les segments typés de `tooltip` (#107). */
+export const CATALOG_TOOLTIP_SEGMENTS_FIELD = "tooltip_segments";
+
+/** Types de dégâts des balises `physicalDamage`, `magicDamage` et `trueDamage` des infobulles Data Dragon. */
+export const CATALOG_DAMAGE_TYPES = ["physical", "magic", "true"] as const;
+export type CatalogDamageType = (typeof CATALOG_DAMAGE_TYPES)[number];
+
+/**
+ * Fragment d'une infobulle (#107) : texte seul, jamais de balisage. `damage_type` vient de la balise
+ * de la source, pas de la formulation du texte, donc il vaut dans toutes les langues ; `null` hors balise
+ * de dégâts. Les balises imbriquées (`scaleAP`…) héritent du type qui les entoure, les placeholders
+ * (`{{ e1 }}`) restent non résolus. Dans `CatalogValue.value` du champ `tooltip_segments`, ce sont des
+ * `CatalogTooltipSegment[]` (statut `derived`, provenance `…/tooltip`) dont les textes concaténés
+ * sont exactement le champ `tooltip` ; l'absence d'infobulle donne l'absence du champ.
+ */
+export interface CatalogTooltipSegment {
+  text: string;
+  damage_type: CatalogDamageType | null;
+}
+
 export interface CatalogRecordCoverage {
   source_fields: number;
   normalized_fields: number;

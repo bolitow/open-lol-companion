@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { CUMULATIVE_RANKS, championIconUrl, displayPatch, screenForPhase } from "./index";
+import {
+  CUMULATIVE_RANKS,
+  championIconUrl,
+  displayPatch,
+  PUBLICATION_STATE_EVENT,
+  screenForPhase,
+  type PublicationState,
+} from "./index";
 
 describe("screenForPhase", () => {
   it("envoie la sélection des champions vers l'écran de draft", () => {
@@ -39,5 +46,22 @@ describe("CUMULATIVE_RANKS (#83)", () => {
       "MASTER_PLUS",
     ]);
     expect(new Set(CUMULATIVE_RANKS).size).toBe(CUMULATIVE_RANKS.length);
+  });
+});
+
+describe("publications", () => {
+  it("garde le nom d'événement et la forme émis par le cœur Rust", () => {
+    expect(PUBLICATION_STATE_EVENT).toBe("publication-state");
+    const state: PublicationState = {
+      revision: 1,
+      status: "connected",
+      publication: {
+        type: "data.updated",
+        stats_version: "2026-10-01 12:05:00+00",
+        static_version: null,
+        available: true,
+      },
+    };
+    expect(Object.keys(state)).toEqual(["revision", "status", "publication"]);
   });
 });

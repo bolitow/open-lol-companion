@@ -71,3 +71,16 @@ export interface LcuSession {
   draft: DraftSession | null;
   runePage: RunePage | null;
 }
+
+/**
+ * Version du jeu lue dans le client par la commande Tauri `client_patch`,
+ * miroir de `lcu_connector::ClientPatch`. `patch` vaut « majeur.mineur » de
+ * `gameVersion` ; ce n'est ni une version Data Dragon ni le libellé public.
+ */
+export interface ClientPatch {
+  gameVersion: string;
+  patch: string;
+}
+
+/** Miroir de `lcu_connector::ClientPatchError` : client absent ou version illisible. */
+export type ClientPatchError = "unavailable" | "invalid_response";
