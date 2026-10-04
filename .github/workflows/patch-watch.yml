@@ -1,0 +1,131 @@
+name: Contrôle à chaque patch LoL
+
+# Chaque jour, compare la version courante de Data Dragon (liste publique, aucun appel
+# Riot authentifié, aucun secret) aux patchs déjà contrôlés. Pour un nouveau patch, lance
+# la suite de tests sur Linux (jamais sur les runners Windows/macOS, plus coûteux) puis
+# consigne le résultat dans une issue « Patch LoL X.Y : contrôle automatique » : ouverte si
+# les tests échouent, fermée aussitôt s'ils passent. L'issue sert de mémoire du dernier
+# patch contrôlé. Les recettes LCU réelles restent manuelles (docs/recettes).
+on:
+  schedule:
+    # 05 h 23 UTC : après la mise en ligne des patchs, hors de l'heure ronde (files de GitHub).
+    - cron: "23 5 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Relancer les tests même si le patch courant a déjà été contrôlé"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: patch-watch
+  cancel-in-progress: false
+
+env:
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  detect:
+    name: Détection du patch
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      version: ${{ steps.detect.outputs.version }}
+      patch: ${{ steps.detect.outputs.patch }}
+      title: ${{ steps.detect.outputs.title }}
+      should_run: ${{ steps.detect.outputs.should_run }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Comparer à la dernière version contrôlée
+        id: detect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force }}
+        run: node scripts/patch-watch.mjs
+
+  tests:
+    name: Tests (Linux)
+    needs: detect
+    if: needs.detect.outputs.should_run == 'true'
+    runs-on: ubuntu-latest
+    # Même base jetable que la CI : aucun appel à Riot.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: pnpm install --frozen-lockfile
+      - name: Tests TypeScript (contrats et interface)
+        run: pnpm -r test
+      - name: Tests des scripts du dépôt
+        run: node --test scripts/patch-watch.test.mjs
+      - name: Tests du connecteur LCU et du client de builds
+        run: cargo test -p olc-desktop-support -p lcu-connector -p olc-build-client
+      - name: Tests de l’exporteur du catalogue desktop
+        run: cargo test -p olc-collector --example export_desktop_catalog
+      - name: Tests du backend (PostgreSQL)
+        run: cargo test -p olc-collector -p olc-api
+        env:
+          OLC_TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  report:
+    name: Trace du contrôle
+    needs: [detect, tests]
+    # Aussi quand les tests échouent : c'est justement ce qu'il faut signaler.
+    if: ${{ always() && needs.detect.outputs.should_run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Ouvrir, commenter ou fermer l'issue du patch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: ${{ needs.detect.outputs.title }}
+          PATCH: ${{ needs.detect.outputs.patch }}
+          VERSION: ${{ needs.detect.outputs.version }}
+          RESULT: ${{ needs.tests.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          if [ "$RESULT" = "success" ]; then
+            body="Les tests passent sur le patch ${PATCH} (version Data Dragon ${VERSION}). Exécution : ${RUN_URL}"$'\n\n'"Cette issue est la trace du patch contrôlé : tant qu'elle existe, le workflow ne relance pas ce patch. Pour le retester, lancer « Contrôle à chaque patch LoL » à la main avec l'option « force »."
+          else
+            body="Les tests ne passent pas sur le patch ${PATCH} (version Data Dragon ${VERSION}, résultat : ${RESULT}). Exécution : ${RUN_URL}"$'\n\n'"Un changement de ce patch (catalogue, runes, client, format des parties) peut en être la cause, mais un incident du runner aussi : lire les journaux avant de conclure. Après correction, relancer le workflow à la main avec l'option « force »."
+          fi
+          existing=$(gh issue list --state all --limit 50 \
+            --search "\"Patch LoL ${PATCH}\" in:title" \
+            --json number,title --jq '.[] | select(.title == env.TITLE) | .number' | head -n 1)
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            if [ "$RESULT" != "success" ]; then
+              gh issue reopen "$existing"
+            fi
+          else
+            url=$(gh issue create --title "$TITLE" --body "$body")
+            if [ "$RESULT" = "success" ]; then
+              gh issue close "$url" --reason completed
+            fi
+          fi

@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
-pub const NORMALIZER_VERSION: u32 = 1;
+/// 2 : ajout de la famille `augment` (#118), qui change la projection des sources CommunityDragon.
+/// 3 : champ `tooltip_segments` des compétences et sorts d'invocateur (#107).
+pub const NORMALIZER_VERSION: u32 = 3;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogSource {
@@ -53,6 +55,23 @@ pub struct CatalogValue {
     pub sources: Vec<ValueSource>,
 }
 
+/// Type de dégâts porté par les balises `physicalDamage`, `magicDamage` et `trueDamage` des
+/// infobulles Data Dragon : il vient de la balise, jamais de la formulation du texte.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum DamageType {
+    Physical,
+    Magic,
+    True,
+}
+
+/// Fragment d'une infobulle : texte seul (jamais de balisage) et type de dégâts, `null` hors balise de dégâts.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct TooltipSegment {
+    pub text: String,
+    pub damage_type: Option<DamageType>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogEffect {
     pub id: String,
@@ -71,7 +90,7 @@ pub struct RecordCoverage {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CatalogRecord {
-    /// item, champion, ability, rune, rune_shard, summoner_spell, map, queue, mode, game_type, profile_icon.
+    /// item, champion, ability, rune, rune_shard, summoner_spell, augment, map, queue, mode, game_type, profile_icon.
     pub kind: String,
     pub id: String,
     pub namespace: String,
