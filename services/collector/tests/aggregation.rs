@@ -785,12 +785,17 @@ async fn aggregation_cli_configure_les_seuils_de_qualite() {
 }
 
 /// Rang attribué au champion `champion_id` (participant `fake-puuid-{champion_id-1}`) :
-/// hors rang agrégé « ALL », la partie de test n'a qu'un rang par champion.
+/// hors rang agrégé « ALL » et hors paliers cumulés (#83), la partie de test n'a qu'un
+/// rang par champion.
 fn rank_of(report: &AggregationReport, champion_id: u32) -> Option<String> {
     let mut ranks: Vec<_> = report
         .groups
         .iter()
-        .filter(|g| g.key.champion_id == champion_id && g.key.rank != "ALL")
+        .filter(|g| {
+            g.key.champion_id == champion_id
+                && g.key.rank != "ALL"
+                && !olc_collector::aggregation::CUMULATIVE_RANKS.contains(&g.key.rank.as_str())
+        })
         .map(|g| g.key.rank.clone())
         .collect();
     ranks.dedup();
