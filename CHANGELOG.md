@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Ban rate par palier de partie : chaque draft est comptée sous `ALL` et sous le palier de sa partie (médiane des paliers observés des joueurs, au moins 6 connus sur 10, `UNKNOWN` sinon), exposé par `/v1/tierlist` selon le rang demandé et par la nouvelle route `/v1/bans` pour la draft, sans rôle ni pagination (#109).
+
 - Builds par étapes dans les agrégats et l’API : objets de départ, bottes, core ordonné des trois premiers objets complets et objets 4 à 6, chacun avec son effectif, son winrate et sa borne Wilson, joints au catalogue d’objets du patch (transformations ramenées à l’objet acheté). Les empreintes exactes restent publiées (#81).
 
 - Rapport d’intégration des réglages et des recettes, avec contrôle en lecture seule de la collecte EUW, des agrégats et de leur publication API (#11, #18, #63).

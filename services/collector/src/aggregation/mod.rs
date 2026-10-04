@@ -1,6 +1,7 @@
 //! Agrégats par champion, rôle, patch, plateforme, file et rang observé (#18).
 
 mod builds;
+mod match_tier;
 mod model;
 mod scheduler;
 mod snapshot;

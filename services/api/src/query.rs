@@ -15,6 +15,35 @@ pub struct StatsQuery {
     #[serde(default = "default_limit")]
     pub limit: usize,
 }
+/// Bans d'une draft (#109) : périmètre et palier de partie, sans rôle ni pagination par offset.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct BansQuery {
+    pub patch: String,
+    pub platform: String,
+    pub queue: i32,
+    #[serde(default = "default_rank")]
+    pub rank: String,
+    #[serde(default = "default_limit")]
+    pub limit: usize,
+}
+impl BansQuery {
+    /// Mêmes contrôles que les statistiques ; le rôle n'intervient pas dans les bans.
+    pub(crate) fn as_stats_query(&self) -> StatsQuery {
+        StatsQuery {
+            patch: self.patch.clone(),
+            platform: self.platform.clone(),
+            queue: self.queue,
+            role: "UNKNOWN".into(),
+            rank: self.rank.clone(),
+            offset: 0,
+            limit: self.limit,
+        }
+    }
+    pub fn validate(&self) -> Result<(), &'static str> {
+        self.as_stats_query().validate()
+    }
+}
 fn default_rank() -> String {
     "ALL".into()
 }
@@ -112,5 +141,41 @@ mod tests {
             json!({"patch":"16.19","platform":"EUW1","queue":420,"role":"MIDDLE","start_ms":1})
         )
         .is_err());
+    }
+
+    #[test]
+    fn les_bans_n_acceptent_ni_role_ni_decalage_et_controlent_le_palier() {
+        let q: BansQuery =
+            serde_json::from_value(json!({"patch":"16.19","platform":"EUW1","queue":420})).unwrap();
+        assert_eq!((q.rank.as_str(), q.limit), ("ALL", 50));
+        assert!(q.validate().is_ok());
+        for invalid in [
+            BansQuery {
+                rank: "FAKE".into(),
+                ..q.clone()
+            },
+            BansQuery {
+                platform: "EUROPE".into(),
+                ..q.clone()
+            },
+            BansQuery {
+                limit: 0,
+                ..q.clone()
+            },
+            BansQuery {
+                limit: 201,
+                ..q.clone()
+            },
+        ] {
+            assert!(invalid.validate().is_err(), "{invalid:?}");
+        }
+        for extra in ["role", "offset"] {
+            let mut value = json!({"patch":"16.19","platform":"EUW1","queue":420});
+            value[extra] = json!(1);
+            assert!(
+                serde_json::from_value::<BansQuery>(value).is_err(),
+                "{extra}"
+            );
+        }
     }
 }

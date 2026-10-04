@@ -49,7 +49,8 @@ activation, émetteur, audience et sujet validés. Réponses dynamiques/erreurs
 | Route GET | Données |
 | --- | --- |
 | `/health` | Connectivité PostgreSQL, publique |
-| `/v1/tierlist` | Champions et bans de la page |
+| `/v1/tierlist` | Champions et bans de la page, au palier demandé |
+| `/v1/bans` | Bans les plus fréquents d'un palier de partie (draft), sans rôle ni page |
 | `/v1/builds/{champion_id}` | Variantes, compétences et achats |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}` | Identité actuelle, icône, niveau, Solo/Flex horodatés |
 | `/v1/profiles/{platform}/{game_name}/{tag_line}/matches` | Historique du joueur recherché |
@@ -90,8 +91,18 @@ couverture ajoute `item_stage_participations` et `missing_item_catalog_participa
 `min_game_duration_s` et `min_played_percent` (0 pour un instantané antérieur),
 `exclude_afk` (`false` pour un instantané antérieur) et `exclusions`, nombre de parties
 sources écartées par motif (`remake`, `invalid_match`, `short_game`, `afk`,
-`early_departure`). Couverture et bans ne sont pas ventilés par
-rôle/rang. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
+`early_departure`). La couverture n'est pas ventilée par rôle/rang.
+Les bans portent un `rank` (#109) : `ALL` ou le **palier de la partie**, médiane des paliers
+observés de ses joueurs (`ban_rank_basis: match_median`, au moins
+`ban_rank_min_known_players` joueurs connus sur 10), `UNKNOWN` sans palier calculable,
+`UNRANKED_MODE` hors Solo/Flex. `/v1/tierlist` ne renvoie que les bans du `rank` demandé et
+des champions de la page ; `/v1/bans` (`patch`, `platform`, `queue` requis, `rank=ALL` et
+`limit=50` par défaut, bornes 1–200, aucun autre paramètre) renvoie les bans du rang
+demandé, du plus au moins banni (taux nul en dernier, puis effectif, puis champion), avant
+`limit` compté dans `total` ; un champion banni sans entrée dans un rôle n'y disparaît pas.
+La couverture ajoute `match_tier_matches` et `unknown_match_tier_matches`. Un instantané
+antérieur à #109 sert ses bans sous `ALL` seulement. Le ban rate est une information de
+draft : l'application n'effectue ni ne recommande aucun ban automatiquement. Taux sous seuil `null`, `total` avant pagination. Périmètre absent :
 liste vide ; snapshot absent/incompatible : 503. `omitted_build_variants` reste
 le compteur **global du snapshot**. Pas de filtre temporel arbitraire : demander
 un nouveau calcul au collecteur. Les restrictions Arena/augments #18 sont conservées.

@@ -238,7 +238,7 @@ inventé à partir des objets ou du rang.
 | `win_rate_lower_bound` | Borne inférieure de Wilson à 95 %, estimation descriptive de l'incertitude binomiale, bornée à 0–100 (0 exact pour 0 victoire, sans résidu flottant négatif) |
 | `position`, `tier` | Borne Wilson décroissante, puis taux, effectif et ID ; S/A/B/C/D par tranches 10/30/60/90/100 %, au moins 5 champions éligibles dans le groupe |
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
-| `bans` | Tableau séparé patch/plateforme/file : matchs bannissant le champion / drafts complètes ; un double ban ne compte qu'une fois |
+| `bans` | Tableau séparé patch/plateforme/file/rang de partie (#109) : matchs bannissant le champion / drafts complètes du même rang ; un double ban ne compte qu'une fois. Le rang `ALL` garde toutes les drafts ; chaque draft compte aussi sous le palier de sa partie |
 
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
 visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
@@ -282,6 +282,30 @@ fiches des bots sont validées mais exclues des statistiques des joueurs ;
 `excluded_bot_participations` en donne le compte. Les données de bans ne
 comptent que si les deux listes de 5 slots et leurs tours sont complets. Les bans
 n'ont pas de rang/rôle individuel attribuable dans les réponses Riot.
+
+### Rang des bans : palier de partie (#109)
+
+Riot ne donne pas le rang de l'auteur d'un ban : le rang d'un ban est celui de sa
+**partie**. Pour une partie Solo/Flex retenue, le palier de partie est la médiane des
+paliers (`IRON` … `CHALLENGER`) observés de ses joueurs, avec les mêmes rangs figés à la
+partie que les picks (`rank_max_age_hours`). Ce palier est observé, jamais un MMR estimé.
+
+- Il faut au moins 6 joueurs au palier connu sur 10 (`ban_rank_min_known_players`) ;
+  `UNRANKED` et `UNKNOWN` ne comptent pas. À effectif pair, la médiane est le plus bas des
+  deux paliers centraux : jamais un palier qu'aucun joueur n'a.
+- Sous ce minimum, la partie est rangée sous `UNKNOWN` ; hors Solo/Flex, sous
+  `UNRANKED_MODE`. Elle n'est jamais attribuée à un palier par défaut.
+- Chaque draft complète compte une fois sous `ALL` et une fois sous le rang de sa partie :
+  la somme des `draft_matches` des rangs (hors `ALL`) égale `draft_matches` de la couverture.
+  Ne jamais additionner `ALL` et un palier.
+- Le seuil `min_games` s'applique au dénominateur de chaque rang : un palier peu observé
+  garde ses comptes mais un `ban_rate` nul.
+- `ban_rank_basis` (`match_median`) et `ban_rank_min_known_players` sont publiés dans le
+  rapport ; la couverture ajoute `match_tier_matches` et `unknown_match_tier_matches`
+  (parties Solo/Flex retenues avec ou sans palier). Un instantané antérieur se relit : ses
+  bans valent `ALL`, ces champs valent vide/0.
+- Les picks restent comptés au rang de chaque joueur, les bans au palier de la partie :
+  les deux taux ne partagent pas exactement la même population, ce qui est publié ici.
 
 ## Builds et timelines
 

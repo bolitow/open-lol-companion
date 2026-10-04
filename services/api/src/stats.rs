@@ -1,5 +1,8 @@
 //! Lecture des instantanés publiés par #18, sans recalcul ni mélange de populations.
-use crate::{error::ApiError, query::StatsQuery};
+use crate::{
+    error::ApiError,
+    query::{BansQuery, StatsQuery},
+};
 use olc_collector::aggregation::*;
 use serde::Serialize;
 use sqlx::{PgPool, Row};
@@ -19,6 +22,11 @@ pub struct SnapshotMeta {
     pub min_played_percent: u32,
     /// Parties classées avec un participant `wasAfk` écartées (`afk`) (#111) ; `false` antérieurement.
     pub exclude_afk: bool,
+    /// Origine du rang des bans (#109) : `match_median`, médiane des paliers observés des
+    /// joueurs de la partie ; vide pour un instantané antérieur.
+    pub ban_rank_basis: String,
+    /// Joueurs connus minimaux (sur dix) pour qu'une partie reçoive un palier ; 0 antérieurement.
+    pub ban_rank_min_known_players: u32,
     /// Parties sources écartées par motif (`remake`, `short_game`, `afk`, `early_departure`…).
     pub exclusions: BTreeMap<String, u64>,
     pub pick_rate_definition: String,
@@ -32,6 +40,15 @@ pub struct TierlistResponse {
     pub query: StatsQuery,
     pub total: usize,
     pub entries: Vec<ChampionStats>,
+    pub bans: Vec<BanStats>,
+}
+/// Bans d'une draft pour un périmètre et un palier de partie, indépendants de la tierlist.
+#[derive(Serialize)]
+pub struct BansResponse {
+    pub meta: SnapshotMeta,
+    pub query: BansQuery,
+    /// Bans publiés pour ce palier, avant `limit`.
+    pub total: usize,
     pub bans: Vec<BanStats>,
 }
 #[derive(Serialize)]
@@ -54,7 +71,7 @@ pub struct BuildsResponse {
 /// Tierlist filtrée sur une population explicite, triée selon le rang publié.
 pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistResponse, ApiError> {
     query.validate().map_err(|_| ApiError::InvalidRequest)?;
-    let (meta, report) = load(pool, &query, None).await?;
+    let (meta, report) = load(pool, &query, None, true).await?;
     let mut entries: Vec<_> = report
         .groups
         .into_iter()
@@ -72,6 +89,7 @@ pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistRespon
         .into_iter()
         .filter(|b| {
             scope_matches(&b.scope, &query)
+                && b.rank == query.rank
                 && entries.iter().any(|g| g.key.champion_id == b.champion_id)
         })
         .collect();
@@ -81,6 +99,33 @@ pub async fn tierlist(pool: &PgPool, query: StatsQuery) -> Result<TierlistRespon
         total,
         entries,
         bans,
+    })
+}
+/// Bans les plus fréquents du palier de partie demandé, du plus au moins banni ; un taux
+/// absent (échantillon sous le seuil) passe après les taux publiés. Aucun rôle, aucune page.
+pub async fn bans(pool: &PgPool, query: BansQuery) -> Result<BansResponse, ApiError> {
+    query.validate().map_err(|_| ApiError::InvalidRequest)?;
+    let scope = query.as_stats_query();
+    let (meta, report) = load(pool, &scope, None, false).await?;
+    let mut entries: Vec<_> = report
+        .bans
+        .into_iter()
+        .filter(|b| scope_matches(&b.scope, &scope) && b.rank == query.rank)
+        .collect();
+    entries.sort_by(|a, b| {
+        b.ban_rate
+            .unwrap_or(-1.0)
+            .total_cmp(&a.ban_rate.unwrap_or(-1.0))
+            .then(b.banned_matches.cmp(&a.banned_matches))
+            .then(a.champion_id.cmp(&b.champion_id))
+    });
+    let total = entries.len();
+    entries.truncate(query.limit);
+    Ok(BansResponse {
+        meta,
+        query,
+        total,
+        bans: entries,
     })
 }
 /// Variantes de build, compétences et achats du champion dans la même population.
@@ -93,7 +138,7 @@ pub async fn builds(
     if champion_id == 0 {
         return Err(ApiError::InvalidRequest);
     }
-    let (meta, report) = load(pool, &query, Some(champion_id)).await?;
+    let (meta, report) = load(pool, &query, Some(champion_id), true).await?;
     let selected = |key: &GroupKey| key.champion_id == champion_id && matches(key, &query);
     let summary = report.groups.into_iter().find(|g| selected(&g.key));
     let mut variants: Vec<_> = report
@@ -148,10 +193,13 @@ async fn load(
     pool: &PgPool,
     query: &StatsQuery,
     champion_id: Option<u32>,
+    groups: bool,
 ) -> Result<(SnapshotMeta, AggregationReport), ApiError> {
     // Une seule lecture cohérente : sélection indexée des morceaux avant le filtre JSON.
     // La tierlist ne charge pas les builds ni les événements de tous les champions.
-    let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":query.role,"rank":query.rank,"champion":champion_id});
+    // Sans `groups`, le rôle est nul : la requête SQL ne lit alors aucun morceau de classement.
+    let role = groups.then_some(&query.role);
+    let vars = serde_json::json!({"patch":query.patch,"platform":query.platform,"queue":query.queue,"role":role,"rank":query.rank,"champion":champion_id});
     let population = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue && @.role == $role && @.rank == $rank && ($champion == null || @.champion_id == $champion))";
     let scope = "$[*] ? (@.patch == $patch && @.platform_id == $platform && @.queue_id == $queue)";
     let rows = sqlx::query(include_str!("sql/stats_snapshot.sql"))
@@ -196,6 +244,8 @@ async fn load(
         min_game_duration_s: report.min_game_duration_s,
         min_played_percent: report.min_played_percent,
         exclude_afk: report.exclude_afk,
+        ban_rank_basis: report.ban_rank_basis.clone(),
+        ban_rank_min_known_players: report.ban_rank_min_known_players,
         exclusions: report.exclusions.clone(),
         pick_rate_definition: report.pick_rate_definition.clone(),
         tier_method: report.tier_method.clone(),

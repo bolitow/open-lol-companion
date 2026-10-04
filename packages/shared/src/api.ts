@@ -58,8 +58,17 @@ export interface ChampionStats extends GroupKey {
   most_picked_rank: string | null;
 }
 
-/** Les bans concernent la draft entière, sans rang ni rôle individuel. */
+/**
+ * Les bans concernent la draft entière, sans rôle individuel. Leur rang est le palier de la
+ * partie (#109) : médiane des paliers observés de ses joueurs, jamais un MMR estimé.
+ */
 export interface BanStats extends ScopeKey {
+  /**
+   * `ALL` (toutes les drafts du périmètre) ou palier de partie (`IRON` … `CHALLENGER`) ;
+   * `UNKNOWN` sans palier calculable, `UNRANKED_MODE` hors Solo/Flex. `ALL` avant #109.
+   * Ne jamais additionner `ALL` et les paliers : une draft compte sous les deux.
+   */
+  rank: string;
   champion_id: number;
   banned_matches: number;
   draft_matches: number;
@@ -123,6 +132,10 @@ export interface Coverage {
   invalid_timeline_participations: number;
   unidentified_item_undos: number;
   draft_matches: number;
+  /** Parties Solo/Flex retenues dont le palier de partie est calculable ; 0 avant #109. */
+  match_tier_matches: number;
+  /** Parties Solo/Flex retenues sans palier de partie (joueurs connus insuffisants) ; 0 avant #109. */
+  unknown_match_tier_matches: number;
   /** Part (%) des participations Solo/Flex sans rang attribuable ; null hors files classées. */
   unknown_rank_rate: number | null;
   /** Écart médian (heures) entre début de partie et observation de rang retenue. */
@@ -151,6 +164,10 @@ export interface SnapshotMeta {
   min_played_percent: number;
   /** Parties classées avec un participant `wasAfk` écartées (`afk`) ; `false` avant #111. */
   exclude_afk: boolean;
+  /** Origine du rang des bans : `match_median` (médiane des paliers de la partie) ; vide avant #109. */
+  ban_rank_basis: string;
+  /** Joueurs connus minimaux (sur dix) pour qu'une partie reçoive un palier ; 0 avant #109. */
+  ban_rank_min_known_players: number;
   /** Parties sources écartées par motif (`remake`, `short_game`, `afk`, `early_departure`, `invalid_match`). */
   exclusions: Record<string, number>;
   pick_rate_definition: string;
@@ -175,6 +192,24 @@ export interface TierlistResponse {
   query: StatsQuery;
   total: number;
   entries: ChampionStats[];
+  bans: BanStats[];
+}
+
+/** Filtres de `/v1/bans` : périmètre et palier de partie, sans rôle ni décalage. */
+export interface BansQuery {
+  patch: string;
+  platform: string;
+  queue: number;
+  rank: string;
+  limit: number;
+}
+
+/** Bans du palier demandé, du plus au moins banni ; indépendants de la page de tierlist. */
+export interface BansResponse {
+  meta: SnapshotMeta;
+  query: BansQuery;
+  /** Bans publiés pour ce palier, avant `limit`. */
+  total: number;
   bans: BanStats[];
 }
 
