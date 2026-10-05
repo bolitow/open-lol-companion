@@ -1,0 +1,15 @@
+{
+  "identifier": "spotlight-controls",
+  "description": "Commandes du lecteur local uniquement, aucun acc\u00e8s du contenu YouTube",
+  "webviews": [
+    "skin-spotlight-controls"
+  ],
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    "allow-skin-spotlight-state",
+    "allow-skin-spotlight-media",
+    "allow-skin-spotlight-control",
+    "allow-skin-spotlight-layout"
+  ]
+}

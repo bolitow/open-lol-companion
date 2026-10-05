@@ -4,6 +4,128 @@ Le collecteur transforme les sources publiques en fiches versionnées, consommab
 par l’API #19. Il enrichit notamment les statistiques d’objets absentes du dictionnaire
 Data Dragon. Les fiches gardent leurs sources, leurs unités et leurs limites.
 
+## Démonstrations vidéo des compétences — #4
+
+La fiche Compétences ouvre un aperçu vidéo au survol ou au focus maintenu 300 ms
+sur une icône. Les statistiques restent visibles dans la carte ; le clic ouvre
+une fiche agrandie, avec vidéo et paramètres côte à côte. Les flèches et les touches
+gauche/droite parcourent les cinq compétences du même champion, en boucle ; les
+vignettes permettent aussi l’accès direct. Le clic extérieur ou Échap ferme la fiche
+et rend le focus sans rouvrir l’aperçu, en conservant la sélection et les filtres.
+Chaque changement met en pause le lecteur précédent. Depuis l’icône, Tab donne accès aux
+commandes de l’aperçu ; Échap ferme celui-ci. Passer dans le panneau conserve la
+lecture. Une seule démonstration est ouverte à la fois, muette et en boucle.
+Fermer un aperçu, défiler ou quitter la fenêtre arrête cet aperçu. Le réglage de mouvements réduits désactive la lecture
+automatique ; un bouton Lecture reste disponible, également si le moteur refuse
+l’autoplay. Erreur de réseau, format non pris en charge ou chargement bloqué donnent
+un état indisponible avec nouvelle tentative. Une référence absente n’est pas inventée.
+
+`apps/desktop/public/game-data/ability-videos.json` est un manifeste léger séparé
+des statistiques normalisées : identifiant `champion:passive|Q|W|E|R`, page Riot,
+date de vérification, dimensions, poster et source MP4 ou WebM. Il est lu à l’ouverture
+d’une fiche champion, puis gardé en mémoire. Cette fiche précharge au maximum ses cinq
+vidéos disponibles, sans les lire. Le même élément vidéo et son tampon passent de
+l’aperçu à la vue agrandie ; fermer celle-ci le met en pause sans jeter le préchargement.
+Changer de champion, fermer sa fiche ou quitter Champions libère toutes ses sources
+(`pause`, retrait de `src`, `load`) et ignore les réponses tardives du manifeste.
+Un préchargement sans état lisible après 12 secondes est abandonné ; consulter le sort
+permet de retenter. Les mouvements réduits conservent le préchargement silencieux,
+mais imposent toujours le bouton Lecture.
+
+Le média provient du CDN public Riot, sans clé ni compte et sans intégration des vidéos
+à l’installeur. [`preload="auto"`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/preload)
+est une indication au moteur : le réseau peut encore ralentir une première lecture,
+et cinq lecteurs ne constituent pas un plafond d’octets. Les ressources détenues par
+l’app sont libérées à la fermeture ; le cache HTTP propre à la WebView n’est pas effacé.
+Aucun cache hors ligne persistant n’est garanti.
+
+Dans la fiche agrandie, récupération, ressource et portée sont alignées par ligne,
+séparément des effets et ratios. Le fonctionnement reste visible intégralement même
+quand les effets chiffrés manquent, sans dépliant ni texte tronqué. Les longs sorts
+défilent à l’intérieur de la modale sur petite fenêtre ; la page reste fixe.
+
+Les libellés et montants de dégâts ont une couleur par type : physiques orange,
+magiques violets, bruts dans la couleur du texte (blanc en sombre, sombre en clair).
+Le type suit le texte source FR/EN, jamais le ratio : les coefficients AD/AP gardent
+leur couleur propre, même dans une formule de dégâts bruts.
+
+Pour rafraîchir les références pendant la préparation d’une publication :
+
+```sh
+node apps/desktop/scripts/build-ability-videos.mjs
+```
+
+Node 20+ suffit. Le générateur lit les [pages officielles des champions](https://www.leagueoflegends.com/en-us/champions/),
+extrait leurs références publiées (aucune URL de vidéo devinée), contrôle le roster
+contre `champions.json`, puis vérifie les en-têtes MP4, WebM de repli et posters.
+Les 404/410 deviennent des absences explicites ; une panne, un format inconnu ou
+un catalogue incomplet bloque le remplacement du manifeste précédent. L’écriture
+est atomique. Aucune vidéo n’est téléchargée par cette commande.
+
+Vérification du 2 octobre 2026 : 173 champions, 865 références, 846 MP4 et 10 WebM
+accessibles ; 9 absences (passifs Vladimir, Rammus, Kassadin, Karma, Wukong,
+Heimerdinger, Ezreal, Rek’Sai et E d’Aphelios). Ces médias pédagogiques officiels
+ne sont pas versionnés par patch et leur accessibilité ne garantit pas leur
+actualité. Les champions à transformations/variantes gardent les cinq groupes
+publiés par Riot ; aucune vidéo par sous-sort n’est promise. Attribution Riot
+visible dans le lecteur ; mentions légales existantes conservées. Aucun accès
+aux informations cachées, aucune action League et aucun secret.
+
+## Effets chiffrés dans le desktop — #4 / #61
+
+Diagnostic du 2 octobre 2026, catalogue 16.19.1 : les 865 compétences ont `stats:{}`
+et `effects:[]`. Le normaliseur expose cooldown/coût/portée, mais conserve les effets
+Data Dragon comme non interprétés. Les 692 actifs contiennent des variables dans leur
+tooltip ; 683 restent incomplets après retrait du seul marqueur technique final.
+Ahri Q, Annie Q et Ezreal Q ont notamment des tableaux `effect` à zéro, `vars:[]` et
+`datavalues:{}` : utiliser leurs zéros comme dégâts serait faux.
+
+Le desktop dispose maintenant d’un complément statique distinct,
+`apps/desktop/public/game-data/ability-effects.json`, sans changer les contrats API,
+Rust ou `@olc/shared`. Il relie les tooltips existants aux BIN publics CommunityDragon
+du **même patch**. La racine `CharacterRecords/Root`, le slot et `mScriptName` doivent
+correspondre à l’identifiant technique Data Dragon. Chaque entrée conserve l’URL,
+le chemin du sort et le SHA-256 de la source. Le front refuse un autre patch, une
+autre langue, le mode Classic, une identité/description modifiée ou un champ conflictuel.
+
+Interprétation volontairement limitée : données nommées, constantes, valeurs d’effet
+explicitement référencées, sommes, AP/AD total/AD bonus et multiplicateurs scalaires.
+Les rangs commencent à 1 ; les valeurs identiques sont regroupées. Les formules restent
+symboliques : `(base par rang + ratio AP/AD)`, jamais des dégâts calculés avec un état
+de partie supposé. Aucun `eval`. Un terme, enum, multiplicateur, condition ou champ
+inconnu invalide **toute** la formule concernée. Une absence n’est jamais zéro.
+
+Les défauts `mStat=0` (AP), `mStatFormula=0` (total) et la formule 2 (bonus) ont été
+croisés avec le [dump constructeur exact 16.19](https://raw.githubusercontent.com/LeagueToolkit/lol-meta-classes/main/dumps/16.19.8217343.json)
+et les données du patch : [Aatrox Q/W](https://raw.communitydragon.org/16.19/game/data/characters/aatrox/aatrox.bin.json)
+référencent explicitement `QTotalADRatio`/`WTotalADRatio`, [Talon](https://raw.communitydragon.org/16.19/game/data/characters/talon/talon.bin.json)
+`BonusADRatio`. L’ancien mapping d’enums de calcrev/Hextechdocs ne correspond pas à ces
+données. `UseNewStats`, les autres indices de stat et les autres formules sont refusés.
+
+Couverture initiale, identique FR/EN : **644 compétences avec au moins une formule**, dont
+**366 tooltips sans variable restante**. Cela ne garantit pas toutes les mécaniques du
+sort. Les 173 passifs, sous-sorts/formes, calculs conditionnels, interpolations de niveau
+et références à d’autres sorts ne sont pas encore interprétés. Le panneau indique
+les effets indisponibles ; un tiret explicite remplace chaque variable non résolue.
+Les montants et ratios ont leurs couleurs et pictogrammes. La carte donne un aperçu
+compact, avec accès à tous les effets dans la fiche agrandie. Les descriptions Riot
+restent du texte React, jamais du HTML injecté ; leurs marqueurs d’icônes sont retirés.
+
+Régénération hors ligne depuis des BIN préalablement archivés et indexés :
+
+```sh
+node apps/desktop/scripts/build-ability-effects.mjs <dossier-sources>
+```
+
+Le dossier contient `<identifiant-technique-en-minuscules>.bin.json` et `index.json` :
+`entries: [{champion_id, url, sha256, status:"ok"}]`. Les 173 identités, URLs du patch,
+empreintes et versions FR/EN doivent correspondre avant le remplacement atomique.
+Les sources utilisées pour cette passe sont conservées dans
+`work/ability-effects-2026-10-02/sources/`. La commande n’interroge pas le réseau et ne
+remplace pas le catalogue du collecteur. **Suite #61** : intégrer ce complément dans
+le pipeline publié, enrichir les formes/passifs et produire une couverture par effet
+avec tests représentatifs ; pas de promesse de couverture totale à ce stade.
+
 ## Exploitation
 
 PostgreSQL et `DATABASE_URL` suffisent ; aucune clé Riot ni client LoL n’est nécessaire.

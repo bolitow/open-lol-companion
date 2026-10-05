@@ -33,10 +33,12 @@ describe('réglages natifs visibles',()=>{
  });
 });
 
-it('conserve les réglages overlay dans les résultats défilants et la recherche',()=>{
+it('rend les commandes overlay dans les résultats recherchables avec leur état desktop',()=>{
  const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'overlay',category:'league'}} update={()=>{}}/></SettingsProvider>);
  expect(html).toContain('overlay-settings-title');
- expect(html).not.toContain('Aucun réglage trouvé.');
+ expect(html).not.toContain('Aucun réglage trouvé');
+ expect(html).toContain('fieldset disabled');
+ expect(html).not.toContain('setting-theme');
 });
 
 it('trouve l’accès à l’API par la recherche et masque la saisie du jeton',()=>{
@@ -47,4 +49,13 @@ it('trouve l’accès à l’API par la recherche et masque la saisie du jeton',
  const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'jeton',category:'all'}} update={()=>{}}/></SettingsProvider>);
  expect(html).toContain('type="password"');expect(html).toContain('autoComplete="off"');
  expect(html).toContain('L’accès à l’API se configure dans l’application desktop.');
+});
+
+
+it('affiche le réglage et le périmètre du taux de draft',()=>{
+ const html=renderToStaticMarkup(<SettingsProvider><SettingsScreen reduced={false} view={{query:'victoire draft',category:'league'}} update={()=>{}}/></SettingsProvider>);
+ expect(html).toContain('aria-label="% de victoire estimé de la draft"');
+ expect(html).toContain('role="switch"');
+ expect(html).toContain('checked');
+ expect(html).toContain('estimation descriptive en draft classée');
 });

@@ -29,6 +29,7 @@ pub type LiveProfiles = Profiles<CoordinatedTransport<HttpsTransport>>;
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
+    pub desktop_catalog_dir: Option<std::path::PathBuf>,
     pub auth: Arc<Auth>,
     pub profiles: Option<Arc<LiveProfiles>>,
     pub publications: watch::Sender<Publication>,
@@ -43,6 +44,7 @@ impl AppState {
     pub fn new(pool: PgPool, auth: Auth) -> Self {
         Self {
             pool,
+            desktop_catalog_dir: None,
             auth: Arc::new(auth),
             profiles: None,
             publications: watch::channel(Publication::default()).0,
@@ -81,6 +83,14 @@ pub fn router(state: AppState) -> Router {
         .merge(private)
         .route("/health", get(health))
         .route("/v1/static/manifest", get(manifest))
+        .route(
+            "/v1/desktop-catalog/{version}/manifest",
+            get(crate::desktop_catalog::manifest),
+        )
+        .route(
+            "/v1/desktop-catalog/snapshots/{snapshot_id}/{*path}",
+            get(crate::desktop_catalog::file),
+        )
         .route("/v1/static/{version}/{locale}/{*resource}", get(document))
         .route(
             "/v1/catalog/{version}/manifest",

@@ -4,8 +4,8 @@ const memory=(initial:Record<string,string>={})=>{const data=new Map(Object.entr
 describe('réglages partagés',()=>{
  it('reprend les clés existantes et garde Flash non défini sans choix explicite',()=>{
   const storage=memory({'olc.app.preferences':'{"theme":"light","locale":"en","motion":false}','olc.flash-slot':'"F"'});
-  expect(createSettingsStore(storage).getSnapshot().values).toEqual({theme:'light',locale:'en',motion:false,flashSlot:'F'});
-  expect(createSettingsStore(memory()).getSnapshot().values).toEqual({theme:'dark',locale:'fr',motion:true,flashSlot:null});
+  expect(createSettingsStore(storage).getSnapshot().values).toEqual({theme:'light',locale:'en',motion:false,flashSlot:'F',autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
+  expect(createSettingsStore(memory()).getSnapshot().values).toEqual({theme:'dark',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
   expect(createSettingsStore(memory({'olc.app.preferences':'broken','olc.flash-slot':'"Z"'})).getSnapshot().values.flashSlot).toBeNull();
  });
  it('propage un changement aux consommateurs et le restaure au prochain lancement',()=>{
@@ -19,7 +19,7 @@ describe('réglages partagés',()=>{
  it('annule seulement la dernière modification et persiste le retour y compris Flash non choisi',()=>{
   const storage=memory(),store=createSettingsStore(storage);
   store.change('theme','light');store.change('flashSlot','F');store.undo();
-  expect(store.getSnapshot().values).toEqual({theme:'light',locale:'fr',motion:true,flashSlot:null});
+  expect(store.getSnapshot().values).toEqual({theme:'light',locale:'fr',motion:true,flashSlot:null,autoRunes:false,autoItems:false,autoSpells:false,autoMinGames:1,autoCustomRole:undefined,showDraftWinEstimate:true});
   expect(createSettingsStore(storage).getSnapshot().values).toEqual(store.getSnapshot().values);
   expect(store.getSnapshot().lastChange).toBeNull();store.undo();expect(store.getSnapshot().values.theme).toBe('light');
  });
@@ -52,8 +52,8 @@ describe('recherche des réglages sans effet de bord',()=>{
   expect(searchSettings('flash couleur','fr','all')).toEqual([]);
   expect(searchSettings('micro','fr','all')).toEqual([]);
   expect(searchSettings('flash','fr','app')).toEqual([]);
-  expect(searchSettings('','en','league')).toEqual(['flashSlot','overlay']);
-  expect(searchSettings('','fr','all')).toEqual(['theme','locale','motion','flashSlot','closeToTray','autostartEnabled','apiAccess','overlay']);
+  expect(searchSettings('','en','league')).toEqual(['showDraftWinEstimate','flashSlot','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
+  expect(searchSettings('','fr','all')).toEqual(['showDraftWinEstimate','theme','locale','motion','flashSlot','closeToTray','autostartEnabled','apiAccess','clientPatch','autoRunes','autoItems','autoSpells','autoMinGames','overlay','autoCustomRole']);
  });
 });
 it('distingue une panne de sauvegarde Flash d’une panne des préférences de l’application',()=>{
@@ -78,8 +78,78 @@ it('invalide annuler local après une modification native et notifie les changem
  store.change('motion',false);store.undo();expect(changes).toBe(3);
 });
 
-it('retrouve le panneau en partie en français et en anglais',()=>{
- expect(searchSettings('panneau partie','fr','league')).toEqual(['overlay']);
- expect(searchSettings('overlay','en','all')).toEqual(['overlay']);
+it('retrouve chaque réglage d’import par intention FR/EN sans élargir Application',()=>{
+ expect(searchSettings('runes automatiques','fr','all')).toEqual(['autoRunes']);
+ expect(searchSettings('import items','en','league')).toEqual(['autoItems']);
+ expect(searchSettings('minimum parties','fr','all')).toEqual(['autoMinGames']);
+ expect(searchSettings('custom role','en','all')).toEqual(['autoCustomRole']);
+ expect(searchSettings('imports','fr','all')).toEqual(['autoRunes','autoItems','autoSpells','autoMinGames','autoCustomRole']);
+ expect(searchSettings('runes','fr','app')).toEqual([]);
+});
+it('reprend les imports existants et annule leur dernier changement sans toucher Flash',()=>{
+ const storage=memory({'olc.auto-import.preferences.v1':'{"runes":true,"items":false,"minGames":120,"customRole":"UTILITY"}'});
+ const store=createSettingsStore(storage);
+ expect(store.getSnapshot().values).toMatchObject({autoRunes:true,autoItems:false,autoSpells:false,autoMinGames:120,autoCustomRole:'UTILITY'});
+ store.change('flashSlot','F');store.change('autoItems',true);store.undo();
+ expect(createSettingsStore(storage).getSnapshot().values).toMatchObject({autoRunes:true,autoItems:false,autoSpells:false,autoMinGames:120,flashSlot:'F'});
+ expect(JSON.parse(storage.data.get('olc.auto-import.preferences.v1')!)).toEqual({runes:true,items:false,spells:false,minGames:120,customRole:'UTILITY'});
+ store.change('autoCustomRole',undefined);store.undo();expect(store.getSnapshot().values.autoCustomRole).toBe('UTILITY');
+});
+it('garde la panne des imports visible après une sauvegarde App réussie et permet sa reprise',()=>{
+ const storage=memory();let fail=true;
+ const store=createSettingsStore({...storage,setItem:(key,value)=>{if(fail&&key==='olc.auto-import.preferences.v1')throw new Error();storage.setItem(key,value)}});
+ store.change('autoRunes',true);store.change('theme','light');expect(store.getSnapshot().storageFailed).toBe(true);
+ fail=false;store.retrySave();expect(store.getSnapshot().storageFailed).toBe(false);
+ expect(createSettingsStore(storage).getSnapshot().values.autoRunes).toBe(true);
+});
+it('refuse un seuil invalide sans remplacer la dernière modification annulable',()=>{
+ const store=createSettingsStore(memory());store.change('autoMinGames',120);const state=store.getSnapshot();
+ for(const value of [0,1001,NaN,2.5]){store.change('autoMinGames',value);expect(store.getSnapshot()).toBe(state);}
+ store.undo();expect(store.getSnapshot().values.autoMinGames).toBe(1);
+});
+
+it('retrouve les réglages overlay sans les confondre avec les préférences de fenêtre',()=>{
+ expect(searchSettings('overlay','fr','all')).toEqual(['overlay']);
+ expect(searchSettings('opacité en jeu','fr','league')).toEqual(['overlay']);
+ expect(searchSettings('monitor position','en','all')).toEqual(['overlay']);
  expect(searchSettings('overlay','fr','app')).toEqual([]);
+});
+
+it('conserve et persiste l’activation sorts existante à travers une modification des runes',()=>{
+ const storage=memory({'olc.auto-import.preferences.v1':'{"runes":false,"items":false,"spells":true,"minGames":100}'});
+ const store=createSettingsStore(storage);
+ expect(store.getSnapshot().values.autoSpells).toBe(true);
+ store.change('autoRunes',true);
+ expect(JSON.parse(storage.data.get('olc.auto-import.preferences.v1')!).spells).toBe(true);
+ store.change('autoSpells',false);store.undo();
+ expect(createSettingsStore(storage).getSnapshot().values.autoSpells).toBe(true);
+ expect(searchSettings('imports sorts','fr','league')).toEqual(['autoSpells']);
+ expect(searchSettings('panneau partie','fr','league')).toEqual(['overlay']);
+});
+
+
+describe('préférence du taux estimé de draft (#187)',()=>{
+ it('est active par défaut, persiste, notifie immédiatement et peut être annulée',()=>{
+  const data=new Map<string,string>();const storage={getItem:(key:string)=>data.get(key)??null,setItem:(key:string,value:string)=>{data.set(key,value)}};
+  const store=createSettingsStore(storage);let observed=true;
+  const unsubscribe=store.subscribe(()=>{observed=store.getSnapshot().values.showDraftWinEstimate});
+  expect(store.getSnapshot().values.showDraftWinEstimate).toBe(true);
+  store.change('showDraftWinEstimate',false);expect(observed).toBe(false);
+  expect(createSettingsStore(storage).getSnapshot().values.showDraftWinEstimate).toBe(false);
+  store.undo();expect(observed).toBe(true);unsubscribe();
+ });
+ it('reste recherchable dans les deux langues',()=>{
+  expect(searchSettings('victoire draft','fr','league')).toContain('showDraftWinEstimate');
+  expect(searchSettings('draft win estimate','en','league')).toContain('showDraftWinEstimate');
+ });
+});
+
+
+it('conserve le choix en mémoire si le disque échoue et réessaie sa sauvegarde',()=>{
+ const storage=memory();let broken=true;
+ const adapter={getItem:storage.getItem,setItem:(key:string,value:string)=>{if(broken)throw new Error('storage');storage.setItem(key,value)}};
+ const store=createSettingsStore(adapter);store.change('showDraftWinEstimate',false);
+ expect(store.getSnapshot().values.showDraftWinEstimate).toBe(false);expect(store.getSnapshot().storageFailed).toBe(true);
+ broken=false;store.retrySave();expect(store.getSnapshot().storageFailed).toBe(false);
+ expect(createSettingsStore(storage).getSnapshot().values.showDraftWinEstimate).toBe(false);
 });

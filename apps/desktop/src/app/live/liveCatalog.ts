@@ -11,7 +11,7 @@ export function connectLiveCatalog(locale: Locale, championId: number, receive: 
       if (!active) return;
       receive({catalog, abilities: [], error: false});
       // Une fiche de compétences absente ne masque pas les runes et les objets.
-      const abilities = await loaders.abilities(locale, championId, catalog.version).catch(() => []);
+      const abilities = await loaders.abilities(locale, championId, catalog.version,catalog.snapshotId).catch(() => []);
       if (active) receive({catalog, abilities, error: false});
     } catch {
       if (active) receive({catalog: null, abilities: [], error: true});

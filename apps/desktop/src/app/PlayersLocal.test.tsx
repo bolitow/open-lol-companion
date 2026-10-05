@@ -26,3 +26,15 @@ it('identifie les parties publiques conservées pendant un échec de recharge lo
  const html=renderToStaticMarkup(<PlayerHistory entry={entry} locale="fr" store={store} onChampion={()=>{}}/>);
  expect(html).toContain('Source : API publique');expect(html).not.toContain('il peut être incomplet');
 });
+
+it('conserve le code Riot occupé et son message distinct dans les profils FR/EN',async()=>{
+ const store=createPlayerStore({profile:async()=>profile,matches:async()=>{throw 'riot_busy'}},null,()=>{});
+ store.syncAccount(true,identity);await new Promise(resolve=>setTimeout(resolve,0));
+ const entry=store.getSnapshot().entries[playerKey(identity)]!;
+ expect(entry.historyError).toBe('riot_busy');
+ for(const locale of ['fr','en'] as const){
+  const html=renderToStaticMarkup(<PlayerHistory entry={entry} locale={locale} store={store} onChampion={()=>{}}/>);
+  expect(html).toContain(locale==='fr'?'Riot est occupé':'Riot is busy');
+  expect(html).not.toContain(locale==='fr'?'ne répond pas':'not responding');
+ }
+});

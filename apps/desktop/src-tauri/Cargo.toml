@@ -15,7 +15,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["tray-icon"] }
+olc-catalog-cache = { path = "../../../crates/catalog-cache" }
+percent-encoding = "2"
+tauri = { version = "~2.12.0", features = ["tray-icon", "unstable"] }
 serde.workspace = true
 serde_json.workspace = true
 lcu-connector = { path = "../../../crates/lcu-connector" }
@@ -35,7 +37,14 @@ tauri-nspanel = "2.1.0"
 core-graphics = "0.25"
 core-foundation = "0.10"
 objc2 = "0.6"
+objc2-foundation = { version = "=0.3.2", default-features = false, features = ["std", "NSString", "NSURL", "NSURLRequest"] }
+objc2-web-kit = { version = "=0.3.2", default-features = false, features = ["std", "objc2-app-kit", "WKWebView", "WKNavigation"] }
 objc2-app-kit = { version = "0.3", default-features = false, features = ["NSWorkspace", "NSRunningApplication", "NSWindow", "NSGlassEffectView", "NSVisualEffectView", "NSView", "NSResponder", "NSAppearance", "objc2-core-foundation", "objc2-quartz-core"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+webview2-com = "=0.39.1"
+windows-core = "=0.62.2"
 windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_Threading", "Win32_UI_WindowsAndMessaging"] }
+
+[dev-dependencies]
+tempfile = "3"

@@ -150,3 +150,50 @@ l’actualisation des autres données. Les CS exacts du HUD aux mêmes instants
 n’ont pas été consignés : voir la [recette macOS #23](recettes/2026-10-03-live-macos.md)
 et sa série anonymisée. Ce constat ne garantit pas le comportement des autres
 patchs ou modes de jeu.
+
+
+## Éditeur de placement — #28
+
+Le panneau existant se règle depuis **Réglages → Overlay → Modifier le placement**,
+ou via **Alt+B** (Option+B sur Mac). **Ctrl+Alt+²** utilise le code physique
+Backquote pour AZERTY ; son fonctionnement sur les dispositions réelles reste à
+recetter. Un second raccourci annule l'édition. Les icônes Déplacer et Redimensionner
+manipulent le panneau ; Enregistrer conserve le résultat, Annuler restaure la
+position et la taille antérieures. Les deux actions sont aussi accessibles dans
+les réglages de l'application.
+
+L'édition augmente temporairement l'opacité à 80 % minimum pour rendre les
+commandes visibles, même si le panneau est réglé à 0 %. Les gestes sont limités
+au cadre du jeu, coalescés côté interface et calculés dans Rust à partir du curseur
+système. La fenêtre reste non activante. Hors édition, elle laisse passer les
+clics. Aucune entrée n'est injectée dans League.
+
+Les réglages comprennent une hauteur relative (0 = hauteur automatique des
+anciennes préférences), le style Dark/Plein et l'opacité 0–100 %. Le minimum
+éditable est 160×120 unités logiques, borné au cadre, pour conserver les commandes
+avec une mise à l'échelle élevée. Dark utilise le matériau natif existant sur Mac ;
+**Windows conserve un repli sombre sans flou natif**. Plein couvre le fond d'une
+surface opaque ; le réglage d'opacité global reste applicable.
+
+La session expire après trois minutes sans validation. Perdre la fenêtre du jeu,
+changer son cadre ou terminer la partie annule les changements temporaires. Un
+aperçu commencé hors partie est interrompu à l'entrée en partie. Les commandes
+en retard d'une ancienne session sont refusées ; un échec d'écriture conserve le
+brouillon et permet de réessayer ou d'annuler. Aucun geste ne sauvegarde sur disque.
+
+Cette première tranche concerne **le seul panneau actuellement raccordé**. Elle
+ne crée pas les futurs modules indépendants du §6. Recette et limites :
+[contrôle du 4 octobre](recettes/2026-10-04-overlay-editor.md).
+
+
+## Présentation et paquet distribué (#187)
+
+Le panneau visible affiche une mention courte FR/EN : absence d’approbation Riot et de données cachées. Elle reste hors du contenu tronqué en hauteur fixe. Elle n’intercepte ni clic ni focus pendant la partie ; en mode édition elle est accessible au clavier (Tab), et son texte reste accessible au lecteur d’écran.
+
+Les réglages recherchables proposent `showDraftWinEstimate`, actif par défaut dans `Preferences` / `parsePreferences`, enregistré avec les autres préférences de l’app. Changement, annulation et reprise après échec de stockage utilisent le store existant. La préférence conditionne le montage de #181, donc ses lectures, son calcul et son rendu. La tierlist complète, le raccordement à la sélection et les limites de cette estimation sont décrits dans [Estimation de draft](draft-estimate.md).
+
+Vite ne distribue que les entrées `index.html` et `overlay.html`. Le plugin de copie publique exclut `public/prototype` ; les polices communes et leurs licences vivent dans `public/fonts`. Les effets graphiques partagés restent inclus. Le serveur de développement continue à servir `/prototype.html` et ses maquettes.
+
+Recette du 4 octobre 2026 : build macOS debug et build Vite réussis ; absence de `dist/prototype.html` et `dist/prototype/`, présence des deux entrées et polices ; pages et fixtures de démo absentes des sourcemaps. Prototype de développement ouvert avec succès. Le réglage a été recherché et changé dans une copie native isolée. Une fixture du vrai composant a été inspectée en navigateur, FR/EN à 320 × 190 px : mentions lisibles sans recouvrement. Cela ne remplace pas la recette de la fenêtre native superposée. Les tests couvrent FR/EN, mention en aperçu/live, focus réservé à l’édition, migration des préférences, sauvegarde, abonnement immédiat, annulation et défaut de stockage.
+
+Réserves : recette réelle Windows et contrôle visuel de la fenêtre overlay séparée non réalisés ; #181 consomme maintenant le réglage (voir `docs/draft-estimate.md`). Les recettes réelles restent ouvertes. Aucun serveur de production modifié.

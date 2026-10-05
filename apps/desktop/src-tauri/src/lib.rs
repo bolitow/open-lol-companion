@@ -1,4 +1,8 @@
 mod api_access;
+mod build_patch;
+mod catalog;
+mod collection;
+mod cosmetic_assets;
 mod desktop;
 mod diagnostics;
 mod friends;
@@ -7,6 +11,10 @@ mod live;
 mod overlay;
 mod players;
 mod publications;
+mod spotlight;
+mod spotlight_media;
+mod spotlight_model;
+mod spotlight_viewer;
 use lcu_connector::LcuSession;
 use serde::Serialize;
 use std::sync::{Arc, Mutex};
@@ -41,10 +49,30 @@ type SessionState = Arc<Mutex<LcuSession>>;
 
 #[tauri::command]
 async fn community_builds(
+    app: tauri::AppHandle,
     request: olc_build_client::BuildRequest,
     state: tauri::State<'_, api_access::ApiState>,
 ) -> Result<olc_build_client::BuildReport, olc_build_client::BuildError> {
-    state.client().await?.builds(request).await
+    let client = state.client().await?;
+    let result = client.builds(request).await;
+    if matches!(result, Err(olc_build_client::BuildError::Unauthorized)) {
+        api_access::report_rejection(&app, &client);
+    }
+    result
+}
+
+#[tauri::command]
+async fn community_draft_stats(
+    app: tauri::AppHandle,
+    request: olc_build_client::DraftStatsRequest,
+    state: tauri::State<'_, api_access::ApiState>,
+) -> Result<olc_build_client::DraftStatsReport, olc_build_client::BuildError> {
+    let client = state.client().await?;
+    let result = client.draft_stats(request).await;
+    if matches!(result, Err(olc_build_client::BuildError::Unauthorized)) {
+        api_access::report_rejection(&app, &client);
+    }
+    result
 }
 
 #[tauri::command]
@@ -77,11 +105,16 @@ pub fn run() {
     #[cfg(target_os = "macos")]
     let builder = builder.plugin(tauri_nspanel::init());
     builder
+        .manage(catalog::CatalogService::default())
+        .manage(cosmetic_assets::CosmeticService::default())
+        .register_asynchronous_uri_scheme_protocol("cosmetic", cosmetic_assets::protocol)
+        .register_asynchronous_uri_scheme_protocol("catalog", catalog::protocol)
         .manage(diagnostics::DiagnosticsState::default())
         .manage(Arc::new(Mutex::new(LcuSession::default())))
         .manage(api_access::ApiState::default())
         .manage(imports::ImportLocks::default())
         .manage(players::LocalState::default())
+        .manage(spotlight_viewer::ViewerRuntime::default())
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
@@ -112,6 +145,7 @@ pub fn run() {
             friends::setup(app.handle());
             publications::setup(app.handle());
             api_access::setup(app.handle());
+            collection::setup(app.handle());
             let state = app.state::<SessionState>().inner().clone();
             let handle = app.handle().clone();
             let (tx, mut rx) = tokio::sync::mpsc::channel(32);
@@ -144,16 +178,30 @@ pub fn run() {
                     // L'état courant reste lisible si aucune fenêtre n'écoute encore.
                     live::lcu_changed(&handle, &snapshot);
                     friends::lcu_changed(&handle, &snapshot);
+                    collection::lcu_changed(&handle, &snapshot);
                     let _ = handle.emit("lcu-session", snapshot);
                 }
             });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            catalog::catalog_state,
+            catalog::catalog_sync,
+            catalog::catalog_read,
+            build_patch::build_patch_context,
             friends::friends_state,
+            spotlight::open_skin_spotlight,
+            spotlight_viewer::skin_spotlight_state,
+            spotlight_viewer::skin_spotlight_media,
+            spotlight_viewer::skin_spotlight_control,
+            spotlight_viewer::skin_spotlight_layout,
+            collection::collection_state,
+            collection::collection_refresh,
+            collection::collection_set_wish,
             live::live_session,
             live::live_custom_role,
             overlay::overlay_state,
+            overlay::overlay_edit,
             overlay::overlay_content_height,
             overlay::overlay_locale,
             overlay::overlay_configure,
@@ -166,6 +214,7 @@ pub fn run() {
             lcu_session,
             client_patch,
             community_builds,
+            community_draft_stats,
             publications::publication_state,
             api_access::api_access_status,
             api_access::save_api_access,
@@ -200,7 +249,8 @@ mod integration_permissions_tests {
         let overlay: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/overlay.json")).unwrap();
         let manifest = include_str!("../build.rs");
-        assert_eq!(main["windows"], serde_json::json!(["main"]));
+        assert!(main.get("windows").is_none());
+        assert_eq!(main["webviews"], serde_json::json!(["main"]));
         assert_eq!(overlay["windows"], serde_json::json!(["game-overlay"]));
         for command in [
             "desktop_settings",

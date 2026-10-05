@@ -22,3 +22,21 @@ body { color: #f3f7fa; font-family: Inter, -apple-system, BlinkMacSystemFont, "S
 .game-overlay-panel .live-build-compact footer { margin-top: 5px; }
 /* Le matériau macOS est rendu par AppKit sous la WebView. */
 .game-overlay-panel[data-material="liquidGlass"], .game-overlay-panel[data-material="vibrancy"] { background: transparent; border-color: transparent; }
+
+.game-overlay-panel[data-fixed="true"]{height:100%;display:flex;flex-direction:column;min-height:0}
+.game-overlay-panel[data-style="solid"]{background:#0e1925;border-color:#506779}
+.overlay-panel-content{min-height:0;overflow:hidden}
+.game-overlay-panel[data-editing="true"]{pointer-events:auto;border:2px solid #fca48d;position:relative;padding:8px 8px 26px}
+.game-overlay-panel[data-editing="true"] .overlay-panel-content{overflow:auto}
+.overlay-edit-toolbar{display:flex;align-items:center;gap:4px;flex-shrink:0;margin-bottom:8px;min-height:28px}
+.overlay-edit-toolbar span{flex:1;min-width:0;font-size:10px;line-height:1.2}
+.overlay-edit-toolbar button,.overlay-resize{display:grid;place-items:center;min-width:28px;height:28px;color:#fff;background:#273543;border:1px solid #718092;border-radius:6px;cursor:pointer;touch-action:none;padding:3px}
+.overlay-edit-toolbar button:first-child{cursor:move}
+.overlay-resize{position:absolute;right:2px;bottom:2px;cursor:nwse-resize}
+
+/* Repli sans flou natif sur Windows : contraste lisible, aucune capture du jeu. */
+.game-overlay-panel[data-material="solid"][data-style="dark"]{background:linear-gradient(145deg,#172938ed,#0e1925d9);border-color:#7593a77a}
+
+/* La mention reste hors du contenu rogné et ne capte aucune entrée en jeu. */
+.overlay-legal{flex-shrink:0;margin:8px 0 0;padding:5px 6px;border-radius:4px;background:#0e1925;color:#d4dfe9;font-size:11px;line-height:1.35;overflow-wrap:anywhere}
+.overlay-legal:focus-visible{outline:2px solid #fca48d;outline-offset:2px}

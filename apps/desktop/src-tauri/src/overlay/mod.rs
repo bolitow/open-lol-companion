@@ -1,3 +1,4 @@
+mod editor;
 mod geometry;
 #[cfg(target_os = "macos")]
 mod glass;
@@ -24,6 +25,10 @@ pub struct OverlayPreferences {
     pub y: f64,
     pub width: f64,
     pub opacity: f64,
+    #[serde(default)]
+    pub height: f64,
+    #[serde(default)]
+    pub style: OverlayStyle,
     pub locale: String,
 }
 impl Default for OverlayPreferences {
@@ -36,6 +41,8 @@ impl Default for OverlayPreferences {
             y: 0.18,
             width: 0.20,
             opacity: 0.9,
+            height: 0.0,
+            style: OverlayStyle::Dark,
             locale: "fr".into(),
         }
     }
@@ -47,10 +54,20 @@ impl OverlayPreferences {
             && (0.0..=0.9).contains(&self.y)
             && (0.1..=0.5).contains(&self.width)
             && self.x + self.width <= 1.0
-            && (0.2..=1.0).contains(&self.opacity)
+            && (0.0..=1.0).contains(&self.opacity)
+            && (self.height == 0.0 || (0.1..=0.8).contains(&self.height))
+            && self.y + self.height <= 1.0
             && matches!(self.locale.as_str(), "fr" | "en")
     }
 }
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OverlayStyle {
+    #[default]
+    Dark,
+    Solid,
+}
+
 #[derive(Debug, Clone, Copy, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum OverlayMaterial {
@@ -70,6 +87,8 @@ pub struct OverlayState {
     pub available: bool,
     pub visible: bool,
     pub preview: bool,
+    #[serde(rename = "editSession")]
+    pub edit_session: Option<u32>,
     pub error: Option<&'static str>,
 }
 pub(super) struct Runtime {
@@ -81,6 +100,9 @@ pub(super) struct Runtime {
     last_opacity: Option<f64>,
     content_height: f64,
     shortcut_available: bool,
+    editor: Option<editor::Editor>,
+    edit_counter: u32,
+    last_editing: bool,
 }
 type Shared = Arc<Mutex<Runtime>>;
 fn require_main(window: &tauri::WebviewWindow) -> Result<(), &'static str> {
@@ -153,6 +175,7 @@ fn refresh(app: &AppHandle, runtime: &mut Runtime) {
     if runtime.preview_until.is_some_and(|until| until <= now) {
         runtime.preview_until = None;
     }
+    editor::check_context(app, runtime);
     let preview = runtime.preview_until.is_some();
     let p = &runtime.public.preferences;
     let game =
@@ -186,26 +209,41 @@ fn refresh(app: &AppHandle, runtime: &mut Runtime) {
         } else {
             1.0
         };
-        geometry::fit_content(r, p.x, p.y, p.width, runtime.content_height, scale)
+        let placement = if p.height > 0.0 {
+            geometry::fit_relative(r, p.x, p.y, p.width, p.height)
+        } else {
+            geometry::fit_content(r, p.x, p.y, p.width, runtime.content_height, scale)
+        };
+        placement
             .ok()
             .map(|rect| platform::GameWindow { rect, ..window })
     });
     runtime.public.preview = preview;
-    if (runtime.last_window != target_window || runtime.last_opacity != Some(p.opacity))
-        && native::apply(app, target_window, p.opacity).is_err()
+    let editing = runtime.editor.is_some();
+    let opacity = if editing {
+        p.opacity.max(0.8)
+    } else {
+        p.opacity
+    };
+    if (runtime.last_window != target_window
+        || runtime.last_opacity != Some(opacity)
+        || runtime.last_editing != editing)
+        && native::apply(app, target_window, opacity, editing).is_err()
     {
         // Aucun affichage si adaptation native/click-through échoue ; fermeture en secours.
-        let _ = native::apply(app, None, 1.0);
+        let _ = native::apply(app, None, 1.0, false);
         if let Some(window) = app.get_webview_window(native::LABEL) {
             let _ = window.destroy();
         }
+        editor::cancel(runtime);
         runtime.public.available = false;
         runtime.public.visible = false;
         runtime.public.error = Some("unavailable");
     } else {
         runtime.public.visible = target_window.is_some();
         runtime.last_window = target_window;
-        runtime.last_opacity = Some(p.opacity);
+        runtime.last_opacity = Some(opacity);
+        runtime.last_editing = editing;
     }
     publish(app, runtime);
 }
@@ -221,6 +259,7 @@ pub fn setup(app: &AppHandle) {
             available,
             visible: false,
             preview: false,
+            edit_session: None,
             error: if available {
                 error
             } else {
@@ -234,6 +273,9 @@ pub fn setup(app: &AppHandle) {
         last_opacity: None,
         content_height: 180.0,
         shortcut_available: false,
+        editor: None,
+        edit_counter: 0,
+        last_editing: false,
     }));
     app.manage(shared);
     use tauri_plugin_global_shortcut::{
@@ -248,6 +290,7 @@ pub fn setup(app: &AppHandle) {
                 let _ = app.run_on_main_thread(move || {
                     let shared = handle.state::<Shared>();
                     if let Ok(mut runtime) = shared.lock() {
+                        editor::cancel(&mut runtime);
                         runtime.public.preferences.enabled = !runtime.public.preferences.enabled;
                         runtime.public.error = preference_error(
                             save(&handle, &runtime.public.preferences),
@@ -264,6 +307,7 @@ pub fn setup(app: &AppHandle) {
             r.public.error = Some("unavailable");
         }
     }
+    editor::register_shortcuts(app);
     let handle = app.clone();
     tauri::async_runtime::spawn(async move {
         loop {
@@ -319,8 +363,9 @@ async fn on_main(
             .lock()
             .map_err(|_| "unavailable")
             .and_then(|mut runtime| {
-                update(&handle, &mut runtime)?;
+                let updated = update(&handle, &mut runtime);
                 refresh(&handle, &mut runtime);
+                updated?;
                 Ok(runtime.public.clone())
             });
         let _ = tx.send(result);
@@ -339,6 +384,9 @@ pub async fn overlay_configure(
         return Err("unavailable");
     }
     on_main(app, move |app, runtime| {
+        if runtime.editor.is_some() {
+            return Err("editing");
+        }
         runtime.public.error = preference_error(
             save(app, &preferences),
             runtime.public.available && runtime.shortcut_available,
@@ -367,6 +415,14 @@ pub async fn overlay_locale(
     require_main(&window)?;
     on_main(app, move |app, runtime| {
         change_locale(&mut runtime.public.preferences, &locale)?;
+        if let Some(editor) = &mut runtime.editor {
+            change_locale(&mut editor.original, &locale)?;
+            runtime.public.error = preference_error(
+                save(app, &editor.original),
+                runtime.public.available && runtime.shortcut_available,
+            );
+            return Ok(());
+        }
         runtime.public.error = preference_error(
             save(app, &runtime.public.preferences),
             runtime.public.available && runtime.shortcut_available,
@@ -385,7 +441,9 @@ pub async fn overlay_content_height(
         return Err("unavailable");
     }
     on_main(app, move |_, runtime| {
-        runtime.content_height = height;
+        if runtime.editor.is_none() {
+            runtime.content_height = height;
+        }
         Ok(())
     })
     .await
@@ -399,6 +457,9 @@ pub async fn overlay_preview(
 ) -> Result<OverlayState, &'static str> {
     require_main(&window)?;
     on_main(app, move |app, runtime| {
+        if runtime.editor.is_some() {
+            return Err("editing");
+        }
         if enabled
             && (!runtime.public.available
                 || runtime.public.preferences.exclusive_fullscreen
@@ -414,6 +475,20 @@ pub async fn overlay_preview(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn migre_anciens_reglages_et_accepte_opacite_zero() {
+        let mut value = serde_json::to_value(OverlayPreferences::default()).unwrap();
+        value.as_object_mut().unwrap().remove("height");
+        value.as_object_mut().unwrap().remove("style");
+        let mut p: OverlayPreferences = serde_json::from_value(value).unwrap();
+        assert_eq!(p.height, 0.0);
+        assert_eq!(p.style, OverlayStyle::Dark);
+        p.opacity = 0.0;
+        assert!(p.valid());
+        p.height = 0.8;
+        p.y = 0.3;
+        assert!(!p.valid());
+    }
     #[test]
     fn sauvegarder_ne_masque_pas_un_raccourci_indisponible() {
         assert_eq!(preference_error(Ok(()), false), Some("unavailable"));
@@ -446,7 +521,16 @@ mod tests {
         p.width = 0.01;
         assert!(!p.valid());
         p = OverlayPreferences::default();
-        p.opacity = 0.0;
+        p.opacity = -0.1;
         assert!(!p.valid());
     }
+}
+
+#[tauri::command]
+pub async fn overlay_edit(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    action: editor::Action,
+) -> Result<OverlayState, &'static str> {
+    editor::handle(app, window, action).await
 }

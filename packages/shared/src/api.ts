@@ -212,10 +212,10 @@ export interface BuildStats extends GroupKey {
   reliability: Reliability | null;
   /**
    * Variantes de ce (groupe, catégorie) non publiées à cause du plafond (#113), identique pour
-   * toutes ses variantes ; nul pour un instantané antérieur, où le compte est inconnu. Absent
-   * de `BuildReport` tant que le client Rust du desktop ne le relaie pas (hors périmètre #113).
+   * toutes ses variantes ; nul pour un instantané antérieur, où le compte est inconnu. Relayé
+   * par `BuildReport` et le client Rust du desktop (#113).
    */
-  omitted_variants?: number | null;
+  omitted_variants: number | null;
   /** Arena, variantes hors objets : participations au placement valide ; 0 hors Arena et pour les objets. */
   placement_games: number;
   /** Arena, variantes hors objets : placement moyen (1 = première) ; nul sous le seuil, hors Arena et pour les objets. */

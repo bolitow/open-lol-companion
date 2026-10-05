@@ -7,6 +7,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+olc-catalog-cache = { path = "../catalog-cache" }
 serde.workspace = true
 serde_json.workspace = true
 reqwest.workspace = true
@@ -15,6 +16,10 @@ webpki-roots = "1"
 tokio = { workspace = true, features = ["sync", "time"] }
 tokio-tungstenite.workspace = true
 futures-util.workspace = true
+sha2 = "0.10"
+fs2 = "0.4.3"
+tempfile = "3"
+thiserror.workspace = true
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "io-util"] }

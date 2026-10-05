@@ -1,9 +1,6 @@
 {
   "identifier": "default",
-  "description": "Permissions de la fen\u00eatre principale",
-  "windows": [
-    "main"
-  ],
+  "description": "Permissions de la fenêtre principale",
   "permissions": [
     "core:default",
     "allow-lcu-status",
@@ -11,6 +8,7 @@
     "allow-client-patch",
     "allow-friends-state",
     "allow-community-builds",
+    "allow-community-draft-stats",
     "allow-publication-state",
     "allow-player-profile",
     "allow-player-matches",
@@ -32,6 +30,22 @@
     "allow-export-diagnostics",
     "allow-api-access-status",
     "allow-save-api-access",
-    "allow-clear-api-access"
+    "allow-clear-api-access",
+    "allow-build-patch-context",
+    "allow-catalog-state",
+    "allow-catalog-read",
+    "allow-catalog-sync",
+    "allow-open-skin-spotlight",
+    "allow-collection-state",
+    "allow-collection-refresh",
+    "allow-collection-set-wish",
+    "allow-skin-spotlight-state",
+    "allow-skin-spotlight-media",
+    "allow-skin-spotlight-control",
+    "allow-skin-spotlight-layout",
+    "allow-overlay-edit"
+  ],
+  "webviews": [
+    "main"
   ]
 }

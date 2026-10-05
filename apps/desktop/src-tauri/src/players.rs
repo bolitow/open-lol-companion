@@ -104,6 +104,7 @@ fn public_profile(profile: olc_build_client::profiles::Profile) -> PlayerProfile
 }
 #[tauri::command]
 pub async fn player_profile(
+    app: tauri::AppHandle,
     request: PlayerRequest,
     state: tauri::State<'_, crate::api_access::ApiState>,
     local: tauri::State<'_, LocalState>,
@@ -118,7 +119,13 @@ pub async fn player_profile(
         return Ok(result);
     }
     match state.client().await {
-        Ok(client) => client.player_profile(request).await.map(public_profile),
+        Ok(client) => {
+            let result = client.player_profile(request).await;
+            if matches!(result, Err(PlayerError::Unauthorized)) {
+                crate::api_access::report_rejection(&app, &client);
+            }
+            result.map(public_profile)
+        }
         Err(error) => Err(error.into()),
     }
 }
@@ -133,6 +140,7 @@ pub struct HistoryRequest {
 }
 #[tauri::command]
 pub async fn player_matches(
+    app: tauri::AppHandle,
     request: HistoryRequest,
     state: tauri::State<'_, crate::api_access::ApiState>,
     local: tauri::State<'_, LocalState>,
@@ -162,7 +170,13 @@ pub async fn player_matches(
         count: request.count,
     };
     let page = match state.client().await {
-        Ok(client) => client.player_matches(request).await?,
+        Ok(client) => {
+            let result = client.player_matches(request).await;
+            if matches!(result, Err(PlayerError::Unauthorized)) {
+                crate::api_access::report_rejection(&app, &client);
+            }
+            result?
+        }
         Err(error) => return Err(error.into()),
     };
     Ok(PlayerHistory {
@@ -203,6 +217,7 @@ mod tests {
         LcuAccount {
             platform: "EUW1".into(),
             game_name: name.into(),
+            profile_icon_id: None,
             tag_line: "TAG".into(),
         }
     }

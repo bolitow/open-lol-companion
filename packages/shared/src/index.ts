@@ -23,3 +23,9 @@ export * from "./friends";
 export * from "./apiAccess";
 
 export * from "./draftModel";
+export * from './catalogRuntime';
+export * from "./collection";
+
+export type {SpotlightState, SpotlightVideo, SpotlightAction, SpotlightSelection} from './spotlight';
+
+export * from "./draftStats";

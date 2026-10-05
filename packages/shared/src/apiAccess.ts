@@ -11,10 +11,11 @@ export type ApiAccessError =
 
 /**
  * État relu par `api_access_status`, `save_api_access` et `clear_api_access`
- * (miroir Rust `ApiAccessStatus`). Ne contient jamais le jeton : `source` non nul
+ * (miroir Rust `ApiAccessView`, qui complète le statut du trousseau). Ne contient jamais le jeton : `source` non nul
  * suffit à dire qu'il est présent.
  */
 export interface ApiAccessStatus {
+    authorizationRejected: boolean;
     source: ApiAccessSource | null;
     url: string | null;
     error: ApiAccessError | null;

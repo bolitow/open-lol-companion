@@ -1,0 +1,22 @@
+.stat-glyph{display:inline-block;flex:0 0 var(--stat-size,16px);width:var(--stat-size,16px);height:var(--stat-size,16px);background-repeat:no-repeat;vertical-align:-3px;filter:drop-shadow(0 0 1px #07101d88)}
+.stat-label{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.stat-tone{color:var(--stat-color,var(--text));font-weight:650;font-size:inherit!important;font-variant-numeric:tabular-nums}
+.stat-mention .stat-glyph{margin-right:3px}
+.stat-tone[data-stat=attack_damage]{--stat-color:#ffae70}.stat-tone[data-stat=ability_power]{--stat-color:#bd9aff}
+.stat-tone[data-stat=armor]{--stat-color:#e8cd77}.stat-tone[data-stat=magic_resistance]{--stat-color:#73d7e5}
+.stat-tone[data-stat=health],.stat-tone[data-stat=health_regeneration],.stat-tone[data-stat=heal_and_shield_power]{--stat-color:#7edba0}
+.stat-tone[data-stat=mana],.stat-tone[data-stat=mana_regeneration]{--stat-color:#76c6ff}
+.stat-tone[data-stat=attack_speed]{--stat-color:#f4dc87}.stat-tone[data-stat=critical_strike_chance]{--stat-color:#ffa08e}
+.stat-tone[data-stat=movement_speed]{--stat-color:#e8dfc3}.stat-tone[data-stat=ability_haste],.stat-tone[data-stat=cooldown]{--stat-color:#d2c5ee}.stat-tone[data-stat=attack_range]{--stat-color:#d3dbe9}
+[data-theme=light] .stat-tone[data-stat=attack_damage]{--stat-color:#994604}[data-theme=light] .stat-tone[data-stat=ability_power]{--stat-color:#7040ac}
+[data-theme=light] .stat-tone[data-stat=armor]{--stat-color:#79600d}[data-theme=light] .stat-tone[data-stat=magic_resistance]{--stat-color:#126675}
+[data-theme=light] .stat-tone[data-stat=health],[data-theme=light] .stat-tone[data-stat=health_regeneration],[data-theme=light] .stat-tone[data-stat=heal_and_shield_power]{--stat-color:#216939}
+[data-theme=light] .stat-tone[data-stat=mana],[data-theme=light] .stat-tone[data-stat=mana_regeneration]{--stat-color:#205e9a}
+[data-theme=light] .stat-tone[data-stat=attack_speed]{--stat-color:#735b09}[data-theme=light] .stat-tone[data-stat=critical_strike_chance]{--stat-color:#a23525}
+[data-theme=light] .stat-tone[data-stat=movement_speed]{--stat-color:#685c37}[data-theme=light] .stat-tone[data-stat=ability_haste],[data-theme=light] .stat-tone[data-stat=cooldown]{--stat-color:#625084}[data-theme=light] .stat-tone[data-stat=attack_range]{--stat-color:#405371}
+
+.item-stat-list .stat-tone[data-stat],.tooltip-stats .stat-tone[data-stat]{color:var(--stat-color,var(--text))}
+[data-theme=light] .stat-glyph{background-color:#283440;border-radius:3px;box-shadow:0 0 0 1px #283440;filter:none}
+
+.stat-tone[data-stat=energy]{--stat-color:#f2d365}
+[data-theme=light] .stat-tone[data-stat=energy]{--stat-color:#786005}

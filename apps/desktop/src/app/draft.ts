@@ -1,10 +1,10 @@
-import type {DraftSession,DraftTimer} from '@olc/shared';
-import champions from '../../public/game-data/champions.json';
+import type {DraftPlayer,DraftSession,DraftTimer} from '@olc/shared';
+import {catalogRuntime,championImage} from './catalogRuntime';
 import type {Locale} from './state';
 export function championDetails(id:number|null,locale:Locale){
  if(id===null)return null;
- const entry=champions[String(id) as keyof typeof champions];
- return entry?{name:entry[locale],image:`/game-data/champions/${id}.jpg`}:null;
+ const entry=catalogRuntime.getSnapshot().index[String(id) as string];
+ return entry?{name:entry[locale],image:championImage(id)}:null;
 }
 export function draftTeams(draft:DraftSession|null){
  const allies={side:draft?.allySide??null,ally:true,players:draft?.allies??[],bans:draft?.allyBans??[]};
@@ -13,4 +13,9 @@ export function draftTeams(draft:DraftSession|null){
 }
 export function secondsRemaining(timer:DraftTimer|null,now:number){
  return timer?Math.floor(Math.max(0,timer.remainingMs-Math.max(0,now-timer.observedAtMs))/1000):null;
+}
+
+/** Les places vides ne partagent pas l'espace d'identifiants des joueurs. */
+export function draftPlayerKey(player:DraftPlayer|undefined,index:number){
+ return player?`player:${player.cellId}`:`empty:${index}`;
 }

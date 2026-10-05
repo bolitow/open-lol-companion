@@ -1,3 +1,7 @@
+import {publicClientPatch} from '../clientPatch';
+import {BuildPatchNotice} from '../BuildPatchNotice';
+import {rankLabel} from '../buildRanks';
+import {usePreparation} from '../PreparationContext';
 import {memo, useEffect, useState} from 'react';
 import type {BuildReport, BuildStats, CatalogRecord, LiveSession} from '@olc/shared';
 import type {Locale} from '../state';
@@ -56,7 +60,7 @@ export const LiveBuildSummaryContent = memo(function LiveBuildSummaryContent({re
   const champion = championDetails(request.champion_id, locale);
   const queue = t.queues[request.queue as keyof typeof t.queues] ?? new Intl.NumberFormat(locale, {useGrouping: false}).format(request.queue);
   return <section className="live-build-compact" aria-label={labels.title}>
-    <header><strong>{champion?.name ?? liveCopy[locale].unknownChampion} · {t.roles[request.role]}</strong><span>{request.platform} · {queue} · {t.patch} {request.patch}</span></header>
+    <header><strong>{champion?.name ?? liveCopy[locale].unknownChampion} · {t.roles[request.role]}</strong><span>{request.platform} · {queue} · {t.patch} {publicClientPatch(request.patch)??request.patch}</span></header>
     {customGame && <small>{labels.custom}</small>}
     <div className="live-build-compact-items"><h3>{t.final_items}</h3>
       {items ? <>
@@ -73,11 +77,12 @@ function LiveBuildSummaryLoader({session, locale, championId}: {session: LiveSes
   const [catalogState, setCatalogState] = useState<LiveCatalogState>({catalog: null, abilities: [], error: false});
   useEffect(() => connectLiveCatalog(locale, championId, setCatalogState), [locale, championId]);
   const catalog = catalogState.catalog;
-  const request = catalog ? liveBuildRequest(session, catalog.version) : null;
-  const {state} = useBuilds(request);
+  const {value:preparation,defaultRank='EMERALD_PLUS'}=usePreparation();
+  const request = catalog ? liveBuildRequest(session, catalog.version,preparation.rankOverride??defaultRank) : null;
+  const {state,choice} = useBuilds(request);
   if (!catalog) return <p className="live-build-compact-status" role="status">{catalogState.error ? liveCopy[locale].catalogError : liveCopy[locale].catalogLoading}</p>;
   if (state?.status !== 'ready') return <p className="live-build-compact-status" role="status">{state?.status === 'error' ? buildCopy[locale].errors[state.error] : buildCopy[locale].loading}</p>;
-  return <LiveBuildSummaryContent report={state.report} records={catalog.records} locale={locale} customGame={session.context?.customGame === true}/>;
+  return <><BuildPatchNotice choice={choice} locale={locale} actual={state.report.request.patch}/><LiveBuildSummaryContent report={state.report} records={catalog.records} locale={locale} customGame={session.context?.customGame === true}/></>;
 }
 
 export function LiveBuildSummary({session, locale}: {session: LiveSession | null; locale: Locale}) {

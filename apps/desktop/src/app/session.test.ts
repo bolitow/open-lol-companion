@@ -38,8 +38,8 @@ describe('navigation du client réel', () => {
         expect(s.session.connected).toBe(false);
     });
     it('tolère les préférences corrompues et valide chaque champ', () => {
-        expect(parsePreferences('{')).toEqual({ theme: 'dark', locale: 'fr', motion: true });
-        expect(parsePreferences('{"theme":"light","locale":"en","motion":false}')).toEqual({ theme: 'light', locale: 'en', motion: false });
+        expect(parsePreferences('{')).toEqual({ theme: 'dark', locale: 'fr', motion: true, showDraftWinEstimate: true });
+        expect(parsePreferences('{"theme":"light","locale":"en","motion":false}')).toEqual({ theme: 'light', locale: 'en', motion: false, showDraftWinEstimate: true });
         expect(parsePreferences('{"theme":12,"locale":"xx"}').locale).toBe('fr');
     });
 });
@@ -60,4 +60,11 @@ it('une nouvelle draft reprend le champion local, une simple reconnexion conserv
  s=reduceApp(s,{type:'session',session:snapshot(4,'Lobby')});
  s=reduceApp(s,{type:'session',session:snapshot(5,'ChampSelect')});
  expect(s.preparation).toMatchObject({manual:null,roleOverride:null,rank:'GOLD'});
+});
+
+
+it('migre les anciens réglages et conserve uniquement un choix booléen pour la draft',()=>{
+ expect(parsePreferences(null).showDraftWinEstimate).toBe(true);
+ expect(parsePreferences('{"showDraftWinEstimate":false}').showDraftWinEstimate).toBe(false);
+ expect(parsePreferences('{"showDraftWinEstimate":"false"}').showDraftWinEstimate).toBe(true);
 });

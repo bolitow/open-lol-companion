@@ -1,4 +1,6 @@
 import type {AutoImportContext, AutoImportReceipt, AutoImportRequest, AutoImportSelection, BuildReport, BuildRequest, BuildStats, CatalogRecord, FlashSlot, LcuSession, Role} from '@olc/shared';
+import {draftDefaults,preparationRequest} from './buildContext';
+import {initialPreparation,type PreparationState} from './state';
 import {buildRequestKey, runePageFromBuild, variantsFor} from './buildModel';
 import {validSpellPair} from './spellEditing';
 import {itemAdjustments,itemSetPlan,type ItemAdjustments} from './itemImport';
@@ -18,7 +20,7 @@ export function parseAutoImportPreferences(raw: string | null, development: bool
     } catch {return defaults;}
 }
 export interface AutoImportTarget {context: AutoImportContext; request: BuildRequest; championName: string; itemLabel: string}
-export function autoImportTarget(session: LcuSession, catalog: PreparationCatalog, locale: Locale, customRole?: Role): AutoImportTarget | null {
+export function autoImportTarget(session: LcuSession, catalog: PreparationCatalog, locale: Locale, customRole?: Role, preparation?:PreparationState): AutoImportTarget | null {
     const draft = session.draft;
     if (!session.connected || session.phase !== 'ChampSelect' || !session.account || !draft?.supported
         || !session.draftId || draft.queueId === undefined || (!draft.customGame && ![400,420,440].includes(draft.queueId))) return null;
@@ -26,10 +28,15 @@ export function autoImportTarget(session: LcuSession, catalog: PreparationCatalo
     if (locals.length !== 1 || !player?.championId) return null;
     const role = (player.position?.toUpperCase() ?? (draft.customGame ? customRole : undefined)) as Role | undefined;
     if (!role || !['TOP','JUNGLE','MIDDLE','BOTTOM','UTILITY'].includes(role)) return null;
+    if(preparation?.manual!==undefined&&preparation.manual!==null)return null;
+    const defaults=draftDefaults(session,customRole??null);
+    const value=preparation??{...initialPreparation,platform:defaults.platform!,queue:defaults.queue!,customRole:customRole??null};
+    const request=preparationRequest(session,value,catalog.version);
+    if(!request)return null;
     const champion = championDetails(player.championId, locale);
     if (!champion) return null;
     return {context: {draftId: session.draftId, gameId: draft.gameId, championId: player.championId, queueId: draft.queueId, role},
-        request: {champion_id: player.championId, patch: catalog.version.split('.').slice(0,2).join('.'), platform: session.account.platform, queue: draft.customGame ? 420 : draft.queueId, role, rank: 'ALL'},
+        request,
         championName: champion.name, itemLabel: locale === 'fr' ? 'Inventaire final observé' : 'Observed final inventory'};
 }
 export interface ObservedMetrics {games: number; wins: number | null; observedWinRate: number | null; lowSample: boolean}
@@ -66,14 +73,14 @@ export function chooseAutoImports(report: BuildReport, target: AutoImportTarget,
     return {runes, items, spells};
 }
 export type AutoImportKind = AutoImportSelection['kind'];
-export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error' | 'needsFlash'; metrics?: ObservedMetrics; adjustments?: ItemAdjustments; error?: unknown}
+export interface AutoImportProgress {status: 'waiting' | 'disabled' | 'loading' | 'importing' | 'empty' | 'confirmed' | 'accepted' | 'error' | 'needsFlash'; scope?:BuildRequest; metrics?: ObservedMetrics; adjustments?: ItemAdjustments; error?: unknown}
 export interface AutoImportSnapshot {runes: AutoImportProgress; items: AutoImportProgress; spells: AutoImportProgress}
 interface Dependencies {
     prepare: (target: AutoImportTarget, minGames: number, flashSlot: FlashSlot | null) => Promise<AutoImportCandidates>;
     send: (request: AutoImportRequest) => Promise<AutoImportReceipt>;
 }
 const kinds: readonly AutoImportKind[] = ['runes', 'items', 'spells'];
-const targetKey = (target: AutoImportTarget) => JSON.stringify([target.context.draftId, target.request.platform, target.context.championId, target.context.role, target.context.queueId]);
+const targetKey = (target: AutoImportTarget) => JSON.stringify([target.context.draftId, target.context.championId, target.context.role, target.context.queueId]);
 /** Un envoi par draft/champion/poste/catégorie, même après une lecture LCU manquante.
  * Une modification manuelle ultérieure dans LoL n'entraîne jamais de nouvel import. */
 export function createAutoImportController(dependencies: Dependencies) {
@@ -105,7 +112,7 @@ export function createAutoImportController(dependencies: Dependencies) {
             if (candidate === 'flashPreferenceRequired') {publish({...snapshot,[kind]:{status:'needsFlash'}}); return;}
             if (!candidate) {publish({...snapshot,[kind]:{status:'empty'}}); return;}
             const entryKey = slotKey(key,kind);
-            const detail = {metrics:candidate.metrics,...(candidate.adjustments?{adjustments:candidate.adjustments}:{})};
+            const detail = {scope:current.request,metrics:candidate.metrics,...(candidate.adjustments?{adjustments:candidate.adjustments}:{})};
             const importing: AutoImportProgress = {status:'importing',...detail};
             inFlight.add(kind); ledger.set(entryKey, importing); publish({...snapshot,[kind]:importing});
             let result: AutoImportProgress;
@@ -123,7 +130,7 @@ export function createAutoImportController(dependencies: Dependencies) {
     const update = (next: AutoImportTarget | null, settings: AutoImportPreferences, flashSlot: FlashSlot | null = null) => {
         if (next && targetKey(next) !== lastContext) {lastContext=targetKey(next);contextEpoch++;ledger.clear();}
         target = next; preferences = settings; flashPreference = flashSlot;
-        const nextFingerprint = JSON.stringify([next && targetKey(next), next?.request.patch, settings.runes, settings.items, settings.spells, settings.minGames, flashSlot]);
+        const nextFingerprint = JSON.stringify([next && targetKey(next), next&&buildRequestKey(next.request), settings.runes, settings.items, settings.spells, settings.minGames, flashSlot]);
         if (nextFingerprint === fingerprint) return;
         fingerprint = nextFingerprint; void run(next,settings,flashSlot);
     };

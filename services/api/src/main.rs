@@ -83,6 +83,7 @@ async fn run(args: Args) -> Result<(), String> {
                 .await
                 .map_err(|_| "migrations PostgreSQL impossibles".to_owned())?;
             let mut state = AppState::new(storage.pool().clone(), auth);
+            state.desktop_catalog_dir = std::env::var_os("OLC_DESKTOP_CATALOG_DIR").map(Into::into);
             let origins = std::env::var("OLC_API_ALLOWED_ORIGINS").unwrap_or_default();
             for origin in origins.split(',').filter(|s| !s.trim().is_empty()) {
                 let origin = origin.trim();

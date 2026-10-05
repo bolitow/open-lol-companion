@@ -7,7 +7,8 @@
  * l'issue d'une partie. Aucun poste n'est attribué aux adversaires : leur poste n'est
  * pas visible en sélection et la projection Rust le force à vide (revue #30).
  */
-import type { ChampionStats, Role } from "./api";
+import type { Role } from "./api";
+import type { DraftChampionStats } from "./draftStats";
 import type { DraftPlayer } from "./draft";
 
 /** Population unique d'où proviennent toutes les statistiques comparées. */
@@ -32,7 +33,7 @@ export interface DraftModelInput {
   /** Poste pour lequel les candidats sont notés (poste visible du joueur local). */
   role: Role;
   /** Entrées publiées de la tierlist, tous rôles confondus ; les autres populations sont ignorées. */
-  stats: ChampionStats[];
+  stats: DraftChampionStats[];
   allies: DraftAllyPick[];
   /** Champions adverses visibles, sans poste par construction. */
   enemies: number[];
@@ -97,7 +98,7 @@ export function scoreDraft(input: DraftModelInput): DraftModelResult {
       s.queue_id === population.queue_id &&
       s.rank === population.rank,
   );
-  const byChampion = new Map<number, ChampionStats[]>();
+  const byChampion = new Map<number, DraftChampionStats[]>();
   for (const s of stats) {
     byChampion.set(s.champion_id, [...(byChampion.get(s.champion_id) ?? []), s]);
   }

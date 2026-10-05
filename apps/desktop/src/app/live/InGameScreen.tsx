@@ -1,3 +1,5 @@
+import {BuildPatchNotice} from '../BuildPatchNotice';
+import {usePreparation} from '../PreparationContext';
 import {useEffect, useState} from 'react';
 import type {CatalogRecord, LiveSession} from '@olc/shared';
 import type {Locale} from '../state';
@@ -19,8 +21,9 @@ function LiveBuildWorkspace({session, locale, championId}: {session: LiveSession
   const [detail, setDetail] = useState<CatalogRecord | null>(null);
   useEffect(() => connectLiveCatalog(locale, championId, setCatalogState), [locale, championId, attempt]);
   const catalog = catalogState.catalog;
-  const request = catalog ? liveBuildRequest(session, catalog.version) : null;
-  const {state, retry} = useBuilds(request);
+  const {value:preparation,defaultRank='EMERALD_PLUS'}=usePreparation();
+  const request = catalog ? liveBuildRequest(session, catalog.version,preparation.rankOverride??defaultRank) : null;
+  const {state, retry,choice} = useBuilds(request);
   const records = catalog ? [...catalog.records, ...catalogState.abilities] : [];
   const t = buildCopy[locale];
   if (!catalog) return <div className="surface live-build-status" role="status">
@@ -28,6 +31,7 @@ function LiveBuildWorkspace({session, locale, championId}: {session: LiveSession
     {catalogState.error && <button className="button" onClick={() => { setCatalogState({catalog: null, abilities: [], error: false}); setAttempt(value => value + 1); }}>{t.retry}</button>}
   </div>;
   return <>
+    <BuildPatchNotice choice={choice} locale={locale} actual={state?.status==='ready'?state.report.request.patch:undefined}/>
     {state?.status === 'ready' ? <LiveBuilds key={`${buildRequestKey(state.report.request)}:${state.report.meta.published_at}`} report={state.report} records={records} locale={locale} customGame={session.context?.customGame === true} onOpen={setDetail}/>
       : <div className="surface live-build-status" role="status">
         <p>{state?.status === 'error' ? t.errors[state.error] : t.loading}</p>

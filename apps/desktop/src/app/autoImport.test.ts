@@ -8,7 +8,7 @@ const session: LcuSession = {revision: 1, draftId:'draft-1', connected: true, ph
     account: {game_name: 'Player', tag_line: 'EUW', platform: 'EUW1'},
     draft: {supported: true, gameId: '123', queueId: 420, allySide: 'blue', allies: [{cellId: 0, championId: 432, locked: true, local: true, position: 'utility', acting: false}], enemies: [], allyBans: [], enemyBans: [], timer: null, localSpells: [4, 14]}};
 const target = (): AutoImportTarget => autoImportTarget(session, data, 'en')!;
-const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null, conditional_rate: null,win_rate_upper_bound:null,win_rate_delta:null,reliability:null,placement_games:0,average_placement:null,...change});
+const variant = (change: Partial<BuildStats> = {}): BuildStats => ({...target().request, platform_id:'EUW1', queue_id:420, category:'final_items',selection:[1001],games:50,wins:40,population:80,omitted_variants:null,performance_available:true,pick_rate:null,win_rate:null,win_rate_lower_bound:null, conditional_rate: null,win_rate_upper_bound:null,win_rate_delta:null,reliability:null,placement_games:0,average_placement:null,...change});
 const report = (builds = [variant()]): BuildReport => ({request:target().request,meta:{min_games:100,source_snapshot_at:'2026-10-02T08:00:00Z',published_at:'2026-10-02T08:01:00Z'},builds});
 const preferences = {runes:true,items:true,spells:false,minGames:1};
 function deferred<T>() {let resolve!:(value:T)=>void; const promise=new Promise<T>(r=>{resolve=r});return {promise,resolve};}
@@ -16,7 +16,7 @@ const flush = async () => {for(let i=0;i<8;i++)await Promise.resolve();};
 
 describe('imports au prépick',()=>{
     it('suit uniquement le champion local sélectionné, son poste et sa vraie file',()=>{
-        expect(target()).toMatchObject({context:{gameId:'123',championId:432,role:'UTILITY',queueId:420},request:{champion_id:432,role:'UTILITY',platform:'EUW1',queue:420,rank:'ALL'}});
+        expect(target()).toMatchObject({context:{gameId:'123',championId:432,role:'UTILITY',queueId:420},request:{champion_id:432,role:'UTILITY',platform:'EUW1',queue:420,rank:'EMERALD_PLUS'}});
         for(const patch of [{connected:false},{phase:'InProgress' as const},{account:null},{draftId:undefined},{draft:{...session.draft!,queueId:undefined}},{draft:{...session.draft!,allies:[{...session.draft!.allies[0]!,position:null}]}}])expect(autoImportTarget({...session,...patch},data,'en')).toBeNull();
     });
     it('accepte le prépick avant gameId et conserve le même contexte au verrouillage',()=>{
@@ -228,4 +228,23 @@ it('un changement Flash pendant le PATCH ne réécrit pas les sorts et vaut pour
     const next={...target(),context:{...target().context,championId:103},request:{...target().request,champion_id:103}};
     controller.update(next,settings,'D');await flush();
     expect(sent).toMatchObject([{selection:{kind:'spells',request:{flashSlot:'F'}}},{selection:{kind:'spells',request:{flashSlot:'D'}}}]);
+});
+
+it('un changement de population de consultation recharge les variantes importables',async()=>{
+ const prepare=vi.fn(async(_target:AutoImportTarget)=>({runes:null,items:null,spells:null}));
+ const controller=createAutoImportController({prepare,send:vi.fn()});
+ const first=target();
+ controller.update(first,preferences);await flush();
+ controller.update({...first,request:{...first.request,queue:440,rank:'GOLD'}},preferences);await flush();
+ expect(prepare).toHaveBeenCalledTimes(2);
+ expect(prepare.mock.calls[1]?.[0]).toMatchObject({request:{queue:440,rank:'GOLD'}});
+});
+it('conserve les imports déjà envoyés quand les filtres changent et affiche leur population réelle',async()=>{
+ const send=vi.fn(async()=>({confirmed:true}));
+ const controller=createAutoImportController({prepare:async()=>chooseAutoImports(report(),target(),1,data.records),send});
+ const settings={...preferences,runes:false};
+ const first=target();controller.update(first,settings);await flush();
+ controller.update({...first,request:{...first.request,platform:'KR',queue:440,role:'TOP',rank:'GOLD'}},settings);await flush();
+ expect(send).toHaveBeenCalledTimes(1);
+ expect(controller.getSnapshot().items.scope).toEqual(first.request);
 });

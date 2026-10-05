@@ -103,6 +103,8 @@ export interface OverlayPreferences {
   y: number;
   width: number;
   opacity: number;
+  height: number;
+  style: 'dark' | 'solid';
   locale: 'fr' | 'en';
 }
 export interface OverlayState {
@@ -112,5 +114,8 @@ export interface OverlayState {
   available: boolean;
   visible: boolean;
   preview: boolean;
+  editSession: number | null;
   error: 'unavailable' | 'storage' | null;
 }
+
+export type OverlayEditAction = {type:'start'} | {type:'begin';session:number;kind:'move'|'resize'} | {type:'move'|'end'|'commit'|'cancel';session:number};

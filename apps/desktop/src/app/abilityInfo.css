@@ -1,0 +1,20 @@
+/* Une grille stable : pictogramme/libellé puis valeur, sans mélange de lignes de base. */
+.ability-metrics{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.55fr) minmax(0,.75fr);align-items:start;gap:7px 12px;margin:8px 0}
+.ability-metric{min-width:0;max-width:100%}
+.ability-metric[data-metric=cooldown]{grid-column:1}
+.ability-metric[data-metric=cost]{grid-column:2}
+.ability-metric[data-metric=range]{grid-column:3}
+.ability-metrics dt{display:flex;align-items:center;gap:5px;min-height:16px;margin:0 0 3px;font-size:10px;line-height:16px;color:var(--muted)}
+.ability-metric-icon{display:inline-flex;align-items:center;justify-content:center;flex:0 0 14px;width:14px;height:14px}
+.ability-metric-icon .stat-glyph{vertical-align:0;filter:none}
+.ability-metrics dd{margin:0;padding-left:19px;font-size:12px;line-height:1.4;font-weight:650;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.ability-metrics small{display:block;font-size:10px!important;color:var(--muted)!important;margin-top:4px;line-height:1.4;padding-left:19px}
+.ability-description{font-size:11px;color:var(--muted);line-height:1.6;margin-top:8px}.ability-description summary{cursor:pointer;width:fit-content}.ability-description p{margin-top:8px}.ability-description strong{font-size:inherit}
+.ability-damage{color:#ffad83}.ability-shield{color:#a8caff}.ability-heal{color:#85e2b1}.ability-value{color:var(--text)}
+.ability-magic-damage{color:#bd9aff}.ability-true-damage{color:var(--text)}
+[data-theme=light] .ability-magic-damage{color:#7040ac}
+[data-theme=light] .ability-damage{color:#a3360d}[data-theme=light] .ability-shield{color:#245baf}[data-theme=light] .ability-heal{color:#14663c}
+.champion-abilities article>div{min-width:0;flex:1}.champion-abilities .ability-metrics small{font-size:10px;color:var(--muted)}
+
+/* Les trois paramètres gardent un espace lisible dans l’infobulle aussi. */
+.game-tooltip.ability-tooltip{width:360px}

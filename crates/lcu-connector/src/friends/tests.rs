@@ -17,6 +17,7 @@ fn expected_account() -> LcuAccount {
     LcuAccount {
         platform: "EUW1".into(),
         game_name: "Owner".into(),
+        profile_icon_id: None,
         tag_line: "TAG".into(),
     }
 }

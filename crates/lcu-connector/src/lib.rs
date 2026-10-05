@@ -11,6 +11,7 @@
 mod account;
 pub use account::LcuAccount;
 mod client;
+pub mod collection;
 mod credentials;
 mod discovery;
 mod draft;
