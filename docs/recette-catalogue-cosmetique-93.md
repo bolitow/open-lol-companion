@@ -24,3 +24,13 @@ La branche réunit #191 (catalogue selon le patch client) et #175 (présentation
 - Les captures et journaux locaux restent sous `work/assets-93/` et ne sont pas publiés. Le serveur, la copie native temporaire et son stockage isolé sont retirés après recette.
 
 Cache observé en fin de recette : 34 fichiers, 2122318 octets, sous les plafonds de 4 096 entrées et 128 Mio.
+
+
+## Stabilité de la recette automatisée — 6 octobre 2026
+
+La CI Windows de la PR #197 a révélé une limite du test de file : son délai de
+250 ms incluait les accès disque. La recette maintient désormais explicitement
+la file verrouillée, avance le temps virtuel au-delà du délai, puis reprend le
+temps réel avant les accès disque. Elle échoue si le timeout englobe la file
+(mutation contrôlée vérifiée), et réussit avec le comportement actuel. Aucun
+délai ni comportement du cache de production n’est modifié.
