@@ -61,7 +61,7 @@ fn tls_client(address: std::net::SocketAddr, trust_fixture: bool) -> Arc<BuildCl
 }
 
 #[tokio::test]
-async fn wss_authentifie_et_recoit_les_publications_sur_un_flux_tls_verifie() {
+async fn wss_authenticates_and_receives_publications_over_verified_tls() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let server = tokio::spawn(async move {
@@ -101,7 +101,7 @@ async fn wss_authentifie_et_recoit_les_publications_sur_un_flux_tls_verifie() {
 }
 
 #[tokio::test]
-async fn wss_refuse_un_certificat_non_approuve_avant_toute_authentification() {
+async fn wss_rejects_untrusted_certificate_before_authentication() {
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = listener.local_addr().unwrap();
     let server = tokio::spawn(async move {
