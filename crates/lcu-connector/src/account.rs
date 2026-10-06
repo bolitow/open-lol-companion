@@ -11,6 +11,13 @@ pub struct LcuAccount {
 }
 
 impl LcuAccount {
+    /// Compare l'identité publique sans les attributs cosmétiques du profil.
+    pub fn same_identity(&self, other: &Self) -> bool {
+        self.platform == other.platform
+            && self.game_name == other.game_name
+            && self.tag_line == other.tag_line
+    }
+
     pub(crate) fn parse(summoner: &Value, region: &Value) -> Option<Self> {
         if summoner.get("unnamed").and_then(Value::as_bool) == Some(true) {
             return None;
@@ -72,7 +79,7 @@ pub(crate) async fn read_account(client: &crate::LcuClient) -> Option<LcuAccount
         let before = LcuAccount::parse(&first, &region)?;
         let last: Value = client.get_json(ACCOUNT_ENDPOINT).await.ok()?;
         let after = LcuAccount::parse(&last, &region)?;
-        (before == after).then_some(after)
+        before.same_identity(&after).then_some(after)
     })
     .await
     .ok()
@@ -92,6 +99,23 @@ mod tests {
             status: 200,
             response,
         }
+    }
+    #[tokio::test]
+    async fn changement_icone_conserve_la_lecture_du_compte() {
+        let first = json!({"gameName":"Alpha","tagLine":"TAG","profileIconId":1});
+        let last = json!({"gameName":"Alpha","tagLine":"TAG","profileIconId":2});
+        let region = json!({"region":"EUW"});
+        let (client, server) = mock_client(vec![
+            get(ACCOUNT_ENDPOINT, first),
+            get(REGION_ENDPOINT, region.clone()),
+            get(ACCOUNT_ENDPOINT, last.clone()),
+        ])
+        .await;
+        assert_eq!(
+            read_account(&client).await,
+            LcuAccount::parse(&last, &region)
+        );
+        server.await.unwrap();
     }
     #[tokio::test]
     async fn lit_un_compte_coherent_et_refuse_un_changement_pendant_la_lecture() {
