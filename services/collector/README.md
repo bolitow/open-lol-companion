@@ -361,6 +361,18 @@ inventé à partir des objets ou du rang.
 | `most_picked_rank` | Rang connu avec le plus de participations de ce champion ; dépend des effectifs collectés par rang |
 | `bans` | Tableau séparé patch/plateforme/file/rang de partie (#109) : matchs bannissant le champion / drafts complètes du même rang ; un double ban ne compte qu'une fois. Le rang `ALL` garde toutes les drafts ; chaque draft compte aussi sous le palier de sa partie |
 
+Le desktop relaie `pick_rate_definition` dans les rapports de champion et de tierlist
+(#84). La fiche champion et « Source & méthode » présentent la définition publiée en
+FR/EN : présence par parties distinctes pour `champion_matches / bucket_matches * 100`,
+part des sélections pour l'ancienne formule
+`champion_participations / bucket_participations * 100`. La formule brute reste
+consultable. Un champ absent ou vide est signalé sans attribuer une méthode au taux ;
+une formule future reste affichée avec un libellé neutre. Ni le patch ni la date de
+publication ne servent à déduire la formule. Un ancien instantané conserve donc son
+taux et sa définition ; seul un recalcul publie les nouvelles valeurs. La fréquence
+d'une variante de build garde son dénominateur propre : participations avec la variante
+divisées par les participations éligibles du champion dans sa catégorie.
+
 Sous le seuil, taux champion/build et classement sont nuls ; les comptes restent
 visibles. Le taux de ban demande au moins ce nombre de drafts complètes. La borne
 Wilson et les tiers ne corrigent pas les biais d'échantillonnage ni les dépendances

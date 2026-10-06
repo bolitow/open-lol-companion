@@ -44,6 +44,46 @@ fn variant(category: &str, selection: Vec<u32>) -> Value {
 fn page(offset: usize, total: usize, rows: Vec<Value>) -> Value {
     json!({"champion_id":103,"meta":{"source_snapshot_at":"2026-10-01T12:00:00Z","published_at":"2026-10-01T12:05:00Z","min_games":100},"query":{"patch":"16.19","platform":"EUW1","queue":420,"role":"MIDDLE","rank":"ALL","offset":offset,"limit":200},"total":total,"builds":rows})
 }
+
+#[tokio::test]
+async fn transmet_la_definition_du_pickrate_sans_la_reinterpreter() {
+    for definition in [
+        "champion_matches / bucket_matches * 100",
+        "champion_participations / bucket_participations * 100",
+        "future_champion_rate / future_population * 100",
+    ] {
+        let mut response = page(0, 0, vec![]);
+        response["meta"]["pick_rate_definition"] = json!(definition);
+        let (url, job) = server(vec![(200, response)]).await;
+        let report = BuildClient::new(Some(url), Some("test-token".into()))
+            .unwrap()
+            .builds(request())
+            .await
+            .unwrap();
+        let serialized = serde_json::to_value(report).unwrap();
+        assert_eq!(serialized["meta"]["pick_rate_definition"], definition);
+        job.await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn un_ancien_serveur_ne_recoit_pas_une_definition_de_pickrate_inventee() {
+    for definition in [None, Some(Value::Null)] {
+        let mut response = page(0, 0, vec![]);
+        if let Some(definition) = definition {
+            response["meta"]["pick_rate_definition"] = definition;
+        }
+        let (url, job) = server(vec![(200, response)]).await;
+        let report = BuildClient::new(Some(url), Some("test-token".into()))
+            .unwrap()
+            .builds(request())
+            .await
+            .unwrap();
+        let serialized = serde_json::to_value(report).unwrap();
+        assert!(serialized["meta"].get("pick_rate_definition").is_none());
+        job.await.unwrap();
+    }
+}
 async fn server(responses: Vec<(u16, Value)>) -> (String, tokio::task::JoinHandle<Vec<String>>) {
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let address = format!("http://{}", listener.local_addr().unwrap());

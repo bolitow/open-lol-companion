@@ -22,6 +22,8 @@ export interface BuildReport {
         source_snapshot_at: string;
         published_at: string;
         min_games: number;
+        /** Formule du pick rate champion fournie par le serveur ; jamais déduite du patch. */
+        pick_rate_definition?: string;
         /** Optionnels pour les anciens serveurs ; libellés futurs tolérés. */
         population_label?: string;
         coverage?: BuildPopulationCoverage[];

@@ -8,7 +8,11 @@ const clock=(milliseconds:number)=>`${Math.floor(milliseconds/60000)}:${String(M
 export function BuildSummaryView({report,locale}:{report:BuildReport;locale:Locale}){
  const summary=report.summary;if(!summary)return null;
  const t=buildCopy[locale],format=new Intl.NumberFormat(locale,{maximumFractionDigits:1});
- return <section className="build-observed-summary"><h3>{t.championSummary}</h3><div className="build-metrics"><span>{format.format(summary.games)} <small>{t.games}</small></span><span><small>{t.winrate}</small> {summary.win_rate===null?'—':`${format.format(summary.win_rate)} %`}</span><span><small>{t.championPickRate}</small> {summary.pick_rate===null?'—':`${format.format(summary.pick_rate)} %`}</span></div></section>;
+ const definition=report.meta.pick_rate_definition;
+ const byMatch=definition==='champion_matches / bucket_matches * 100',byParticipation=definition==='champion_participations / bucket_participations * 100';
+ const label=byMatch?t.championPickRate:byParticipation?t.championSelectionShare:t.championPickRateUnspecified;
+ const hint=byMatch?t.pickRateMatches:byParticipation?t.pickRateParticipations:definition?.trim()?t.pickRateUnknown:t.pickRateMissing;
+ return <section className="build-observed-summary"><h3>{t.championSummary}</h3><div className="build-metrics"><span>{format.format(summary.games)} <small>{t.games}</small></span><span><small>{t.winrate}</small> {summary.win_rate===null?'—':`${format.format(summary.win_rate)} %`}</span><span><small>{label}</small> {summary.pick_rate===null?'—':`${format.format(summary.pick_rate)} %`}</span></div><details className="build-observations"><summary>{t.pickRateDefinition}</summary><p>{hint}</p>{definition?.trim()&&<code lang="en">{definition}</code>}<p>{t.buildFrequencyHint}</p></details></section>;
 }
 export function SkillTimings({report,locale}:{report:BuildReport;locale:Locale}){
  const rows=report.skill_levels??[];if(!rows.length)return null;

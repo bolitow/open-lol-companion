@@ -357,7 +357,7 @@ Riot, toutes les files accessibles des historiques et les deux patches récents 
 observations horodatées des rangs Solo/Flex, sans prétendre connaître le rang historique.
 Synchronisation atomique Data Dragon FR/EN (champions standard/Classic, compétences,
 objets, runes, sorts et catalogues). Agrégats par patch/plateforme/file/rôle/rang,
-winrate, part des sélections, bans par draft, builds, achats et ordre des compétences ;
+winrate, pick rate par parties distinctes et part des sélections, bans par draft, builds, achats et ordre des compétences ;
 seuils et couvertures explicites, tiers descriptifs (amendement #85 : winrate lissé vers
 la moyenne du compartiment, présence pick + ban, seuils absolus sans répartition forcée,
 au moins 20 champions éligibles ; la borne Wilson reste publiée comme intervalle).
@@ -367,6 +367,12 @@ représentatif ; les seeds restent issus du classement. Les modes non classés n
 reçoivent pas un rang compétitif inventé. Le #19 reste responsable de l'API.
 Voir [le contrat complet](../services/collector/README.md) et
 [la recette étendue](recettes/2026-10-01-agregation-complete.md).
+Amendement #84 : le pick rate champion est la proportion de parties distinctes du
+compartiment où il apparaît ; la part des participations reste `selection_share`.
+Le desktop affiche la provenance `pick_rate_definition` reçue du serveur, y compris
+la formule historique, et signale une méthode absente ou inconnue sans l'inférer du
+patch. La fréquence des builds garde sa population par catégorie. Les seuils restent
+inchangés ; les anciens instantanés ne prennent la nouvelle formule qu'après recalcul.
 Contrôle de qualité #111 : en classé (420/440), les parties très courtes (`short_game`,
 300 s par défaut), celles où un participant est AFK (`afk`, champ `wasAfk` de match-v5) et
 celles où un participant a joué moins de 80 % de la durée (`early_departure`) sont exclues
