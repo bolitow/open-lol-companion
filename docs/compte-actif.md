@@ -111,3 +111,11 @@ PUUID ou secret enregistré dans le journal de recette. Les anomalies de partie
 restent validées par simulation, pas par altération des données du client. Le
 rendu FR/EN est couvert par le test de composant ; le bundle ouvert n’a pas été
 remplacé pendant cette recette. Windows réel reste à vérifier.
+
+### Affichage des rangs apex (#106)
+
+Master, Grandmaster et Challenger sont affichés sans division, quelle que soit la
+division technique reçue. Leurs points de ligue restent affichés ; les autres paliers
+gardent leur division. Les contrats API, le collecteur et la validation LCU ne sont
+pas modifiés : la valeur réellement renvoyée par un compte apex dans le client reste
+à observer avant d’élargir son parsing.
