@@ -66,3 +66,14 @@ it('retire le bandeau actif et le bouton de retrait pendant une connexion League
  const html=renderToStaticMarkup(<HomePlayer locale="fr" state={{...state,active:null,connected:false}} store={store} onBrowse={()=>{}}/>);
  expect(html).toContain('League déconnecté');expect(html).toContain('Retirer de l’accueil');
 });
+
+it('affiche les rangs apex sans division et conserve leurs PL en FR/EN',()=>{
+ for(const locale of ['fr','en'] as const) for(const tier of ['MASTER','GRANDMASTER','CHALLENGER']){
+  const profile:PlayerProfile={...identity,source:'api',summoner_level:50,fetched_at:0,ranks:[{queue_id:420,status:'ranked',tier,division:'I',league_points:321}]};
+  const html=renderToStaticMarkup(<PlayerIdentity profile={profile} identity={identity} locale={locale}/>);
+  expect(html).not.toMatch(/<strong>[^<]* I<\/strong>/);
+  expect(html).toContain(`321 ${locale==='fr'?'PL':'LP'}`);
+ }
+ const profile:PlayerProfile={...identity,source:'lcu',summoner_level:50,fetched_at:0,ranks:[{queue_id:420,status:'ranked',tier:'DIAMOND',division:'II',league_points:20}]};
+ expect(renderToStaticMarkup(<PlayerIdentity profile={profile} identity={identity} locale="fr"/>)).toContain('Diamant II');
+});

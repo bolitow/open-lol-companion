@@ -249,21 +249,34 @@ fn parse_history(
     let games = page.get("games").and_then(Value::as_array).ok_or(invalid)?;
     let length = u32::try_from(games.len()).map_err(|_| invalid)?;
     // gameCount ne prouve ni la longueur de page ni l'exhaustivité d'une saison.
-    // Certains clients renvoient la page initiale pour n'importe quel index : la refuser.
+    let begin = page
+        .get("gameIndexBegin")
+        .and_then(Value::as_u64)
+        .ok_or(invalid)?;
+    let repeated = start > 0 && begin == 0;
     if length > count
-        || page.get("gameIndexBegin").and_then(Value::as_u64) != Some(u64::from(start))
+        || (begin != u64::from(start) && !repeated)
         || page.get("gameIndexEnd").and_then(Value::as_u64)
-            != Some(u64::from(start + length.saturating_sub(1)))
+            != begin.checked_add(u64::from(length.saturating_sub(1)))
     {
         return Err(invalid);
     }
-    let matches = games
-        .iter()
-        .map(|game| parse_match(game, identity))
-        .collect::<Result<Vec<_>, _>>()?;
+    let mut matches = Vec::with_capacity(games.len());
+    let mut omitted_matches = 0;
     let mut ids = HashSet::new();
-    if matches.iter().any(|game| !ids.insert(&game.match_id)) {
-        return Err(invalid);
+    for game in games {
+        // Identité et unicité restent fatales, même pour une partie illisible
+        // ou la page initiale répétée par certains clients.
+        let (game_id, participant) = match_identity(game, identity)?;
+        if !ids.insert(game_id) {
+            return Err(invalid);
+        }
+        if !repeated {
+            match parse_match(game, identity, game_id, participant) {
+                Ok(game) => matches.push(game),
+                Err(_) => omitted_matches += 1,
+            }
+        }
     }
     Ok(PlayerHistory {
         platform: identity.account.platform.clone(),
@@ -272,14 +285,18 @@ fn parse_history(
         fetched_at: timestamp()?,
         start,
         count,
-        next_start: (length == count && start + count <= 10_000).then_some(start + count),
-        omitted_matches: 0,
+        next_start: (!repeated && length == count && start + count <= 10_000)
+            .then_some(start + count),
+        omitted_matches,
         matches,
         source: PlayerSource::Lcu,
     })
 }
 
-fn parse_match(game: &Value, identity: &Identity) -> Result<PlayerMatch, LocalPlayerError> {
+fn match_identity<'a>(
+    game: &'a Value,
+    identity: &Identity,
+) -> Result<(u64, &'a Value), LocalPlayerError> {
     let invalid = LocalPlayerError::InvalidResponse;
     if game.get("platformId").and_then(Value::as_str) != Some(identity.account.platform.as_str()) {
         return Err(invalid);
@@ -320,12 +337,22 @@ fn parse_match(game: &Value, identity: &Identity) -> Result<PlayerMatch, LocalPl
     if matching.next().is_some() {
         return Err(invalid);
     }
-    let stats = participant.get("stats").ok_or(invalid)?;
     let game_id = game
         .get("gameId")
         .and_then(Value::as_u64)
         .filter(|id| *id > 0)
         .ok_or(invalid)?;
+    Ok((game_id, participant))
+}
+
+fn parse_match(
+    game: &Value,
+    identity: &Identity,
+    game_id: u64,
+    participant: &Value,
+) -> Result<PlayerMatch, LocalPlayerError> {
+    let invalid = LocalPlayerError::InvalidResponse;
+    let stats = participant.get("stats").ok_or(invalid)?;
     let game_start_ms = game
         .get("gameCreation")
         .and_then(Value::as_i64)

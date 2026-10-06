@@ -136,8 +136,8 @@ async fn accepte_un_patch_absent_sans_l_inventer() {
 }
 
 #[tokio::test]
-async fn refuse_identites_ambigues_statistiques_malformees_et_doublons() {
-    for fault in 0..5 {
+async fn refuse_identites_ambigues_et_doublons() {
+    for fault in 0..3 {
         let mut row = game(51);
         match fault {
             0 => {
@@ -151,8 +151,6 @@ async fn refuse_identites_ambigues_statistiques_malformees_et_doublons() {
                 let same = row["participants"][1].clone();
                 row["participants"].as_array_mut().unwrap().push(same);
             }
-            2 => row["participants"][1]["stats"]["win"] = Value::Null,
-            3 => row["gameCreation"] = json!(-1),
             _ => row["platformId"] = json!("NA1"),
         }
         assert!(matches!(
@@ -167,16 +165,17 @@ async fn refuse_identites_ambigues_statistiques_malformees_et_doublons() {
 }
 
 #[tokio::test]
-async fn avance_uniquement_une_page_pleine_coherente_et_refuse_un_cache_ancien() {
+async fn avance_uniquement_une_page_pleine_coherente_et_termine_un_cache_ancien() {
     let result = read_page(history(10, vec![game(51), game(52)]), 10, 2)
         .await
         .unwrap();
     assert_eq!(result.next_start, Some(12));
     assert_eq!((result.start, result.count), (10, 2));
-    assert!(matches!(
-        read_page(history(0, vec![game(51)]), 10, 2).await,
-        Err(LocalPlayerError::InvalidResponse)
-    ));
+    let repeated = read_page(history(0, vec![game(51)]), 10, 2).await.unwrap();
+    assert_eq!(repeated.start, 10);
+    assert!(repeated.matches.is_empty());
+    assert_eq!(repeated.next_start, None);
+    assert_eq!(repeated.omitted_matches, 0);
     let mut malformed = history(10, vec![game(51), game(52)]);
     malformed["games"]["gameIndexEnd"] = json!(12);
     assert!(matches!(
@@ -300,6 +299,45 @@ async fn borne_a_dix_secondes_la_somme_des_requetes_locales() {
     assert!(matches!(result, Err(LocalPlayerError::Unavailable)));
     assert!(started.elapsed() >= Duration::from_secs(9));
     assert!(started.elapsed() < Duration::from_secs(12));
+}
+
+#[tokio::test]
+async fn omet_les_parties_illisibles_sans_perdre_les_valides_ni_le_curseur() {
+    for fault in 0..3 {
+        let mut row = game(52);
+        match fault {
+            0 => row["participants"][1]["stats"]["win"] = Value::Null,
+            1 => row["gameCreation"] = json!(-1),
+            _ => row["participants"][1]["championId"] = json!(0),
+        }
+        let result = read_page(history(0, vec![game(51), row.clone()]), 0, 2)
+            .await
+            .unwrap();
+        assert_eq!(result.matches.len(), 1);
+        assert_eq!(result.matches[0].match_id, "EUW1_51");
+        assert_eq!(result.omitted_matches, 1);
+        assert_eq!(result.next_start, Some(2));
+        let empty = read_page(history(0, vec![row]), 0, 1).await.unwrap();
+        assert!(empty.matches.is_empty());
+        assert_eq!(empty.omitted_matches, 1);
+        assert_eq!(empty.next_start, Some(1));
+    }
+}
+
+#[tokio::test]
+async fn ne_masque_pas_une_identite_invalide_ou_un_doublon_par_omission_ou_fin_locale() {
+    let mut broken = game(51);
+    broken["participants"][1]["stats"]["win"] = Value::Null;
+    assert!(read_page(history(0, vec![game(51), broken]), 0, 2)
+        .await
+        .is_err());
+    let mut other = game(52);
+    other["participantIdentities"][1]["player"]["puuid"] = json!("other");
+    assert!(read_page(history(0, vec![other]), 10, 2).await.is_err());
+    assert!(read_page(history(11, vec![game(51)]), 10, 2).await.is_err());
+    let mut malformed = history(0, vec![game(51)]);
+    malformed["games"]["gameIndexEnd"] = json!(9);
+    assert!(read_page(malformed, 10, 2).await.is_err());
 }
 
 #[test]
