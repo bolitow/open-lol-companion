@@ -9,6 +9,8 @@ it('montre parts et effectifs de tous les rôles, badge seulement sur drapeau se
   expect(html).toContain(locale==='fr'?'Échantillon collecté':'Collected sample');
   expect(html).toContain(locale==='fr'?'Échantillon surtout Master+':'Mostly Master+ sample');
   expect(html).toContain(locale==='fr'?'tous rôles':'all roles');
+  expect(html).toContain('26.19');expect(html).not.toContain('16.19');
+  expect(report.request.patch).toBe('16.19');
   expect(html).toContain('92');expect(html).toContain('100');
  }
  const quiet={...report,meta:{...report.meta,coverage:[{...report.meta.coverage![0]!,high_elo_biased:false}]}};

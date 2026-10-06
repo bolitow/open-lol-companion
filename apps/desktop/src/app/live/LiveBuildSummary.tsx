@@ -60,7 +60,7 @@ export const LiveBuildSummaryContent = memo(function LiveBuildSummaryContent({re
   const champion = championDetails(request.champion_id, locale);
   const queue = t.queues[request.queue as keyof typeof t.queues] ?? new Intl.NumberFormat(locale, {useGrouping: false}).format(request.queue);
   return <section className="live-build-compact" aria-label={labels.title}>
-    <header><strong>{champion?.name ?? liveCopy[locale].unknownChampion} · {t.roles[request.role]}</strong><span>{request.platform} · {queue} · {t.patch} {publicClientPatch(request.patch)??request.patch}</span></header>
+    <header><strong>{champion?.name ?? liveCopy[locale].unknownChampion} · {t.roles[request.role]}</strong><span>{request.platform} · {queue} · {t.patch} {publicClientPatch(request.patch)??'—'}</span></header>
     {customGame && <small>{labels.custom}</small>}
     <div className="live-build-compact-items"><h3>{t.final_items}</h3>
       {items ? <>

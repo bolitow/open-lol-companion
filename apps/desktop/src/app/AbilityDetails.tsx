@@ -1,3 +1,4 @@
+import {publicClientPatch} from './clientPatch';
 import {useEffect,useId,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {CatalogRecord} from '@olc/shared';
@@ -33,7 +34,7 @@ export function AbilityDetails({record,records,locale,version,onClose,onOpen}:{r
   onClick={event=>{if(outside.current&&event.target===event.currentTarget)motion.close();outside.current=false}}
   onKeyDown={event=>{if(event.altKey||event.metaKey||event.ctrlKey)return;if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();move(event.key==='ArrowLeft'?-1:1)}}}>
   <div className="game-detail-shell">
-   <header><CatalogIcon key={record.id} record={record}/><div><small>{champion?.name} · {slotLabel(record,locale)} · {t.patch} {version}</small><h2 id={title} aria-live="polite">{record.name}</h2></div><button ref={close} className="icon-button" onClick={motion.close} aria-label={t.close}><Icon name="close"/></button></header>
+   <header><CatalogIcon key={record.id} record={record}/><div><small>{champion?.name} · {slotLabel(record,locale)} · {t.patch} {publicClientPatch(version)??'—'}</small><h2 id={title} aria-live="polite">{record.name}</h2></div><button ref={close} className="icon-button" onClick={motion.close} aria-label={t.close}><Icon name="close"/></button></header>
    <div ref={body} className="game-detail-body ability-detail-grid">
     <div className="ability-detail-media"><AbilityVideoPreview key={record.id} abilityId={record.id} locale={locale} onBeforeRetry={()=>close.current?.focus({preventScroll:true})}/></div>
     <div className="ability-detail-parameters">

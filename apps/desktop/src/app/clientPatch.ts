@@ -1,7 +1,7 @@
 import type {ClientPatch,ClientPatchError} from '@olc/shared';
-/** Depuis 2025 (version technique 15), le jeu affiche l’année à deux chiffres. */
+/** Libellé public des patchs, versions catalogue et builds client numériques. Depuis 15, le jeu affiche l’année. */
 export function publicClientPatch(version:string):string|null {
- const match=/^([1-9]\d?)\.([1-9]\d?)(?:\.\d+\.\d+)?$/.exec(version);
+ const match=/^([1-9]\d?)\.([1-9]\d?)(?:\.\d+){0,2}$/.exec(version);
  if(!match)return null;
  const major=Number(match[1]);
  return `${major>=15?major+10:major}.${match[2]}`;

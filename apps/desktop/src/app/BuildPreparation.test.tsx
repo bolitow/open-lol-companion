@@ -47,6 +47,7 @@ it('garde le champion local et explique les limites du matchup choisi en FR/EN',
  const value={...initialPreparation,platform:'NA1',queue:440,matchup:{championId:103,kind:'chosen' as const}};
  for(const locale of ['fr','en'] as const){
   const html=renderToStaticMarkup(<SettingsProvider><PreparationContext.Provider value={{value,session:{...initialState.session,draft},update:()=>{}}}><BuildPreparation draft={draft} equipped={null} catalog={catalog as never} locale={locale} onOpen={()=>{}}/></PreparationContext.Provider></SettingsProvider>);
+  expect(html).toContain('26.19');expect(html).not.toContain('16.19');
   expect(html).toContain(locale==='fr'?'Matchup choisi':'Selected matchup');
   expect(html).toContain(locale==='fr'?'Données de matchup indisponibles':'Matchup data unavailable');
   expect(html).toMatch(/aria-label="(?:Champion à consulter|Champion to browse)"[^>]*><span>Bard<\/span>/);

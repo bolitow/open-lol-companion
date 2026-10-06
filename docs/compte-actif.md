@@ -119,3 +119,12 @@ division technique reçue. Leurs points de ligue restent affichés ; les autres 
 gardent leur division. Les contrats API, le collecteur et la validation LCU ne sont
 pas modifiés : la valeur réellement renvoyée par un compte apex dans le client reste
 à observer avant d’élargir son parsing.
+
+### Numéros de patch visibles (#186)
+
+Les versions techniques des rapports (`16.19`), du catalogue (`16.19.1`) et des
+builds numériques du client sont converties en libellé public (`26.19`) au rendu.
+Fiches, détails, populations, estimation de draft et état des imports partagent
+cette conversion ; une valeur invalide affiche « — », jamais la chaîne brute.
+Les requêtes, clés de cache et lectures de ressources conservent leur version
+technique. Les tests FR/EN couvrent les principaux rendus et les formats acceptés.
