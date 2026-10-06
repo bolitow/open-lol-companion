@@ -123,13 +123,25 @@ Exemples vérifiés sur le catalogue 16.19.1 : Muramana 3042 → Manamune 3004,
 de l'hiver 3119, Boussole runique 3866 et Trésor des mondes 3867 → Atlas 3865,
 Semelles militaires 3176 → Bottes 1001, Potion de corruption 2033 → Potion
 rechargeable 2031 ; Chaussures légèrement magiques 2422 est retirée. Plusieurs formes d'une même lignée
-n'ajoutent l'ancêtre qu'une fois ; les répétitions réelles (deux potions) restent.
+n'ajoutent l'ancêtre qu'une fois. Si la sélection contient aussi cet ancêtre,
+la conversion n'ajoute pas d'exemplaire : `[3042, 3004]` et `[3004, 3042]`
+donnent tous deux un seul Manamune, à la première position résolue. Les achats
+directs répétés (deux potions ou deux exemplaires de l'ancêtre) restent distincts ;
+les formes évoluées répétées n'ajoutent, elles, qu'un ancêtre. Le nombre de
+remplacements reste signalé même quand un doublon ainsi résolu est fusionné.
 
 Seules les catégories `purchase_order` et `final_items` sont importables : l'import
 d'un objet isolé (`item`) ou de la seule relique (`trinket`) remplaçait le set de
 l'app par un set partiel. Le set reste en **un seul bloc** : les blocs Départ,
 Bottes, Core et Options dépendent des nouvelles catégories d'agrégation de #81 ;
 le contrat (`blocks`) accepte déjà plusieurs blocs, ordonnés tels quels.
+
+Le test interactif `BuildPreparation.imports.test.tsx` exerce le vrai dropdown
+d'objets en français et en anglais : passer à `item` ou `trinket` désactive
+l'import avec le motif de catégorie, puis revenir à `purchase_order` ou
+`final_items` restitue le plan et ses ajustements. Il utilise un DOM de test,
+sans client League ni écriture native ; cette preuve ne remplace pas la recette
+du set dans la boutique sur les deux OS.
 
 Le nombre d'exemplaires doit être positif ;
 un nom ou un bloc vide est refusé avant accès réseau.
@@ -311,7 +323,7 @@ Ne pas clôturer #13/#15 sur la base de cette recette synthétique.
 
 ## Intégration du set d’objets (#13, #16)
 
-Le front importe explicitement la variante consultée sur la Faille (carte 11), même hors draft si League est connecté. L’ordre et les répétitions des achats sont conservés. Une variante vide ou contenant un ID absent du catalogue est refusée entièrement. Les catégories indépendantes ne sont pas assemblées en prétendue recommandation situationnelle.
+Le front importe explicitement la variante consultée sur la Faille (carte 11), même hors draft si League est connecté. L'ordre est celui des objets résolus : les formes non achetables sont converties ou retirées selon les règles de #88 ci-dessus, et la collision entre une forme évoluée et son ancêtre est fusionnée à leur première position. Les achats directs répétés sont conservés. Une variante vide ou contenant un ID absent du catalogue est refusée entièrement. Les catégories indépendantes ne sont pas assemblées en prétendue recommandation situationnelle.
 
 Moteur repris sans changement de la PR #59, head `cf04f75` : UID propre à l’app/champion/carte, autres sets préservés, formes évoluées de Larme converties en objets achetables (depuis #88 : par le catalogue côté interface). Un succès signifie que League a accepté le PUT ; la priorité visuelle en boutique reste à vérifier en partie. Aucun import automatique.
 

@@ -55,6 +55,13 @@ describe('imports au prépick',()=>{
         expect(choices.items?.selection).toMatchObject({kind:'items',request:{blocks:[{items:[{id:3070,count:1}]}]}});
         expect(choices.items?.adjustments).toEqual({converted:0,dropped:1});
     });
+    it('n’ajoute pas de doublon à l’import automatique quand la forme évoluée et l’ancêtre coexistent',()=>{
+        for(const selection of [[3042,3004],[3004,3042]]){
+            const choices=chooseAutoImports(report([variant({selection})]),target(),1,data.records);
+            expect(choices.items?.selection).toMatchObject({kind:'items',request:{blocks:[{items:[{id:3004,count:1}]}]}});
+            expect(choices.items?.adjustments).toEqual({converted:1,dropped:0});
+        }
+    });
     it('passe à la variante suivante quand une variante devient vide ou a un statut boutique illisible',()=>{
         const unreadable={kind:'item',id:'999001',fields:{purchasable:{value:true,unit:null,status:'unmapped',sources:[]},in_store:{value:true,unit:null,status:'verified',sources:[]}}} as unknown as CatalogRecord;
         const records=[...data.records,unreadable];
