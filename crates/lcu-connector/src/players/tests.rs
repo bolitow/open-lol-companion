@@ -339,3 +339,24 @@ async fn ne_masque_pas_une_identite_invalide_ou_un_doublon_par_omission_ou_fin_l
     malformed["games"]["gameIndexEnd"] = json!(9);
     assert!(read_page(malformed, 10, 2).await.is_err());
 }
+
+#[test]
+fn changement_icone_ne_change_pas_identite_mais_puuid_reste_verifie() {
+    let original = Identity {
+        account: expected_account(),
+        puuid: "first".into(),
+        summoner: summoner(),
+    };
+    let mut updated = Identity {
+        account: expected_account(),
+        puuid: "first".into(),
+        summoner: summoner(),
+    };
+    updated.account.profile_icon_id = Some(42);
+    assert!(original.validate_after(&updated).is_ok());
+    updated.puuid = "second".into();
+    assert!(matches!(
+        original.validate_after(&updated),
+        Err(LocalPlayerError::AccountChanged)
+    ));
+}

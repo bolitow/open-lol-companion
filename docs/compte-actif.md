@@ -4,6 +4,15 @@ Le desktop suit automatiquement le Riot ID du client League et sa région. Consu
 
 À la fermeture du client, l’accueil garde le dernier compte et les données déjà chargées en mémoire, avec un état déconnecté. Après redémarrage de l’app, seule l’identité est restaurée. Pour le compte actif, le profil et l’historique sont lus dans le client LoL ; les autres comptes utilisent le service public configuré. Aucun cache de parties sur disque. Une reconnexion actualise le compte même s’il est inchangé. Les données précédentes restent consultables pendant cette actualisation et en cas d’échec ; Réessayer ne les efface pas. Une pagination ne peut pas concurrencer le rechargement du profil. Une indisponibilité de l’identité locale garde le dernier accueil, sans le présenter comme le compte actif.
 
+## Changement d’avatar (#127)
+
+L’identité repose sur la plateforme et le Riot ID ; `profile_icon_id` est uniquement
+un attribut d’affichage. Son changement est diffusé à l’interface sans augmenter la
+génération du lecteur de profils, invalider une lecture en vol ou effacer les choix
+de préparation. Les lectures locales conservent leur contrôle privé du PUUID ;
+un véritable changement de compte ou une reconnexion invalide toujours les anciennes
+réponses. Les images utilisent le catalogue versionné du patch (#93).
+
 ## Contrat et lecture
 
 `LcuSession.account: LcuAccount | null` est identique en Rust et TypeScript : `platform`, `game_name`, `tag_line`. Aucun PUUID, identifiant de session ou mot de passe n’est projeté par ce nouveau flux. La seule persistance est `olc.app.home-player`, déjà utilisée par #64, avec ces trois champs. Ce stockage local n’est pas une preuve de possession et aucune association de comptes n’est publiée.

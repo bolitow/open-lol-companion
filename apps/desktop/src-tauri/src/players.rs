@@ -19,11 +19,16 @@ struct LocalContext {
 impl LocalContext {
     fn update(&mut self, connected: bool, account: Option<LcuAccount>) {
         let account = account.filter(|_| connected);
-        if self.connected != connected || self.account != account {
+        let same_account = match (&self.account, &account) {
+            (Some(before), Some(after)) => before.same_identity(after),
+            (None, None) => true,
+            _ => false,
+        };
+        if self.connected != connected || !same_account {
             self.generation = self.generation.saturating_add(1);
-            self.connected = connected;
-            self.account = account;
         }
+        self.connected = connected;
+        self.account = account;
     }
     fn local_account(&self, request: &PlayerRequest) -> Result<Option<LcuAccount>, PlayerError> {
         if self.connected && self.account.is_none() {
@@ -39,7 +44,11 @@ impl LocalContext {
     fn is_current(&self, other: &Self) -> bool {
         self.generation == other.generation
             && self.connected == other.connected
-            && self.account == other.account
+            && match (&self.account, &other.account) {
+                (Some(before), Some(after)) => before.same_identity(after),
+                (None, None) => true,
+                _ => false,
+            }
     }
 }
 #[derive(Default)]
@@ -227,6 +236,17 @@ mod tests {
             game_name: name.into(),
             tag_line: "TAG".into(),
         }
+    }
+    #[test]
+    fn changement_icone_conserve_les_lectures_en_vol_et_actualise_affichage() {
+        let mut context = LocalContext::default();
+        context.update(true, Some(account("A")));
+        let old = context.clone();
+        let mut changed = account("A");
+        changed.profile_icon_id = Some(42);
+        context.update(true, Some(changed));
+        assert!(context.is_current(&old));
+        assert_eq!(context.account.unwrap().profile_icon_id, Some(42));
     }
     #[test]
     fn le_compte_actif_choisit_la_lcu_et_les_autres_profils_le_service_public() {
