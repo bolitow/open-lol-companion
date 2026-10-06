@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Desktop : numéro de patch public homogène dans les fiches, détails, populations et imports ; les versions techniques restent réservées aux requêtes et aux ressources (#186).
+
 - Historique local : une page initiale répétée termine la pagination sans erreur ni doublon ; les statistiques illisibles sont omises et comptées sans perdre les parties valides (#94).
 - Recette du cache cosmétique : attente en file vérifiée en temps virtuel, sans délai disque artificiel de 250 ms qui rendait le test instable sous Windows (#93).
 

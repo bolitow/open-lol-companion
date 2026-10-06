@@ -1,3 +1,4 @@
+import {publicClientPatch} from './clientPatch';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {DraftModelResult,DraftSession,DraftStatsReport} from '@olc/shared';
@@ -38,6 +39,6 @@ export function DraftEstimate({draft,locale}:{draft:DraftSession;locale:Locale})
  const report=key&&snapshot.key===key?snapshot.report:null;
  const estimate=useMemo(()=>estimateDraft(active,draft,request,report),[active,draft,key,report]);
  const status:Status=!candidate?'unavailable':!request?(choice.kind==='loading'?'loading':'error'):snapshot.key!==key||snapshot.status==='idle'?'loading':snapshot.status;
- const population=request?`${request.patch} · ${request.platform} · ${request.queue===420?'Solo/Duo':'Flex'} · ${rankLabel(request.rank,locale)}`:'';
+ const population=request?`${publicClientPatch(request.patch)??'—'} · ${request.platform} · ${request.queue===420?'Solo/Duo':'Flex'} · ${rankLabel(request.rank,locale)}`:'';
  return <DraftEstimateSummary locale={locale} teams={estimate?.teams??null} status={status} side={draft.allySide} population={population} retry={()=>{if(request)void store.retry();else void buildPatchStore.load()}}/>;
 }

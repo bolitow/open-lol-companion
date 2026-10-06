@@ -2,10 +2,11 @@ import {it,expect} from 'vitest';
 import {publicClientPatch,createClientPatchStore} from './clientPatch';
 it('sépare le numéro public du numéro technique et refuse les versions ambiguës',()=>{
  expect(publicClientPatch('16.19')).toBe('26.19');
+ expect(publicClientPatch('16.19.1')).toBe('26.19');
  expect(publicClientPatch('16.19.123.4567')).toBe('26.19');
  expect(publicClientPatch('15.1')).toBe('25.1');
  expect(publicClientPatch('14.24')).toBe('14.24');
- for(const value of ['','bad','16.19.foo','16.0','016.19','16.019','1000.19','16.19.1','16.19.1.2.3'])expect(publicClientPatch(value)).toBeNull();
+ for(const value of ['','bad','16.19.foo','16.0','016.19','16.019','1000.19','16.19.1.2.3'])expect(publicClientPatch(value)).toBeNull();
 });
 it('ne lit que sur demande, sans appel navigateur et sans chargements concurrents',async()=>{
  let calls=0,resolve!:(v:{gameVersion:string;patch:string})=>void;

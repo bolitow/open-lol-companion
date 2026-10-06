@@ -29,7 +29,7 @@ function errorMessage(error: unknown, locale: Locale): string {
 export function Progress({progress,locale,label}:{progress:AutoImportProgress;locale:Locale;label:string}) {
     const t = messages[locale], metrics = progress.metrics, adjustments = progress.adjustments;
     return <div className="auto-import-progress"><strong>{label}</strong><span>{progress.status === 'error' ? errorMessage(progress.error,locale) : t[progress.status]}</span>
-        {progress.scope&&<small>{progress.scope.platform} · {buildCopy[locale].queues[progress.scope.queue as 420]??progress.scope.queue} · {buildCopy[locale].roles[progress.scope.role]} · {t.scope} {publicClientPatch(progress.scope.patch)??progress.scope.patch} · {rankLabel(progress.scope.rank,locale)}</small>}
+        {progress.scope&&<small>{progress.scope.platform} · {buildCopy[locale].queues[progress.scope.queue as 420]??progress.scope.queue} · {buildCopy[locale].roles[progress.scope.role]} · {t.scope} {publicClientPatch(progress.scope.patch)??'—'} · {rankLabel(progress.scope.rank,locale)}</small>}
         {metrics && <small>{metrics.games} {t.games}{metrics.wins !== null && <> · {metrics.wins} {t.wins} · {t.observed} : {metrics.observedWinRate?.toLocaleString(locale,{maximumFractionDigits:1})}%</>}{metrics.lowSample && <> · {t.sample}</>}</small>}
         {adjustments?.converted ? <small>{t.converted(adjustments.converted)}</small> : null}{adjustments?.dropped ? <small>{t.dropped(adjustments.dropped)}</small> : null}</div>;
 }
@@ -89,7 +89,7 @@ export function AutoImportSetting({setting,locale}:{setting:AutoImportSettingKey
   {!engine?.native&&<small className="setting-system-note">{t.desktop}</small>}
   {progress&&kind&&progress.status!=='disabled'&&<div className="setting-import-status" role="status"><Progress progress={progress} locale={locale} label={t[kind]}/>{['error','empty'].includes(progress.status)&&<button className="button" disabled={disabled} onClick={engine?.retry}>{t.retry}</button>}</div>}
   {kind&&engine&&<BuildPatchNotice choice={engine.patchChoice} locale={locale}/>}
-  {kind&&<details className="setting-import-details"><summary>{t.details}</summary><p>{t.hint}</p><p>{kind==='runes'?t.singlePage:t.itemsHint}</p>{engine?.target&&<p>{engine.target.championName} · {buildCopy[locale].roles[engine.target.request.role]} · {engine.target.request.platform} · {buildCopy[locale].queues[engine.target.request.queue as 400|420|440]} · {t.scope} {publicClientPatch(engine.target.request.patch)??engine.target.request.patch} · {rankLabel(engine.target.request.rank,locale)}</p>}</details>}
+  {kind&&<details className="setting-import-details"><summary>{t.details}</summary><p>{t.hint}</p><p>{kind==='runes'?t.singlePage:t.itemsHint}</p>{engine?.target&&<p>{engine.target.championName} · {buildCopy[locale].roles[engine.target.request.role]} · {engine.target.request.platform} · {buildCopy[locale].queues[engine.target.request.queue as 400|420|440]} · {t.scope} {publicClientPatch(engine.target.request.patch)??'—'} · {rankLabel(engine.target.request.rank,locale)}</p>}</details>}
   {setting==='autoMinGames'&&import.meta.env.DEV&&<small className="setting-system-note">{t.development}</small>}
   {setting==='autoCustomRole'&&<small className="setting-system-note">{t.source}</small>}
   {kind&&engine?.catalogError&&<p className="setting-system-note" role="alert">{t.catalog}<button className="button" onClick={engine.reload}>{t.reload}</button></p>}
