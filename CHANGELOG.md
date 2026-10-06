@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Historique local : une page initiale répétée termine la pagination sans erreur ni doublon ; les statistiques illisibles sont omises et comptées sans perdre les parties valides (#94).
+
 - Livraison desktop : attente correcte d’un verrou de cache cosmétique occupé sous Windows ; libération explicite du verrou PostgreSQL entre deux exécutions de campagne, révélées par la CI multi-OS (#93, #181, #187).
 
 ### Ajouté

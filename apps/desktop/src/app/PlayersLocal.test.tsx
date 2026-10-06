@@ -38,3 +38,23 @@ it('conserve le code Riot occupé et son message distinct dans les profils FR/EN
   expect(html).not.toContain(locale==='fr'?'ne répond pas':'not responding');
  }
 });
+
+it('termine la pagination locale sans effacer les parties ni les omissions et sans réessayer',async()=>{
+ const starts:number[]=[];
+ const store=createPlayerStore({profile:async()=>profile,matches:async request=>{
+  starts.push(request.start);
+  return request.start===0?{...page,next_start:10,omitted_matches:1}:{...page,start:10,matches:[]};
+ }},null,()=>{});
+ store.syncAccount(true,identity);await new Promise(resolve=>setTimeout(resolve,0));
+ await store.more(identity);await store.more(identity);
+ const entry=store.getSnapshot().entries[playerKey(identity)]!;
+ expect(starts).toEqual([0,10]);expect(entry.matches).toEqual(page.matches);
+ expect(entry.omitted).toBe(1);expect(entry.next).toBeNull();expect(entry.historyError).toBeNull();
+ for(const locale of ['fr','en'] as const){
+  const html=renderToStaticMarkup(<PlayerHistory entry={entry} locale={locale} store={store} onChampion={()=>{}}/>);
+  expect(html).toContain(locale==='fr'?'Fin des parties fournies par le client':'End of matches provided by the client');
+  expect(html).toContain(locale==='fr'?'Certaines parties du client sont incomplètes':'Some client matches are incomplete');
+  expect(html).not.toContain(locale==='fr'?'Afficher plus de parties':'Load more matches');
+  expect(html).not.toContain(locale==='fr'?'Réessayer':'Try again');
+ }
+});

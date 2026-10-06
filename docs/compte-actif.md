@@ -70,3 +70,35 @@ Les dix emblèmes officiels Riot sont embarqués dans `apps/desktop/public/game-
 Le texte « Compte actif dans League » est retiré de l’accueil. Les états déconnecté/compte indisponible restent explicites. Actualiser et Voir le profil sont regroupés près de l’identité avec libellés accessibles ; Retirer de l’accueil n’apparaît que hors connexion. Les actions n’occupent plus un pied de carte susceptible de déborder sous les rangs.
 
 Recette de cette passe : 857 tests réussis (deux tests Rust ignorés), lint et build macOS OK ; revue stricte OK après ajout du rôle accessible aux amis sans profil. En 1000 × 650, sombre et clair, la carte et les actions restent contenues, les lignes d’amis mesurent 46 px. Sur le bundle natif connecté à League, avatars réels des amis et deux emblèmes Or visibles. Une réponse d’historique refusée comme incohérente a été observée après reconnexion, puis après Réessayer/Actualiser ; ce parcours de données n’a pas été modifié dans cette passe et nécessite une investigation distincte. Aucun test Windows exécuté.
+
+
+## Pagination locale résiliente — #94
+
+Si League renvoie une page d’indices cohérents commençant à zéro alors qu’une page
+suivante était demandée, le lecteur termine l’historique local sans réajouter les
+parties : l’interface conserve les lignes déjà chargées et affiche « Fin des parties
+fournies par le client ». Tout autre décalage ou intervalle incohérent reste une erreur.
+La plateforme, la jointure vers le participant local, les identifiants de partie et
+leur unicité sont contrôlés même sur cette page répétée.
+
+Une partie dont les statistiques sont illisibles (par exemple victoire absente,
+date invalide ou champion zéro) est omise et comptée dans `omitted_matches`.
+L’avertissement local FR/EN existant l’indique. La pagination avance selon le nombre
+d’entrées brutes, y compris si elles sont toutes omises ; elle ne dépend pas du
+nombre de cartes affichables. Une identité ambiguë, une autre plateforme ou un
+doublon restent fatals, même si les statistiques de cette partie sont invalides.
+Aucun nouveau endpoint ni repli vers l’API publique n’est ajouté.
+
+Les scénarios sont couverts par le serveur LCU simulé et un test du parcours
+store → historique rendu en FR/EN. La recette sur client réel reste distincte des
+tests automatisés ; l’alternative par endpoint PUUID n’est pas utilisée ni déclarée
+vérifiée par cette correction.
+
+
+Recette réelle macOS du 4 octobre 2026 sur la base `9b4aea6` avec ce correctif :
+lecture via le connecteur Rust, 10 parties au curseur 0 (`next_start=10`), puis
+0 partie au curseur 10 (`next_start=null`), sans erreur ni doublon. Aucun Riot ID,
+PUUID ou secret enregistré dans le journal de recette. Les anomalies de partie
+restent validées par simulation, pas par altération des données du client. Le
+rendu FR/EN est couvert par le test de composant ; le bundle ouvert n’a pas été
+remplacé pendant cette recette. Windows réel reste à vérifier.
