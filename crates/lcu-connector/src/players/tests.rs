@@ -301,3 +301,24 @@ async fn borne_a_dix_secondes_la_somme_des_requetes_locales() {
     assert!(started.elapsed() >= Duration::from_secs(9));
     assert!(started.elapsed() < Duration::from_secs(12));
 }
+
+#[test]
+fn changement_icone_ne_change_pas_identite_mais_puuid_reste_verifie() {
+    let original = Identity {
+        account: expected_account(),
+        puuid: "first".into(),
+        summoner: summoner(),
+    };
+    let mut updated = Identity {
+        account: expected_account(),
+        puuid: "first".into(),
+        summoner: summoner(),
+    };
+    updated.account.profile_icon_id = Some(42);
+    assert!(original.validate_after(&updated).is_ok());
+    updated.puuid = "second".into();
+    assert!(matches!(
+        original.validate_after(&updated),
+        Err(LocalPlayerError::AccountChanged)
+    ));
+}

@@ -144,7 +144,7 @@ struct Identity {
 
 impl Identity {
     fn validate_account(&self, expected: &LcuAccount) -> Result<(), LocalPlayerError> {
-        if &self.account != expected {
+        if !self.account.same_identity(expected) {
             return Err(LocalPlayerError::AccountChanged);
         }
         Ok(())
