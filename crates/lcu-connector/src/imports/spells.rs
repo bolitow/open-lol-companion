@@ -67,6 +67,19 @@ impl LcuClient {
     }
 }
 impl SpellSelection {
+    /// Une recommandation sans Flash conserve la touche d'un sort déjà équipé.
+    /// Sans paire locale valide ou sort commun, l'orientation observée reste intacte.
+    pub(super) fn preserve_equipped_slot(mut self, equipped: Option<[u32; 2]>) -> Self {
+        if self.spell1_id == 4 || self.spell2_id == 4 {
+            return self;
+        }
+        if let Some([first, second]) = equipped.filter(|[d, f]| *d > 0 && *f > 0 && d != f) {
+            if self.spell2_id == first || self.spell1_id == second {
+                std::mem::swap(&mut self.spell1_id, &mut self.spell2_id);
+            }
+        }
+        self
+    }
     pub(super) fn matches(&self, pair: Option<[u32; 2]>) -> bool {
         pair == Some([self.spell1_id, self.spell2_id])
     }

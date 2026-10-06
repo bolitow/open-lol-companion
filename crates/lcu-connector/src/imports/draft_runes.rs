@@ -51,7 +51,7 @@ impl LcuClient {
     pub(super) async fn require_draft_champion(
         &self,
         champion_id: u32,
-    ) -> Result<(), DraftRuneImportError> {
+    ) -> Result<DraftSession, DraftRuneImportError> {
         let flow: serde_json::Value = self.get_json(FLOW_ENDPOINT).await?;
         if flow["phase"] != "ChampSelect" || champion_id == 0 {
             return Err(DraftRuneImportError::Guard(
@@ -74,7 +74,7 @@ impl LcuClient {
                 DraftRuneGuardError::DraftContextChanged,
             ));
         }
-        Ok(())
+        Ok(draft)
     }
 }
 

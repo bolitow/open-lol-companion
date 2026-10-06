@@ -268,6 +268,19 @@ pub async fn builds_sorted(
                     .total_cmp(&a.win_rate_lower_bound.unwrap_or(-1.0)),
             })
             .then(b.games.cmp(&a.games))
+            .then_with(|| {
+                // L'agrégateur classe avant de publier D/F : victoires puis paire canonique.
+                // Les autres catégories conservent leur tri, notamment les achats ordonnés.
+                if a.category == "summoner_spells" {
+                    let mut first = a.selection.clone();
+                    let mut second = b.selection.clone();
+                    first.sort_unstable();
+                    second.sort_unstable();
+                    b.wins.cmp(&a.wins).then(first.cmp(&second))
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            })
             .then(a.selection.cmp(&b.selection))
     });
     let total = variants.len();

@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Sorts d’invocateur : les imports d’une variante sans Flash conservent la touche d’un sort déjà équipé, les éditions manuelles restent prioritaires et la préférence Flash ne change pas. L’aperçu et sa confirmation suivent ce placement ; l’API départage les paires à égalité comme l’agrégateur, sans altérer leur orientation D/F ni les séquences d’achats (#124).
+
 - Import du set d’objets : la coexistence d’une forme évoluée et de son ancêtre achetable ne crée plus de doublon, quel que soit leur ordre ; la première position résolue et les achats directs répétés sont conservés. Le vrai dropdown des catégories est vérifié en français et en anglais (#88).
 
 - Desktop : numéro de patch public homogène dans les fiches, détails, populations et imports ; les versions techniques restent réservées aux requêtes et aux ressources (#186).

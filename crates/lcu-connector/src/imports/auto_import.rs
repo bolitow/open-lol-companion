@@ -78,7 +78,8 @@ impl LcuClient {
             }
             AutoImportSelection::Spells(spells) => {
                 let prepared = self.prepare_spells(spells).await?;
-                self.selected_context(&request.context).await?;
+                let draft = self.selected_context(&request.context).await?;
+                let prepared = prepared.preserve_equipped_slot(draft.local_spells);
                 if !current_draft() {
                     return Err(DraftRuneImportError::Guard(
                         DraftRuneGuardError::DraftContextChanged,
@@ -283,6 +284,46 @@ mod tests {
     }
     fn spell_request(slot: &str, pair: [u32; 2]) -> AutoImportRequest {
         serde_json::from_value(json!({"context":context(),"selection":{"kind":"spells","request":{"spellIds":pair,"flashSlot":slot}}})).unwrap()
+    }
+    #[tokio::test]
+    async fn sorts_sans_flash_preservent_l_emplacement_equipe_avant_le_patch() {
+        for (equipped, expected) in [
+            ([14, 4], [14, 6]),
+            ([4, 14], [6, 14]),
+            ([14, 6], [14, 6]),
+            ([6, 14], [6, 14]),
+            ([7, 21], [6, 14]),
+            ([0, 14], [6, 14]),
+        ] {
+            let mut before = draft();
+            before["myTeam"][0]["spell1Id"] = json!(equipped[0]);
+            before["myTeam"][0]["spell2Id"] = json!(equipped[1]);
+            let mut after = draft();
+            after["myTeam"][0]["spell1Id"] = json!(expected[0]);
+            after["myTeam"][0]["spell2Id"] = json!(expected[1]);
+            let (client, server) = mock_client(vec![
+                read("/lol-gameflow/v1/gameflow-phase", json!("ChampSelect")),
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, before),
+                ExpectedRequest {
+                    method: "PATCH",
+                    path: "/lol-champ-select/v1/session/my-selection".into(),
+                    body: Some(json!({"spell1Id":expected[0],"spell2Id":expected[1]})),
+                    status: 204,
+                    response: Value::Null,
+                },
+                read(FLOW_ENDPOINT, flow()),
+                read(DRAFT_ENDPOINT, after),
+            ])
+            .await;
+            assert_eq!(
+                client
+                    .import_selected_build(&spell_request("F", [6, 14]), || true)
+                    .await,
+                Ok(AutoImportReceipt { confirmed: true })
+            );
+            server.await.unwrap();
+        }
     }
     #[tokio::test]
     async fn sorts_automatiques_respectent_flash_et_confirment_la_paire_sans_toucher_au_skin() {

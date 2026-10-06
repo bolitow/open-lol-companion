@@ -75,6 +75,21 @@ est explicitement `"D"` ou `"F"`. Si Flash (4) fait partie de la paire, il est p
 sur la touche choisie ; sinon l'ordre fourni reste inchangé. Flash n'est jamais
 ajouté à la paire.
 
+L’import manuel gardé `import_draft_spells` accepte en plus
+`preserveEquippedSlot?: boolean` (défaut `false`, compatible avec les anciens
+appels). Le panneau l’active uniquement pour une variante observée non modifiée.
+Sans Flash, si l’un des sorts recommandés est déjà équipé, sa touche D/F est
+conservée et l’autre occupe la touche restante. Si les deux sorts sont équipés,
+leur placement reste intact ; sans sort commun ou paire locale valide, l’ordre
+observé est utilisé. Flash suit toujours la préférence explicite. Modifier
+volontairement un emplacement dans le panneau désactive cette conservation :
+l’ordre choisi par le joueur devient prioritaire.
+
+L’aperçu applique la même règle, mais le cœur Rust décide sur la session de draft
+locale relue par la garde champion/mode avant l’écriture. Aucun endpoint ni
+lecture des sorts adverses n’est ajouté. L’import primitif `import_spells`
+conserve son contrat et son ordre explicite sans Flash.
+
 Après vérification de la phase `ChampSelect`, le PATCH de
 `/lol-champ-select/v1/session/my-selection` contient seulement `spell1Id` (D)
 et `spell2Id` (F). Le skin est conservé. La disponibilité des sorts pour le mode
