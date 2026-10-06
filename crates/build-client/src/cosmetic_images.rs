@@ -707,16 +707,29 @@ mod tests {
     async fn attente_dans_la_file_ne_consomme_pas_le_delai_de_chaque_image() {
         let dir = tempfile::tempdir().unwrap();
         let cache = CosmeticImages::new(dir.path().into()).unwrap();
-        let other = PROFILE.replace("29.png", "30.png");
-        let fetch = || async {
-            tokio::time::sleep(Duration::from_millis(150)).await;
-            Ok(png())
-        };
-        let (first, second) = tokio::join!(
-            cache.load_with_timeout(PROFILE, fetch, Duration::from_millis(250)),
-            cache.load_with_timeout(&other, fetch, Duration::from_millis(250))
-        );
-        assert_eq!(first.unwrap(), png());
-        assert_eq!(second.unwrap(), png());
+        use std::{future::Future, task::Poll};
+        // Bloquer la file explicitement, puis dépasser le délai réseau en temps virtuel.
+        // Le disque n'est sollicité qu'après reprise du temps réel, avec sa marge normale.
+        let gate = cache.gate.lock().await;
+        tokio::time::pause();
+        let mut pending = std::pin::pin!(cache.load_with_timeout(
+            PROFILE,
+            || async { Ok(png()) },
+            Duration::from_secs(20),
+        ));
+        std::future::poll_fn(|cx| {
+            assert!(pending.as_mut().poll(cx).is_pending());
+            Poll::Ready(())
+        })
+        .await;
+        tokio::time::advance(Duration::from_secs(21)).await;
+        std::future::poll_fn(|cx| {
+            assert!(pending.as_mut().poll(cx).is_pending());
+            Poll::Ready(())
+        })
+        .await;
+        tokio::time::resume();
+        drop(gate);
+        assert_eq!(pending.await.unwrap(), png());
     }
 }
