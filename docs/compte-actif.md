@@ -70,3 +70,12 @@ Les dix emblèmes officiels Riot sont embarqués dans `apps/desktop/public/game-
 Le texte « Compte actif dans League » est retiré de l’accueil. Les états déconnecté/compte indisponible restent explicites. Actualiser et Voir le profil sont regroupés près de l’identité avec libellés accessibles ; Retirer de l’accueil n’apparaît que hors connexion. Les actions n’occupent plus un pied de carte susceptible de déborder sous les rangs.
 
 Recette de cette passe : 857 tests réussis (deux tests Rust ignorés), lint et build macOS OK ; revue stricte OK après ajout du rôle accessible aux amis sans profil. En 1000 × 650, sombre et clair, la carte et les actions restent contenues, les lignes d’amis mesurent 46 px. Sur le bundle natif connecté à League, avatars réels des amis et deux emblèmes Or visibles. Une réponse d’historique refusée comme incohérente a été observée après reconnexion, puis après Réessayer/Actualiser ; ce parcours de données n’a pas été modifié dans cette passe et nécessite une investigation distincte. Aucun test Windows exécuté.
+
+
+### Affichage des rangs apex (#106)
+
+Master, Grandmaster et Challenger sont affichés sans division, quelle que soit la
+division technique reçue. Leurs points de ligue restent affichés ; les autres paliers
+gardent leur division. Les contrats API, le collecteur et la validation LCU ne sont
+pas modifiés : la valeur réellement renvoyée par un compte apex dans le client reste
+à observer avant d’élargir son parsing.
