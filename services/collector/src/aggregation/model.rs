@@ -1543,8 +1543,9 @@ fn is_bot(participant: &Value) -> bool {
         .is_some_and(|p| p == "BOT" || (!p.is_empty() && p.bytes().all(|b| b == b'0')))
 }
 /// Contrôles de qualité des files classées, après la validité structurelle (#111).
-/// Ordre des motifs : `remake`, `invalid_match`, puis `short_game`, `afk` et enfin
-/// `early_departure` ; une partie n'est comptée que sous le premier motif rencontré.
+/// Après `validate` (forme et remake), `short_game` précède toute lecture de `wasAfk`
+/// et `timePlayed`. Les types des contrôles actifs sont ensuite validés avant les
+/// motifs `afk` puis `early_departure` ; une partie n'est comptée qu'une fois.
 /// `afk` : au moins un participant a `wasAfk = true` (champ match-v5 déjà stocké).
 /// Une clé absente n'est pas jugée ; un type invalide rend la partie incohérente, mais
 /// seulement si le contrôle correspondant est actif. Une reddition normale n'est jamais

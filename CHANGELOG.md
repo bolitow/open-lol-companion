@@ -219,6 +219,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Documentation des filtres qualité : ordre réel des validations, miroirs normaux 430/480 et séparation entre preuves synthétiques et recette réelle ; tests renforcés sur les files rares et les compteurs/options CLI et API, sans changement de seuil ou de politique (#111).
+
 - Cœur Rust de l’import d’objets : la table de conversion codée en dur disparaît, la conversion se fait côté interface avec le catalogue du patch (#88).
 
 - Tier des champions recalculé sans répartition forcée : winrate lissé vers la moyenne du compartiment, présence (pick rate + ban rate du même palier de partie) et seuils absolus S/A/B/C/D ; tier nul sous 0,5 % de pick rate ou sous 20 champions éligibles, position triée sur le même score, formule publiée dans `tier_method`. La borne Wilson reste publiée comme intervalle (#85).

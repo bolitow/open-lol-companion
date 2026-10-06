@@ -377,8 +377,13 @@ Contrôle de qualité #111 : en classé (420/440), les parties très courtes (`s
 300 s par défaut), celles où un participant est AFK (`afk`, champ `wasAfk` de match-v5) et
 celles où un participant a joué moins de 80 % de la durée (`early_departure`) sont exclues
 avec leurs compteurs ; seuils configurables et publiés, filtre AFK désactivable, reddition
-normale conservée. Sur la copie de recette (17 112 parties) : 37 `short_game`, 602 `afk`
-supplémentaires, 0 `early_departure`.
+normale conservée. La validation de forme précède les contrôles de qualité ; les types
+de `wasAfk` et `timePlayed` sont vérifiés seulement après `short_game` et lorsque leur
+contrôle est actif. Les miroirs 430/480 conservent les participations et les builds,
+sans matchup de lane. Sonde SQL historique du 4 octobre sur la copie de recette
+(17 112 parties) : 37 `short_game`, 602 `afk` supplémentaires, 0 `early_departure` ;
+confirmation CLI/API sur la copie de Matthieu restant à faire, distincte des
+[preuves synthétiques](recettes/2026-10-06-filtres-qualite.md).
 Correctif #80 : le rang d'une participation est figé à sa partie (observation la plus
 proche du début, écart maximal configurable, 7 jours par défaut) et ne dépend plus de
 l'heure du recalcul horaire ; la part `UNKNOWN` et les écarts sont publiés.

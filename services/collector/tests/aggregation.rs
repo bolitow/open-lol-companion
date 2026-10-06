@@ -738,6 +738,12 @@ async fn aggregation_exclut_les_parties_classees_courtes_ou_avec_depart_precoce(
     .unwrap();
     assert_eq!(off.included_matches, 4);
     assert!(off.exclusions.is_empty());
+    let snapshot = published(&db).await;
+    assert_eq!(snapshot["included_matches"], 4);
+    assert_eq!(snapshot["min_game_duration_s"], 0);
+    assert_eq!(snapshot["min_played_percent"], 0);
+    assert_eq!(snapshot["exclude_afk"], false);
+    assert_eq!(snapshot["exclusions"], json!({}));
     let invalid = recalculate_with_quality(
         &db.storage,
         1,
@@ -762,9 +768,13 @@ async fn aggregation_cli_configure_les_seuils_de_qualite() {
     let db = db_or_skip!();
     let run_id = run(&db).await;
     insert_quality_matches(&db, run_id).await;
-    let aggregate = |extra: &[&str]| {
-        std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"))
-            .args(["aggregate", "--all-stored", "--min-games", "1", "--json"])
+    let aggregate = |extra: &[&str], json_output: bool| {
+        let mut command = std::process::Command::new(env!("CARGO_BIN_EXE_olc-collector"));
+        command.args(["aggregate", "--all-stored", "--min-games", "1"]);
+        if json_output {
+            command.arg("--json");
+        }
+        command
             .args(extra)
             .env("DATABASE_URL", db.database_url())
             .env("RIOT_API_KEY", "")
@@ -772,34 +782,55 @@ async fn aggregation_cli_configure_les_seuils_de_qualite() {
             .output()
             .unwrap()
     };
-    let default = aggregate(&[]);
+    let default = aggregate(&[], true);
     assert!(default.status.success());
     let report: Value = serde_json::from_slice(&default.stdout).unwrap();
     assert_eq!(report["included_matches"], 1);
     assert_eq!(report["min_game_duration_s"], 300);
+    assert_eq!(report["min_played_percent"], 80);
     assert_eq!(report["exclude_afk"], true);
-    assert_eq!(report["exclusions"]["afk"], 1);
-    let keep_afk = aggregate(&["--keep-afk"]);
+    assert_eq!(
+        report["exclusions"],
+        json!({"short_game": 1, "afk": 1, "early_departure": 1})
+    );
+    let text = aggregate(&[], false);
+    assert!(text.status.success());
+    let text = String::from_utf8(text.stdout).unwrap();
+    assert!(text.contains("1 / 4 parties retenues"));
+    for reason in ["short_game", "afk", "early_departure"] {
+        assert!(text.contains(&format!("Exclusions {reason} : 1")), "{text}");
+    }
+    let keep_afk = aggregate(&["--keep-afk"], true);
     assert!(keep_afk.status.success());
     let report: Value = serde_json::from_slice(&keep_afk.stdout).unwrap();
     assert_eq!(report["included_matches"], 2);
     assert_eq!(report["exclude_afk"], false);
-    let lenient = aggregate(&[
-        "--min-game-duration-s",
-        "0",
-        "--min-played-percent",
-        "0",
-        "--keep-afk",
-    ]);
+    assert_eq!(
+        report["exclusions"],
+        json!({"short_game": 1, "early_departure": 1})
+    );
+    let lenient = aggregate(
+        &[
+            "--min-game-duration-s",
+            "0",
+            "--min-played-percent",
+            "0",
+            "--keep-afk",
+        ],
+        true,
+    );
     assert!(lenient.status.success());
     let report: Value = serde_json::from_slice(&lenient.stdout).unwrap();
     assert_eq!(report["included_matches"], 4);
+    assert_eq!(report["min_game_duration_s"], 0);
     assert_eq!(report["min_played_percent"], 0);
+    assert_eq!(report["exclude_afk"], false);
+    assert_eq!(report["exclusions"], json!({}));
     for bad in [
         ["--min-game-duration-s", "901"],
         ["--min-played-percent", "101"],
     ] {
-        assert_eq!(aggregate(&bad).status.code(), Some(2), "{bad:?}");
+        assert_eq!(aggregate(&bad, true).status.code(), Some(2), "{bad:?}");
     }
     db.cleanup().await;
 }
