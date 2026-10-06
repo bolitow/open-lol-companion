@@ -7,6 +7,7 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 ### Corrigé
 
 - Profils : Master, Grandmaster et Challenger s’affichent sans division fictive, avec leurs points de ligue ; les autres paliers conservent leur division (#106).
+- Compte actif : un changement d’avatar reste diffusé sans invalider les lectures en cours ni réinitialiser les choix de préparation ; les changements réels de compte restent détectés (#127).
 
 - Livraison desktop : attente correcte d’un verrou de cache cosmétique occupé sous Windows ; libération explicite du verrou PostgreSQL entre deux exécutions de campagne, révélées par la CI multi-OS (#93, #181, #187).
 

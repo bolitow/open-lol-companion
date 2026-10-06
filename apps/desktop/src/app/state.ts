@@ -72,7 +72,7 @@ export function reduceApp(state: AppState, action: AppAction): AppState {
         return state;
     // La coupure conserve le contexte ; une autre identité de draft le réinitialise.
     const freshDraft=session.connected&&session.phase==='ChampSelect'&&(state.lastConnectedPhase!=='ChampSelect'||!!(session.draftId&&state.lastDraftId&&session.draftId!==state.lastDraftId));
-    const accountKey=session.account?JSON.stringify(session.account):state.lastAccountKey;
+    const accountKey=session.account?JSON.stringify([session.account.platform,session.account.game_name,session.account.tag_line]):state.lastAccountKey;
     const accountChanged=!!(accountKey&&state.lastAccountKey&&accountKey!==state.lastAccountKey);
     const defaults=draftDefaults(session,state.preparation.customRole);
     const reset=freshDraft||accountChanged;
