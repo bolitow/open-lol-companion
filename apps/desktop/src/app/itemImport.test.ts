@@ -72,6 +72,28 @@ it('ne duplique pas un ancêtre issu de conversions mais conserve les répétiti
  const boots=[item(1001),item(3010,false,{builds_from:['1001']}),item(3013,false,{builds_from:['3010']}),item(2003)];
  expect(itemSetRequest(103,'Ahri','Ordre',[3010,3013,2003,2003],boots)?.blocks[0]?.items).toEqual([{id:1001,count:1},{id:2003,count:1},{id:2003,count:1}]);
 });
+it('fusionne la forme évoluée et son ancêtre dans les deux ordres, à la première position résolue',()=>{
+ const cases=[
+  {selection:[3042,3004],want:[{id:3004,count:1}]},
+  {selection:[3004,3042],want:[{id:3004,count:1}]},
+  {selection:[3042,2003,3004],want:[{id:3004,count:1},{id:2003,count:1}]},
+  {selection:[3004,2003,3042],want:[{id:3004,count:1},{id:2003,count:1}]},
+  {selection:[3042,3042,3004],want:[{id:3004,count:1}]},
+  {selection:[3042,3042,3004,3004],want:[{id:3004,count:1},{id:3004,count:1}]},
+ ];
+ for(const {selection,want} of cases)expect(itemSetRequest(103,'Ahri','Ordre',selection,records)?.blocks[0]?.items).toEqual(want);
+});
+it('conserve chaque achat direct répété sans ajouter un exemplaire issu de la conversion',()=>{
+ for(const selection of [[3042,3004,2003,3004],[3004,3042,2003,3004]]){
+  const plan=itemSetPlan(103,'Ahri','Ordre',selection,records);
+  expect(plan?.request.blocks[0]?.items).toEqual([{id:3004,count:1},{id:2003,count:1},{id:3004,count:1}]);
+  expect(plan?.converted).toEqual([{from:3042,to:3004}]);
+  expect(plan?.dropped).toEqual([]);
+ }
+});
+it('conserve un seul ancêtre quand seules des formes évoluées répétées sont présentes',()=>{
+ expect(itemSetRequest(103,'Ahri','Ordre',[3042,3042],records)?.blocks[0]?.items).toEqual([{id:3004,count:1}]);
+});
 it('ne boucle pas sur une chaîne cyclique du catalogue',()=>{
  const loop=[item(5001,false,{special_recipe:5002}),item(5002,false,{special_recipe:5001}),item(3070)];
  const plan=itemSetPlan(103,'Ahri','Objets',[5001,3070],loop);

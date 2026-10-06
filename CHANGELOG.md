@@ -6,6 +6,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Corrigé
 
+- Import du set d’objets : la coexistence d’une forme évoluée et de son ancêtre achetable ne crée plus de doublon, quel que soit leur ordre ; la première position résolue et les achats directs répétés sont conservés. Le vrai dropdown des catégories est vérifié en français et en anglais (#88).
+
 - Desktop : numéro de patch public homogène dans les fiches, détails, populations et imports ; les versions techniques restent réservées aux requêtes et aux ressources (#186).
 
 - Historique local : une page initiale répétée termine la pagination sans erreur ni doublon ; les statistiques illisibles sont omises et comptées sans perdre les parties valides (#94).
@@ -213,6 +215,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Modifié
 
+- Cœur Rust de l’import d’objets : la table de conversion codée en dur disparaît, la conversion se fait côté interface avec le catalogue du patch (#88).
+
 - Tier des champions recalculé sans répartition forcée : winrate lissé vers la moyenne du compartiment, présence (pick rate + ban rate du même palier de partie) et seuils absolus S/A/B/C/D ; tier nul sous 0,5 % de pick rate ou sous 20 champions éligibles, position triée sur le même score, formule publiée dans `tier_method`. La borne Wilson reste publiée comme intervalle (#85).
 - Pick rate des champions calculé par partie (parties où le champion apparaît / parties du compartiment), donc comparable au ban rate et non plus plafonné à 50 % par rôle ; l’ancienne part des participations reste publiée sous `selection_share`, avec `bucket_matches` pour le dénominateur et `pick_rate_definition` mise à jour (#84).
 - Agrégats : en classé (Solo/Duo et Flex), les parties de moins de 300 s, celles où un participant est AFK (`wasAfk`) et celles où un participant a joué moins de 80 % de la durée sont exclues avec un compteur par motif (`short_game`, `afk`, `early_departure`), exposé dans le rapport et les métadonnées de l’API ; seuils réglables par `--min-game-duration-s` et `--min-played-percent`, filtre AFK désactivable par `--keep-afk`, redditions normales conservées ; sur la copie de recette, 37 parties courtes et 602 parties AFK supplémentaires sont écartées sur 17 112 (#111).
@@ -263,7 +267,6 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 - Import du set d’objets : seuls l’ordre des achats et l’inventaire final sont importables (les catégories objet isolé et relique sont désactivées) ; le panneau d’import et le statut de l’import automatique affichent le nombre d’objets remplacés ou retirés (#88).
 
-- Cœur Rust de l’import d’objets : la table de conversion codée en dur disparaît, la conversion se fait côté interface avec le catalogue du patch (#88).
 - Lecteur de skins : nouvelle session native lors d’un changement de passage ou d’une relance, chargement prolongé signalé après 15 secondes, événements périmés ignorés et lecture intégrée arrêtée lors du repli YouTube ; aucun démarrage automatique (#47).
 
 - Intégration des réglages système avec les recettes macOS : permissions des commandes système limitées à la fenêtre principale, préférence Flash unique pour les trois écrans, panneau overlay accessible dans la recherche, amis/Live/raccourci et fermeture native conservés (#11, #22, #23, #63).

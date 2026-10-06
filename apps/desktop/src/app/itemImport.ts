@@ -63,14 +63,17 @@ export function itemSetPlan(championId:number,championName:string,label:string,s
  if(selection.some(id=>!byId.has(String(id))))return null;
  const items:{id:number;count:number}[]=[],converted:ItemSetPlan['converted']=[],dropped:number[]=[];
  const emitted=new Set<number>();
+ const synthetic=new Set<number>();
  for(const id of selection){
   const ancestor=purchasableAncestor(id,byId);
   if(ancestor==='unknown')return null;
   if(ancestor===null){dropped.push(id);continue}
-  if(ancestor===id){items.push({id,count:1});emitted.add(id);continue}
+  // Le premier achat direct remplace l'exemplaire issu d'une conversion, à sa position.
+  // Les achats directs suivants restent distincts (par exemple deux potions).
+  if(ancestor===id){if(!synthetic.delete(id))items.push({id,count:1});emitted.add(id);continue}
   converted.push({from:id,to:ancestor});
   // Plusieurs formes évoluées d'une même lignée ne doivent pas répéter leur ancêtre.
-  if(!emitted.has(ancestor)){items.push({id:ancestor,count:1});emitted.add(ancestor)}
+  if(!emitted.has(ancestor)){items.push({id:ancestor,count:1});emitted.add(ancestor);synthetic.add(ancestor)}
  }
  if(!items.length)return null;
  return {request:{championId,championName,mapId:11,blocks:[{label,items}]},converted,dropped};
