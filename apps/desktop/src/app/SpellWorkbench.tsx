@@ -6,8 +6,9 @@ import {importErrorMessage,type CatalogRecord,type DraftSession,type FlashSlot,t
 import {CatalogButton} from './GameDetails';
 import {Icon} from '../ui/Icon';
 import {createImportController,importEligibility} from './runeImport';
-import {editSpellSelection,placeFlash,spellChoices,spellsMatch,validSpellPair,type SpellPair} from './spellEditing';
+import {editSpellSelection,placeFlash,placeRecommendedSpells,spellChoices,spellsMatch,validSpellPair,type SpellPair} from './spellEditing';
 import {spellCopy} from './spellCopy';
+import {buildCopy} from './buildCopy';
 import type {Locale} from './state';
 import './spells.css';
 
@@ -17,7 +18,8 @@ export function SpellWorkbench({draft,championId,sourceKey,source,records,locale
  const t=spellCopy[locale],[edited,setEdited]=useState<SpellPair|null>(null);
  const settings=useSettings(),flashSlot=settings.state.values.flashSlot,saveError=settings.state.flashStorageFailed;
  const base=source??draft?.localSpells??[0,0],basePair:SpellPair=[base[0]??0,base[1]??0];
- const current=placeFlash(edited??basePair,flashSlot),choices=spellChoices(records);
+ const preserveEquippedSlot=source!=null&&edited===null;
+ const current=preserveEquippedSlot?placeRecommendedSpells(basePair,draft?.localSpells??null,flashSlot):placeFlash(edited??basePair,flashSlot),choices=spellChoices(records);
  const modified=[...current].sort().join(':')!==[...basePair].sort().join(':');
  const eligibility=importEligibility(isTauri(),draft,championId,validSpellPair(current,records));
  const needsFlash=current.includes(4)&&flashSlot===null;
@@ -39,7 +41,7 @@ export function SpellWorkbench({draft,championId,sourceKey,source,records,locale
  const submit=()=>{
   if(importEligibility(isTauri(),draft,championId,validSpellPair(current,records))||needsFlash||confirmed)return;
   // Sans Flash, la valeur technique D ne réordonne rien et ne crée aucune préférence.
-  void imports.submit(context,{championId,spells:{spellIds:current,flashSlot:flashSlot??'D'}});
+  void imports.submit(context,{championId,preserveEquippedSlot,spells:{spellIds:current,flashSlot:flashSlot??'D'}});
  };
  return <section className="spell-workbench" aria-label={t.title}>
   <header className="build-panel-heading"><h2>{t.title}</h2>{variantPicker??<small>{modified?t.custom:source?t.source:t.client}</small>}</header>
@@ -47,6 +49,7 @@ export function SpellWorkbench({draft,championId,sourceKey,source,records,locale
   <div className="spell-controls"><div className="spell-preference"><span>{t.flash}</span>{(['D','F'] as const).map(slot=><button key={slot} aria-label={`${t.flash} ${slot}`} aria-pressed={slot===flashSlot} disabled={snapshot.pending} onClick={()=>selectFlash(slot)}>{slot}</button>)}{edited&&<button className="icon-button spell-reset" aria-label={t.reset} disabled={snapshot.pending} onClick={()=>setEdited(null)}><Icon name="replay" size={14}/></button>}</div>
   <button className="rune-import-button spell-import" disabled={!!eligibility||needsFlash||confirmed||snapshot.pending} onClick={submit}>{snapshot.pending?t.pending:t.import}<Icon name={confirmed?'check':'arrow'} size={14}/></button></div>
   {modified?<small className="spell-custom-label">{t.custom}</small>:statistics}
+  {preserveEquippedSlot&&<p className="build-hint">{buildCopy[locale].spellHint}</p>}
   <p className={`rune-import-status ${error?'has-error':''}`} role="status" aria-live="polite">{status}</p>{saveError&&<p className="rune-import-status has-error" role="status">{t.saveError}</p>}
  </section>;
 }

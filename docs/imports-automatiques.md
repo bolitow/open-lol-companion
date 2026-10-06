@@ -60,11 +60,14 @@ Aucune valeur spéciale n'est codée pour Bard : même parcours pour tout champi
 - Variante **valide la plus jouée**, séparément pour `runes`, `final_items` et
   `summoner_spells`. Les sorts doivent être deux identifiants distincts du
   catalogue CLASSIC. Si la paire retenue contient Flash, attendre sa préférence
-  D/F sans choisir à sa place une autre paire moins jouée. Sans Flash, conserver
-  l’ordre de la paire statistique, soit l’orientation D/F la plus fréquente observée
-  pour cette paire ; cet ordre ne représente pas un choix D/F du joueur et
-  n’enregistre pas de préférence Flash.
-  Les égalités suivent l'ordre numérique des sélections. Le catalogue valide
+  D/F sans choisir à sa place une autre paire moins jouée. Sans Flash, préserver
+  la touche d’un sort recommandé déjà équipé dans la session locale relue ;
+  si les deux sont présents, préserver leur placement. Sans sort commun ou
+  paire locale valide, conserver l’orientation D/F la plus fréquente observée
+  pour cette paire. Cela n’enregistre jamais de préférence Flash.
+  À effectifs égaux, les sorts suivent les victoires puis la paire numérique
+  canonique, avant publication de l’orientation, comme dans l’agrégateur (#124).
+  Les autres catégories conservent leur tri. Le catalogue valide
   les identifiants et positions ; une variante invalide est ignorée.
 - Le minimum concerne chaque variante, pas le total de matchs du champion.
   Sous le seuil de publication de l'API, les compteurs permettent un **taux
@@ -112,6 +115,8 @@ Le schéma LCU utilisé est [le dump public](https://raw.githubusercontent.com/K
   Préparation et relecture de contexte précèdent la dernière garde de génération,
   immédiatement suivie du PATCH. Verrou et cache distincts des runes/objets ;
   le verrou sorts reste commun à l'import manuel.
+  La confirmation compare la paire réellement envoyée, avec son placement D/F,
+  à la relecture du même champion et de la même draft, pas à l’ordre statistique.
 - Option sorts désactivée : aucun appel à leur endpoint, D/F inchangés.
 - Après acceptation, relit la page courante, le set, ou les deux sorts
   locaux dans le même contexte de draft. Si la relecture échoue

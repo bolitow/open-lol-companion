@@ -107,6 +107,11 @@ variantes restent regroupées par catégorie, puis `performance` les ordonne par
 de Wilson décroissante, effectif et sélection, les variantes sans borne (sous le seuil,
 Arena, instantané antérieur) venant après. Le tri précède la pagination et la réponse
 renvoie `sort` ; toute autre valeur, ou `sort` sur la tierlist, est refusée (400).
+Pour `summoner_spells` (#124), à effectifs égaux (et borne égale en mode
+`performance`), le départage suit les victoires décroissantes puis la paire
+numérique triée, comme l’agrégateur avant la publication de l’orientation.
+La réponse conserve l’orientation D/F observée ; aucune réorganisation des
+séquences d’achats ni du tri des autres catégories.
 Ce n'est pas une recommandation : le winrate d'un inventaire final reste biaisé par la
 durée et la survie de la partie.
 

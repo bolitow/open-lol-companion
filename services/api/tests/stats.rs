@@ -960,6 +960,68 @@ async fn builds_se_trie_par_effectif_par_defaut_et_par_performance_sur_demande()
 }
 
 #[tokio::test]
+async fn sorts_a_effectifs_egaux_suivent_le_tri_canonique_sans_perdre_d_f() {
+    let db = db_or_skip!();
+    let mut source = report();
+    let variant = |category: &str, selection: [u32; 2], wins: u64| {
+        json!({"patch":"16.19","platform_id":"EUW1","queue_id":420,
+            "role":"TOP","rank":"ALL","champion_id":1,"category":category,
+            "selection":selection,"games":100,"wins":wins,"performance_available":true,
+            "population":400,"pick_rate":25.0,"win_rate":wins as f64,
+            "win_rate_lower_bound":40.0})
+    };
+    source["builds"] = json!([
+        variant("summoner_spells", [14, 4], 60),
+        variant("summoner_spells", [6, 7], 60),
+        variant("summoner_spells", [21, 1], 70),
+        variant("summoner_spells", [14, 6], 60),
+        variant("purchase_order", [14, 4], 60),
+        variant("purchase_order", [6, 7], 60),
+    ]);
+    publish(db.storage.pool(), source).await;
+    for sort in [BuildSort::Games, BuildSort::Performance] {
+        let all = builds_sorted(db.storage.pool(), query(), 1, sort)
+            .await
+            .unwrap();
+        let spells: Vec<_> = all
+            .builds
+            .iter()
+            .filter(|b| b.category == "summoner_spells")
+            .map(|b| b.selection.clone())
+            .collect();
+        assert_eq!(spells, [vec![21, 1], vec![14, 4], vec![6, 7], vec![14, 6]]);
+        let purchases: Vec<_> = all
+            .builds
+            .iter()
+            .filter(|b| b.category == "purchase_order")
+            .map(|b| b.selection.clone())
+            .collect();
+        assert_eq!(purchases, [vec![6, 7], vec![14, 4]]);
+        let page = builds_sorted(
+            db.storage.pool(),
+            StatsQuery {
+                offset: 3,
+                limit: 2,
+                ..query()
+            },
+            1,
+            sort,
+        )
+        .await
+        .unwrap();
+        assert_eq!(page.total, 6);
+        assert_eq!(
+            page.builds
+                .iter()
+                .map(|b| b.selection.clone())
+                .collect::<Vec<_>>(),
+            [vec![14, 4], vec![6, 7]]
+        );
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn builds_expose_le_taux_conditionnel_des_runes_sans_toucher_au_taux_global() {
     let db = db_or_skip!();
     let mut source = report();

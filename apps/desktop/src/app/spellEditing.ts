@@ -6,6 +6,12 @@ export function parseFlashSlot(raw:string|null):FlashSlot|null{
 export function placeFlash(pair:SpellPair,slot:FlashSlot|null):SpellPair{
  return slot==='D'&&pair[1]===4||slot==='F'&&pair[0]===4?[pair[1],pair[0]]:[...pair];
 }
+/** Aperçu de la même règle appliquée en Rust sur une relecture de la draft locale. */
+export function placeRecommendedSpells(pair:SpellPair,equipped:readonly number[]|null,slot:FlashSlot|null):SpellPair{
+ if(pair.includes(4))return placeFlash(pair,slot);
+ const valid=equipped?.length===2&&equipped[0]!==equipped[1]&&equipped.every(id=>Number.isSafeInteger(id)&&id>0);
+ return valid&&(equipped[0]===pair[1]||equipped[1]===pair[0])?[pair[1],pair[0]]:[...pair];
+}
 export function chooseSpell(pair:SpellPair,index:0|1,id:number):SpellPair{
  const next:SpellPair=[...pair],other=index===0?1:0;
  if(next[other]===id)next[other]=next[index];
