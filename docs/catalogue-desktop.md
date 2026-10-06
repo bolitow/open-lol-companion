@@ -20,6 +20,60 @@ Configurer `OLC_DESKTOP_CATALOG_DIR=/chemin/artefacts` dans le processus API. Ce
 
 `heads/{version}` ne change qu’après écriture et validation du paquet complet. Une republication de la même release change d’identité si un fichier change. Les anciens instantanés serveur restent disponibles : leur purge relève de l’exploitation et doit respecter les clients en reprise et la rétention des patchs. Aucun déploiement n’est effectué par ce lot.
 
+## Reprise ciblée des segments #107
+
+Le 6 octobre 2026, l’embarqué 16.19.1 a été repris pour les seuls `tooltip_segments`. Les 1 496 records
+par langue, les 316 objets de la carte 11 et leurs recettes, les cartes et les 1 477 icônes restent
+identiques après retrait du champ ajouté. Les augments et la sélection élargie #116/#118 ne sont pas
+intégrés par cette reprise. Le normaliseur 3 décrit les champs reprojetés depuis les sources originales ;
+les autres champs gardent le résultat du normaliseur 1. `manifest.json` et `sources.json` déclarent
+ce périmètre dans `reprojection` (`fields`, `base_normalizer_version`, `other_records_preserved`).
+
+L’outil développeur sans PostgreSQL, clé Riot ou téléchargement consomme 348 **vrais** documents
+Data Dragon : 173 fiches champion détaillées et `summoner.json` par langue. Les JSON raw doivent
+être nommés `<source_id>.json` dans un cache local, acquis depuis les URL épinglées de `sources.json`
+avec TLS validé et des bornes. Une source normalisée n’est jamais réutilisée comme raw. L’outil vérifie
+le contexte public exact, recalcule chaque ID `make_source`, reprojette avec `project_sources`, puis
+copie uniquement le champ si le tooltip et sa provenance sont exactement ceux de l’origine. Une
+source divergente, absente ou un nombre de tooltips inattendu interrompt la génération.
+
+Les deux dossiers de sortie doivent être absents ou vides, avec leur parent déjà présent, distincts
+des origines et non imbriqués entre eux. Leurs parents sont résolus avant comparaison, y compris
+les alias `..` et symlinks d’ancêtres. Par prudence, les sorties différant seulement par la casse
+sont aussi refusées sur tous les OS ; leurs chemins doivent être Unicode. Les chemins/symlinks
+et lectures sont bornés (16 Mio par JSON, 2 Mio par PNG, 256 Mio
+pour l’export, 1 000 sources maximum). Depuis des caches déjà acquis :
+
+```sh
+cargo run -p olc-collector --example reproject_tooltip_segments -- \
+  --input /chemin/export-original \
+  --raw-dir /chemin/raw-public \
+  --output /chemin/work/catalog-candidat \
+  --snapshot-input /chemin/snapshot-original \
+  --snapshot-output /chemin/work/snapshot-candidat
+```
+
+`--expected-tooltips` vaut 726 par langue par défaut. Après validation et mesure du candidat,
+actualiser explicitement l’embarqué tout en gardant l’export précédent. Le snapshot est dérivé dans
+un **nouveau** cache avec les primitives existantes ; tous les fichiers hors périmètre réutilisent leurs
+octets/empreintes. Le nouveau `heads/16.19.1` est écrit en dernier, après validation du snapshot et
+écriture complète de l’export. Un échec I/O laisse éventuellement des fichiers candidats pour
+diagnostic, sans publier ce pointeur ; il faut reprendre dans deux nouvelles sorties vides. Les
+anciennes données et leur pointeur ne sont jamais modifiés. Aucun artwork
+ou cosmétique n’est réacquis, et cet outil ne publie ni l’API PostgreSQL ni un déploiement externe.
+
+Recette 16.19.1 : 726 tooltips par langue (692 compétences et 34 sorts), concaténation exacte,
+provenance inchangée, 2 005 fichiers du snapshot dont seuls 350 JSON de catalogue changent.
+L’export passe de 56 089 960 à 57 085 679 octets (+1,78 %), dont **995 454 octets** dus au seul champ
+segments (FR 522 594, EN 472 860) ; les métadonnées et la sérialisation expliquent le reste. Le gzip
+indicatif, calculé par document, ajoute 54 921 octets. La tête d’origine est `a257ff0b…a40e97`, le
+candidat scratch `835f22f7…2d70544`. Ce candidat n’est pas déployé/configuré dans l’application.
+
+Le type est consommé par occurrence dans les formules et textes correspondants ; descriptions
+courtes distinctes et champs invalides restent neutres. La migration de l’interprète BIN, les autres
+balises et la recette visuelle/native Windows restent ouverts. Les tests de l’outil font partie de
+`pnpm test`, grâce à sa déclaration `[[example]] test = true`.
+
 ## Installation native
 
 Le cœur Rust sélectionne la plus haute release du patch majeur.mineur effectivement lu du client. Il n’interprète pas le suffixe de build LCU comme une release Data Dragon, n’installe pas de patch futur et ne suit pas arbitrairement le realm EUW en l’absence du client.

@@ -1,6 +1,6 @@
 import {expect,it} from 'vitest';
 import type {CatalogRecord,CatalogValue} from '@olc/shared';
-import {abilityDamageTone,abilityMetrics,abilitySegments} from './abilityPresentation';
+import {abilityMetrics,abilitySegments} from './abilityPresentation';
 const field=(value:unknown,status='verified',unit='seconds')=>({value,status,unit,sources:[]} as CatalogValue);
 const record=(fields:CatalogRecord['fields'])=>({kind:'ability',fields} as CatalogRecord);
 it('compacte les constantes, conserve chaque rang et localise les décimales',()=>{
@@ -14,26 +14,21 @@ it('ne présente pas le coût numérique comme un coût total et signale un supp
  const metrics=abilityMetrics(record({cost:field([40,45],'verified','resource_points'),resource:field('{{ percenthealthcost*100 }}% HP, {{ cost }} Mana','descriptive',null as never)}),'en');
  expect(metrics[0]?.label).toBe('Mana');expect(metrics[0]?.note).toBe('Additional resource change not quantified');
 });
-it('colore dégâts, soins et boucliers sans modifier le texte ni créer de chiffres',()=>{
+it('conserve soins et boucliers sans inférer les dégâts ni créer de chiffres',()=>{
  const text='Inflige 80 dégâts magiques, soigne 30 PV et donne un bouclier.';
  const segments=abilitySegments(text);expect(segments.map(s=>s.text).join('')).toBe(text);
- expect(segments.filter(s=>s.tone).map(s=>s.tone)).toEqual(['value','magic-damage','heal','value','shield']);
- expect(abilitySegments('deals damage and heals with a shield').filter(s=>s.tone).map(s=>s.tone)).toEqual(['damage','heal','shield']);
+ expect(segments.filter(s=>s.tone).map(s=>s.tone)).toEqual(['value','heal','value','shield']);
+ expect(abilitySegments('deals damage and heals with a shield').filter(s=>s.tone).map(s=>s.tone)).toEqual(['heal','shield']);
 });
-it('distingue les types de dégâts FR/EN sans les déduire des ratios AD ou AP',()=>{
+it('laisse les libellés de dégâts FR/EN neutres et conserve les mentions AD/AP',()=>{
  for(const text of ['dégâts bruts, dégâts magiques, dégâts physiques','true damage, magic damage, physical damage']){
   const segments=abilitySegments(text);expect(segments.map(s=>s.text).join('')).toBe(text);
-  expect(segments.filter(s=>s.tone).map(s=>s.tone)).toEqual(['true-damage','magic-damage','damage']);
+  expect(segments.filter(s=>s.tone).map(s=>s.tone)).toEqual([]);
  }
  expect(abilitySegments('130% AD et 40% AP').filter(s=>s.statKey).map(s=>s.statKey)).toEqual(['attack_damage','ability_power']);
 });
-it('reconnaît magical damage et les dégâts en pourcentage de PV sans confondre soins ou réduction',()=>{
- expect(abilitySegments('magical damage').filter(s=>s.tone).map(s=>s.tone)).toEqual(['magic-damage']);
- expect(abilityDamageTone('% des PV max en dégâts magiques')).toBe('magic-damage');
- expect(abilityDamageTone('% max Health magic damage')).toBe('magic-damage');
- expect(abilityDamageTone('% de ses PV max en dégâts bruts')).toBe('true-damage');
- expect(abilityDamageTone('% max Health healing and physical damage')).toBeUndefined();
- expect(abilityDamageTone('% reduced physical damage')).toBeUndefined();
+it('ne déduit pas un type depuis magical damage ou les dégâts en pourcentage de PV',()=>{
+ for(const text of ['magical damage','% des PV max en dégâts magiques','% max Health magic damage','% de ses PV max en dégâts bruts','% reduced physical damage'])expect(abilitySegments(text).filter(s=>s.tone)).toEqual([]);
 });
 it('ne confond pas health ou une portion de PV sacrifiée avec un soin',()=>{
  expect(abilitySegments('sacrifices health and gains movement speed').filter(s=>s.tone)).toEqual([]);

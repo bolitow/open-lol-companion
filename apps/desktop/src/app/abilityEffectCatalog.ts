@@ -1,6 +1,7 @@
 import type {CatalogRecord} from '@olc/shared';
 import type {Locale} from './state';
 import type {CompiledAbility} from '../../scripts/build-ability-effects.mjs';
+import {compiledTooltip} from './abilityTooltip';
 export type AbilityEffectEntry=CompiledAbility&{source:{url:string;sha256:string}};
 export interface AbilityEffectManifest{version:string;abilities:Record<string,AbilityEffectEntry>;}
 const object=(value:unknown):value is Record<string,unknown>=>!!value&&typeof value==='object'&&!Array.isArray(value);
@@ -26,7 +27,7 @@ export function matchingAbilityEffects(manifest:AbilityEffectManifest,record:Cat
  if(manifest.version!==version||record.kind!=='ability'||record.namespace!=='standard'||record.locale!==(locale==='fr'?'fr_FR':'en_US'))return null;
  if(['technical_id','max_rank'].some(key=>!['verified','derived'].includes(record.fields[key]?.status??''))||!['descriptive','verified','derived'].includes(record.fields.tooltip?.status??''))return null;
  const entry=manifest.abilities[`${record.locale}:${record.id}`],tooltip=record.fields.tooltip?.value;
- if(!entry||entry.technicalId!==record.fields.technical_id?.value||typeof tooltip!=='string'||entry.tooltip!==tooltip.replace(/\{\{\s*spellmodifierdescriptionappend\s*\}\}/gi,'').trim())return null;
+ if(!entry||entry.technicalId!==record.fields.technical_id?.value||typeof tooltip!=='string'||entry.tooltip!==compiledTooltip(tooltip))return null;
  const ranks=record.fields.max_rank?.value;
  if(typeof ranks!=='number'||!Number.isInteger(ranks)||ranks<1||ranks>6)return null;
  if(Object.values(entry.formulas).some(formula=>formula.terms.some(term=>term.values.length!==1&&term.values.length!==ranks)))return null;

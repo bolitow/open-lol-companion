@@ -38,26 +38,19 @@ export function abilityMetrics(record:CatalogRecord,locale:Locale,champion?:Cata
   return [{key,statKey,label:statKey==='mana'||statKey==='energy'||statKey==='health'?t[statKey]:t[key],value:(constant?values.slice(0,1):values).map(n=>number.format(n)).join(' / ')+(key==='cooldown'?' s':key==='cost'?costSuffix(record,locale):''),byRank:!constant,note:extra?t.extra:null}];
  });
 }
-type DamageTone='damage'|'magic-damage'|'true-damage';
-/** Le type vient du libellé de dégâts, jamais du ratio AD/AP du sort. */
-export function abilityDamageTone(text:string):DamageTone|undefined{
- const suffix=text.replace(/^\s*%\s+(?:(?:des|de ses|de leurs)\s+PV\s+(?:max|actuels|manquants)\s+en|(?:max(?:imum)?|current|missing)\s+Health(?:\s+as)?)\s+/i,'');
- const label=suffix.match(/^\s*(?:(?:pts?|points?)\s+(?:de\s+|of\s+)?)?(dégâts(?:\s+(?:magiques|physiques|bruts))?|(?:magic(?:al)?\s+|physical\s+|true\s+)?damage)\b/i)?.[1];
- return label?/bruts|true/i.test(label)?'true-damage':/magiques|magic/i.test(label)?'magic-damage':'damage':undefined;
-}
 // Texte uniquement : les balises et formules du fournisseur ne sont jamais exécutées.
 export function abilitySegments(text:string){
  const statWords="(?:bonus attack damage|total attack damage|attack damage|dégâts d['’]attaque|ability power|puissance|magic resistance|résistance magique|armure|armor|AD|AP)";
  const statExpression="(?:\\d+(?:[.,]\\d+)?\\s?%?\\s*(?:de (?:la |l['’])?)?)?"+statWords;
- const pattern=new RegExp('('+statExpression+"|dégâts(?:\\s+(?:magiques|physiques|bruts))?|(?:magic(?:al)? |physical |true )?damage|boucliers?|shields?|soign\\p{L}*|soins?|heals?|healing|(?:récupère|rend|restaure)(?: immédiatement)? (?:des |les |ses )?PV|(?:recovers?|restor(?:es?|ing)) health|\\d+(?:[.,]\\d+)?(?:\\s?%)?)(?![\\p{L}])",'giu');
- const parts:{text:string;tone?:DamageTone|'shield'|'heal'|'value';statKey?:string}[]=[];let end=0;
+ const pattern=new RegExp('('+statExpression+"|boucliers?|shields?|soign\\p{L}*|soins?|heals?|healing|(?:récupère|rend|restaure)(?: immédiatement)? (?:des |les |ses )?PV|(?:recovers?|restor(?:es?|ing)) health|\\d+(?:[.,]\\d+)?(?:\\s?%)?)(?![\\p{L}])",'giu');
+ const parts:{text:string;tone?:'shield'|'heal'|'value';statKey?:string}[]=[];let end=0;
  // Sans lookbehind : compatible avec le WebKit du minimum macOS 13.0.
  for(const match of text.matchAll(pattern)){
   if(/\p{L}$/u.test(text.slice(0,match.index)))continue;
   if(match.index>end)parts.push({text:text.slice(end,match.index)});
   const token=match[0];
   const statKey=/ability power|puissance|\bAP$/i.test(token)?'ability_power':/attack damage|dégâts d['’]attaque|\bAD$/i.test(token)?'attack_damage':/magic resistance|résistance magique/i.test(token)?'magic_resistance':/armure|armor/i.test(token)?'armor':undefined;
-  const tone=/^\d/.test(token)?'value':abilityDamageTone(token)??(/bouclier|shield/i.test(token)?'shield':'heal');
+  const tone=/^\d/.test(token)?'value':/bouclier|shield/i.test(token)?'shield':'heal';
   parts.push({text:token,tone,statKey});end=match.index+token.length;
  }
  if(end<text.length)parts.push({text:text.slice(end)});return parts;
