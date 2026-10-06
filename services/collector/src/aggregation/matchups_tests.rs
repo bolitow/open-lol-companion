@@ -153,6 +153,64 @@ fn une_partie_normale_ne_publie_aucun_matchup_et_le_dit_dans_la_couverture() {
 }
 
 #[test]
+fn normal_mirrors_keep_participations_and_builds_without_lane_matchups() {
+    for queue in [430, 480] {
+        let mut game = ranked_game(&format!("EUW1_mirror_{queue}"), queue);
+        game.detail["info"]["participants"][5]["championId"] = json!(1);
+        for (index, item) in [(0, 1001), (5, 3006)] {
+            for slot in 0..6 {
+                game.detail["info"]["participants"][index][format!("item{slot}")] =
+                    json!(if slot == 0 { item } else { 0 });
+            }
+        }
+        let mut acc = Accumulator::new(1).unwrap();
+        acc.add(&game);
+        let report = acc.finish();
+        assert_eq!((report.source_matches, report.included_matches), (1, 1));
+        assert!(report.exclusions.is_empty());
+        let champion = report
+            .groups
+            .iter()
+            .find(|g| {
+                g.key.queue_id == queue
+                    && g.key.champion_id == 1
+                    && g.key.role == Role::Top
+                    && g.key.rank == "ALL"
+            })
+            .unwrap();
+        assert_eq!((champion.games, champion.wins, champion.losses), (2, 1, 1));
+        assert_eq!(champion.bucket_matches, 1);
+        assert_eq!(
+            (champion.win_rate, champion.pick_rate),
+            (Some(50.0), Some(100.0))
+        );
+        let mut builds: Vec<_> = report
+            .builds
+            .iter()
+            .filter(|b| {
+                b.key.queue_id == queue
+                    && b.key.champion_id == 1
+                    && b.key.role == Role::Top
+                    && b.key.rank == "ALL"
+                    && b.category == "final_items"
+            })
+            .map(|b| (b.selection.clone(), b.games, b.wins, b.population))
+            .collect();
+        builds.sort();
+        assert_eq!(
+            builds,
+            vec![(vec![1001], 1, Some(1), 2), (vec![3006], 1, Some(0), 2)]
+        );
+        assert!(
+            report.matchups.is_empty(),
+            "aucun appariement en file {queue}"
+        );
+        assert_eq!(report.coverage[0].counts.participations, 10);
+        assert_eq!(report.coverage[0].counts.lane_matchup_participations, 0);
+    }
+}
+
+#[test]
 fn une_couverture_publiee_avant_les_matchups_reste_lisible() {
     let mut coverage = serde_json::to_value(crate::aggregation::Coverage::default()).unwrap();
     coverage

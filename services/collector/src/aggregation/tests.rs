@@ -2186,6 +2186,23 @@ fn un_temps_de_jeu_absent_n_est_pas_juge_et_un_type_invalide_est_refuse() {
 }
 
 #[test]
+fn short_games_skip_malformed_quality_fields_until_duration_threshold() {
+    for (field, value) in [("wasAfk", json!("true")), ("timePlayed", json!("1800"))] {
+        for (duration, reason) in [(200, "short_game"), (1800, "invalid_match")] {
+            let mut invalid = timed("EUW1_quality_type", duration, duration as u64);
+            invalid.detail["info"]["participants"][2][field] = value.clone();
+            let report = aggregate_one(&invalid);
+            assert_eq!((report.source_matches, report.included_matches), (1, 0));
+            assert_eq!(
+                serde_json::to_value(&report.exclusions).unwrap(),
+                json!({(reason): 1}),
+                "{field}, durée {duration}"
+            );
+        }
+    }
+}
+
+#[test]
 fn les_seuils_sont_configurables_publies_et_desactivables() {
     let report = Accumulator::new(1).unwrap().finish();
     assert_eq!(report.min_game_duration_s, DEFAULT_MIN_GAME_DURATION_S);
@@ -2220,8 +2237,13 @@ fn les_seuils_sont_configurables_publies_et_desactivables() {
     let mut left = timed("EUW1_3", 200, 200);
     left.detail["info"]["participants"][1]["timePlayed"] = json!(1);
     acc.add(&left);
+    // Contrôles désactivés : les types des deux champs de qualité ne sont pas lus.
+    let mut malformed = timed("EUW1_4", 200, 200);
+    malformed.detail["info"]["participants"][1]["timePlayed"] = json!("inconnu");
+    malformed.detail["info"]["participants"][1]["wasAfk"] = json!("inconnu");
+    acc.add(&malformed);
     let report = acc.finish();
-    assert_eq!(report.included_matches, 1);
+    assert_eq!(report.included_matches, 2);
     assert!(report.exclusions.is_empty());
     assert!(!report.exclude_afk);
 }
@@ -3691,14 +3713,50 @@ fn une_file_inconnue_est_isolee_par_une_exclusion_explicite() {
         let mut g = game(id);
         g.queue_id = queue;
         g.detail["info"]["queueId"] = json!(queue);
+        for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+            p["summoner1Id"] = json!(4);
+            p["summoner2Id"] = json!(12);
+        }
         acc.add(&g);
     }
-    acc.add(&game("EUW1_ranked"));
+    for queue in [420, 440] {
+        let mut g = game(&format!("EUW1_ranked_{queue}"));
+        g.queue_id = queue;
+        g.detail["info"]["queueId"] = json!(queue);
+        for p in g.detail["info"]["participants"].as_array_mut().unwrap() {
+            p["summoner1Id"] = json!(4);
+            p["summoner2Id"] = json!(12);
+        }
+        acc.add(&g);
+    }
     let r = acc.finish();
-    assert_eq!((r.source_matches, r.included_matches), (4, 1));
+    assert_eq!((r.source_matches, r.included_matches), (5, 2));
     assert_eq!(r.exclusions.get("unknown_queue"), Some(&3));
-    assert!(r.groups.iter().all(|g| g.key.queue_id == 420));
-    assert!(r.coverage.iter().all(|c| c.scope.queue_id == 420));
+    assert_eq!(r.coverage.len(), 2);
+    for queue in [420, 440] {
+        let c = r
+            .coverage
+            .iter()
+            .find(|c| c.scope.queue_id == queue)
+            .unwrap();
+        assert_eq!((c.counts.matches, c.counts.participations), (1, 10));
+        assert_eq!(c.counts.lane_matchup_participations, 10);
+    }
+    assert_eq!(r.groups.len(), 40);
+    assert!(r
+        .groups
+        .iter()
+        .all(|g| [420, 440].contains(&g.key.queue_id) && g.games == 1));
+    assert_eq!(r.builds.len(), 40);
+    assert!(r
+        .builds
+        .iter()
+        .all(|b| [420, 440].contains(&b.key.queue_id) && b.games == 1));
+    assert_eq!(r.matchups.len(), 20);
+    assert!(r
+        .matchups
+        .iter()
+        .all(|m| [420, 440].contains(&m.key.queue_id) && m.games == 1));
 }
 
 #[test]

@@ -423,17 +423,31 @@ rapport, la sortie texte de `aggregate` et `meta.exclusions` de l'API) :
 | `afk` | au moins un participant a `wasAfk = true` (champ match-v5 des participants, déjà stocké) | actif par défaut ; `--keep-afk` le désactive ; `exclude_afk` publié dans le rapport |
 | `early_departure` | un participant a un `timePlayed` < `--min-played-percent` % de la durée (80 par défaut, 0 à 100 ; 0 désactive) | `min_played_percent` publié dans le rapport |
 
-Ordre d'évaluation : `remake`, `invalid_match`, puis `short_game`, puis `afk`, puis
-`early_departure` ; une partie n'est comptée qu'une fois, sous son premier motif. Une partie
-très courte avec un AFK est donc comptée `short_game`, pas `afk`. Une reddition normale
-(`gameEndedInSurrender`) n'est jamais un motif : seuls la durée, `wasAfk` et le temps joué
-comptent. Une clé absente (`wasAfk`, `timePlayed`) n'est pas jugée : rien n'est deviné. Une
-valeur de mauvais type (`wasAfk` non booléen, `timePlayed` qui n'est pas un entier positif)
-rend la partie `invalid_match`, seulement si le contrôle correspondant est actif. La
-comparaison du temps joué est faite en entiers : exactement 80 % joués est conservé. Les
-autres files ne sont pas concernées. Un rapport publié avant #111 relit `min_game_duration_s`
+L'évaluation se déroule en trois étapes ; une partie n'est comptée qu'une fois,
+sous le premier motif rencontré :
+
+1. Validation de forme et des remakes, avant toute contribution : identité et
+   plateforme/patch/file cohérents, file identifiée, participants et équipes valides.
+   Les rejets `remake`, `invalid_match` ou `unknown_queue` interrompent cette étape.
+2. En 420/440, contrôle de durée : `short_game` précède toute lecture des champs
+   `wasAfk` et `timePlayed`.
+3. Validation des types des champs de qualité actifs, puis décision `afk`, puis
+   `early_departure`. Un mauvais type produit `invalid_match` à cette étape, même si
+   un autre participant porte un AFK avéré.
+
+Une partie très courte avec un AFK, ou même un `wasAfk`/`timePlayed` mal typé,
+est donc comptée `short_game`. La même erreur de type dans une partie assez longue
+produit `invalid_match`, seulement si le contrôle correspondant est actif.
+Une reddition normale (`gameEndedInSurrender`) n'est jamais un motif : seuls la durée,
+`wasAfk` et le temps joué comptent. Une clé absente (`wasAfk`, `timePlayed`) n'est pas
+jugée : rien n'est deviné. `wasAfk` doit être booléen et `timePlayed` un entier non
+négatif ; `--keep-afk` et `--min-played-percent 0` désactivent aussi la lecture et la
+validation de leur champ respectif. La comparaison du temps joué est faite en entiers :
+exactement 80 % joués est conservé. Les autres files ne sont pas concernées par ces
+contrôles de qualité. Un rapport publié avant #111 relit `min_game_duration_s`
 et `min_played_percent` à 0 et `exclude_afk` à `false` (contrôles non appliqués).
-Chiffres de la copie de recette (17 112 parties 420/440 hors remake) : 37 parties de moins
+Sonde SQL historique du 4 octobre sur la copie de recette (17 112 parties 420/440 hors
+remake), à confirmer par la CLI release sur la copie de Matthieu : 37 parties de moins
 de 300 s (`short_game`, dont 35 portaient aussi un AFK), 602 parties `afk` supplémentaires
 (637 parties contiennent au moins un `wasAfk = true`, soit ≈ 3,7 %), 0 `early_departure`
 (le plus petit rapport `timePlayed` / durée est 0,989 : `wasAfk` est le vrai signal, le
@@ -448,6 +462,17 @@ fiches des bots sont validées mais exclues des statistiques des joueurs ;
 `excluded_bot_participations` en donne le compte. Les données de bans ne
 comptent que si les deux listes de 5 slots et leurs tours sont complets. Les bans
 n'ont pas de rang/rôle individuel attribuable dans les réponses Riot.
+
+Les miroirs (même champion dans les deux camps) sont acceptés en 430 et 480 après
+validation du format 5 contre 5 et des résultats d'équipe. Les deux participations,
+avec leurs victoires/défaites et leurs builds, restent comptées : un miroir au même
+rôle donne deux participations au champion, une victoire et une défaite. Son pick rate
+compte la partie distincte une fois (#84). Aucun matchup de lane n'est publié pour ces
+files, même sans miroir : seuls 420/440 sont appariés et
+`lane_matchup_participations` reste à 0 ailleurs. Aucun adversaire ambigu n'est inventé.
+Les preuves synthétiques et la recette réelle restant à exécuter sont détaillées dans
+la [recette qualité #111](../../docs/recettes/2026-10-06-filtres-qualite.md) ; ces tests
+ne confirment pas les chiffres de `olc_nuit_d`.
 
 ### Rang des bans : palier de partie (#109)
 

@@ -563,6 +563,88 @@ async fn tierlist_isole_la_population_pagine_et_garde_les_bans_de_la_page() {
 }
 
 #[tokio::test]
+async fn api_serves_quality_counters_and_options_in_both_snapshot_formats() {
+    let db = db_or_skip!();
+    for chunked in [false, true] {
+        for (duration, played, afk, included, exclusions) in [
+            (
+                300,
+                80,
+                true,
+                97,
+                json!({"short_game": 1, "afk": 1, "early_departure": 1}),
+            ),
+            (
+                300,
+                80,
+                false,
+                98,
+                json!({"short_game": 1, "early_departure": 1}),
+            ),
+            (0, 0, false, 100, json!({})),
+        ] {
+            let mut source = report();
+            source["min_game_duration_s"] = json!(duration);
+            source["min_played_percent"] = json!(played);
+            source["exclude_afk"] = json!(afk);
+            source["included_matches"] = json!(included);
+            source["exclusions"] = exclusions.clone();
+            sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+                .execute(db.storage.pool())
+                .await
+                .unwrap();
+            if chunked {
+                publish_chunked(db.storage.pool(), source).await;
+            } else {
+                publish(db.storage.pool(), source).await;
+            }
+            for meta in [
+                tierlist(db.storage.pool(), query()).await.unwrap().meta,
+                builds(db.storage.pool(), query(), 1).await.unwrap().meta,
+            ] {
+                let meta = serde_json::to_value(meta).unwrap();
+                assert_eq!(meta["min_game_duration_s"], duration);
+                assert_eq!(meta["min_played_percent"], played);
+                assert_eq!(meta["exclude_afk"], afk);
+                assert_eq!(meta["exclusions"], exclusions);
+            }
+        }
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
+async fn legacy_snapshot_does_not_invent_quality_options() {
+    let db = db_or_skip!();
+    let mut source = report();
+    for field in ["min_game_duration_s", "min_played_percent", "exclude_afk"] {
+        source.as_object_mut().unwrap().remove(field).unwrap();
+    }
+    for chunked in [false, true] {
+        sqlx::query("DELETE FROM champion_stats_snapshot WHERE id=1")
+            .execute(db.storage.pool())
+            .await
+            .unwrap();
+        if chunked {
+            publish_chunked(db.storage.pool(), source.clone()).await;
+        } else {
+            publish(db.storage.pool(), source.clone()).await;
+        }
+        for meta in [
+            tierlist(db.storage.pool(), query()).await.unwrap().meta,
+            builds(db.storage.pool(), query(), 1).await.unwrap().meta,
+        ] {
+            let meta = serde_json::to_value(meta).unwrap();
+            assert_eq!(meta["min_game_duration_s"], 0);
+            assert_eq!(meta["min_played_percent"], 0);
+            assert_eq!(meta["exclude_afk"], false);
+            assert_eq!(meta["exclusions"], json!({"remake": 1}));
+        }
+    }
+    db.cleanup().await;
+}
+
+#[tokio::test]
 async fn un_morceau_sans_part_apex_est_servi_avec_l_indicateur_recalcule_depuis_les_paliers() {
     // Instantané publié avec le premier commit de #82 : `tier_participations` sans indicateur.
     let db = db_or_skip!();
