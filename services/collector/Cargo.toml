@@ -45,3 +45,7 @@ tokio = { workspace = true, features = ["test-util"] }
 [[example]]
 name = "publish_desktop_catalog"
 test = true
+
+[[example]]
+name = "reproject_tooltip_segments"
+test = true

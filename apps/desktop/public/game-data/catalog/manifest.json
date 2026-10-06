@@ -2,2424 +2,2424 @@
   "champions": {
     "1": {
       "en_US": {
-        "bytes": 86282,
+        "bytes": 88757,
         "path": "/game-data/catalog/champions/1/en_US.json",
         "records": 6,
-        "sha256": "b2dbfda2b99376a9639c5b2f8f35a65e72c84433d3f72963ee933d4ed7f1e7c4"
+        "sha256": "05226f8283d70c5c253371e4572c3ea99496024142f2171f83a3a1f4263a0ebf"
       },
       "fr_FR": {
-        "bytes": 87020,
+        "bytes": 89813,
         "path": "/game-data/catalog/champions/1/fr_FR.json",
         "records": 6,
-        "sha256": "0e3bf4ae8e7ea0c13b5b690bdd367b302ab5d2a25978982ced03e7e1488aeacd"
+        "sha256": "202c0a899ccd1fc65c8a7a76eb5d7faada82d7ac5312e30ae04fc7a59c7b0c05"
       }
     },
     "10": {
       "en_US": {
-        "bytes": 100531,
+        "bytes": 102855,
         "path": "/game-data/catalog/champions/10/en_US.json",
         "records": 6,
-        "sha256": "bf465931300d8f2b9b95cbeab49fe4772ab2e9b841153e3e3cae692104d69873"
+        "sha256": "e3d305241ce8a38eb6e8b7517ac203048adfdc648bccf5bc22dccefb9d26e4a1"
       },
       "fr_FR": {
-        "bytes": 101285,
+        "bytes": 103809,
         "path": "/game-data/catalog/champions/10/fr_FR.json",
         "records": 6,
-        "sha256": "81f6b19cca8e00baae4e4a969fe7ebaccc746bb2ddc0bd1015970fd153411b4f"
+        "sha256": "d78f880a83ef5cf48591c2e09eec6d33f4da16b43750e26a35e71c54bb2efb9d"
       }
     },
     "101": {
       "en_US": {
-        "bytes": 75150,
+        "bytes": 77635,
         "path": "/game-data/catalog/champions/101/en_US.json",
         "records": 6,
-        "sha256": "9482668963abb307ee6159bd31e33eae888fbf103bcd8a5158dce04566bf4e91"
+        "sha256": "c6568d1357b09780e4a2043d75d77df9ba2c6bb73573295ff7343193ac09abb4"
       },
       "fr_FR": {
-        "bytes": 75869,
+        "bytes": 78617,
         "path": "/game-data/catalog/champions/101/fr_FR.json",
         "records": 6,
-        "sha256": "413970ce782cd4258f9869071b34e0074bad641125d3c0ed437ca7491a0aff35"
+        "sha256": "005627716755fe5506818e2e9726ab36b2f77cd458bd7f1c1fc08f15e28b2032"
       }
     },
     "102": {
       "en_US": {
-        "bytes": 74268,
+        "bytes": 78384,
         "path": "/game-data/catalog/champions/102/en_US.json",
         "records": 6,
-        "sha256": "6aa5406d96273e41734436270a719fa5d0aede10769e2b105508b3814a955d39"
+        "sha256": "834ac63a176486d71c02ad1585e6d0d4fb60b9f3ab96e29e6134e888168072d0"
       },
       "fr_FR": {
-        "bytes": 75391,
+        "bytes": 80069,
         "path": "/game-data/catalog/champions/102/fr_FR.json",
         "records": 6,
-        "sha256": "1f6e492332121a32d73fbe8ec2d35a3552efea5089fc501533fe72dea2d1fa3a"
+        "sha256": "d69d0720ba51d9711d9f6d124f1c9bd2420a67a35b9e066446f50247e3a1363d"
       }
     },
     "103": {
       "en_US": {
-        "bytes": 100987,
+        "bytes": 103411,
         "path": "/game-data/catalog/champions/103/en_US.json",
         "records": 6,
-        "sha256": "847ff83186b937f728864adf14e3e6d132a285db3003eef9d283a87b58ced65b"
+        "sha256": "944cf22a382d8d0652a1994ce0ed778d4a8db01ee66345ff4da4d3945afc25ac"
       },
       "fr_FR": {
-        "bytes": 101636,
+        "bytes": 104279,
         "path": "/game-data/catalog/champions/103/fr_FR.json",
         "records": 6,
-        "sha256": "db0d96da93d774d100623b05148daca9347d61bc372336b15f1d1c7c89ea92a0"
+        "sha256": "238688c22ede3750b07ed3fa452573f53b19721f5046ea735f42ce44132ed0d5"
       }
     },
     "104": {
       "en_US": {
-        "bytes": 85383,
+        "bytes": 87916,
         "path": "/game-data/catalog/champions/104/en_US.json",
         "records": 6,
-        "sha256": "f24a46efa39112503587ecf70b2e94a49a689526fd44fc755ce1a22ebd5a6d85"
+        "sha256": "b6b78b1f55ab15408cff2e02cadef29659fb17a7d86f789efbf1c04ea3e91e44"
       },
       "fr_FR": {
-        "bytes": 86031,
+        "bytes": 88832,
         "path": "/game-data/catalog/champions/104/fr_FR.json",
         "records": 6,
-        "sha256": "de39cdb8ae2607c24d7c331b1e4f8fe29f0e09119e0f9efbb14042f1af07690e"
+        "sha256": "bccefb4b8e1b80dc71be86defbeb768585539cbf81c9fa80d56d39fe9efbaf1c"
       }
     },
     "105": {
       "en_US": {
-        "bytes": 79982,
+        "bytes": 82892,
         "path": "/game-data/catalog/champions/105/en_US.json",
         "records": 6,
-        "sha256": "0473fa3ac5edbd24f4d0f33104cb0ed57bbe12386c6b3441bb7f2dc854b1cedd"
+        "sha256": "83c5bd0ecdb1f11b36381354ff22e0f63637131b25a5a93de44337e568268c0b"
       },
       "fr_FR": {
-        "bytes": 80573,
+        "bytes": 83789,
         "path": "/game-data/catalog/champions/105/fr_FR.json",
         "records": 6,
-        "sha256": "366995730656e3730c85aa50e3b7a4d0397acf2541b378b3fcbf35ce6316acd6"
+        "sha256": "dbb5199b06da902bb6c8c866963698b9e2ca8c5733e28fb1db291b4aa34d7412"
       }
     },
     "106": {
       "en_US": {
-        "bytes": 78832,
+        "bytes": 81868,
         "path": "/game-data/catalog/champions/106/en_US.json",
         "records": 6,
-        "sha256": "68ef42507538f43e16ad7eed1c04924847b1a59e5cfdd2e9f3c6467d093484a2"
+        "sha256": "73dc0e9d0b2bc6e8fa9edbede617570df7a27448a6a7b25948b9997c572c70aa"
       },
       "fr_FR": {
-        "bytes": 79524,
+        "bytes": 82853,
         "path": "/game-data/catalog/champions/106/fr_FR.json",
         "records": 6,
-        "sha256": "c96378167443d80be6e39099961c1e2cb801cafca9f3d8090ab17a638f08e7c1"
+        "sha256": "06c21044f26d485fd4257892b701c26679b3ce90c6084b80bb95ad229f9b5ea9"
       }
     },
     "107": {
       "en_US": {
-        "bytes": 87810,
+        "bytes": 90657,
         "path": "/game-data/catalog/champions/107/en_US.json",
         "records": 6,
-        "sha256": "2c665d0412717814db93da754952264c2f23ddf1738012eb9e96de9ac2226732"
+        "sha256": "8651358d5869e744515913dcc197abcc9c0f3178c0568a4aeab43da676af8984"
       },
       "fr_FR": {
-        "bytes": 88805,
+        "bytes": 91972,
         "path": "/game-data/catalog/champions/107/fr_FR.json",
         "records": 6,
-        "sha256": "2f081b4390b7bdf899ae79fe5d187d1cc60b23ee3be0cabedbfa1c3760b1590c"
+        "sha256": "96ddb51e304735393968a9ebeb82421412b506562e02b98df2ae51883aeabd2d"
       }
     },
     "11": {
       "en_US": {
-        "bytes": 103243,
+        "bytes": 105868,
         "path": "/game-data/catalog/champions/11/en_US.json",
         "records": 6,
-        "sha256": "6c54a1fa24adeef92d9cf18e9ee6e8ab0a078913e355d22ad54845df1937405b"
+        "sha256": "93c264dc121f14440c17d8d7586c91645d9306dfeea6744bc71342e911b6b9a8"
       },
       "fr_FR": {
-        "bytes": 104198,
+        "bytes": 107135,
         "path": "/game-data/catalog/champions/11/fr_FR.json",
         "records": 6,
-        "sha256": "ac2e7131c39b5b40b79cdbd35c6709ced7ffad4fe21a6d53a607bd0dbddee548"
+        "sha256": "25e382d5056395d0a18994cd9788124e9c0bc6be5f00f5552829d41430f1d519"
       }
     },
     "110": {
       "en_US": {
-        "bytes": 92628,
+        "bytes": 96074,
         "path": "/game-data/catalog/champions/110/en_US.json",
         "records": 6,
-        "sha256": "55682f44c29d6cb08405c6acf6fa253a7aa6af806c08ad3c9d88c1026390c72f"
+        "sha256": "2cd39bef96fb517a7dede63fe6a936e8734e2f9c2c99892d85d06bc321480d7f"
       },
       "fr_FR": {
-        "bytes": 93538,
+        "bytes": 97366,
         "path": "/game-data/catalog/champions/110/fr_FR.json",
         "records": 6,
-        "sha256": "5c57301ea7842c01d25d3aa86710f7a07af53b32457dfa710090b035b501410c"
+        "sha256": "5e47568be1bca4e7677afdfc4881a42c4ba6833ceab55307b03120b3a521654a"
       }
     },
     "111": {
       "en_US": {
-        "bytes": 82795,
+        "bytes": 85144,
         "path": "/game-data/catalog/champions/111/en_US.json",
         "records": 6,
-        "sha256": "2a1de9dddeac1fe2de79a650d13561b69200d9d35bdc2caf1fe51897f37885b6"
+        "sha256": "9b0327a5d5ee2453800528efe676a674243aabb9f41b189776beadad560a9965"
       },
       "fr_FR": {
-        "bytes": 83275,
+        "bytes": 85829,
         "path": "/game-data/catalog/champions/111/fr_FR.json",
         "records": 6,
-        "sha256": "583dbb08a24dc5507326d298f1deb4da888949caacde1fd0039c7014bdb58e45"
+        "sha256": "6d3a8c7efb4e35cff1be4eeddc79f1f1532a11ae41406afd8033d650a7a54085"
       }
     },
     "112": {
       "en_US": {
-        "bytes": 77232,
+        "bytes": 80146,
         "path": "/game-data/catalog/champions/112/en_US.json",
         "records": 6,
-        "sha256": "9a179cf3ff76b811414daae568e435ee4e1f39c0cd5c87066ce0ca14de7bbdd9"
+        "sha256": "1e9fe189faa704276807c4b9687d72931b893bf29bea9ae50f6c6022a5b0f6f5"
       },
       "fr_FR": {
-        "bytes": 78178,
+        "bytes": 81418,
         "path": "/game-data/catalog/champions/112/fr_FR.json",
         "records": 6,
-        "sha256": "4d5ac00ec17d43cc3ec8ef65df420d97bb54f0bfd1fb3a64038067f2b4877d3a"
+        "sha256": "05acc8ab1794caf00e5626c38a7024a79796627af326bb46ae86c3359aabe46f"
       }
     },
     "113": {
       "en_US": {
-        "bytes": 86472,
+        "bytes": 89095,
         "path": "/game-data/catalog/champions/113/en_US.json",
         "records": 6,
-        "sha256": "6d43d9fbe563e5f2a16f767b700521a066efa4b5c42c5616c9f0cf840dffa7bd"
+        "sha256": "0e809eec71a54fb6a57705ced9f493e9851949b3ed9b0a04ab0287f72750a898"
       },
       "fr_FR": {
-        "bytes": 87179,
+        "bytes": 90081,
         "path": "/game-data/catalog/champions/113/fr_FR.json",
         "records": 6,
-        "sha256": "872b8db42de08480f28c27b4564d9985bb689fa1e6a1513c01bb55bc6010fe50"
+        "sha256": "9f77ec7f5daecf932a946846b9a68c52aceee81a7d2c7b4f58425aa896d548ee"
       }
     },
     "114": {
       "en_US": {
-        "bytes": 105578,
+        "bytes": 108325,
         "path": "/game-data/catalog/champions/114/en_US.json",
         "records": 6,
-        "sha256": "52ea862ce05eea7da2d9ca3f6dd6e0917464b3be92a3d66449955354073332a3"
+        "sha256": "3f9cef1f025c1fdcfd63a06a6c97815edd4ffe00d522262e5f41b5f74c2bc121"
       },
       "fr_FR": {
-        "bytes": 106496,
+        "bytes": 109592,
         "path": "/game-data/catalog/champions/114/fr_FR.json",
         "records": 6,
-        "sha256": "c28ef23f0aa62dff874e849acc89a1788e957dfc529c7e34aacc226f7d328264"
+        "sha256": "d5642b3ea35d9cb41c3f7cd0b0e7b691dcac149251a592c853d63db8ccf604d0"
       }
     },
     "115": {
       "en_US": {
-        "bytes": 83503,
+        "bytes": 85654,
         "path": "/game-data/catalog/champions/115/en_US.json",
         "records": 6,
-        "sha256": "df8baf11412c7df1121f74db709a9e708b01b0ad858327cec465714569ebe018"
+        "sha256": "330be756fda0b97779c698b74dc56049bc02cb0f60e320e4f386a56abc1f8ba6"
       },
       "fr_FR": {
-        "bytes": 84197,
+        "bytes": 86505,
         "path": "/game-data/catalog/champions/115/fr_FR.json",
         "records": 6,
-        "sha256": "6733236529ee7f8eaa524542da8600b69126a3e057ec6b6c9fbdf5eb732d4b97"
+        "sha256": "5979a869bba6474c963d03b0522928428efd7fe88de5f2d1580ef7f9bfa24107"
       }
     },
     "117": {
       "en_US": {
-        "bytes": 88389,
+        "bytes": 90664,
         "path": "/game-data/catalog/champions/117/en_US.json",
         "records": 6,
-        "sha256": "53415effd6a524e484743715b327493802868ce7f77b48855854d4f63e9b92ae"
+        "sha256": "68a387fa3bf1574ff7adccb08c7b45c305ed07f656867d85a541778971b55ab6"
       },
       "fr_FR": {
-        "bytes": 89111,
+        "bytes": 91648,
         "path": "/game-data/catalog/champions/117/fr_FR.json",
         "records": 6,
-        "sha256": "bdeb4e6d44190234281d06c3208f7ef70771430c5b29d0e6cddb4e0954b545d7"
+        "sha256": "097dccbfb47799b17607f0c8855e123204d3e98851599238f539a79da4966b3e"
       }
     },
     "119": {
       "en_US": {
-        "bytes": 96868,
+        "bytes": 99254,
         "path": "/game-data/catalog/champions/119/en_US.json",
         "records": 6,
-        "sha256": "9559213bf933ca6b14b3b242b1496483c931759b768e472b3ea8ec32105abdb2"
+        "sha256": "fc7517019ef5785f2c45d07eb052fb3b570e9019bcd865a80d50fcc02ee0d079"
       },
       "fr_FR": {
-        "bytes": 97902,
+        "bytes": 100531,
         "path": "/game-data/catalog/champions/119/fr_FR.json",
         "records": 6,
-        "sha256": "0f67ad70e2f74b7c53d32ad6f0f9efca70f597277b32396c6011b4fbad9ba641"
+        "sha256": "dd3a7cd71517869cdcb8b6de3d091202c9d8ca8200b8c848ed8bad91321818cd"
       }
     },
     "12": {
       "en_US": {
-        "bytes": 81165,
+        "bytes": 83189,
         "path": "/game-data/catalog/champions/12/en_US.json",
         "records": 6,
-        "sha256": "ca470430b57ba302dbb83135f4bd52f5486e2d68724ff1c45d9ce9ed4c9b1804"
+        "sha256": "c44b11ec2d9eb9d8ce98efe844fbdb91ee203ee8087a231f467126780bc88dde"
       },
       "fr_FR": {
-        "bytes": 81702,
+        "bytes": 83838,
         "path": "/game-data/catalog/champions/12/fr_FR.json",
         "records": 6,
-        "sha256": "2af00b8f48d8ed323046321c78dcba5ac68305beec6a46943b63efafe449692e"
+        "sha256": "3330835391eca38d72aad86c3926684ce6485bebaab63c54d3c58f0e0f497708"
       }
     },
     "120": {
       "en_US": {
-        "bytes": 83573,
+        "bytes": 86135,
         "path": "/game-data/catalog/champions/120/en_US.json",
         "records": 6,
-        "sha256": "c488bb9d017ad072783eb86a315d9f320bf4409557b52ac4ec21596da9b355de"
+        "sha256": "b1c27dc0c92a7c67f079623a0e3caedbb4fc6632e640880d28e6ed19bf2f9ffc"
       },
       "fr_FR": {
-        "bytes": 84251,
+        "bytes": 87080,
         "path": "/game-data/catalog/champions/120/fr_FR.json",
         "records": 6,
-        "sha256": "01513fb7bdd93a06b5f4c23376cdaf3f6825ec9e5fa369ef2a90b79d04680815"
+        "sha256": "30d5f7a49f4a895b291c1e029fd9167a55e4e1d783bb6919977c9f9c25d7d770"
       }
     },
     "121": {
       "en_US": {
-        "bytes": 87632,
+        "bytes": 90116,
         "path": "/game-data/catalog/champions/121/en_US.json",
         "records": 6,
-        "sha256": "6ff761a82021101b0606a461865be123462d7878c94fda18391240ae21ae215c"
+        "sha256": "a33263577c5f15712c458ac30b8eae3d78634e70f39ebe546da23b2923e866a9"
       },
       "fr_FR": {
-        "bytes": 88921,
+        "bytes": 91716,
         "path": "/game-data/catalog/champions/121/fr_FR.json",
         "records": 6,
-        "sha256": "92bdd4084e8cae719de877add25b14a3c22a6d9896d038dde7c9004335327583"
+        "sha256": "aadcc0bfc09f35945fabec4b1fac7f4a5042eadf7b24488d6078f7c87929d05f"
       }
     },
     "122": {
       "en_US": {
-        "bytes": 93796,
+        "bytes": 96476,
         "path": "/game-data/catalog/champions/122/en_US.json",
         "records": 6,
-        "sha256": "f9defbeb8c64af3302184f0d85b3035138781bfb7ab1349f6c25879d7c224549"
+        "sha256": "2e952b669b626bd876541bcee107b1f6975e3f73dc9d63c56010d74f585511fe"
       },
       "fr_FR": {
-        "bytes": 94544,
+        "bytes": 97470,
         "path": "/game-data/catalog/champions/122/fr_FR.json",
         "records": 6,
-        "sha256": "46589016fc926d942a29744c56bae023502f184225d40f751bba38bfd38416de"
+        "sha256": "614edfafa6b41bf536509aefe0f6440e99df150e189312841c25ed548896e135"
       }
     },
     "126": {
       "en_US": {
-        "bytes": 82044,
+        "bytes": 84250,
         "path": "/game-data/catalog/champions/126/en_US.json",
         "records": 6,
-        "sha256": "b3f9f6598bbe455ded9b896e7756a488cc1ec69ce7c444936ee4b16958e4733d"
+        "sha256": "af22d057800f5e880762fcbbbf0476befa290674731d9f0c318861d14835df59"
       },
       "fr_FR": {
-        "bytes": 82722,
+        "bytes": 85106,
         "path": "/game-data/catalog/champions/126/fr_FR.json",
         "records": 6,
-        "sha256": "83afd3e39d05564afaf981a3d5ee3b0ac8b0a1fe117e8308e4fa25158ad3bf84"
+        "sha256": "5b000c8fa767c8a86ec22f33de28c050548980021a7cb38844fcb979743b2930"
       }
     },
     "127": {
       "en_US": {
-        "bytes": 87469,
+        "bytes": 89833,
         "path": "/game-data/catalog/champions/127/en_US.json",
         "records": 6,
-        "sha256": "52b8bc34825e4254331f1af7f92cab04fcbe9109ac33559f912f471d24cbac67"
+        "sha256": "9a7f33bd94f265419ba316bc990c1319a75c4e04aa49d923ae495cd756651473"
       },
       "fr_FR": {
-        "bytes": 88332,
+        "bytes": 90891,
         "path": "/game-data/catalog/champions/127/fr_FR.json",
         "records": 6,
-        "sha256": "3de218538db2e4a91bc453a7546884c48d99fb651fd408366a382e55e3145343"
+        "sha256": "dd4c8ed20ba83906d4072993e00c97a801d98d2ec4d081136088467130441cf6"
       }
     },
     "13": {
       "en_US": {
-        "bytes": 76793,
+        "bytes": 79264,
         "path": "/game-data/catalog/champions/13/en_US.json",
         "records": 6,
-        "sha256": "909a120156543e91b857feb81137db77d55e630d6ea98acb17a65e41fc9eaf23"
+        "sha256": "24253ae580fcb9ecdae34815189f50282bf2cc2083b8b104316b716ae44ff1c6"
       },
       "fr_FR": {
-        "bytes": 77951,
+        "bytes": 80761,
         "path": "/game-data/catalog/champions/13/fr_FR.json",
         "records": 6,
-        "sha256": "2b702a750d1812064705f578832e23856ed91bdad752f2c48193ca3aa5c7484e"
+        "sha256": "f15e0e39420ca28ab5475268a5beb4ece3afd98a32fc70f68b355c409f8c625c"
       }
     },
     "131": {
       "en_US": {
-        "bytes": 98144,
+        "bytes": 100730,
         "path": "/game-data/catalog/champions/131/en_US.json",
         "records": 6,
-        "sha256": "3ad362af4604134c4c6abdba53cbf95f64a02a4ade15267496f5ec866dbb29d7"
+        "sha256": "6b1f88e9552365a52b1d3b3a859bf7b13735492c665fdd601441c5620b9efc45"
       },
       "fr_FR": {
-        "bytes": 98787,
+        "bytes": 101641,
         "path": "/game-data/catalog/champions/131/fr_FR.json",
         "records": 6,
-        "sha256": "b59d12258b8ff83f52a3e7ea8ff5b59f6de3da20a7b811c6434e3e99ccb76671"
+        "sha256": "9370db99c78551466ee3068d81d37d5d65207f909e62bb7da4181959a7c58c6d"
       }
     },
     "133": {
       "en_US": {
-        "bytes": 75152,
+        "bytes": 77603,
         "path": "/game-data/catalog/champions/133/en_US.json",
         "records": 6,
-        "sha256": "132b3881c60ee7768dda4ae2ec9657c2894ddabb9f40da8171fabb44ace7b6ad"
+        "sha256": "43ae12455fe81ee145dd42b381f1e53bbc7483276fb31ae4cbcbe86b12edb4d9"
       },
       "fr_FR": {
-        "bytes": 75847,
+        "bytes": 78500,
         "path": "/game-data/catalog/champions/133/fr_FR.json",
         "records": 6,
-        "sha256": "b3424e366df3dad19134d442a2a4e7e8c4bfcf7e52b90a786d397db402c0efee"
+        "sha256": "cfb4713576f5fd521d248b623eb27230dbe64ff915f0f973a6b4bb5a53b89bba"
       }
     },
     "134": {
       "en_US": {
-        "bytes": 94092,
+        "bytes": 97219,
         "path": "/game-data/catalog/champions/134/en_US.json",
         "records": 6,
-        "sha256": "c18248329eef294a4e8176463b50952c20316ca96e688d93e45ee105267e96f1"
+        "sha256": "2fb4f0c1a42ccdb6fed98001b75823f0f0c34c40872454dac74537f38462c14f"
       },
       "fr_FR": {
-        "bytes": 95008,
+        "bytes": 98418,
         "path": "/game-data/catalog/champions/134/fr_FR.json",
         "records": 6,
-        "sha256": "d3ae2278b03b7d9bef5c727b672942ac990808c5920ed62cdc3ee11ff53ca599"
+        "sha256": "36a540f192aaa63fa918e54fdcbf9aa3d04a7aaa6009ad35c7f97197f6e52a99"
       }
     },
     "136": {
       "en_US": {
-        "bytes": 83702,
+        "bytes": 87069,
         "path": "/game-data/catalog/champions/136/en_US.json",
         "records": 6,
-        "sha256": "f189e213057e0f9fccab7a742cbd6b7a396b1cbb0cd74c9d1a7606f248589bd1"
+        "sha256": "c5a50ad2f416699ff245fb41e374dbcef96c383406b8b6ffd71870e608e5d62a"
       },
       "fr_FR": {
-        "bytes": 85161,
+        "bytes": 88955,
         "path": "/game-data/catalog/champions/136/fr_FR.json",
         "records": 6,
-        "sha256": "c188b067672ef11067388ea121397eb8394027c84732dd03b59c88dbd9dfeec1"
+        "sha256": "5a93b80b53c337d4b4303393c3d935216f13bc76abf586dcce6ee311efd64e86"
       }
     },
     "14": {
       "en_US": {
-        "bytes": 88252,
+        "bytes": 91151,
         "path": "/game-data/catalog/champions/14/en_US.json",
         "records": 6,
-        "sha256": "7a078168c9d6d3368da5d30f85de31f14a16f773c02b840d33f3f529be67266a"
+        "sha256": "82382d6fc000ea0301ce3e2016db666319fd637f45e93bc15fe67a29de35daa3"
       },
       "fr_FR": {
-        "bytes": 89118,
+        "bytes": 92399,
         "path": "/game-data/catalog/champions/14/fr_FR.json",
         "records": 6,
-        "sha256": "a3ab13822d4e200135791cbce8aa59c30992520caa59cdd8cf2c3987162adebb"
+        "sha256": "33df4e1d557ff064948db50371ebb71d16207d0e99d34b1bb4b90428441e8d0d"
       }
     },
     "141": {
       "en_US": {
-        "bytes": 72977,
+        "bytes": 75852,
         "path": "/game-data/catalog/champions/141/en_US.json",
         "records": 6,
-        "sha256": "95e97449ac4a95ddbdb041a510d038c32cdb5f96aded33e4bae147208625de00"
+        "sha256": "caafefeaa9e41abad88f6c554fef53bedca0ae5f33c6b202b20c2651f109236b"
       },
       "fr_FR": {
-        "bytes": 73897,
+        "bytes": 77266,
         "path": "/game-data/catalog/champions/141/fr_FR.json",
         "records": 6,
-        "sha256": "d45085cf4683b42848c77a0e02874587badaac94001b790c709d5787b454ec54"
+        "sha256": "143b54afd7a4d8c4898b045743ed65520f0e85cf535c9edf9a237570df082007"
       }
     },
     "142": {
       "en_US": {
-        "bytes": 78924,
+        "bytes": 81699,
         "path": "/game-data/catalog/champions/142/en_US.json",
         "records": 6,
-        "sha256": "d819c24212319eac3dc767f61fff2bdede1e2a4c1abb15f952b19c5ee01253e6"
+        "sha256": "c802f511f386c550a1d653fbd01c8e2738532f629be12b280d8473f209f4363b"
       },
       "fr_FR": {
-        "bytes": 79948,
+        "bytes": 83188,
         "path": "/game-data/catalog/champions/142/fr_FR.json",
         "records": 6,
-        "sha256": "7d01a96d36d51e5760404a941e7b1ee1a92f58e639da652e567101d373bde0d0"
+        "sha256": "ec79e8a73957c3444387deb62124a2154f4e601b46d7e021c892d9607e64cb4a"
       }
     },
     "143": {
       "en_US": {
-        "bytes": 93206,
+        "bytes": 96196,
         "path": "/game-data/catalog/champions/143/en_US.json",
         "records": 6,
-        "sha256": "148dbc19c1916aef3fe764ff7d41990709e1393bdebc2bb364a24033ce667e9c"
+        "sha256": "2130795ad4432a4597cabf5ef687d70f1de11777ab752a0f05476783e141aaa2"
       },
       "fr_FR": {
-        "bytes": 94385,
+        "bytes": 97811,
         "path": "/game-data/catalog/champions/143/fr_FR.json",
         "records": 6,
-        "sha256": "7476210c0c07be79f430265eaf5f431718475e71ec51a4755b3570624b7c64d4"
+        "sha256": "893a2a2f2b6e32deaf3416193905afe993723e4200b2a81199fc06c86d69a63f"
       }
     },
     "145": {
       "en_US": {
-        "bytes": 95820,
+        "bytes": 98279,
         "path": "/game-data/catalog/champions/145/en_US.json",
         "records": 6,
-        "sha256": "24a9d0bae37c498ab4bb5111a1fa47566eb8049f5530be67e2eee2afa5981512"
+        "sha256": "ec9fbdc2614b3094d1c0d37776e527697d5391a2f7e7437d9b13b8dcf2da7ddb"
       },
       "fr_FR": {
-        "bytes": 96739,
+        "bytes": 99486,
         "path": "/game-data/catalog/champions/145/fr_FR.json",
         "records": 6,
-        "sha256": "7d5833513c68294d06416a6716b45067042e1423a1aa04af7a18eb6dc4dac3f2"
+        "sha256": "7711e7a47f6b8b6273660015118b986b9e0d8a159f79f8ec3873b27a7e43bbd7"
       }
     },
     "147": {
       "en_US": {
-        "bytes": 99678,
+        "bytes": 102202,
         "path": "/game-data/catalog/champions/147/en_US.json",
         "records": 6,
-        "sha256": "452e5de2f78d8dab9c34ccdb576616ff37b13f9fdcd0114a82aaa9fb89cd01a0"
+        "sha256": "d3fc00a460f56d98b1b188af8e942741270ff9e9557ab2a11c9a5af29d924f3e"
       },
       "fr_FR": {
-        "bytes": 100465,
+        "bytes": 103287,
         "path": "/game-data/catalog/champions/147/fr_FR.json",
         "records": 6,
-        "sha256": "d8acd8e87212da125f56c76967ecdc31c1dfbd2ddb9226fa8e4867f9d127062f"
+        "sha256": "c2b5b27324e333a8f7b76734a3fbd34e602cc44e149e097f1f20b8c717342fd4"
       }
     },
     "15": {
       "en_US": {
-        "bytes": 95488,
+        "bytes": 97743,
         "path": "/game-data/catalog/champions/15/en_US.json",
         "records": 6,
-        "sha256": "2778033db5f5abc04d98cfb2da49fcc14e5dc221f2318a1c3607841ba036ea75"
+        "sha256": "494bf8997dc5a4d03c1ed5f4ec34feb0d8a5f827dc89cb95344289decb794523"
       },
       "fr_FR": {
-        "bytes": 96085,
+        "bytes": 98525,
         "path": "/game-data/catalog/champions/15/fr_FR.json",
         "records": 6,
-        "sha256": "9d77b37464a2051795a36ce897192200e4cb263bd68f7ab2c7ab18f6daa1b801"
+        "sha256": "c2eae1e366545179cff2bccda8a3a79b790de07e51d2840babc09a3132fbb317"
       }
     },
     "150": {
       "en_US": {
-        "bytes": 80521,
+        "bytes": 83244,
         "path": "/game-data/catalog/champions/150/en_US.json",
         "records": 6,
-        "sha256": "4a42e9c60edd056d5edc099c998ad968934504f7e0fda348e2e2e5f0a01c6a79"
+        "sha256": "56e7b276c646f19e2b341872600ab4a34040e28824b4eb01838c89716386f591"
       },
       "fr_FR": {
-        "bytes": 81547,
+        "bytes": 84572,
         "path": "/game-data/catalog/champions/150/fr_FR.json",
         "records": 6,
-        "sha256": "3346ebeeed619194b7fec37e55ab5cefd2a48b2520668388c5a4a1450f2c46c3"
+        "sha256": "78735b73edb5c5644d511a2021e5b43c52e7830d8415e999ab50ffda65b6381f"
       }
     },
     "154": {
       "en_US": {
-        "bytes": 77398,
+        "bytes": 80084,
         "path": "/game-data/catalog/champions/154/en_US.json",
         "records": 6,
-        "sha256": "3ea21af142d9f038345b7f866a76f95825da74ec731a9ec70bae022035ccb7f8"
+        "sha256": "70bb9ec1332899b977be18fa618f0c3ea9daf92ed559f2c0bab98fd0b430e0ee"
       },
       "fr_FR": {
-        "bytes": 78100,
+        "bytes": 81182,
         "path": "/game-data/catalog/champions/154/fr_FR.json",
         "records": 6,
-        "sha256": "5af30a1f3584566d69cbc72cbc868fb8fa80501806bfaa3b1deb6eafefe5a619"
+        "sha256": "04710c1b7a7e7d9713abafc0154d2d73501de03b76ca40241f2532dcfc7d0397"
       }
     },
     "157": {
       "en_US": {
-        "bytes": 103510,
+        "bytes": 105945,
         "path": "/game-data/catalog/champions/157/en_US.json",
         "records": 6,
-        "sha256": "7088aec172389af67e663bfb8fccd53c0fde2c6db54a16658176c78c8920a912"
+        "sha256": "046c90d9b85107ba3605da164764f906a70fee664b41b6cd14d9a6d3dc5f9d99"
       },
       "fr_FR": {
-        "bytes": 104644,
+        "bytes": 107366,
         "path": "/game-data/catalog/champions/157/fr_FR.json",
         "records": 6,
-        "sha256": "52da0a1ec57bebba4e3c6e9701b483cb3e81885b783addb537d0a8e44b7eedcd"
+        "sha256": "4623b0bab121ec4eeb5b8a59c4a2dc5b5e6150e07150becf0d9bb6772a53e994"
       }
     },
     "16": {
       "en_US": {
-        "bytes": 93012,
+        "bytes": 95344,
         "path": "/game-data/catalog/champions/16/en_US.json",
         "records": 6,
-        "sha256": "6fa33b1d5c42879cc09c5a3f7a37f298a8c69d3cca34eb5f5d908c4f9d7f70f7"
+        "sha256": "f59b2951212d50fbb39845d66324b9db7458f4f901942d08ff7e87851cced0b6"
       },
       "fr_FR": {
-        "bytes": 93472,
+        "bytes": 95940,
         "path": "/game-data/catalog/champions/16/fr_FR.json",
         "records": 6,
-        "sha256": "5a33fc690f6a1077105d635e13823dd2648a548e0bc92a7a1099b3ae8a619a4d"
+        "sha256": "878ea196d2ad4135b964b8a30df72ae881a79b9fb7e3da6189585ebb09317438"
       }
     },
     "161": {
       "en_US": {
-        "bytes": 76865,
+        "bytes": 79375,
         "path": "/game-data/catalog/champions/161/en_US.json",
         "records": 6,
-        "sha256": "e7277aba02132621dfefc07e007237c8b6c9e1987509bcf027079d5f9ec4030d"
+        "sha256": "13ff0e2ec2e224ac8970108f8ab59f944f6c6380516148c45648322f5cd10646"
       },
       "fr_FR": {
-        "bytes": 77688,
+        "bytes": 80537,
         "path": "/game-data/catalog/champions/161/fr_FR.json",
         "records": 6,
-        "sha256": "2af606aaa010909a0fef3b1459b432230a85c94c86f70742db4a50b2c7ed7c8c"
+        "sha256": "c2cc70fc4df95308b10487cfb7c1290e2a6081de4f934ddb75b2580e03d0d206"
       }
     },
     "163": {
       "en_US": {
-        "bytes": 72416,
+        "bytes": 75087,
         "path": "/game-data/catalog/champions/163/en_US.json",
         "records": 6,
-        "sha256": "e71fadf95d5a07e108b0057db853bd6e7c6ab7624ca052d90b164719fa2b7c21"
+        "sha256": "5f215eaaa2a2be7f556e9589ebecade8eb6a65f0104bd196f30770b37207920d"
       },
       "fr_FR": {
-        "bytes": 73163,
+        "bytes": 76181,
         "path": "/game-data/catalog/champions/163/fr_FR.json",
         "records": 6,
-        "sha256": "5900be4662b05fad3dd8dcc2d2fec3568606af0f1dae0a587680a46f31d247e4"
+        "sha256": "efa27b7af3e6b09ac25cc08f88045766bb64d0d4c1237e6abdf60f18c9e5c693"
       }
     },
     "164": {
       "en_US": {
-        "bytes": 86286,
+        "bytes": 89487,
         "path": "/game-data/catalog/champions/164/en_US.json",
         "records": 6,
-        "sha256": "c1beba4c7fd54c870c23738f2552b96449cc88ab35a116784e2fbe26fb10fdae"
+        "sha256": "8f02431591d2ba49e078a1eb6be84cdbb8aa7e31edb7ef5098131d916dec7160"
       },
       "fr_FR": {
-        "bytes": 87225,
+        "bytes": 90825,
         "path": "/game-data/catalog/champions/164/fr_FR.json",
         "records": 6,
-        "sha256": "604bb7c710bdac2d4be80370416cdffa627c9f04f045542f726921b3132f69e9"
+        "sha256": "837f66ec9ede800c7d71061b2c9d1d10abdb371b3d75aa00fa25befd0fe8cef9"
       }
     },
     "166": {
       "en_US": {
-        "bytes": 74716,
+        "bytes": 77078,
         "path": "/game-data/catalog/champions/166/en_US.json",
         "records": 6,
-        "sha256": "9fd6e852af0d7cb4e38d2b483052500b40b6fffdfc89db169339ca2fd28066a5"
+        "sha256": "1552fce46bd365cbfb0363ef28d8534b4ce8ba3171445ad59780e9965959821d"
       },
       "fr_FR": {
-        "bytes": 75854,
+        "bytes": 78552,
         "path": "/game-data/catalog/champions/166/fr_FR.json",
         "records": 6,
-        "sha256": "00b1b4d3da8a1a51b70c5a18f992b9b053c328bcbc4eb85ace4475b7bed6a0b3"
+        "sha256": "9163c224c4f5cd29aecae0e222d06c97dbb3f686ede6047dfb6d581407c5113a"
       }
     },
     "17": {
       "en_US": {
-        "bytes": 88686,
+        "bytes": 91073,
         "path": "/game-data/catalog/champions/17/en_US.json",
         "records": 6,
-        "sha256": "a256a20cc41b4bbbe14ea38f35c37012245e2ffcfb42e458a94d1b8336cc756c"
+        "sha256": "c517ab6c7e6766c1baafe9d25a61f113854f36a81b8ad04de451e06f8eaaa91a"
       },
       "fr_FR": {
-        "bytes": 89265,
+        "bytes": 91849,
         "path": "/game-data/catalog/champions/17/fr_FR.json",
         "records": 6,
-        "sha256": "8cec765b2ab52efb68d90bbce6ba872a9004f0fb904aafc8f5c01a686d9f8572"
+        "sha256": "0f6356c527761358e9ca6cf45b9339e78ffa9af705ced6bbdc4ce48b0808e6f2"
       }
     },
     "18": {
       "en_US": {
-        "bytes": 98888,
+        "bytes": 101311,
         "path": "/game-data/catalog/champions/18/en_US.json",
         "records": 6,
-        "sha256": "1d2fbd0572533b087187a8e7b2454a1e4bd7b84766cc81ae03fb215768638975"
+        "sha256": "0f9bc98fbe48c2122230519212dc0aed8fdb94412363d550be47fa9583f45bc8"
       },
       "fr_FR": {
-        "bytes": 99611,
+        "bytes": 102360,
         "path": "/game-data/catalog/champions/18/fr_FR.json",
         "records": 6,
-        "sha256": "07287bb31b25fbf1cc638cb1cc5e2e40f290b2a6f9acf83141ad7ef965d31387"
+        "sha256": "00918322d475ccb4a6a01dde8ecf6d83ef3812e1f1c37b3444d711e3f9f1ea79"
       }
     },
     "19": {
       "en_US": {
-        "bytes": 88607,
+        "bytes": 91204,
         "path": "/game-data/catalog/champions/19/en_US.json",
         "records": 6,
-        "sha256": "77bb48d5f10e366f50e4d91af40c85a20d3b36ab0cc8939e6e78b412ba741b58"
+        "sha256": "963388bd026a00c6f8b97b0b54ca0748a340d3bb783901ff1f3e6add79ef23ff"
       },
       "fr_FR": {
-        "bytes": 89794,
+        "bytes": 92870,
         "path": "/game-data/catalog/champions/19/fr_FR.json",
         "records": 6,
-        "sha256": "e4c2a4744d57b19236af80b3ac7e1e4014becbd42e1385d2814dcb30a6d66477"
+        "sha256": "331c79a76cc09478cfb22d3be7de8a68bb11ea6267451e56046e8f9755242b7c"
       }
     },
     "2": {
       "en_US": {
-        "bytes": 83358,
+        "bytes": 85908,
         "path": "/game-data/catalog/champions/2/en_US.json",
         "records": 6,
-        "sha256": "689e0ee5e28c4caea231b46c634189cf6b3bff2ec604d04fd1e77a5df52c758e"
+        "sha256": "f325e91efcdd582dc715ad532c128af08c92b06a32beaa9326e0064de8ae6159"
       },
       "fr_FR": {
-        "bytes": 83969,
+        "bytes": 86812,
         "path": "/game-data/catalog/champions/2/fr_FR.json",
         "records": 6,
-        "sha256": "ed2e8ca2848015c8eaddc8502b79459cfe7dea4b3e1f40d9a43cb465765658da"
+        "sha256": "95d8a7054ffe95d5468e5d953fa04a1f7c1adc1c7e960e676f8b8e85a0cf2759"
       }
     },
     "20": {
       "en_US": {
-        "bytes": 84276,
+        "bytes": 87656,
         "path": "/game-data/catalog/champions/20/en_US.json",
         "records": 6,
-        "sha256": "8eec1811c60381fa2ca8b08cc74a5d5ce029ec3a127f0a59e272ce42c0d39ce3"
+        "sha256": "6cd29c97ee6bff8d54fcf78b48b123c1d920953546c13c5f1fc3bb2366d3e578"
       },
       "fr_FR": {
-        "bytes": 85182,
+        "bytes": 89075,
         "path": "/game-data/catalog/champions/20/fr_FR.json",
         "records": 6,
-        "sha256": "de84fea67a45c4be6f6e0f6c3f9cb7f78a5dc9094ae6cb4f5f9563f8bef716e0"
+        "sha256": "f01577951943a413c3f3676a8de2743a6a97c9bdd41c327c4fbe4ce436cc3662"
       }
     },
     "200": {
       "en_US": {
-        "bytes": 79882,
+        "bytes": 83235,
         "path": "/game-data/catalog/champions/200/en_US.json",
         "records": 6,
-        "sha256": "8f153c8d3bb93c5e47e93f3c3a76fd912a0b8d004a9196f193de4d5df5450d21"
+        "sha256": "ebc51d69dd19f6066d9fccc006e16d78658e32f41bc853f05546ec15b7d0bdf7"
       },
       "fr_FR": {
-        "bytes": 80699,
+        "bytes": 84438,
         "path": "/game-data/catalog/champions/200/fr_FR.json",
         "records": 6,
-        "sha256": "f1abca446a7fae30524fbd597470a08dac8a4289843bd922c8f8da2f2310e70d"
+        "sha256": "a2ecab76a495446fcc2135ae3ed3bcec8e86b97b55868994b0a8b044c5e1a8af"
       }
     },
     "201": {
       "en_US": {
-        "bytes": 88653,
+        "bytes": 91147,
         "path": "/game-data/catalog/champions/201/en_US.json",
         "records": 6,
-        "sha256": "7729f7172682ca5a485ea3ee7129cca60bd4a41d85cce566586548ee46f7275e"
+        "sha256": "d9fc684eef7237ffc40769262a27812470d89fa802d0dfc2341f330ef788da5d"
       },
       "fr_FR": {
-        "bytes": 89560,
+        "bytes": 92317,
         "path": "/game-data/catalog/champions/201/fr_FR.json",
         "records": 6,
-        "sha256": "8ce2344e2f403d0a255ec1afdbda9657784fe22fb16b7caf2facbd721aa01b64"
+        "sha256": "c9e9b7ddfb9ffae47876cb31cd7bd5d7381f645d9aeeb6a54e63705d00c1e253"
       }
     },
     "202": {
       "en_US": {
-        "bytes": 88822,
+        "bytes": 91649,
         "path": "/game-data/catalog/champions/202/en_US.json",
         "records": 6,
-        "sha256": "16784ca79bac5fe4235d156a84c46223c57721d3f67e3deaa117267d46275fd9"
+        "sha256": "d91c292702208af8ccbb970b5ced23b191d4fea57ee705fdd3ee66baa78f1ca3"
       },
       "fr_FR": {
-        "bytes": 89796,
+        "bytes": 92826,
         "path": "/game-data/catalog/champions/202/fr_FR.json",
         "records": 6,
-        "sha256": "9b9ddbcb536c78bb92c8e775ec2601238022cbf488c6fbd4fabf7f3acb04ddb2"
+        "sha256": "07c1e3d3bf30e38bb041b09b95c02d95b8e2b5c0ca6b4173ed241f3ceb46b120"
       }
     },
     "203": {
       "en_US": {
-        "bytes": 80349,
+        "bytes": 82970,
         "path": "/game-data/catalog/champions/203/en_US.json",
         "records": 6,
-        "sha256": "e63ed00aa412f562a9cc65b5ffc60c7499f50268fa164ecbadac1b9fe09058a8"
+        "sha256": "72fce1cf61f40d18435c53f2d11d97078354b581181ee1a056c4ee8cc63fc68d"
       },
       "fr_FR": {
-        "bytes": 80891,
+        "bytes": 83714,
         "path": "/game-data/catalog/champions/203/fr_FR.json",
         "records": 6,
-        "sha256": "3d300d344d9574cfe0431a31e6a99d4dd78128f0a3ea1ef27809e22bbe39f88a"
+        "sha256": "d88418f09ea51f95615f31c6bc87994a97ea0d869a685a4ed53a96065724f575"
       }
     },
     "21": {
       "en_US": {
-        "bytes": 97671,
+        "bytes": 100436,
         "path": "/game-data/catalog/champions/21/en_US.json",
         "records": 6,
-        "sha256": "bdb56f1d097f9c7b390de5dd8c001a440d773556d0e5606aaf7a05620af2057e"
+        "sha256": "50ca46449b574c20a7ff492cbf55d2399ad118e537a4616ae822714b1ff32861"
       },
       "fr_FR": {
-        "bytes": 98460,
+        "bytes": 101490,
         "path": "/game-data/catalog/champions/21/fr_FR.json",
         "records": 6,
-        "sha256": "5a2df5365f252221f6a295be79db4f7dc9b4364e64a20a24257eea2871b4796f"
+        "sha256": "2ca2aa37237c2209f11d4dc68b67e3373ab2f3d54def4d72741620ba49112e80"
       }
     },
     "22": {
       "en_US": {
-        "bytes": 100527,
+        "bytes": 102663,
         "path": "/game-data/catalog/champions/22/en_US.json",
         "records": 6,
-        "sha256": "a9df077629f158310da31500d87724faf3e692421832838d2a9d9589a6fef489"
+        "sha256": "e686975b4f1ebaf5760a345007a8950bf7241bb2cd6a1920ace612336470ac19"
       },
       "fr_FR": {
-        "bytes": 101273,
+        "bytes": 103590,
         "path": "/game-data/catalog/champions/22/fr_FR.json",
         "records": 6,
-        "sha256": "bda45ac656a3cc08363e457f540527aa8475bab30a9afa8f2267322736513920"
+        "sha256": "8fc15dce71ced57c3600856f6a0ec3305dbdd9b1565bcafb1653a43d317bf308"
       }
     },
     "221": {
       "en_US": {
-        "bytes": 81454,
+        "bytes": 84559,
         "path": "/game-data/catalog/champions/221/en_US.json",
         "records": 6,
-        "sha256": "1e1a5b5eabcb3b471fc80eddbe2c708e6e5b7883a9c45b39e7ee5b5678ff566b"
+        "sha256": "214c2d1cc484ab6ef661c6fda77fc9bdbe55b85bf8b9e3bf6ec40bda68773f23"
       },
       "fr_FR": {
-        "bytes": 82440,
+        "bytes": 85943,
         "path": "/game-data/catalog/champions/221/fr_FR.json",
         "records": 6,
-        "sha256": "f98f30d1a6fbd56b912edcdea4eb4194982cb2f6b64aa5470f88d646cf8f8f82"
+        "sha256": "30d6d9ae26ae1f06320cec6e9533a4d75e2e5e367052fd4ac133cda40decd8b9"
       }
     },
     "222": {
       "en_US": {
-        "bytes": 92574,
+        "bytes": 95168,
         "path": "/game-data/catalog/champions/222/en_US.json",
         "records": 6,
-        "sha256": "4e5211ab515c3d4336b65ae1166c0cf9ae1156f263750c2cb8272f0daf6e6e27"
+        "sha256": "e4acec9daa497c0113e787ffdbe76a46380f2e27463561beedd81696a8ae124f"
       },
       "fr_FR": {
-        "bytes": 93235,
+        "bytes": 96072,
         "path": "/game-data/catalog/champions/222/fr_FR.json",
         "records": 6,
-        "sha256": "47896b8933a7c160e54bf41c7eda7ab12a709061a862fd8318db149ca101b125"
+        "sha256": "125b5bea3225389327d81e4384d4cc9e411eb462a567695a82037787ac937df7"
       }
     },
     "223": {
       "en_US": {
-        "bytes": 86013,
+        "bytes": 89472,
         "path": "/game-data/catalog/champions/223/en_US.json",
         "records": 6,
-        "sha256": "47185ac49e5042fab5d9cc46d825828560c8bd72a7ec75ab7f7d13b8c62aa89c"
+        "sha256": "43adf8f52cebd86feb461c76a220933ef35585bc6f689ac952d6d8b2b9a0d145"
       },
       "fr_FR": {
-        "bytes": 87045,
+        "bytes": 91023,
         "path": "/game-data/catalog/champions/223/fr_FR.json",
         "records": 6,
-        "sha256": "01a5e1b62c69f62c1eb50b6849f3981c7a2796f367dfdd6f608043177032191c"
+        "sha256": "cd99c0e34a2fb547afc04c99afa5233882fa23f416475666fb9a2a5a6154d64c"
       }
     },
     "23": {
       "en_US": {
-        "bytes": 83481,
+        "bytes": 85653,
         "path": "/game-data/catalog/champions/23/en_US.json",
         "records": 6,
-        "sha256": "2d028384bb4e1bb80d1b446ec1484e69a0f368385a42d25e59a692b09cd9c607"
+        "sha256": "2f82cb31c9a058adf953c52d42ce733e0b3a75ffb5d5a424025b80742b3595b0"
       },
       "fr_FR": {
-        "bytes": 83940,
+        "bytes": 86237,
         "path": "/game-data/catalog/champions/23/fr_FR.json",
         "records": 6,
-        "sha256": "a7ba9eebdfa4fb61a92b431357d5f639e31337ed603c58e0f7ecde578ede900f"
+        "sha256": "0248c029843da193d16ae636aec068c62d8673b245070c9c9df6db59da1f71b7"
       }
     },
     "233": {
       "en_US": {
-        "bytes": 76273,
+        "bytes": 79664,
         "path": "/game-data/catalog/champions/233/en_US.json",
         "records": 6,
-        "sha256": "adb8a18396f5e9a88b9393b38b1f5793d25503b70a6e27287d14cf66ff888acf"
+        "sha256": "bce78c9ba5f551d807d00dd0f7f92d11bb1693445e732aba733085bfcdb12ff7"
       },
       "fr_FR": {
-        "bytes": 77375,
+        "bytes": 81201,
         "path": "/game-data/catalog/champions/233/fr_FR.json",
         "records": 6,
-        "sha256": "c38840d03892594179a2bb9257683d84e03aaef408a716e8c95da071db7c6f2b"
+        "sha256": "60205d2ee4044c2ec49caef0913d1502398d88f7788581712b61e408bbe6f104"
       }
     },
     "234": {
       "en_US": {
-        "bytes": 79397,
+        "bytes": 82170,
         "path": "/game-data/catalog/champions/234/en_US.json",
         "records": 6,
-        "sha256": "aeb791bf074d796ac855d2e0fe6813198b38108d98e03cd3c4cd7174fa635ffe"
+        "sha256": "fb7211ebefb74cab71270124fceecfe8aee90108b4e1bc6757094ce26dad4f32"
       },
       "fr_FR": {
-        "bytes": 80260,
+        "bytes": 83272,
         "path": "/game-data/catalog/champions/234/fr_FR.json",
         "records": 6,
-        "sha256": "619abb7a26c1be49fc0b75cd6194ef63340ae029cd84b6cab1241aed0d38fdd7"
+        "sha256": "3d36e929edad18b8ddf99f7455d1647e986d40051fd192ae1df680cc79764ea5"
       }
     },
     "235": {
       "en_US": {
-        "bytes": 97236,
+        "bytes": 99528,
         "path": "/game-data/catalog/champions/235/en_US.json",
         "records": 6,
-        "sha256": "97d3f2ed88ee74ca87bb09434e71c3972af4b7bc245bad2cc4963db08e50118b"
+        "sha256": "004de90a3d31f24fda106b6f172aeb1bd04c4ba153b5b50f270d2cf6fac0708e"
       },
       "fr_FR": {
-        "bytes": 98113,
+        "bytes": 100620,
         "path": "/game-data/catalog/champions/235/fr_FR.json",
         "records": 6,
-        "sha256": "b04c4d82dbba8b2a3156886b03ae3c962587ca5eaded181b8f79a156d0c92732"
+        "sha256": "55763c3d26abdc4038cdff5a639fd848962382a3457adf15df4ff2d77c3ff211"
       }
     },
     "236": {
       "en_US": {
-        "bytes": 92881,
+        "bytes": 95092,
         "path": "/game-data/catalog/champions/236/en_US.json",
         "records": 6,
-        "sha256": "65a222acf2455c77372eb16f90702dbbf319703fe9f81e2a7e10fe352a3ef65f"
+        "sha256": "d3458906e358eb7f0c9e4f0843096f0daab0bcc5fdde667fd339f8a762dc4999"
       },
       "fr_FR": {
-        "bytes": 93418,
+        "bytes": 95827,
         "path": "/game-data/catalog/champions/236/fr_FR.json",
         "records": 6,
-        "sha256": "2d771e88c8b879b280dc871f71a46d3fb78efdea5d2a2c9a0198b1910b476d5a"
+        "sha256": "01f523d0c29862393bd002da26045b9450dde558300635e7540d09478f243197"
       }
     },
     "238": {
       "en_US": {
-        "bytes": 90406,
+        "bytes": 93049,
         "path": "/game-data/catalog/champions/238/en_US.json",
         "records": 6,
-        "sha256": "f727f3e49b6f4c4746438c6bb1d5a4ff2a3b7713ae883725c4b5e7251f56b369"
+        "sha256": "2fdadf21c4261e4d1986bef4a905e71c2c82655f0137894d728ec66c8a547a48"
       },
       "fr_FR": {
-        "bytes": 91086,
+        "bytes": 93951,
         "path": "/game-data/catalog/champions/238/fr_FR.json",
         "records": 6,
-        "sha256": "6fcef1c71c782f03d854cbfb9e0fef9b0cd63a4baca220ea99ef57bc04f104c1"
+        "sha256": "4767e9d774174dc73c52c158c238addb0b26e5c6aa5679dfa2f8612829e9cba8"
       }
     },
     "24": {
       "en_US": {
-        "bytes": 77861,
+        "bytes": 80628,
         "path": "/game-data/catalog/champions/24/en_US.json",
         "records": 6,
-        "sha256": "8e400e67216f660534a552b03035c46a5f86f7fb6c39b476d3d5868717191402"
+        "sha256": "c5b713da7929b4d49bc936de68f0f6e034c78c7b8693271db028c20701e0a535"
       },
       "fr_FR": {
-        "bytes": 78436,
+        "bytes": 81492,
         "path": "/game-data/catalog/champions/24/fr_FR.json",
         "records": 6,
-        "sha256": "abd9fd7cf6404cc0873c62418e3fd418133518206798af3a28ed74b4de968e84"
+        "sha256": "ed286b08d7b1c15268d8b0bc715be21af16c821e684e3c40ead7c8e28db48d83"
       }
     },
     "240": {
       "en_US": {
-        "bytes": 72664,
+        "bytes": 75444,
         "path": "/game-data/catalog/champions/240/en_US.json",
         "records": 6,
-        "sha256": "950eeebe5cbcacc76f9de199b449bd95e7304f2de3d3a0f4afc29532998dee92"
+        "sha256": "94c108f6846fe66a7453ace8c0c3f92cfd80c5d71182b6591c63eb9cbb9699ba"
       },
       "fr_FR": {
-        "bytes": 73702,
+        "bytes": 76732,
         "path": "/game-data/catalog/champions/240/fr_FR.json",
         "records": 6,
-        "sha256": "b69e3097712e7eb2dbe05be41f3ad54de05bc80ad64b60045e97aa99618d2036"
+        "sha256": "747ef57ab670542efddb5d451b029cc86cb0bc375bb64ae4133864bcb951cd6f"
       }
     },
     "245": {
       "en_US": {
-        "bytes": 86925,
+        "bytes": 89432,
         "path": "/game-data/catalog/champions/245/en_US.json",
         "records": 6,
-        "sha256": "377b49c7b293318867fd67454bee9b58f0e45f4fe29da47cb3b6c02381264202"
+        "sha256": "195cc5dcbd9f130f7f9915f0bf57c0dcd207c7ee70ba114b51f7383f502475c6"
       },
       "fr_FR": {
-        "bytes": 88059,
+        "bytes": 90863,
         "path": "/game-data/catalog/champions/245/fr_FR.json",
         "records": 6,
-        "sha256": "98c62b9040ebbdf60334eb45bb93e160232ed21c19d1b3e53a6cea7c2b99b533"
+        "sha256": "2ffef602786727b1305c934f22eb481de0ca431d1ba371f9634b8a081e956501"
       }
     },
     "246": {
       "en_US": {
-        "bytes": 82926,
+        "bytes": 85931,
         "path": "/game-data/catalog/champions/246/en_US.json",
         "records": 6,
-        "sha256": "62e0569709135128c7675da745f678a4114fd7a055bfb8c5de53fc6e9481d94a"
+        "sha256": "3092df99adfc471d301332cfc7c6be726d2b81b3e5bb8d063111241098a3bea9"
       },
       "fr_FR": {
-        "bytes": 83629,
+        "bytes": 87039,
         "path": "/game-data/catalog/champions/246/fr_FR.json",
         "records": 6,
-        "sha256": "6d37980e4a5d4ac613a000969d0a83d09ec22e5bce63bdf8d9695db325be8527"
+        "sha256": "55c30642a54e4f605127c7f5354d7531c54ef964a91714dc874a847b7f6a6f78"
       }
     },
     "25": {
       "en_US": {
-        "bytes": 99020,
+        "bytes": 101388,
         "path": "/game-data/catalog/champions/25/en_US.json",
         "records": 6,
-        "sha256": "ab2156b30aec067376deb1e20f57d3fe6cf618f71285c8dd8221d5d2c79543ae"
+        "sha256": "fe84d3e019c8ea9a684f3062e17c7c864a5dc4e4a739d8d00b4dc4cbe8712be5"
       },
       "fr_FR": {
-        "bytes": 99759,
+        "bytes": 102387,
         "path": "/game-data/catalog/champions/25/fr_FR.json",
         "records": 6,
-        "sha256": "fc7d9f7ab32e58d8cd050fb61ed6e9e2d12806c650b6e1ca75a4d4512b28c42f"
+        "sha256": "58430d6b6e4952595316e215839aa7790f6090025cb31154e7dfbb4da9d880d3"
       }
     },
     "254": {
       "en_US": {
-        "bytes": 80108,
+        "bytes": 82588,
         "path": "/game-data/catalog/champions/254/en_US.json",
         "records": 6,
-        "sha256": "14a9cd4f01d6db45acf9c5d57b706687a2fcafcdca66ba13484cf66dff35f532"
+        "sha256": "3c913b92f392993187e513d9f23d3adcbd13b49767f0304b5ac280c89a1f959c"
       },
       "fr_FR": {
-        "bytes": 80785,
+        "bytes": 83504,
         "path": "/game-data/catalog/champions/254/fr_FR.json",
         "records": 6,
-        "sha256": "3acd04cf7b1f5150389b5073fca29021087662eec10c0637b706992c2adf12db"
+        "sha256": "0bf70c85ec5b5aa09e122252516793aba219ec8833871052f5063728ab1f3617"
       }
     },
     "26": {
       "en_US": {
-        "bytes": 74685,
+        "bytes": 76657,
         "path": "/game-data/catalog/champions/26/en_US.json",
         "records": 6,
-        "sha256": "a8b2307474e4d1e2a9abf21d1f73cea2c32e04236de152308cf5fca82cb37690"
+        "sha256": "4d12ff61144ea9ebd6b973b308a597ca4f7152fed2faf6ba7764693638153814"
       },
       "fr_FR": {
-        "bytes": 75259,
+        "bytes": 77322,
         "path": "/game-data/catalog/champions/26/fr_FR.json",
         "records": 6,
-        "sha256": "82335db7b5bb1f1ad6f418f022d6b6034da3d668779ebb560cb7eb35b5131e61"
+        "sha256": "dcec80bbbd46822f09d44abe3e71e022d34eb1da06f060e16141083bf6175a35"
       }
     },
     "266": {
       "en_US": {
-        "bytes": 78533,
+        "bytes": 80983,
         "path": "/game-data/catalog/champions/266/en_US.json",
         "records": 6,
-        "sha256": "31669a3272a0ff0e9c56e1800a83e1a68d65cb24c1259641ab522968dba03bb5"
+        "sha256": "e71b026331445d234a0f759d64a395f3eef81812d2812053fcb09b3b5a6ddc80"
       },
       "fr_FR": {
-        "bytes": 79357,
+        "bytes": 82097,
         "path": "/game-data/catalog/champions/266/fr_FR.json",
         "records": 6,
-        "sha256": "10d3f6fd51575ef5e41c08a3ebe6519284ebababfcfd17b50ade76c284ce7e9c"
+        "sha256": "54959993498d7460fc03cbec756412a3871f3c6fc7c65430443b9caf26de8e5a"
       }
     },
     "267": {
       "en_US": {
-        "bytes": 89044,
+        "bytes": 91424,
         "path": "/game-data/catalog/champions/267/en_US.json",
         "records": 6,
-        "sha256": "6be83951eee48ba8891f97a6e7d14bcb1137c155bf53f262daa1d0d6b9bc1018"
+        "sha256": "d62efcd7fc2c7f6df3ccfdd89e185cadb42b6afacf30155ad2baa64a0ad2c36e"
       },
       "fr_FR": {
-        "bytes": 89577,
+        "bytes": 92089,
         "path": "/game-data/catalog/champions/267/fr_FR.json",
         "records": 6,
-        "sha256": "0ccc2eff7569347fecdd1eaf6cc4d8bfd5b0d6a9d534938d2431a275ec9ebd94"
+        "sha256": "359d1aa8481ef370fe4c877b8ee96f478e82002d4759296c9bdcd1b74d336358"
       }
     },
     "268": {
       "en_US": {
-        "bytes": 72021,
+        "bytes": 74208,
         "path": "/game-data/catalog/champions/268/en_US.json",
         "records": 6,
-        "sha256": "754c801e042d23aec94c45a75a3a56834e9d50a7b85ce27806a0bd130529507b"
+        "sha256": "5be8a9cf1fc26e0e802f1efd4381e28f9097948405d132e2b858d22d2e54d81c"
       },
       "fr_FR": {
-        "bytes": 72620,
+        "bytes": 75026,
         "path": "/game-data/catalog/champions/268/fr_FR.json",
         "records": 6,
-        "sha256": "75c58f602150354726c1aaceae9c0b3bfbae6d1726e666131cdd26152619cc16"
+        "sha256": "93128fba4fe970404d8fbd7876bd8e21cde633e92049801f6d79438868c15395"
       }
     },
     "27": {
       "en_US": {
-        "bytes": 71919,
+        "bytes": 73858,
         "path": "/game-data/catalog/champions/27/en_US.json",
         "records": 6,
-        "sha256": "1df709ba4db8b79e2faf08d244369c3fe1830d8cf0d0d5b1016e6c40b1d094f4"
+        "sha256": "2532c24ff68f52e47c42e6a59244a7536c4998664b29051ee9663f458ee900d1"
       },
       "fr_FR": {
-        "bytes": 72455,
+        "bytes": 74552,
         "path": "/game-data/catalog/champions/27/fr_FR.json",
         "records": 6,
-        "sha256": "c3deae665637a703a1d5c87d73cc652998f9cf35be75acf35d07a744a16403b1"
+        "sha256": "4e0b6ea77354dee1fb63729c1d992d7f9e90c366cb4f514e4745903f9e3aa52f"
       }
     },
     "28": {
       "en_US": {
-        "bytes": 91771,
+        "bytes": 95048,
         "path": "/game-data/catalog/champions/28/en_US.json",
         "records": 6,
-        "sha256": "4be6b8d08794fa5ad89058e4331b2e481b589768a782ee8b51801cb8f85e14b0"
+        "sha256": "3849fc9b1f5fde9f0d4e76ad02fd8a4f9ccf489f6480e2e4c52b6fb80be8e8ce"
       },
       "fr_FR": {
-        "bytes": 92552,
+        "bytes": 96215,
         "path": "/game-data/catalog/champions/28/fr_FR.json",
         "records": 6,
-        "sha256": "fd3d94d7bacc877471eb292048b9c98ab3b0060d450d1e3bebcfc455cfb560be"
+        "sha256": "f21cb33a41f3aa6ddf742df347fc4d52db3231d0c202c64f3896a87e59b04690"
       }
     },
     "29": {
       "en_US": {
-        "bytes": 86338,
+        "bytes": 89090,
         "path": "/game-data/catalog/champions/29/en_US.json",
         "records": 6,
-        "sha256": "481324cd64207e1aeeddf9c3e692f7da00deaf8c7a596c89d9751788a905d0d9"
+        "sha256": "2e5bfa26d2e3be25a59deb1ced506e8bcf6a52e115ea3bf87853eb0a06e4537a"
       },
       "fr_FR": {
-        "bytes": 86882,
+        "bytes": 89878,
         "path": "/game-data/catalog/champions/29/fr_FR.json",
         "records": 6,
-        "sha256": "e183edeb24c33c8db9a6b0562102f973e3ddeefae328991df6bd1685253bdc72"
+        "sha256": "fe21747854bbb7bf85be2944f5773c4e774510479c21b496b919cac09b950891"
       }
     },
     "3": {
       "en_US": {
-        "bytes": 84544,
+        "bytes": 87494,
         "path": "/game-data/catalog/champions/3/en_US.json",
         "records": 6,
-        "sha256": "1bc5c177f54729055b799e1c0f937946fb63a874893abaca455529784410f848"
+        "sha256": "4143e2852650a01b81822db4fd6030bdeb343f90f9de91df68f7edf22f29b6e8"
       },
       "fr_FR": {
-        "bytes": 85335,
+        "bytes": 88574,
         "path": "/game-data/catalog/champions/3/fr_FR.json",
         "records": 6,
-        "sha256": "554c1480b65b3db905766f4b31dfc698ebca23657580755977a4ef17a63304df"
+        "sha256": "4589175802e3e966a2ecb409f04786bec07d400a9e4176b98ee9a1482619a15d"
       }
     },
     "30": {
       "en_US": {
-        "bytes": 79592,
+        "bytes": 81607,
         "path": "/game-data/catalog/champions/30/en_US.json",
         "records": 6,
-        "sha256": "852009003340143c77ae29f4f1f1d5bd708612e5b0ab34006a1559d3121c9e51"
+        "sha256": "f912b22aceb3bb1a8ce7fed180ebb23f1fb56fce2d94eb8510673d848a47dbad"
       },
       "fr_FR": {
-        "bytes": 79912,
+        "bytes": 82067,
         "path": "/game-data/catalog/champions/30/fr_FR.json",
         "records": 6,
-        "sha256": "818d4ff4f970f263b5f46a3221c114e35cc39533c3d16b074f0c9dba31d0225d"
+        "sha256": "dfd79043930490f72ce0caa5b25330ef256f03ac7baf15f1a7ceacb28e09c7d6"
       }
     },
     "31": {
       "en_US": {
-        "bytes": 79873,
+        "bytes": 82117,
         "path": "/game-data/catalog/champions/31/en_US.json",
         "records": 6,
-        "sha256": "1177d4ed300351afd9099aff0cd415bf65b91771a5e48e9eb8c7a923c558f853"
+        "sha256": "312d39b8a94e3e8181dc7b89346c00bdbfe0149c2ab66f1f0b2bed63a22b6845"
       },
       "fr_FR": {
-        "bytes": 80343,
+        "bytes": 82793,
         "path": "/game-data/catalog/champions/31/fr_FR.json",
         "records": 6,
-        "sha256": "e69bc570f5af594b8bcf05ced35bc64b517e945b9e317cee9fa7196f71bc0832"
+        "sha256": "f810b91459190338fa5dfc9b9e698c352fdf2e490fc5bb2b508fd1809d2bd4b8"
       }
     },
     "32": {
       "en_US": {
-        "bytes": 86625,
+        "bytes": 88682,
         "path": "/game-data/catalog/champions/32/en_US.json",
         "records": 6,
-        "sha256": "8a45e344ab628b6a5119d5dc22e857c6681831407bf57917c56bb5de2fbad387"
+        "sha256": "eebe5798e2f6dcb11228f051d230e059e206ce550ae040621d75adf2ff0f73b7"
       },
       "fr_FR": {
-        "bytes": 87252,
+        "bytes": 89525,
         "path": "/game-data/catalog/champions/32/fr_FR.json",
         "records": 6,
-        "sha256": "018a8518e223bd7e6a96b014c80324ec55cf7511a4f7e2f44bc01258a3640e7e"
+        "sha256": "275db3ac1cbadf922dfe1814e1a3ca59c3f48f5a80282206bbc69730204aa4af"
       }
     },
     "33": {
       "en_US": {
-        "bytes": 76140,
+        "bytes": 78811,
         "path": "/game-data/catalog/champions/33/en_US.json",
         "records": 6,
-        "sha256": "45590f98a9fa32acee867460b2245678c0ccc81268c7fd8edc82c5fbe63c2964"
+        "sha256": "500b5873a92a81a4237c0f808a6fc5a771d51501da0cc96a1af6df11d032ee84"
       },
       "fr_FR": {
-        "bytes": 76799,
+        "bytes": 79758,
         "path": "/game-data/catalog/champions/33/fr_FR.json",
         "records": 6,
-        "sha256": "0e062c187be623eed97c5040a4b324d2bf49098b857b36bb55c4105ea1b6ee78"
+        "sha256": "3fc97803692a5dfd27b7ceeb86814a1fa496ac6c6f0705df22cf536db102a1f4"
       }
     },
     "34": {
       "en_US": {
-        "bytes": 89701,
+        "bytes": 92232,
         "path": "/game-data/catalog/champions/34/en_US.json",
         "records": 6,
-        "sha256": "f4ed4e1e4ddb03143c9334e4b7f2103c5f669c39265e7332afba8793a643c554"
+        "sha256": "2cdd00f4d223cb6a04dd34281f0e6b09f8b6a53df34399bdb95618631e1453bc"
       },
       "fr_FR": {
-        "bytes": 90026,
+        "bytes": 92768,
         "path": "/game-data/catalog/champions/34/fr_FR.json",
         "records": 6,
-        "sha256": "7e66cdc55fce1ab0513fd5123570a9ee47036e16070f5aeff51578d3d2c76d4d"
+        "sha256": "a5b6851f03fdb7421ac936f77b7ebcaa89e1b5148935bf6740780945f2053d3b"
       }
     },
     "35": {
       "en_US": {
-        "bytes": 93564,
+        "bytes": 97021,
         "path": "/game-data/catalog/champions/35/en_US.json",
         "records": 6,
-        "sha256": "0676b92288eea1f47f7c2ca953496fb41bb53f6ee9319acb754ce76ee8188b12"
+        "sha256": "b6db590e8180b1428e3eefcdd3b630f507bcca04208d3acb7afd47d943af4e2d"
       },
       "fr_FR": {
-        "bytes": 94408,
+        "bytes": 98200,
         "path": "/game-data/catalog/champions/35/fr_FR.json",
         "records": 6,
-        "sha256": "28abd5cbe5490257536574df384051d80fc13317dd4c3f65674621f635abf3f1"
+        "sha256": "f9ec2fc7660c3709dcb45cf23e3b6a1a0efdc39cddd50b22d29944374cc05889"
       }
     },
     "350": {
       "en_US": {
-        "bytes": 99333,
+        "bytes": 103048,
         "path": "/game-data/catalog/champions/350/en_US.json",
         "records": 6,
-        "sha256": "59069bf3d55dfe7a52aec8457bbbed3f0e49e9f78bcfc1ae3d99234a37ec73fe"
+        "sha256": "5f74c6f290d6a453105c50e2cd0c2d8eee2b1b16cebb4c21069f6ba1d7645ea2"
       },
       "fr_FR": {
-        "bytes": 100851,
+        "bytes": 105105,
         "path": "/game-data/catalog/champions/350/fr_FR.json",
         "records": 6,
-        "sha256": "3dfc9d6aa748c24a6c374f9b9813fc9a0787d6e10e7323ac21dc04980f7a2130"
+        "sha256": "8116c61cc68db4f28c8445457ec1ab9fba81d13f6d513a256d4e1cbe804a056b"
       }
     },
     "36": {
       "en_US": {
-        "bytes": 76154,
+        "bytes": 79414,
         "path": "/game-data/catalog/champions/36/en_US.json",
         "records": 6,
-        "sha256": "9ca66c803fd4c4dd073f92c6db97738861f58df3b4b885f7a50d1e2d6b9e0349"
+        "sha256": "c441be603982a358974c68b41a7ff9465c86ebbe0c5ef82a8ff388e04a47d356"
       },
       "fr_FR": {
-        "bytes": 76815,
+        "bytes": 80274,
         "path": "/game-data/catalog/champions/36/fr_FR.json",
         "records": 6,
-        "sha256": "ed3022e9d5c583ad03d6ef8ccdc3ec0c6a5658726cd9698af372a96860180cb6"
+        "sha256": "b9800788204b1d1af9ed87cd792bccf9e1eca7664f54c9a476ca4405e6762cda"
       }
     },
     "360": {
       "en_US": {
-        "bytes": 78701,
+        "bytes": 81218,
         "path": "/game-data/catalog/champions/360/en_US.json",
         "records": 6,
-        "sha256": "5e35a832b19418edc3454c590646bbd7992b70f46d911f730f31ced003297838"
+        "sha256": "e8d1dbff6f5132597fe7e2f562653026a437f8b2ed2d1410a395e1b4cc3c0584"
       },
       "fr_FR": {
-        "bytes": 79425,
+        "bytes": 82106,
         "path": "/game-data/catalog/champions/360/fr_FR.json",
         "records": 6,
-        "sha256": "8d0c8369ceccd2027b8e25b11880725afb71fe41fe6555db21cc2100d0bdae47"
+        "sha256": "4a7a705e22bef802433da9f7468ac0179b76ab1b20d437e15b1876d25777a362"
       }
     },
     "37": {
       "en_US": {
-        "bytes": 94577,
+        "bytes": 97669,
         "path": "/game-data/catalog/champions/37/en_US.json",
         "records": 6,
-        "sha256": "9b1bfe921ce8eee65348d7809e56b62ab9edf137113c1862793b733ee05b7574"
+        "sha256": "a30b8b3918f5b79a191c018019d7faf081e9873c9ce13d8f1faf5aa37d36e5e2"
       },
       "fr_FR": {
-        "bytes": 95493,
+        "bytes": 98909,
         "path": "/game-data/catalog/champions/37/fr_FR.json",
         "records": 6,
-        "sha256": "0a855b8365101235c084c9ec9c5eb580f49789e95e637626390db9ea08518ec0"
+        "sha256": "d601d74701967516758bc661478af35950e35763d2a16a61d2ac24c2019b822f"
       }
     },
     "38": {
       "en_US": {
-        "bytes": 76382,
+        "bytes": 78878,
         "path": "/game-data/catalog/champions/38/en_US.json",
         "records": 6,
-        "sha256": "961af4305c245618f42f306570699ba2ce47fc011b3816de2acd0ce0a2908be2"
+        "sha256": "c5a159de63c6b1d705c54a56dbf838fa0205e3ef2b1fa4c5f5f575e7089c0a25"
       },
       "fr_FR": {
-        "bytes": 77074,
+        "bytes": 79839,
         "path": "/game-data/catalog/champions/38/fr_FR.json",
         "records": 6,
-        "sha256": "2b826ae126ac9b577054c5dae7d48f7501afe9a7844d3b68ead400b213b70760"
+        "sha256": "22032d8739b0d64e1126bddb1624a36650361715e5403485689f5bd073656475"
       }
     },
     "39": {
       "en_US": {
-        "bytes": 93519,
+        "bytes": 96260,
         "path": "/game-data/catalog/champions/39/en_US.json",
         "records": 6,
-        "sha256": "66e9217a3d1c05e679fc2e6fc0d28533a707755aa16d68e96a1b90334444be1c"
+        "sha256": "6cd8ded573fbffa2fd518a010917f5c59ec3461858b272d4e3f16ab37ee91347"
       },
       "fr_FR": {
-        "bytes": 94222,
+        "bytes": 97242,
         "path": "/game-data/catalog/champions/39/fr_FR.json",
         "records": 6,
-        "sha256": "f599a8b9fd8242e990ecadf35dbe0403ed17c59ece114b2c85e23882ea8972c0"
+        "sha256": "f965e3815759a268e6fb69fa6916450c6af3870201f0a179b2348cdbe8c44242"
       }
     },
     "4": {
       "en_US": {
-        "bytes": 87535,
+        "bytes": 89711,
         "path": "/game-data/catalog/champions/4/en_US.json",
         "records": 6,
-        "sha256": "da80ee1d46d85ba4dd1a4b8610aec21c5a24494d3b81b4a21409ac895bd0d426"
+        "sha256": "4af4efe7c07c4f8db0c7b3bb85006ae636975e70b1ad9499f46b31616c6ccf63"
       },
       "fr_FR": {
-        "bytes": 88017,
+        "bytes": 90425,
         "path": "/game-data/catalog/champions/4/fr_FR.json",
         "records": 6,
-        "sha256": "2f5e1eb3a1880b3792df5efede38eacb1282e7eb7bd66f63977aa72118e72e59"
+        "sha256": "b20ce4cc467e42d500a433e9be4a21bef561a49f9d436a8b0b794248c6c26e44"
       }
     },
     "40": {
       "en_US": {
-        "bytes": 94037,
+        "bytes": 96302,
         "path": "/game-data/catalog/champions/40/en_US.json",
         "records": 6,
-        "sha256": "d5367ec2b97a3510b50092e99d8bd7082da3a4e5c67c5e75ec64898cd65cf342"
+        "sha256": "bf1f4603167029162544f1b29b9bc40afa9cdfc10fd93036f0e6b48c011be9cb"
       },
       "fr_FR": {
-        "bytes": 94910,
+        "bytes": 97467,
         "path": "/game-data/catalog/champions/40/fr_FR.json",
         "records": 6,
-        "sha256": "5a32153e2894347dfd486be713d720a0269633ca31befa021ebd3d115326bccd"
+        "sha256": "6bcf8e860c1a160f3ced0d7419b348a1b263a80f89253d081fe25afcf80748bb"
       }
     },
     "41": {
       "en_US": {
-        "bytes": 81127,
+        "bytes": 84062,
         "path": "/game-data/catalog/champions/41/en_US.json",
         "records": 6,
-        "sha256": "38d048b5df4683bf3bf254eb2aa7f3de2bafd88979d9698235da6b04b6754fa5"
+        "sha256": "d65551fc56326e24e6015aa3d9bfba1a2ee807eba7c63b4524e2903bf46328f7"
       },
       "fr_FR": {
-        "bytes": 81758,
+        "bytes": 84930,
         "path": "/game-data/catalog/champions/41/fr_FR.json",
         "records": 6,
-        "sha256": "94816b83491d65b44c8f47b0328d250014daed5922fbdb0b76ccdb02c02a8402"
+        "sha256": "d2a4d4b6c6d9dab0eda8c8e5215405f80ef19750b5d22630374e2b0596a5a23d"
       }
     },
     "412": {
       "en_US": {
-        "bytes": 91034,
+        "bytes": 93656,
         "path": "/game-data/catalog/champions/412/en_US.json",
         "records": 6,
-        "sha256": "20efba91e136a4ddc1e617c1a52f921af8df29efa831b46009cb9f6f527c7a85"
+        "sha256": "1b1fd36200e65a3eec5c2c99283a8dc5e8ab8d8aff183caf5442875244c412c7"
       },
       "fr_FR": {
-        "bytes": 91646,
+        "bytes": 94530,
         "path": "/game-data/catalog/champions/412/fr_FR.json",
         "records": 6,
-        "sha256": "7f7c3a13972a8b20bcec6316a57bc2dcff7dab19d2d9a24b80a474ce57aa360a"
+        "sha256": "21a3ce6831f639c165ab42b4156053266a5cc33acb3a09315dc875f51b0a41b0"
       }
     },
     "42": {
       "en_US": {
-        "bytes": 79335,
+        "bytes": 81562,
         "path": "/game-data/catalog/champions/42/en_US.json",
         "records": 6,
-        "sha256": "c59d3dab9f3427181ba1835fcafe1483cc77878c86cf734929d0a8147030c120"
+        "sha256": "b66940da93fd479d8db9618ba2eae82f28e682d52c8f6073b8cbf7daef5480e4"
       },
       "fr_FR": {
-        "bytes": 79946,
+        "bytes": 82371,
         "path": "/game-data/catalog/champions/42/fr_FR.json",
         "records": 6,
-        "sha256": "8c853031121973206911718139b049530b7e8d495f66dcc5f921914d49072b5e"
+        "sha256": "0fd5cb150eddeb016979c51eefbc8b3000fe82e4611ab568411c442974121839"
       }
     },
     "420": {
       "en_US": {
-        "bytes": 81842,
+        "bytes": 84419,
         "path": "/game-data/catalog/champions/420/en_US.json",
         "records": 6,
-        "sha256": "e4f04b441e9da3b2c82dce911c44de328d686e08e9e3cdb3ef2dbf9f4f0b2f84"
+        "sha256": "4fa83fee6b5f702faffc553198ed4f7422d6330ec3b2e337e88127326c1d8132"
       },
       "fr_FR": {
-        "bytes": 82494,
+        "bytes": 85295,
         "path": "/game-data/catalog/champions/420/fr_FR.json",
         "records": 6,
-        "sha256": "114726f5f850d5b736cbc997733187bc2f7bf9d405e56c6ca0e36f8f3949e4f6"
+        "sha256": "85092be9b97aee388f34f16ed89109d93725858c83f75739b4fff11450382ba0"
       }
     },
     "421": {
       "en_US": {
-        "bytes": 77474,
+        "bytes": 79868,
         "path": "/game-data/catalog/champions/421/en_US.json",
         "records": 6,
-        "sha256": "63afb5d11c9ce8e98e5136ce9e4515f7b36ce3878bc6c084e79866640017bf67"
+        "sha256": "86509706763e8b38decda494735bf01ab45bf6c43b9dd37796128171bf39f51c"
       },
       "fr_FR": {
-        "bytes": 78468,
+        "bytes": 81094,
         "path": "/game-data/catalog/champions/421/fr_FR.json",
         "records": 6,
-        "sha256": "13ab2c69116eadaf07fa7873d042b740ac1ec106d678943b3ba377deddd1e007"
+        "sha256": "f4ee0799a79ee8ac5ea2720bb5ca927cf508d13fcc6e4394299f360ee9804435"
       }
     },
     "427": {
       "en_US": {
-        "bytes": 78359,
+        "bytes": 81325,
         "path": "/game-data/catalog/champions/427/en_US.json",
         "records": 6,
-        "sha256": "17b0047507cd0849d6d4fcfd86c6d861980f5878cc81af4483c29b0c887a1e34"
+        "sha256": "05affe9b1bfc73696512322986d5300ea5118ffb4969140ba774440bda825a1d"
       },
       "fr_FR": {
-        "bytes": 79508,
+        "bytes": 82928,
         "path": "/game-data/catalog/champions/427/fr_FR.json",
         "records": 6,
-        "sha256": "84ab7d2a7a1c6e63bcdfcc4488932a9f7b06c712e38aadd25b4b25205965715c"
+        "sha256": "27fe8b965e118f014e74e74acb6431fdfcac475d1743604717c5e62303d4b406"
       }
     },
     "429": {
       "en_US": {
-        "bytes": 76365,
+        "bytes": 79110,
         "path": "/game-data/catalog/champions/429/en_US.json",
         "records": 6,
-        "sha256": "a7833c3d6860f3dc84ce63b81f947d8d7ede3dd39d4dd5a8ab20e6632a5c12c8"
+        "sha256": "0d64b41ab0340297a71d383622dfc02b8eda315255dcebbf92c5f577eaf31926"
       },
       "fr_FR": {
-        "bytes": 77097,
+        "bytes": 80144,
         "path": "/game-data/catalog/champions/429/fr_FR.json",
         "records": 6,
-        "sha256": "89d20e24775d780e40dadd8e706693807c97956d8c4d3a65004bec7afb353b1d"
+        "sha256": "e83349cc99028e84fc2baeeedc1d47d18cc2d256c7614e2365bb1cef8d850726"
       }
     },
     "43": {
       "en_US": {
-        "bytes": 96202,
+        "bytes": 98774,
         "path": "/game-data/catalog/champions/43/en_US.json",
         "records": 6,
-        "sha256": "ab25a31f79d796b84f570d3ef9e7b8858210429388cc4c438f41364ee2fbbcb7"
+        "sha256": "9974a18a3afd4945b4a245c38e79886a544c2e04dc3ff6f996f398b14bc544d8"
       },
       "fr_FR": {
-        "bytes": 96744,
+        "bytes": 99517,
         "path": "/game-data/catalog/champions/43/fr_FR.json",
         "records": 6,
-        "sha256": "aa784556a43e3e83675a989819f8d67bfd7d0b3b5dcbd1165ea6fc82f2859491"
+        "sha256": "bf190edfada8eeb7e917a94f4eb0312f3bd6ab0cc4e5d33cc2bd24d6b80b5d77"
       }
     },
     "432": {
       "en_US": {
-        "bytes": 79929,
+        "bytes": 82089,
         "path": "/game-data/catalog/champions/432/en_US.json",
         "records": 6,
-        "sha256": "f4a368977b5df4eb3aa9dd72ab7eb8c4160a9fe863a5fc58374e153d20eb8a68"
+        "sha256": "3ff93301e7782af3d88b0fb903f7f60df92c1fc6552cf9c38020c0d67ecd7e1a"
       },
       "fr_FR": {
-        "bytes": 80690,
+        "bytes": 83060,
         "path": "/game-data/catalog/champions/432/fr_FR.json",
         "records": 6,
-        "sha256": "1efe7f458964e439e1bde07fe55852fda4a18e4ea05c98ef6f3f236566aab27c"
+        "sha256": "00dcc94d773e8f55f61c0f13171a514bc0a1b06e8c003316ae668c968b1387c7"
       }
     },
     "44": {
       "en_US": {
-        "bytes": 74757,
+        "bytes": 76846,
         "path": "/game-data/catalog/champions/44/en_US.json",
         "records": 6,
-        "sha256": "eef5ee85ab47107c1f40a682cf2ea3c388af4382b267bee8fbb138276567eb1e"
+        "sha256": "7f4899f7c8bca2f77fa77237ceb8a0292f25f00e51636e53cfac4da13eeaf064"
       },
       "fr_FR": {
-        "bytes": 75716,
+        "bytes": 77979,
         "path": "/game-data/catalog/champions/44/fr_FR.json",
         "records": 6,
-        "sha256": "46fcd210fe5a9bab08840edc3cef351c9e3080d6db5faea262eb68a3864b752e"
+        "sha256": "233ac1d3c9e11c3ed7f81874c3b28d7978260644a119a91b79f91702be917a4b"
       }
     },
     "45": {
       "en_US": {
-        "bytes": 91955,
+        "bytes": 94147,
         "path": "/game-data/catalog/champions/45/en_US.json",
         "records": 6,
-        "sha256": "9c74bc567e6bf456d9943556d8ec352366da9303919c14f6c2f512e793babc56"
+        "sha256": "a9c8405cb7eaa5ce37e05f0bb8ae444dd6770628e5f8af4f7ba33a7a4e011c18"
       },
       "fr_FR": {
-        "bytes": 92488,
+        "bytes": 94847,
         "path": "/game-data/catalog/champions/45/fr_FR.json",
         "records": 6,
-        "sha256": "ea7658082c43f0fa2592075008bdbcd3daf75355d4aaf93dbac2afa7a3b2527b"
+        "sha256": "237412cd1a588556d006440e6b5ec9ba1d9715faceea2a7faf0c1ab6032b3181"
       }
     },
     "48": {
       "en_US": {
-        "bytes": 73676,
+        "bytes": 75828,
         "path": "/game-data/catalog/champions/48/en_US.json",
         "records": 6,
-        "sha256": "268b17566b3543ec6972bd0fee2cc8a68531ab34a2912bec4c81d3f89ea33901"
+        "sha256": "09637abe15f2c6629b10fb0cd744ee97c7f9b4795e0da392b506786f4b4bb436"
       },
       "fr_FR": {
-        "bytes": 74062,
+        "bytes": 76393,
         "path": "/game-data/catalog/champions/48/fr_FR.json",
         "records": 6,
-        "sha256": "73615ed5a50b6378f15b8349c5d894e248b18b8e484adcac0decdc616c7a22fe"
+        "sha256": "f3ee0bb369c3afafe348a58bd64846d5b8364f366fc90b324f6a99347de5cdb6"
       }
     },
     "497": {
       "en_US": {
-        "bytes": 84872,
+        "bytes": 86997,
         "path": "/game-data/catalog/champions/497/en_US.json",
         "records": 6,
-        "sha256": "be6f3837cf4badccccb5e77b260de62590c1602e1b39214a510408875f23480f"
+        "sha256": "6193a18b32954574478ebd9928d65bd18cd4a592a9b320993e2396b92132f3c5"
       },
       "fr_FR": {
-        "bytes": 85550,
+        "bytes": 87924,
         "path": "/game-data/catalog/champions/497/fr_FR.json",
         "records": 6,
-        "sha256": "02c5021949f9a04d7a4a94e201092bd3d33011f642e5eb69bfbb613ed7c6d22f"
+        "sha256": "e928c937c30784a161aa180979f8cef283acf3b7cd7fc2ba704585567823393f"
       }
     },
     "498": {
       "en_US": {
-        "bytes": 88033,
+        "bytes": 90380,
         "path": "/game-data/catalog/champions/498/en_US.json",
         "records": 6,
-        "sha256": "b8a6059342a41236e0449200cb2400f89013f04271c568009214e801f17ff255"
+        "sha256": "e90395b8e7c36bc45f73ea5aae7a2a80ccad3eea73253356beb1299f5f9b2c8f"
       },
       "fr_FR": {
-        "bytes": 88637,
+        "bytes": 91179,
         "path": "/game-data/catalog/champions/498/fr_FR.json",
         "records": 6,
-        "sha256": "a1ce0d5a68d33bad3d52b4246d8e00dc9b703f21a6341e0fb341085b45a7ee2f"
+        "sha256": "77ccbf52c5f440ebd185857a9cada2d8fec303ce11aba6c48a9bdee93d767746"
       }
     },
     "5": {
       "en_US": {
-        "bytes": 87456,
+        "bytes": 90151,
         "path": "/game-data/catalog/champions/5/en_US.json",
         "records": 6,
-        "sha256": "4547b8402458e0ccf099d7efed27d87a387c2d05db5e7aea48aa50156123c604"
+        "sha256": "d874caa7283a1093583b9857682e91655d09160a03264f4a7bb0e7493f911ff6"
       },
       "fr_FR": {
-        "bytes": 88150,
+        "bytes": 91116,
         "path": "/game-data/catalog/champions/5/fr_FR.json",
         "records": 6,
-        "sha256": "ca112aac411deeb8bc8d8d0450558c51bd23fe22a5d98397b09548d4d66528d9"
+        "sha256": "92e3ee2e76a093a19fdf89f48b56302b3e81359635fb9a8c849f0037c3174337"
       }
     },
     "50": {
       "en_US": {
-        "bytes": 83843,
+        "bytes": 86697,
         "path": "/game-data/catalog/champions/50/en_US.json",
         "records": 6,
-        "sha256": "b464a038b61c4d93f989b69deabf19820b2c1ed68d1d25c7df28c317604cfa3c"
+        "sha256": "1384b0c82c2f1bc28de206a621fa9842a4785bd6dbd608ad3df38ffe900749a1"
       },
       "fr_FR": {
-        "bytes": 84726,
+        "bytes": 87938,
         "path": "/game-data/catalog/champions/50/fr_FR.json",
         "records": 6,
-        "sha256": "ecfca6738a2f3dc1013185ceeaed7cb17ecbfff737580476214d28cec66d0400"
+        "sha256": "ba7ec2dc7f0c13d54efa9c9ef3a47ae0dfe1551e6ff6c737e3f912a26dd4332c"
       }
     },
     "51": {
       "en_US": {
-        "bytes": 89016,
+        "bytes": 91604,
         "path": "/game-data/catalog/champions/51/en_US.json",
         "records": 6,
-        "sha256": "a519e92500ab4419fc54e9d5cc4fe8cf0e5f62c2628b1aa2c0b2d772d602d58a"
+        "sha256": "fd25bd693799329618a5d0f03c9b5fdd50ba44602716247dc31cb699294cf009"
       },
       "fr_FR": {
-        "bytes": 89810,
+        "bytes": 92616,
         "path": "/game-data/catalog/champions/51/fr_FR.json",
         "records": 6,
-        "sha256": "6aa8b59cebfcbb2b86cab6360a812ecad88b46c5e6a4f717b807f790779c36c4"
+        "sha256": "eb4b4a4cabb1bbb1b82adf73904515628e66c133d92bb450aede92bea557cb9a"
       }
     },
     "516": {
       "en_US": {
-        "bytes": 77979,
+        "bytes": 80972,
         "path": "/game-data/catalog/champions/516/en_US.json",
         "records": 6,
-        "sha256": "522c8f9e650e6deec01ee1a7a73e07ec1017e2810bdf5a8a3076283431774592"
+        "sha256": "ea024a2ba68f3d1d89be8cc328b0d999f2b195446edb33377385caaeeec1eb68"
       },
       "fr_FR": {
-        "bytes": 78759,
+        "bytes": 82075,
         "path": "/game-data/catalog/champions/516/fr_FR.json",
         "records": 6,
-        "sha256": "7d06bc86bb86a4bb359b321ef80812a422ce0952da160b5a0ca69461765ed58f"
+        "sha256": "24982e7e78c1670458f62f57581650e4ea54e75588d61d47744a5414cd1eaacd"
       }
     },
     "517": {
       "en_US": {
-        "bytes": 84224,
+        "bytes": 86635,
         "path": "/game-data/catalog/champions/517/en_US.json",
         "records": 6,
-        "sha256": "2d7fd84ebb89b2683ddd0c64fd38eb605aff89d57d08780ec32a84aef7224d8c"
+        "sha256": "619f2a25410f237f96fcf493674d39250b7c7585c277c319f79a89827e945495"
       },
       "fr_FR": {
-        "bytes": 85009,
+        "bytes": 87674,
         "path": "/game-data/catalog/champions/517/fr_FR.json",
         "records": 6,
-        "sha256": "e6075772521a9bbc4e3e42475f89b869fc046fc63c647c8346c90a7b50e6b421"
+        "sha256": "362ae7fbb7ede4ba1086ed225022e61f4c16d8c859e0dbfc7e7425c2c639c0fe"
       }
     },
     "518": {
       "en_US": {
-        "bytes": 83862,
+        "bytes": 86634,
         "path": "/game-data/catalog/champions/518/en_US.json",
         "records": 6,
-        "sha256": "4316a1fcf8e5ea494d45b8a016b19be2f560aa83a645ef4585efdd505d22cc0b"
+        "sha256": "314fdf7faded0918fc5c2699316661f59dea5b8a8c2be310680db410c0802c99"
       },
       "fr_FR": {
-        "bytes": 84896,
+        "bytes": 87967,
         "path": "/game-data/catalog/champions/518/fr_FR.json",
         "records": 6,
-        "sha256": "5cae8c7652a8f7af7af6969c9875286a40e63a07eb1eb1cbdc94e3e7eb8798eb"
+        "sha256": "884eac6285b96239aaf9299feddc0398fd60f7f374a4f4cb11eb8adfd27be118"
       }
     },
     "523": {
       "en_US": {
-        "bytes": 82030,
+        "bytes": 83479,
         "path": "/game-data/catalog/champions/523/en_US.json",
         "records": 6,
-        "sha256": "cf7d4544fbc7616eb0444b7a6e45a1b9940f7d5cb0a20bdcdc6157d5ceaa4605"
+        "sha256": "3d669178ef2e73be5f924c7a2a574e57495fd2c3b9a77fce9cb06286e3b9be41"
       },
       "fr_FR": {
-        "bytes": 82630,
+        "bytes": 84113,
         "path": "/game-data/catalog/champions/523/fr_FR.json",
         "records": 6,
-        "sha256": "e6a1920e8aed2316080852fd2717b04adc94dd43a5331837d7bc381bd79f800c"
+        "sha256": "a97e4002ba4a2f9566017ff32ce900dfa57e4aeae8c36bad8105787030bf0d87"
       }
     },
     "526": {
       "en_US": {
-        "bytes": 73336,
+        "bytes": 75936,
         "path": "/game-data/catalog/champions/526/en_US.json",
         "records": 6,
-        "sha256": "7433e114cc5f8f1f892b804882641a0cb646746205921ba3f678be17b1e75431"
+        "sha256": "3b475ab619a4a6bdb9a306be57d8b69dc52e3b2adbf0b5b7d48517170bc026f4"
       },
       "fr_FR": {
-        "bytes": 74495,
+        "bytes": 77380,
         "path": "/game-data/catalog/champions/526/fr_FR.json",
         "records": 6,
-        "sha256": "9cf374b9346d0fbb8fce4c61659f6687a919e8e2834f493b8f15fa30b52dc6d6"
+        "sha256": "14c0adf3d7eae77e98c7b14e40745258eec5155ae9e33a0de7885c8f0cebe0ae"
       }
     },
     "53": {
       "en_US": {
-        "bytes": 96727,
+        "bytes": 98931,
         "path": "/game-data/catalog/champions/53/en_US.json",
         "records": 6,
-        "sha256": "0a2b17d2b4cd80f87ece00f38cbef6a59d6887ec3b6263c778fd7b7b0f1fff50"
+        "sha256": "c96652d98de9eb9d0c8c3b205753367174d57111e13a01706f97326cfdefc729"
       },
       "fr_FR": {
-        "bytes": 97317,
+        "bytes": 99791,
         "path": "/game-data/catalog/champions/53/fr_FR.json",
         "records": 6,
-        "sha256": "1d2835f70d395a3d9353ac9f3029cbd1989c6eaffaab75579ee1fdf7d7742195"
+        "sha256": "c382af018a6751b07b3223b25f0e56505327472465d94ac76c15ba7b06d2c15a"
       }
     },
     "54": {
       "en_US": {
-        "bytes": 87579,
+        "bytes": 90073,
         "path": "/game-data/catalog/champions/54/en_US.json",
         "records": 6,
-        "sha256": "cc1d6e11fa2f733ad824142b3e11b8fc7fb1d639a8bb6ac7828fb8408ceeae94"
+        "sha256": "552331b032cbc2304a4fbc973cb79f7cd7d2fe5626772404842e330676276f9c"
       },
       "fr_FR": {
-        "bytes": 87943,
+        "bytes": 90595,
         "path": "/game-data/catalog/champions/54/fr_FR.json",
         "records": 6,
-        "sha256": "cb038c8ad2f7a281182ae4e74c59a0da115a7b1193653b3ea59b3183844f7f0e"
+        "sha256": "9a43c725b8fd598a1dde9f7234401b3a99cf101ddb8f4552adfb86838fee248f"
       }
     },
     "55": {
       "en_US": {
-        "bytes": 96192,
+        "bytes": 98768,
         "path": "/game-data/catalog/champions/55/en_US.json",
         "records": 6,
-        "sha256": "47cc8a225e90ff9ffca006f83c9226d745285082f69edf3256d53b5b679d9208"
+        "sha256": "0fa09f6a2d4f93e0c4363c8f38bb927af08574b2751903036401ba7c5e85cecf"
       },
       "fr_FR": {
-        "bytes": 96656,
+        "bytes": 99351,
         "path": "/game-data/catalog/champions/55/fr_FR.json",
         "records": 6,
-        "sha256": "00f5f888acb6b3404b5c2cfacd8178187cd4cc602211ce8622de6a9a2baf1506"
+        "sha256": "c0387b9621b265594fb392d24fe04fc76d78b42a11cd662e8dac6f7f3e6531e4"
       }
     },
     "555": {
       "en_US": {
-        "bytes": 96918,
+        "bytes": 99562,
         "path": "/game-data/catalog/champions/555/en_US.json",
         "records": 6,
-        "sha256": "34bc457ad5f6e3c4bb8909fa6b2e9912f6a8fecdd30a1708ad986f5b59da7121"
+        "sha256": "0d20e29c1b3e85fcac1f74c8434cb93e7549091edb8bade46bc98dc004672f32"
       },
       "fr_FR": {
-        "bytes": 97484,
+        "bytes": 100421,
         "path": "/game-data/catalog/champions/555/fr_FR.json",
         "records": 6,
-        "sha256": "a136ddb3055e6b38b15ecd34d74932757553c5a28fed54cc4ce4c2f033888591"
+        "sha256": "91749e22c22885c421d08bb87e867717e081ba7c0c1a7321c86a80917e2d446d"
       }
     },
     "56": {
       "en_US": {
-        "bytes": 78498,
+        "bytes": 80983,
         "path": "/game-data/catalog/champions/56/en_US.json",
         "records": 6,
-        "sha256": "47f7b12d0ea5749371550738d3ff7b0d9786498345e9ea1484926a3eb46875bc"
+        "sha256": "862ca409fc157717e8585d1451eb54173f27cdd253a43021bd00e16cf943dc0e"
       },
       "fr_FR": {
-        "bytes": 79306,
+        "bytes": 82062,
         "path": "/game-data/catalog/champions/56/fr_FR.json",
         "records": 6,
-        "sha256": "706233198d82a594003b31a284644d526ce135309b356e64bc6b3379deff2cd3"
+        "sha256": "3aa84836eaf6ab1198420fed68d0054e266c104e1dcf5928662bab5344c6552e"
       }
     },
     "57": {
       "en_US": {
-        "bytes": 76827,
+        "bytes": 79540,
         "path": "/game-data/catalog/champions/57/en_US.json",
         "records": 6,
-        "sha256": "2113d624e8795125cbcfd7f6b8a40afd7b7907fd044a2200e2b70363a7fb22b2"
+        "sha256": "0b0644a0d24f9b2abaae4a757528aa277c530552d442057af07ee2a4c3a4c9f4"
       },
       "fr_FR": {
-        "bytes": 77557,
+        "bytes": 80516,
         "path": "/game-data/catalog/champions/57/fr_FR.json",
         "records": 6,
-        "sha256": "3ccc693de4eb1b247b9dab74248efb42948d85aab2248c490c0a4fe4db6e71b8"
+        "sha256": "3ec5dac323d0bde75307dca1ac202d8ac7801b50f9c559b624a7e30935bde35f"
       }
     },
     "58": {
       "en_US": {
-        "bytes": 88597,
+        "bytes": 91757,
         "path": "/game-data/catalog/champions/58/en_US.json",
         "records": 6,
-        "sha256": "ca4aaa03f685f74887b5ee1e15aa698fb09bce1453670606a39ad2f9bafc604a"
+        "sha256": "6e442c198e88f28a25a38fa2d88af70b5366a87b56a6eccfe647272ee62669a0"
       },
       "fr_FR": {
-        "bytes": 89811,
+        "bytes": 93329,
         "path": "/game-data/catalog/champions/58/fr_FR.json",
         "records": 6,
-        "sha256": "11b553267913d88e0c29642390628180b1a9c0cbf7f22033dc1fb5c4c5bbd4d2"
+        "sha256": "2f36065cc582bc55080802592aeb2ca4cbb52e627a16fa152aab74cfaf3619ae"
       }
     },
     "59": {
       "en_US": {
-        "bytes": 86711,
+        "bytes": 88938,
         "path": "/game-data/catalog/champions/59/en_US.json",
         "records": 6,
-        "sha256": "6b31f7634cbdb989a8047c5010161054ab4ee4c72ef0903d1e09af166d12a394"
+        "sha256": "695d0d0abfb4a71808a5a189e4d54163520c6b944e63e91f2a223938dd1a8286"
       },
       "fr_FR": {
-        "bytes": 87193,
+        "bytes": 89563,
         "path": "/game-data/catalog/champions/59/fr_FR.json",
         "records": 6,
-        "sha256": "6fce8efde8f0eadac84eafa17aa6cdf06fd5db84bf2d370f08ccd3c8105acd11"
+        "sha256": "59c851f564864dd85fbf5ea7820a30ad1ce54f63bd4b605205d981cc2260d03e"
       }
     },
     "6": {
       "en_US": {
-        "bytes": 82912,
+        "bytes": 85559,
         "path": "/game-data/catalog/champions/6/en_US.json",
         "records": 6,
-        "sha256": "a09413297688f22f8894caa6486b965f525b348a12bf1f14044d00855b0464d9"
+        "sha256": "f5432ddc5cd238447a81acd9eecc5afdeb0af7371174f118cb5bb4ccbf89f5d6"
       },
       "fr_FR": {
-        "bytes": 83541,
+        "bytes": 86461,
         "path": "/game-data/catalog/champions/6/fr_FR.json",
         "records": 6,
-        "sha256": "9dfd14a9090d2a5320316c2487030594500e4ab15de6f9bdf133323c4ae5f9d8"
+        "sha256": "0f75bc9d74dfab6a0355c05181c9ee8aab1bad03c9c4192c52166e1dbb3a596a"
       }
     },
     "60": {
       "en_US": {
-        "bytes": 77511,
+        "bytes": 79272,
         "path": "/game-data/catalog/champions/60/en_US.json",
         "records": 6,
-        "sha256": "7d9fc4123427727901ae17cccf66b62d4da1214a7924378d7c623fe32472e108"
+        "sha256": "55e59ca4b083225574f913662c3d03ecb6d11a98973c8ca7f24013e0139cde41"
       },
       "fr_FR": {
-        "bytes": 78221,
+        "bytes": 80093,
         "path": "/game-data/catalog/champions/60/fr_FR.json",
         "records": 6,
-        "sha256": "d108ca87f44e824fb50b45eb60258f7ae582c2ab3cc282548a2632f1416ad4ff"
+        "sha256": "5a896cb8ad5cbcc03a30d3d7616ca56f58a375d88b9a64ef1c4c2d25b4756714"
       }
     },
     "61": {
       "en_US": {
-        "bytes": 80431,
+        "bytes": 82819,
         "path": "/game-data/catalog/champions/61/en_US.json",
         "records": 6,
-        "sha256": "53cb01a5650f21c6edd1e1f64559036d5f7cfba5967e6272bf9d9b5c4123a440"
+        "sha256": "a44da903860450bfa4d5d982eccaeb48d4383c7475fb9797889079550980a703"
       },
       "fr_FR": {
-        "bytes": 81061,
+        "bytes": 83637,
         "path": "/game-data/catalog/champions/61/fr_FR.json",
         "records": 6,
-        "sha256": "85c0a7342420113f6b5c6ae0477f57886b29ed666d864cea0da4e904844f07e2"
+        "sha256": "57e9e6b83ef774ea583dd1de1b463403f6e321b39974e01e655f18bcf5f6c774"
       }
     },
     "62": {
       "en_US": {
-        "bytes": 79014,
+        "bytes": 81594,
         "path": "/game-data/catalog/champions/62/en_US.json",
         "records": 6,
-        "sha256": "d8cedc5e0ea4b4cf43cd4606f1be41fc0118c1edd4e2a7eba350225add5756a1"
+        "sha256": "5f58008f043c2c873ad0657080ac0084106a88c370062c321371ccf0aaaa8915"
       },
       "fr_FR": {
-        "bytes": 79691,
+        "bytes": 82559,
         "path": "/game-data/catalog/champions/62/fr_FR.json",
         "records": 6,
-        "sha256": "22adbcd1db3515a1e78384157eb820425c6ae8543ccbc839e87d53560d5d7178"
+        "sha256": "63924e8c6aed324ac671d4fa4fa7a811ba4bf50d2a7eaf73552f465277565736"
       }
     },
     "63": {
       "en_US": {
-        "bytes": 84003,
+        "bytes": 86146,
         "path": "/game-data/catalog/champions/63/en_US.json",
         "records": 6,
-        "sha256": "cb253d078a39c42ae863049ecccaec07895eb578781fcc2d82bc033419aed478"
+        "sha256": "982ebe2f5654bdd286c069e9e10853d85f0f26ae3336e9349bef9a9b7510e11e"
       },
       "fr_FR": {
-        "bytes": 84676,
+        "bytes": 86972,
         "path": "/game-data/catalog/champions/63/fr_FR.json",
         "records": 6,
-        "sha256": "6a529f51a269c5f04763295a1266ec3210d2648742a463b6896ed493c23005b8"
+        "sha256": "4b703fb34be08162ca7eb169c81a515c932a9861faad3f74001baf71df421a8d"
       }
     },
     "64": {
       "en_US": {
-        "bytes": 97799,
+        "bytes": 100546,
         "path": "/game-data/catalog/champions/64/en_US.json",
         "records": 6,
-        "sha256": "47361cb951aa7915630d2617549ae1d5496e3c50d5e92dd7696345b9c77bac26"
+        "sha256": "171407bc935a769a1ef5612cd44b9a695fa80c82ceae287ab454fd2fab35f65e"
       },
       "fr_FR": {
-        "bytes": 98815,
+        "bytes": 101819,
         "path": "/game-data/catalog/champions/64/fr_FR.json",
         "records": 6,
-        "sha256": "3c0eabbf32e02e92120542791ec7d8dd30a5da14e74dd9763c95211d30f58923"
+        "sha256": "730cfd16fa8ede3a427ae0b22c5c4474f209be3c14fcf4b34a6ea9acac7659a4"
       }
     },
     "67": {
       "en_US": {
-        "bytes": 92629,
+        "bytes": 94970,
         "path": "/game-data/catalog/champions/67/en_US.json",
         "records": 6,
-        "sha256": "d43fe83187b58d84f3b3b4b3aa4221a32d5610996121a29ce6e8ef7626d37109"
+        "sha256": "d2141513e4a51fe31de790269c544b803f403514945ee5603776d15f73fe07e9"
       },
       "fr_FR": {
-        "bytes": 93448,
+        "bytes": 96000,
         "path": "/game-data/catalog/champions/67/fr_FR.json",
         "records": 6,
-        "sha256": "38fddc74ee6a567ef5c6fde0c5a7d01781376b4f5175343769f4fd4de7b7be86"
+        "sha256": "f1f85fd02739da02f16a8ff6f639bc874b9c20c0fd9cdc30b9b733dc1a4c89d5"
       }
     },
     "68": {
       "en_US": {
-        "bytes": 75218,
+        "bytes": 78062,
         "path": "/game-data/catalog/champions/68/en_US.json",
         "records": 6,
-        "sha256": "50cb534d5d6ef9c34ec9d5e17eff7f1883c76a7ea3457c4395808a26497aeb90"
+        "sha256": "3e72af9879274c82f3f421b1b50ca9e574dda5e013cde5eda49ee924e45097ae"
       },
       "fr_FR": {
-        "bytes": 76106,
+        "bytes": 79276,
         "path": "/game-data/catalog/champions/68/fr_FR.json",
         "records": 6,
-        "sha256": "617659b689be4b11e526cb6381e512c66197a3a5bac4dcbdbff894402caeb244"
+        "sha256": "e36e1305a5fd5a66afbe679bd46d06b9378a931f522b27d32c92979851bb9e9a"
       }
     },
     "69": {
       "en_US": {
-        "bytes": 79656,
+        "bytes": 82105,
         "path": "/game-data/catalog/champions/69/en_US.json",
         "records": 6,
-        "sha256": "fd40b5c1f03763d66cb2262707db9c1aa684e2725e5e0c14d910e0d2e77c040d"
+        "sha256": "5944ed95b66756113a9da718cab3883548008ebf3b0fa6a9dae90c321307738b"
       },
       "fr_FR": {
-        "bytes": 80088,
+        "bytes": 82745,
         "path": "/game-data/catalog/champions/69/fr_FR.json",
         "records": 6,
-        "sha256": "a052a8fc8b471c06c766eb6c88e6e835dcb8ca765d4b6d58a440a0fe339559d0"
+        "sha256": "ed4243bbd75c5a2b58ad219b9c43e7b4c1274052cb460651b4ee1195ab17d37f"
       }
     },
     "7": {
       "en_US": {
-        "bytes": 89665,
+        "bytes": 92726,
         "path": "/game-data/catalog/champions/7/en_US.json",
         "records": 6,
-        "sha256": "35fdf5f05a3e1c915abbe1fec2d6ee0670f6b8674dd4a6e162ee6cea78942f23"
+        "sha256": "f58ca1d890edd68d74f2dadeef3fcbf6c43108755a5c7ae4daaf1cdbba440ecd"
       },
       "fr_FR": {
-        "bytes": 90385,
+        "bytes": 93791,
         "path": "/game-data/catalog/champions/7/fr_FR.json",
         "records": 6,
-        "sha256": "0e47b46a09c139704c2cdfd19ad2592250dbdb39b10c4bedca77779086efc6ff"
+        "sha256": "9cf33f945614f19607d85258be13d376f3a9ada2f4e10085b4453f59699c51a8"
       }
     },
     "711": {
       "en_US": {
-        "bytes": 75456,
+        "bytes": 77863,
         "path": "/game-data/catalog/champions/711/en_US.json",
         "records": 6,
-        "sha256": "04d050912aaadebcbe269001ba84eb9f6c9050c9da1df4eea2a1c742b66bfd22"
+        "sha256": "da2660c2a1c6fac2b1aea50fe6420ec77ee44a09d7c88b4f56bb4fd5a87ea47a"
       },
       "fr_FR": {
-        "bytes": 76299,
+        "bytes": 79002,
         "path": "/game-data/catalog/champions/711/fr_FR.json",
         "records": 6,
-        "sha256": "43017e5b1851bb0ee6d0126583f1ca69caee12bc651dbaf769ff9cb0dc94eb0d"
+        "sha256": "891cd856f125f8479cac8c96000d112bc256aac5a90b72a2e6fe2fd5a6a1c652"
       }
     },
     "72": {
       "en_US": {
-        "bytes": 67980,
+        "bytes": 71098,
         "path": "/game-data/catalog/champions/72/en_US.json",
         "records": 6,
-        "sha256": "ae673b8b57b7a21b36c80a9d610dc9e2d7ff6455e1a01b065707dd4e972893d0"
+        "sha256": "c74424df1165c56e02496d862fb226053380d819047eb1223c3539a79ca98db3"
       },
       "fr_FR": {
-        "bytes": 68586,
+        "bytes": 72002,
         "path": "/game-data/catalog/champions/72/fr_FR.json",
         "records": 6,
-        "sha256": "f1f5cab77300ba856572bde320626bbb579376002820cea4024ba6384fb46047"
+        "sha256": "4713e7f48f947bcbe8c9ccc6de5a1c9a52954642b3a72f6b93ecb8f14a4221d7"
       }
     },
     "74": {
       "en_US": {
-        "bytes": 75910,
+        "bytes": 79171,
         "path": "/game-data/catalog/champions/74/en_US.json",
         "records": 6,
-        "sha256": "4606bb7ce8c5cfb2bef4f06dc17ffce8479c253ea397b065432e47dae4c143c7"
+        "sha256": "1c1b0d0239d143b732d9513a68d7db84928f23a9c51349db8f926c0ff1deb235"
       },
       "fr_FR": {
-        "bytes": 76800,
+        "bytes": 80603,
         "path": "/game-data/catalog/champions/74/fr_FR.json",
         "records": 6,
-        "sha256": "aac3f9fccaa435e0f976dfea79587e85ba0e300185a0e7cc70a13c837c8b4ee9"
+        "sha256": "5ec773f1f8e397fc031ad74f0d8099aee0e36c6e4984a75d8247bb53671d34ea"
       }
     },
     "75": {
       "en_US": {
-        "bytes": 88083,
+        "bytes": 90387,
         "path": "/game-data/catalog/champions/75/en_US.json",
         "records": 6,
-        "sha256": "0d7392c500e1a018ea4af75f69df4061e045ba6d63738cd38d4ade8394db3bb2"
+        "sha256": "11e57651ec47ad3fb1da4c4a969b41b95d61ca0a35362840c87c5fbd954f5f9e"
       },
       "fr_FR": {
-        "bytes": 88585,
+        "bytes": 91082,
         "path": "/game-data/catalog/champions/75/fr_FR.json",
         "records": 6,
-        "sha256": "c6d16bb40300d2c38143b83a9844d468cb129c6d0c77bb852b9109363d3e5966"
+        "sha256": "416c6d08b0139385363a72e155d354f1c1b935462b153f096128c2c588b8cad5"
       }
     },
     "76": {
       "en_US": {
-        "bytes": 93387,
+        "bytes": 95519,
         "path": "/game-data/catalog/champions/76/en_US.json",
         "records": 6,
-        "sha256": "340f23d8d657a5b0c60eb003fd58f682f242e27e2a8c409c069eab612a96b30d"
+        "sha256": "15287cef0f8b6b2df71b9f9ee91e3155902aa3c7bbf011d4ee338b436596f069"
       },
       "fr_FR": {
-        "bytes": 94182,
+        "bytes": 96525,
         "path": "/game-data/catalog/champions/76/fr_FR.json",
         "records": 6,
-        "sha256": "b6b0956fe63f17644f0de088068433f452062d57501e84741bed1cefc15f0a16"
+        "sha256": "02979ea96603779c3ce663f670f534dcaf466346578422c0c3fcebd9002f96ab"
       }
     },
     "77": {
       "en_US": {
-        "bytes": 71267,
+        "bytes": 74763,
         "path": "/game-data/catalog/champions/77/en_US.json",
         "records": 6,
-        "sha256": "0b1b0458b696c3b1dfcc334464fb079bacf3a3761aef73cef5586d8a34555888"
+        "sha256": "3fb364cc6df77cecb258a98e15e10a9a9d49b18c57926b1f51e7e953eb88388d"
       },
       "fr_FR": {
-        "bytes": 72472,
+        "bytes": 76409,
         "path": "/game-data/catalog/champions/77/fr_FR.json",
         "records": 6,
-        "sha256": "1f050c87a2a5bcffb9cd200f8848fe82e67826d7ed43ebab7fb1981b8e4dc0fe"
+        "sha256": "acd8dedff9afc8f89275ce8625f1bdb09e0fdf4b74b65454173ad2d6b867dc59"
       }
     },
     "777": {
       "en_US": {
-        "bytes": 92449,
+        "bytes": 95125,
         "path": "/game-data/catalog/champions/777/en_US.json",
         "records": 6,
-        "sha256": "ce1d5ffd3be5daf26fa3221760827ca3546bf87804258a08fb52cc8d59007919"
+        "sha256": "95106237e6655458ef873f58240198428c90de29e2b9f91b5f2db8f5ced72b0a"
       },
       "fr_FR": {
-        "bytes": 93606,
+        "bytes": 96794,
         "path": "/game-data/catalog/champions/777/fr_FR.json",
         "records": 6,
-        "sha256": "e466e5417602890fed71066f081cae8198484c3c67bf36c8d136d66961d8baee"
+        "sha256": "87c2dff738a06aaa50cc90aab9fc407ef4d4fa8c0e89fb84f1476d16818c77b5"
       }
     },
     "78": {
       "en_US": {
-        "bytes": 83226,
+        "bytes": 86459,
         "path": "/game-data/catalog/champions/78/en_US.json",
         "records": 6,
-        "sha256": "4c474bc050b520844a219b18764096c21e51c7c50d65edaee82b1dde35acd442"
+        "sha256": "cc1598efb6110f4f7590d6973847a1a849d557481f76966d6839d8b87caeea20"
       },
       "fr_FR": {
-        "bytes": 83739,
+        "bytes": 87235,
         "path": "/game-data/catalog/champions/78/fr_FR.json",
         "records": 6,
-        "sha256": "733fb8bf3511cbd78663f3415496ff6490125fde55500958f1fc4c688267fbc2"
+        "sha256": "b5a32d45cff91ef5ba96217aa410ec400df19bde49cd609a1ce4af73a70543d8"
       }
     },
     "79": {
       "en_US": {
-        "bytes": 81056,
+        "bytes": 83514,
         "path": "/game-data/catalog/champions/79/en_US.json",
         "records": 6,
-        "sha256": "79faa8f5d6a627c6d45ea528a1450a1fc800750a6614ee11a333dd4bfed7a8e4"
+        "sha256": "cc232d37f370b219df6b2dec87154461d97a8c9f1a314c8fd44b6a06dae74e39"
       },
       "fr_FR": {
-        "bytes": 81322,
+        "bytes": 83927,
         "path": "/game-data/catalog/champions/79/fr_FR.json",
         "records": 6,
-        "sha256": "006ac2f81633559ff88f54de1e0c14fb337d3cf82fd3abb41ac31eb794c4c069"
+        "sha256": "56a85ad348f71c9291e8a91ccb8c11641c2ee6461ea94541490a303bb2806d01"
       }
     },
     "799": {
       "en_US": {
-        "bytes": 69028,
+        "bytes": 72073,
         "path": "/game-data/catalog/champions/799/en_US.json",
         "records": 6,
-        "sha256": "c7e2a1f426586a9069e1e78c46cd5b5b989df22be8bec6973082c5deaff61679"
+        "sha256": "c16e5c5c2984836e2a6ca13fde88dcc4ecfd8558070e6cac8ae9111a1cd70ba1"
       },
       "fr_FR": {
-        "bytes": 69951,
+        "bytes": 73262,
         "path": "/game-data/catalog/champions/799/fr_FR.json",
         "records": 6,
-        "sha256": "2ef249cff18a0dbcc1e686540c5c3e139a03329dcac510f8ac6f2a089b51de97"
+        "sha256": "c23d64fa0e3ceaa4948fc65063d86018efb5a289145abc870fdb8addc18f98b1"
       }
     },
     "8": {
       "en_US": {
-        "bytes": 88480,
+        "bytes": 91621,
         "path": "/game-data/catalog/champions/8/en_US.json",
         "records": 6,
-        "sha256": "6350bf35bfe0eb47f391f1afbb322a200139cf33cfd94a383b180aa5534dcb7f"
+        "sha256": "be7b8df482117da614f93e645b1d557f16ce512c8d38cdb5cf7635a22d39ae63"
       },
       "fr_FR": {
-        "bytes": 89063,
+        "bytes": 92469,
         "path": "/game-data/catalog/champions/8/fr_FR.json",
         "records": 6,
-        "sha256": "2cba2620cb36d8e87637849846fda66ee87883591280d35e34ca127fcba27674"
+        "sha256": "4ff1f49d93f64e86ac2d8a2c4f971748fe9a3bd357f08eac2824c40a9b46376e"
       }
     },
     "80": {
       "en_US": {
-        "bytes": 82592,
+        "bytes": 86275,
         "path": "/game-data/catalog/champions/80/en_US.json",
         "records": 6,
-        "sha256": "ea5834a80f2a370f9ba4dc114bece32bca8cb05df306045d08ac35fc075d4831"
+        "sha256": "dbaeeaa6f4e05424fc64f4f700241ad49d3cd232a658498f3d6715fb1213116e"
       },
       "fr_FR": {
-        "bytes": 83368,
+        "bytes": 87478,
         "path": "/game-data/catalog/champions/80/fr_FR.json",
         "records": 6,
-        "sha256": "adc542d90e1fbcfc3743bac20a48f56d06c858af943584d331f7fe8ccc4c3115"
+        "sha256": "9c9c69bbbdf84ab5fa3a93e43bb3b2376546d4dde1cb1b7a5f2ddc2789757e10"
       }
     },
     "800": {
       "en_US": {
-        "bytes": 70194,
+        "bytes": 73033,
         "path": "/game-data/catalog/champions/800/en_US.json",
         "records": 6,
-        "sha256": "3e10a95ad0f08a6367224b619b3ea0158551e9930a55988cb049b8c4ba6f7704"
+        "sha256": "8c50bbcb086fd2685cb3ac88c86291cf85f52ef20b9a7c1fedae07a88327b494"
       },
       "fr_FR": {
-        "bytes": 71109,
+        "bytes": 74266,
         "path": "/game-data/catalog/champions/800/fr_FR.json",
         "records": 6,
-        "sha256": "7881caebf5b4e5dcb470f897227e7da432afe08a5e6056dc0e7868dfbdcf154c"
+        "sha256": "5413963df8810b850d7581e89fb6dbcef40958950faf06047d6f4783314932a6"
       }
     },
     "804": {
       "en_US": {
-        "bytes": 67283,
+        "bytes": 70151,
         "path": "/game-data/catalog/champions/804/en_US.json",
         "records": 6,
-        "sha256": "067ea24934b2387ae0349a19c575210652869a50b98430aea451b9e6afe84691"
+        "sha256": "b086519196ffb31711eb23c881609c0a75797f5bdce101e439750fb8f21d92ef"
       },
       "fr_FR": {
-        "bytes": 67745,
+        "bytes": 70819,
         "path": "/game-data/catalog/champions/804/fr_FR.json",
         "records": 6,
-        "sha256": "0c63a0422194c9250002e60232c02e4de90956154b502e0f9b28bb8d8f5d82c0"
+        "sha256": "3fcdd5a86f537e434e3cfca62e5648d393ff6eb40f7ca8b476957ef5bc6d68c8"
       }
     },
     "805": {
       "en_US": {
-        "bytes": 64999,
+        "bytes": 68437,
         "path": "/game-data/catalog/champions/805/en_US.json",
         "records": 6,
-        "sha256": "a9da45dd8415259926b9799f5a41a99968654271b221ed82af8b552fbfd18477"
+        "sha256": "996fce6479432f55fb38ffe5b3db2edb0ef1f150326a77f53c9747d998f2343d"
       },
       "fr_FR": {
-        "bytes": 65693,
+        "bytes": 69467,
         "path": "/game-data/catalog/champions/805/fr_FR.json",
         "records": 6,
-        "sha256": "d90a0fa306c91bfac8cf36db4bc239d0566903b585c1d381ff982d93edb1813c"
+        "sha256": "7a46f6f5dba14376ca19a0672e0d501f54d950d177ec3335d7accd4f530b9f4b"
       }
     },
     "81": {
       "en_US": {
-        "bytes": 94019,
+        "bytes": 96211,
         "path": "/game-data/catalog/champions/81/en_US.json",
         "records": 6,
-        "sha256": "6f274a7e4c9710d601bdfcbbde701c7ee5e2e6bfe2a3cf5778fedad92841282b"
+        "sha256": "7a652c3ac79b62a1cb4b3072be2492901cb70a556bc9d0cecac74ea9180e8a19"
       },
       "fr_FR": {
-        "bytes": 94658,
+        "bytes": 97087,
         "path": "/game-data/catalog/champions/81/fr_FR.json",
         "records": 6,
-        "sha256": "04a831820691d821c85c6de8ce78bfb2d84c8be81359659eacb8552c6c330702"
+        "sha256": "f0b6f29331c09e6c653134383bfacc58566a90f59a54bbf6d242f0ae16e0a91b"
       }
     },
     "82": {
       "en_US": {
-        "bytes": 88494,
+        "bytes": 90743,
         "path": "/game-data/catalog/champions/82/en_US.json",
         "records": 6,
-        "sha256": "0013eaa4d6386f93a8a041684cf58b47a8c624a83fae8dda98ab08f874134aa6"
+        "sha256": "c73551e4bc803fa407f97f612e2afd5f6b34306c1c7dbed36f49b547279686a2"
       },
       "fr_FR": {
-        "bytes": 89112,
+        "bytes": 91513,
         "path": "/game-data/catalog/champions/82/fr_FR.json",
         "records": 6,
-        "sha256": "30284ca0d06ed53d472fb7eb2eaa0aad10ecb03b1c3b442ee75c2b402988e71e"
+        "sha256": "95539118b3f7c024fce2e16cb3b68071af33ac4d04afe00df7d0a64efa30586c"
       }
     },
     "83": {
       "en_US": {
-        "bytes": 88328,
+        "bytes": 91300,
         "path": "/game-data/catalog/champions/83/en_US.json",
         "records": 6,
-        "sha256": "d5883339c4f1284242f7b7b3391cf301000a10b6af48f90323863d56e6fb21a0"
+        "sha256": "73ceacd693a52b441a7cff752a99233e539e6e6a47653ed6d428814f9c1fc213"
       },
       "fr_FR": {
-        "bytes": 88924,
+        "bytes": 92184,
         "path": "/game-data/catalog/champions/83/fr_FR.json",
         "records": 6,
-        "sha256": "5dacd7a2d9f08235a32f1bd134a524a81dd9fee826ebb3d455860157ecdaeb20"
+        "sha256": "ed850249f5474cdad5e6d3905f5273d76886a9bff960db7f70632aa046447a57"
       }
     },
     "84": {
       "en_US": {
-        "bytes": 105496,
+        "bytes": 107946,
         "path": "/game-data/catalog/champions/84/en_US.json",
         "records": 6,
-        "sha256": "50d5f826a7e20c211125e8a1b8c0392d7bfb2c40a2e8d605228f40c04843c7bf"
+        "sha256": "24b09a7d6d3f2fca1c341698d4dbae5cc1e703669160fb905e32233df5c2b409"
       },
       "fr_FR": {
-        "bytes": 106213,
+        "bytes": 108917,
         "path": "/game-data/catalog/champions/84/fr_FR.json",
         "records": 6,
-        "sha256": "9cffd2922da6695256d27fdff9e0fe2982d10a4ed446c0d3070bdf3de17dfa5e"
+        "sha256": "008bc222a9d129abac10a9dafb58cc9a2d2998ea6726c79801eabe586fe910d0"
       }
     },
     "85": {
       "en_US": {
-        "bytes": 75707,
+        "bytes": 78294,
         "path": "/game-data/catalog/champions/85/en_US.json",
         "records": 6,
-        "sha256": "599a8a986ea410d31550b60d2c2792f747e40ec4e7ce2cc3ee60abe76cda2116"
+        "sha256": "84c032e3fdacaa2a438df2c343569a588216aec9c0267366eed912b7a2b1fef1"
       },
       "fr_FR": {
-        "bytes": 76346,
+        "bytes": 79179,
         "path": "/game-data/catalog/champions/85/fr_FR.json",
         "records": 6,
-        "sha256": "610eb7fd798225feaf49892cdc04c4feb4db0615340963d5c1fa64817942f3b2"
+        "sha256": "9f6d6d03c1e7511ae1a5946e1c6a5d825f915e6fe0272b25c10c64d4c5363977"
       }
     },
     "86": {
       "en_US": {
-        "bytes": 83430,
+        "bytes": 85922,
         "path": "/game-data/catalog/champions/86/en_US.json",
         "records": 6,
-        "sha256": "e20b1c0f153c93d216805a9275b78de6ddd94e5afdab83df719b660479fb112b"
+        "sha256": "532c628c3f85bafe03a372f4e856fb93c59ae9144a0d0d1b5433dbdc2666ef38"
       },
       "fr_FR": {
-        "bytes": 84038,
+        "bytes": 86746,
         "path": "/game-data/catalog/champions/86/fr_FR.json",
         "records": 6,
-        "sha256": "d6eb43b2226e2344c8e35050b312bb3abb85f0b22313175abe87fa2618786232"
+        "sha256": "e4dad78742c58125dd1eec87a8161c99c95db09e40f240b969dcff347eb768af"
       }
     },
     "875": {
       "en_US": {
-        "bytes": 93440,
+        "bytes": 96337,
         "path": "/game-data/catalog/champions/875/en_US.json",
         "records": 6,
-        "sha256": "62d5b184844038ed65ae3d9a049e0373eeafc490719a59fca1db039fd6ef9e3f"
+        "sha256": "855e740bf3842e35c71f9044e606864ca40a4c49d4d188e2b76884be3e484e1d"
       },
       "fr_FR": {
-        "bytes": 94591,
+        "bytes": 97825,
         "path": "/game-data/catalog/champions/875/fr_FR.json",
         "records": 6,
-        "sha256": "0f805dd1e4e1664a0b5ef2fa27d85b78d60cb4e8ec04d8c8338f911e9328089f"
+        "sha256": "98dad87ab702aa6919704a1a4efd494ef8e488dc4a72e01ccb0a124423f019f9"
       }
     },
     "876": {
       "en_US": {
-        "bytes": 83972,
+        "bytes": 86357,
         "path": "/game-data/catalog/champions/876/en_US.json",
         "records": 6,
-        "sha256": "0b95bd205e5c1c928c266ae1f2afb2baac9f7acbffa91146d743a703086bfaf7"
+        "sha256": "33ebadd2249286af84b2d88672e75d9c63c2280b8add6127fea8c94ea3120c23"
       },
       "fr_FR": {
-        "bytes": 84928,
+        "bytes": 87571,
         "path": "/game-data/catalog/champions/876/fr_FR.json",
         "records": 6,
-        "sha256": "3c6a05a292de570d0f6d07503e99fabee7066fe19d19376592cb2da1ee71a052"
+        "sha256": "dbf90eb1fc18d8ecb93aee645ac6a452d7d6685faa524bd71a4e645c8aa59f6d"
       }
     },
     "887": {
       "en_US": {
-        "bytes": 86079,
+        "bytes": 89303,
         "path": "/game-data/catalog/champions/887/en_US.json",
         "records": 6,
-        "sha256": "004bb19cb7504c677c2f6e2358a8e703054a1acc4533ded939e392f7d0d0d04d"
+        "sha256": "d579c6d5edcd0025298e5b09e2ecc13c80dba62d87792d2702ed36cd6e54c6d6"
       },
       "fr_FR": {
-        "bytes": 87220,
+        "bytes": 90954,
         "path": "/game-data/catalog/champions/887/fr_FR.json",
         "records": 6,
-        "sha256": "1905714a4e070c7926c9259e2f38bb9c7de5d97ca9842b3e1be967b8d0faef93"
+        "sha256": "db9221725942af1a251f4f829e79f7145a2359a4267e5e1599d0ae3f5c61fa8d"
       }
     },
     "888": {
       "en_US": {
-        "bytes": 74267,
+        "bytes": 77066,
         "path": "/game-data/catalog/champions/888/en_US.json",
         "records": 6,
-        "sha256": "0fbf415ea26b6c51e41c249cbf45c2394741e9f02a10552ca11bd7eb47ca0374"
+        "sha256": "e088aa15b838bd0b55061ff74c1d5be2a32c7a635f1e74418858d9a0324134cd"
       },
       "fr_FR": {
-        "bytes": 75275,
+        "bytes": 78516,
         "path": "/game-data/catalog/champions/888/fr_FR.json",
         "records": 6,
-        "sha256": "d9b1849764891156a31c902c9bc7d66ba00a3808de63eea9c06a656bf85719ec"
+        "sha256": "a56b827b587988ed659d0ea94edc02272bde5ee3da7be0ce2b4ad88081f79288"
       }
     },
     "89": {
       "en_US": {
-        "bytes": 91387,
+        "bytes": 93648,
         "path": "/game-data/catalog/champions/89/en_US.json",
         "records": 6,
-        "sha256": "b0bd4241967efb610111348257aaafd3ada01748b2319ee2a9a9a6787b130737"
+        "sha256": "d3b4708f34cae9fda909adee2233d8c3d48a89e3012528733d81e86a830f97da"
       },
       "fr_FR": {
-        "bytes": 92115,
+        "bytes": 94574,
         "path": "/game-data/catalog/champions/89/fr_FR.json",
         "records": 6,
-        "sha256": "ea8e70f673ddf337ac8fb359a2c9941e7e310ed652afe3025892fa33be98689c"
+        "sha256": "abbcf383d8e548f137867cf6025533b75d95d138ea74e5c1e149c09667dc8e2f"
       }
     },
     "893": {
       "en_US": {
-        "bytes": 73776,
+        "bytes": 76594,
         "path": "/game-data/catalog/champions/893/en_US.json",
         "records": 6,
-        "sha256": "a56ca763c4a7d71318e379c253e1e1cb9f51cc7677ff988e5e383ad02344155b"
+        "sha256": "f471f40ab3b3582074c079099cadfd7e45e5e89e59e8b7bd249fcddf7d95c272"
       },
       "fr_FR": {
-        "bytes": 74507,
+        "bytes": 77727,
         "path": "/game-data/catalog/champions/893/fr_FR.json",
         "records": 6,
-        "sha256": "982587907c94723a11545eb7a5a9ce509d81501681164a471853e9ddaa5f80ac"
+        "sha256": "8199c75b745a19673b16d858c6b2ef191e3222438d828d52defd84ffe62564c6"
       }
     },
     "895": {
       "en_US": {
-        "bytes": 73114,
+        "bytes": 75873,
         "path": "/game-data/catalog/champions/895/en_US.json",
         "records": 6,
-        "sha256": "b73ace1bb20e143083c9f52e9e6c9df8f760f325bc2d30333723a71438d9e966"
+        "sha256": "63ba36487c05cb90449a2e9a702661ee3fa3641fa8a22bb99531af3f89b0b2f9"
       },
       "fr_FR": {
-        "bytes": 73548,
+        "bytes": 76613,
         "path": "/game-data/catalog/champions/895/fr_FR.json",
         "records": 6,
-        "sha256": "e0f38d09b1c4ca7c952c715c4533ec60dca5256e1d3034c0af3c4bd211ee2bd6"
+        "sha256": "52c818948d77a30149409544fc59de5ad3d47feba5b24430d99a04580d1327df"
       }
     },
     "897": {
       "en_US": {
-        "bytes": 69742,
+        "bytes": 73122,
         "path": "/game-data/catalog/champions/897/en_US.json",
         "records": 6,
-        "sha256": "7b8ed70a683584be099ba2bb5e3937affc99b0a0d72c55e6ff4c3f4bdb5da8fd"
+        "sha256": "3eb5ef3f6faa0941b5457c724db896ccd9a6d97c6aab99518833146ab0c00e09"
       },
       "fr_FR": {
-        "bytes": 70969,
+        "bytes": 74830,
         "path": "/game-data/catalog/champions/897/fr_FR.json",
         "records": 6,
-        "sha256": "2457c71e3637c86ab487ee7b55ba4b1e2729722fd7c03e10974f2caea69b0c2b"
+        "sha256": "ec018c4cb19024b6b89fcfb279f61b85e3ccdc7f0f09a25dc58c4ea4931f6cb8"
       }
     },
     "9": {
       "en_US": {
-        "bytes": 89294,
+        "bytes": 91904,
         "path": "/game-data/catalog/champions/9/en_US.json",
         "records": 6,
-        "sha256": "38ea299329418e51d988b96c8a9108c98fa21334372a9146add656d994aeb7db"
+        "sha256": "1cc46bd12794067616ef9e3a3a227742c2f3fd014cac180d394e55bf3dc07b9c"
       },
       "fr_FR": {
-        "bytes": 89998,
+        "bytes": 92847,
         "path": "/game-data/catalog/champions/9/fr_FR.json",
         "records": 6,
-        "sha256": "1cfa48ce1458f93dff68149074113e4536e151657a71fb439cb4cdfe2d7ff8e5"
+        "sha256": "9b6809b40cd412b1de9bf10f3c24fc884ec53688c308d9eac78fc37b6951a3ae"
       }
     },
     "90": {
       "en_US": {
-        "bytes": 88388,
+        "bytes": 90851,
         "path": "/game-data/catalog/champions/90/en_US.json",
         "records": 6,
-        "sha256": "595f7bc90ee719457e8516701bd6312e95d8561f922902b9ba1af97f7b5bb68c"
+        "sha256": "a94bbfe8065bba056bc89ff633290fd31c4cc5eb027195ca6d8958083f602866"
       },
       "fr_FR": {
-        "bytes": 89083,
+        "bytes": 91744,
         "path": "/game-data/catalog/champions/90/fr_FR.json",
         "records": 6,
-        "sha256": "64e341c71419576a1d55e84da84da5e8e2adc0505c1e85fb425748db8e9706cf"
+        "sha256": "97dfdf5e5fb684f7ee119a31115c82650f8b0b0de4a744139ea8fcad157295f5"
       }
     },
     "901": {
       "en_US": {
-        "bytes": 70370,
+        "bytes": 73850,
         "path": "/game-data/catalog/champions/901/en_US.json",
         "records": 6,
-        "sha256": "6e2c681d4949be575908fe7fd761b6bb639531c94f0c1b086303b824c95de63f"
+        "sha256": "852b4f14dd215e3e50eea38653db726cc0caee613dcd204822bf841ad32a5357"
       },
       "fr_FR": {
-        "bytes": 71155,
+        "bytes": 75029,
         "path": "/game-data/catalog/champions/901/fr_FR.json",
         "records": 6,
-        "sha256": "79550e2ba726c2b84f1321c96b4249bcdc46db4476b5f5c8aa5ff55a60f5d122"
+        "sha256": "f9a78a2bbc71f16d3ea570de5618cd688d3f667db32942131ca4b5ce79b57164"
       }
     },
     "902": {
       "en_US": {
-        "bytes": 73371,
+        "bytes": 75623,
         "path": "/game-data/catalog/champions/902/en_US.json",
         "records": 6,
-        "sha256": "3915153d88c10e33fa7a6c437dcb77f7383a38208b66e86701172000f0f7b655"
+        "sha256": "13f2698dcbab8c9cc7b835e26718cdede3092089a24ee67cbf54da2197f6a657"
       },
       "fr_FR": {
-        "bytes": 74002,
+        "bytes": 76443,
         "path": "/game-data/catalog/champions/902/fr_FR.json",
         "records": 6,
-        "sha256": "2e12d8e9c9ea9b2bdd66bea217f33223f9b9db23d327f0b1fa5b16f0e2e37979"
+        "sha256": "d3618f2aeb43b49e4785bfd9706a33040ce1b95d58bc69fac5bd8d6bc6a3875c"
       }
     },
     "904": {
       "en_US": {
-        "bytes": 65035,
+        "bytes": 67666,
         "path": "/game-data/catalog/champions/904/en_US.json",
         "records": 6,
-        "sha256": "053d6fc585ecad4f540ad22792d44199a227849976e22440dd0901d99bad411d"
+        "sha256": "263e02b8759564a0dd9391d0580308efa393bf18a3c68dbe171164b81b5cab83"
       },
       "fr_FR": {
-        "bytes": 65929,
+        "bytes": 68859,
         "path": "/game-data/catalog/champions/904/fr_FR.json",
         "records": 6,
-        "sha256": "e0847ec1c3ceff01e802804cb889427da1dea1030bc29e85528d22477e6a34e0"
+        "sha256": "cdf8e4fecf3a476e5fcfb94497fe6702aa545facb6472ecf33278428de658c31"
       }
     },
     "91": {
       "en_US": {
-        "bytes": 87289,
+        "bytes": 89801,
         "path": "/game-data/catalog/champions/91/en_US.json",
         "records": 6,
-        "sha256": "68dc59f76ade2f4592ef18a8d83025f86fed26c17055a1877039924e873f8ba4"
+        "sha256": "fb45ff2c80587205a770f57f95ca534b1ad84044708f9ecdd54ceaad53758f3e"
       },
       "fr_FR": {
-        "bytes": 88134,
+        "bytes": 90875,
         "path": "/game-data/catalog/champions/91/fr_FR.json",
         "records": 6,
-        "sha256": "96a594ee29ea8c73c722259036976d81992c28a8f1744d7ebbc638b6356a8048"
+        "sha256": "f3886d8b59838aeee1eef00ed599ed8b1518fd0f842c1f36df59f03404a83420"
       }
     },
     "910": {
       "en_US": {
-        "bytes": 74575,
+        "bytes": 78850,
         "path": "/game-data/catalog/champions/910/en_US.json",
         "records": 6,
-        "sha256": "1100d4262a46351a03e86c9b0c8750d124ae89d52889360a4b5d6befd220e91c"
+        "sha256": "a839d380edbfe0aca304f38ece2356911fc1e7f22f048016be464016065524ce"
       },
       "fr_FR": {
-        "bytes": 75631,
+        "bytes": 80450,
         "path": "/game-data/catalog/champions/910/fr_FR.json",
         "records": 6,
-        "sha256": "c9790ad50715844b4b26f161d452cc837e9253448ed60213cd0826ffa11b35af"
+        "sha256": "559f609cf5430d63482d10053aeba33c045ab21177ac71bc30c8fb0588dab72f"
       }
     },
     "92": {
       "en_US": {
-        "bytes": 91223,
+        "bytes": 93544,
         "path": "/game-data/catalog/champions/92/en_US.json",
         "records": 6,
-        "sha256": "39c904006b8cfb181ffdd0f2146277626c8a5e5028604f97ad0c7c177d4d5cd1"
+        "sha256": "5d87fa23b8411e9cf07742a09c637f7bddf0d4bbde4b9608c548e0019857cf8b"
       },
       "fr_FR": {
-        "bytes": 91923,
+        "bytes": 94506,
         "path": "/game-data/catalog/champions/92/fr_FR.json",
         "records": 6,
-        "sha256": "b968815f9375b4e54ebc041a8aad9c3864dcc303fef9765bd535db1d0994ff2c"
+        "sha256": "ab78e76f8dbddbaf27e91fa45c6967252a2208963102273c451a4794cdb4af2f"
       }
     },
     "950": {
       "en_US": {
-        "bytes": 79295,
+        "bytes": 82730,
         "path": "/game-data/catalog/champions/950/en_US.json",
         "records": 6,
-        "sha256": "047431f79dc50f142c214575242347013f84316b0ab35194ace125d96b662222"
+        "sha256": "f6f8bbc64d17cc32ca10d642919f493963bc20f360c34ce3dc96f0a61ed5e860"
       },
       "fr_FR": {
-        "bytes": 80296,
+        "bytes": 84121,
         "path": "/game-data/catalog/champions/950/fr_FR.json",
         "records": 6,
-        "sha256": "34c24ec54aa02c73dda76db6b3dcae801b53c9a55b1861c0af18183cc87d88da"
+        "sha256": "e57346c71ddc62c24ff04a4314381d87ba774f8a950a171602545e4a1e986e17"
       }
     },
     "96": {
       "en_US": {
-        "bytes": 89987,
+        "bytes": 92340,
         "path": "/game-data/catalog/champions/96/en_US.json",
         "records": 6,
-        "sha256": "971d97075db551b2cbd49c7099d7590c0f241d78ea6f7f5bf841b86fd0aab5d9"
+        "sha256": "cd40509b97a702874f0be544ba36b9ff2bd649d717b1d0ef459e9bd3b9270474"
       },
       "fr_FR": {
-        "bytes": 90658,
+        "bytes": 93207,
         "path": "/game-data/catalog/champions/96/fr_FR.json",
         "records": 6,
-        "sha256": "4609537beabe08d75da44a6f966a1211f352f437063f5e6f882f8fd53071872c"
+        "sha256": "fcf52bbb1c8314718f32c5809303c1c3127232c7be2562d4af0330fdec960a70"
       }
     },
     "98": {
       "en_US": {
-        "bytes": 86777,
+        "bytes": 89478,
         "path": "/game-data/catalog/champions/98/en_US.json",
         "records": 6,
-        "sha256": "6e1e839129120166189b8efe20cf2cb71f35ef541228a0c00b7e8638deda07eb"
+        "sha256": "d228976fac82c1ae2c5513959fbbd8217b702c84418a2b4cf0a7165585e2e4fe"
       },
       "fr_FR": {
-        "bytes": 87378,
+        "bytes": 90317,
         "path": "/game-data/catalog/champions/98/fr_FR.json",
         "records": 6,
-        "sha256": "b0d5c548aeeb41aaf860363fb6cfcf80fa1e56639d45778974c8fde11c8b4dfc"
+        "sha256": "96323917fb466c15713ab283cface6176a291aba5fe405ba1d004210eb005bde"
       }
     },
     "99": {
       "en_US": {
-        "bytes": 93812,
+        "bytes": 95730,
         "path": "/game-data/catalog/champions/99/en_US.json",
         "records": 6,
-        "sha256": "8c0f2e6cde5a1a3758454cb1c525976981a4b935a44d1dd4148c7971f3fbcc94"
+        "sha256": "24fe6e81fbef4655251996863d796718bd55b1ed6add777d3c4b186cd8a96618"
       },
       "fr_FR": {
-        "bytes": 94336,
+        "bytes": 96373,
         "path": "/game-data/catalog/champions/99/fr_FR.json",
         "records": 6,
-        "sha256": "d11e9c94d74812b9d201232623ebd87e54cdd4f6cb771d9bc56ce30e243dfe75"
+        "sha256": "1b1fbce0c5bc66611be640b2152556a8085d9786ed1763cf0b656214948da22a"
       }
     }
   },
@@ -2432,14 +2432,14 @@
         "rune_shard": 10,
         "summoner_spell": 34
       },
-      "bytes": 5620262,
+      "bytes": 5634770,
       "item_filter": {
         "mode": "map_11_with_components",
         "reason": null
       },
       "path": "/game-data/catalog/en_US.json",
       "records": 458,
-      "sha256": "f84213e0df268bd82ca0d00fd6b8b267006720118e1fc5e843c9269fcf7f38f6",
+      "sha256": "d85baaf68f03e0ca14f948b42d5ef59d1a76b161ff944bcf07f5de1b83349a17",
       "total_records": 1496
     },
     "fr_FR": {
@@ -2449,23 +2449,30 @@
         "rune_shard": 10,
         "summoner_spell": 34
       },
-      "bytes": 5714314,
+      "bytes": 5730340,
       "item_filter": {
         "mode": "map_11_with_components",
         "reason": null
       },
       "path": "/game-data/catalog/fr_FR.json",
       "records": 458,
-      "sha256": "8cc1b38862850f0c8c39f4511d4c0fa170a26ff8bbde290c5eefc95028ee07cd",
+      "sha256": "c6b3513d5c2f6e562668e16413fdad5910d06b0bb4fb818bbcb963737ad5342d",
       "total_records": 1496
     }
   },
-  "normalizer_version": 1,
+  "normalizer_version": 3,
+  "reprojection": {
+    "base_normalizer_version": 1,
+    "fields": [
+      "tooltip_segments"
+    ],
+    "other_records_preserved": true
+  },
   "schema_version": 2,
   "sources": {
-    "bytes": 530501,
+    "bytes": 530607,
     "path": "/game-data/catalog/sources.json",
-    "sha256": "db8b009db30da97f4c30d982bc6dd2c7e2919baf5d73a3cb239249603ddfeac3"
+    "sha256": "92eed8bd1da4009d0ac7732e4517ef44055c9fc3aa51bd665cdc2b7226573dc0"
   },
   "version": "16.19.1"
 }

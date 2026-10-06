@@ -76,6 +76,11 @@ versionnées avec provenance et couverture, sans clé Riot. Reconstruction depui
 les archives : `catalog --rebuild <publication_id> --json` (sans réseau).
 Options, filtres et limites : [référentiel du jeu](catalogue-jeu.md).
 
+Pour reprendre uniquement les types de dégâts des tooltips sans base ni clé Riot, l’exemple
+`reproject_tooltip_segments` consomme un export/snapshot d’origine et un cache de JSON raw publics
+vérifiés. Il produit deux nouveaux dossiers, sans modifier les anciens :
+voir [commande, format du cache et limites](catalogue-desktop.md#reprise-ciblée-des-segments-107).
+
 Pour les vidéos de skins (#47), `scripts/catalog-skin-spotlights.py` prépare
 un catalogue candidat et un rapport de couverture depuis les métadonnées
 publiques, sans télécharger les vidéos. Paramètres, cache, arrêt sur refus

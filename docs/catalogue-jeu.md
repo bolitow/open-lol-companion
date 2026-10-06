@@ -255,10 +255,22 @@ fragments `{text, damage_type}` :
   `tooltip` dans Data Dragon, non plus. Les sorts d'invocateur passent par le même code et
   l'obtiennent si leur source porte un `tooltip`.
 
+Le desktop valide le statut `derived`, l’unité absente, la shape, la provenance du même tooltip et la
+concaténation brute avant de colorer. Les formules reçoivent le type de leur occurrence : le même
+`{{ totaldamage }}` d’Ahri Q est magique à l’aller puis brut au retour. Les mentions/ratios AD/AP
+gardent leurs propres couleurs. Sans champ valide ou si le texte compilé diffère, les dégâts restent
+neutres ; la description courte, distincte du tooltip, et les passifs sans tooltip sont aussi neutres.
+Le retrait des jetons d’icône et de l’append s’applique aux segments sans perdre leurs positions.
+
+L’embarqué FR/EN a reçu 726 champs par langue le 6 octobre 2026 par [reprise ciblée du raw public](catalogue-desktop.md#reprise-ciblée-des-segments-107).
+`NORMALIZER_VERSION=3` désigne les nouveaux champs reprojetés ; les autres records/champs de
+l’export d’origine (normaliseur 1) sont conservés. Cette opération ne republie pas le référentiel
+PostgreSQL `/v1/catalog` et n’intègre pas l’export élargi des objets/augments.
+
 Limites : les ratios (PV, armure, résistance magique) et les valeurs des blocs `effect`, `vars` et
-`leveltip` ne sont pas interprétés, l'interprète d'effets du BIN reste propre au desktop, et la regex de
-`abilityPresentation.ts` n'est pas supprimée par ce lot (côté desktop). Le catalogue publié et l'export
-desktop ne contiennent ce champ qu'après une nouvelle publication (`NORMALIZER_VERSION` passe à 3).
+`leveltip` ne sont pas interprétés ; l’interprète d’effets du BIN reste propre au desktop. Le rendu
+générique des sorts d’invocateur utilise encore leur description courte, sans résoudre les variables
+du tooltip. #107 reste ouvert pour la migration BIN et les validations non effectuées.
 
 ## Contrat, provenance et couverture
 

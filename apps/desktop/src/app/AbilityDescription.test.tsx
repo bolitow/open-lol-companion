@@ -11,3 +11,8 @@ it('affiche le fonctionnement entier sans dépliant dans la vue agrandie',()=>{
 it('conserve le fonctionnement dépliable dans la fiche compacte',()=>{
  expect(renderToStaticMarkup(<AbilityDescription record={record} locale="en"/>)).toContain('aria-expanded="false"');
 });
+it('laisse une description courte et un passif neutres même si leur texte annonce des dégâts',()=>{
+ const html=renderToStaticMarkup(<AbilityDescription record={record} locale="fr" compact/>);
+ expect(html).not.toContain('ability-magic-damage');expect(html).not.toContain('ability-damage');
+ expect(html).toContain('…');expect(html).not.toContain('Fin du fonctionnement.');
+});
