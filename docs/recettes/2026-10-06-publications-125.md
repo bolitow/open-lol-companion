@@ -53,11 +53,37 @@ synthétique en environnement du processus, session League préservée.
   94 secondes, sans nouvelle tentative.
 - Ressources de recette nettoyées, aucune configuration persistante d'accès.
 
-**Limite explicite :** la protection anti-collage DevTools a empêché la lecture
-directe de `publication_state`. Les statuts et révisions exacts ne sont donc pas
-revendiqués sur Windows. Cette preuve reste nécessaire avant clôture de #125.
-Aucune protection désactivée ; aucun WSS natif Windows revendiqué. La recette du
-transport WSS est couverte séparément par les tests Rust ci-dessous.
+### Complément natif en développement : lecture exacte des états
+
+La protection anti-collage DevTools empêchait la lecture directe de
+`publication_state`. Elle a été conservée. Une page de recette temporaire charge
+le vrai front `/src/main.tsx` et affiche uniquement les données publiques de la
+commande et de l'événement `publication-state`, dans la vraie WebView Tauri.
+Le fichier est hors production et a été retiré après recette.
+
+Sources `acffccb`, binaire Tauri **dev** SHA256
+`798CC8589247127A246D7F5A0C3632002853DD0AB36C9973322955EA263200D9`,
+distinct du binaire embarqué précédent. Configuration standard du `devUrl`
+vers `http://127.0.0.1:1420/recipe125.html`, sans changement des capabilities,
+de CSP, du trousseau ou des règles TLS. Page SHA256
+`4CC9537C3FB9EBB40A0BE655C6BC4BA76F71049A77312A7A5B6BA5F5DFC734BD`,
+configuration SHA256
+`79239D549A7C00AD5E9648D4E6C316CA555EAAFBADA0358E16D3B0CA7EFBC417`.
+
+| Action | État réellement lu dans la WebView native |
+| --- | --- |
+| Connexion initiale | `connected`, révision 1 |
+| Nouvelle publication | `connected`, révision 2, relectures REST automatiques |
+| Coupure | `reconnecting`, révision 2 |
+| Relance sans changer la publication | `connected`, révision 2 |
+| Nouveau processus avec accès invalide | `unauthorized`, révision 0, version des statistiques absente |
+| Après refus | Une seule ouverture WebSocket, aucune nouvelle tentative pendant 63 secondes |
+
+Preuves locales : `outputs/windows-pr197-acffccb/qa125dev/native-states.json`,
+`requests.jsonl`, `artifact-hashes.json`, configuration et compte rendu. Processus,
+page, profil et PostgreSQL de recette nettoyés ; checkout propre ; binaire initial
+restauré avec son empreinte, session League préservée. Aucun WSS natif Windows
+revendiqué : son transport est couvert séparément par les tests Rust ci-dessous.
 
 ## Transport WSS automatisé
 

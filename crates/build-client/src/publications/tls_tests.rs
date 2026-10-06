@@ -2,11 +2,25 @@
 use super::*;
 use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use tokio_rustls::TlsAcceptor;
+use tokio_tungstenite::tungstenite::handshake::server::{
+    Callback, ErrorResponse, Request, Response,
+};
 
 const AUTHORITY: &[u8] = include_bytes!("fixtures/authority.der");
 const CERTIFICATE: &[u8] = include_bytes!("fixtures/server.der");
 // Clé privée de recette, publiquement distribuée et inutilisable en production.
 const TEST_PRIVATE_KEY: &[u8] = include_bytes!("fixtures/server-key.der");
+
+/// Implémente le contrat de Tungstenite sans imposer son erreur HTTP à une closure.
+struct PublicHandshake;
+impl Callback for PublicHandshake {
+    fn on_request(self, request: &Request, response: Response) -> Result<Response, ErrorResponse> {
+        assert_eq!(request.uri().path(), "/v1/ws");
+        assert!(request.uri().query().is_none());
+        assert!(!request.headers().contains_key("authorization"));
+        Ok(response)
+    }
+}
 
 fn acceptor() -> TlsAcceptor {
     let config = rustls::ServerConfig::builder_with_provider(Arc::new(
@@ -53,18 +67,9 @@ async fn wss_authentifie_et_recoit_les_publications_sur_un_flux_tls_verifie() {
     let server = tokio::spawn(async move {
         let (stream, _) = listener.accept().await.unwrap();
         let tls = acceptor().accept(stream).await.unwrap();
-        let mut ws = tokio_tungstenite::accept_hdr_async(
-            tls,
-            |request: &tokio_tungstenite::tungstenite::handshake::server::Request,
-             response: tokio_tungstenite::tungstenite::handshake::server::Response| {
-                assert_eq!(request.uri().path(), "/v1/ws");
-                assert!(request.uri().query().is_none());
-                assert!(!request.headers().contains_key("authorization"));
-                Ok(response)
-            },
-        )
-        .await
-        .unwrap();
+        let mut ws = tokio_tungstenite::accept_hdr_async(tls, PublicHandshake)
+            .await
+            .unwrap();
         let first = ws.next().await.unwrap().unwrap();
         assert_eq!(
             serde_json::from_str::<serde_json::Value>(first.to_text().unwrap()).unwrap(),
