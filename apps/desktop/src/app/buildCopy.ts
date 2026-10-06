@@ -1,5 +1,11 @@
 export const buildCopy={
  fr:{
+  pickRateDefinition:'Méthode du taux de sélection',championSelectionShare:'Part des sélections',championPickRateUnspecified:'Taux de sélection',
+  pickRateMatches:'Parties avec ce champion / parties du compartiment × 100. Chaque partie compte une seule fois, même si le champion apparaît deux fois.',
+  pickRateParticipations:'Participations du champion / participations du compartiment × 100. Méthode historique, différente de la présence par partie.',
+  pickRateMissing:'Définition non fournie par cet instantané ; le taux publié est conservé sans supposer sa méthode.',
+  pickRateUnknown:'Définition non reconnue dans cette version ; la formule du serveur est conservée ci-dessous.',
+  buildFrequencyHint:'Fréquence des builds : participations avec cette variante / participations éligibles de cette catégorie pour ce champion × 100. Ce taux décrit la variante, pas la présence du champion.',
   otherCategory:'Autre catégorie',variantCap:'Plafond de variantes par catégorie',
   observationCategories:{starter:'Objets de départ',boots:'Bottes',core:'Trois premiers objets',item_slot_4:'Quatrième objet',item_slot_5:'Cinquième objet',item_slot_6:'Sixième objet',rune_keystone:'Clé de voûte',rune_primary_style:'Arbre principal',rune_secondary_style:'Arbre secondaire',rune_secondary_pair:'Paire secondaire',rune_slot_1:'Runes — premier emplacement',rune_slot_2:'Runes — deuxième emplacement',rune_slot_3:'Runes — troisième emplacement',rune_shard_offense:'Fragment offensif',rune_shard_flex:'Fragment adaptatif',rune_shard_defense:'Fragment défensif',skill_start:'Trois premiers points',skill_priority:'Priorité des compétences',special_skill_order:'Évolutions des compétences'},
 
@@ -21,6 +27,12 @@ export const buildCopy={
   errors:{not_configured:'Les statistiques ne sont pas encore connectées sur cet appareil.',invalid_configuration:'La connexion aux statistiques doit être configurée.',invalid_request:'Ces filtres ne sont pas pris en charge.',unauthorized:'L’accès aux statistiques a expiré ou n’est pas autorisé.',unavailable:'Les statistiques sont temporairement indisponibles.',rate_limited:'Le service est occupé. Réessayez dans un instant.',invalid_response:'Ces données ne peuvent pas être affichées de façon fiable.',changed_snapshot:'Les statistiques ont changé pendant le chargement. Actualisez.',desktop_required:'Les statistiques sont accessibles dans l’application desktop.'},
  },
  en:{
+  pickRateDefinition:'Pick rate method',championSelectionShare:'Selection share',championPickRateUnspecified:'Pick rate',
+  pickRateMatches:'Matches with this champion / matches in this group × 100. Each match counts once, even if the champion appears twice.',
+  pickRateParticipations:'Champion participations / participations in this group × 100. Historical method, different from match presence.',
+  pickRateMissing:'Definition not provided by this snapshot; the published rate is kept without assuming its method.',
+  pickRateUnknown:'Unrecognized definition in this version; the server formula is kept below.',
+  buildFrequencyHint:'Build frequency: participations using this variant / eligible participations in this category for this champion × 100. This rate describes the variant, not champion presence.',
   otherCategory:'Other category',variantCap:'Variant limit per category',
   observationCategories:{starter:'Starting items',boots:'Boots',core:'First three items',item_slot_4:'Fourth item',item_slot_5:'Fifth item',item_slot_6:'Sixth item',rune_keystone:'Keystone',rune_primary_style:'Primary tree',rune_secondary_style:'Secondary tree',rune_secondary_pair:'Secondary pair',rune_slot_1:'Runes — first slot',rune_slot_2:'Runes — second slot',rune_slot_3:'Runes — third slot',rune_shard_offense:'Offensive shard',rune_shard_flex:'Adaptive shard',rune_shard_defense:'Defensive shard',skill_start:'First three points',skill_priority:'Ability priority',special_skill_order:'Ability evolutions'},
 

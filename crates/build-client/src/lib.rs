@@ -106,6 +106,9 @@ pub struct BuildMeta {
     pub source_snapshot_at: String,
     pub published_at: String,
     pub min_games: u32,
+    /// Formule publiée du pick rate champion ; absente pour les anciens serveurs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pick_rate_definition: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub population_label: Option<String>,
     #[serde(default)]

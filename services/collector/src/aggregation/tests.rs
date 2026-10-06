@@ -364,8 +364,12 @@ fn le_denominateur_du_pickrate_est_propre_au_rang_observe() {
         "fake-puuid-0".into(),
         observed("ranked", Some("GOLD"), 3600),
     );
+    a.ranks.insert(
+        "fake-puuid-5".into(),
+        observed("ranked", Some("GOLD"), 3600),
+    );
     let mut b = game("EUW1_r2");
-    // Seule la seconde partie a un top GOLD, sous un autre champion.
+    // La seconde partie a un seul TOP GOLD, sous un autre champion ; la première en a deux.
     b.detail["info"]["participants"][0]["championId"] = json!(99);
     b.ranks.insert(
         "fake-puuid-0".into(),
@@ -374,13 +378,17 @@ fn le_denominateur_du_pickrate_est_propre_au_rang_observe() {
     let mut acc = Accumulator::new(1).unwrap();
     acc.add(&a);
     acc.add(&b);
+    // Troisième partie du compartiment ALL, sans participation GOLD.
+    acc.add(&game("EUW1_r3"));
     let report = acc.finish();
     let gold = find_group(&report, 1, Role::Top, "GOLD");
     assert_eq!(
         (gold.bucket_matches, gold.population, gold.pick_rate),
-        (2, 2, Some(50.0))
+        (2, 3, Some(50.0))
     );
-    assert_eq!(gold.selection_share, Some(50.0));
+    assert!((gold.selection_share.unwrap() - 100.0 / 3.0).abs() < 1e-9);
+    let all = find_group(&report, 1, Role::Top, "ALL");
+    assert_eq!((all.bucket_matches, all.population), (3, 6));
 }
 
 #[test]

@@ -270,6 +270,22 @@ mod tests {
         assert!(requests.iter().all(|r| r.starts_with("GET /v1/tierlist?")));
     }
     #[tokio::test]
+    async fn transmet_la_definition_du_pickrate_de_la_tierlist() {
+        let definition = "champion_matches / bucket_matches * 100";
+        let pages = ROLES
+            .iter()
+            .map(|role| {
+                let mut value = page(role, 0, 0, vec![]);
+                value["meta"]["pick_rate_definition"] = json!(definition);
+                value
+            })
+            .collect();
+        let (client, server) = server(pages).await;
+        let report = serde_json::to_value(client.draft_stats(request()).await.unwrap()).unwrap();
+        assert_eq!(report["meta"]["pick_rate_definition"], definition);
+        server.await.unwrap();
+    }
+    #[tokio::test]
     async fn refuse_doublons_snapshot_et_scope_incoherents() {
         let duplicate = page("TOP", 0, 2, vec![row("TOP", 1), row("TOP", 1)]);
         let mut scope = page("TOP", 0, 1, vec![row("TOP", 1)]);
