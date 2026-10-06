@@ -18,6 +18,8 @@ Toutes les évolutions notables du projet. Format : [Keep a Changelog](https://k
 
 ### Ajouté
 
+- Recette native de l’overlay : visibilité de la mention légale FR/EN vérifiée sur Windows et macOS, captures du NSPanel macOS et limites consignées (#187).
+
 - Recette WSS du client de publications : authentification et notifications sur TLS réel, refus d'une autorité non approuvée avant envoi du jeton, sans modification de la confiance du système (#125).
 
 - Draft classée : estimation descriptive des deux camps et couverture, recalcul local depuis une tierlist complète et cohérente des six rôles ; transport Rust borné, réglage masquant aussi calcul/chargement, aucune estimation de remplacement sans données (#181).
