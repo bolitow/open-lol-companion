@@ -10,6 +10,9 @@ use tokio_tungstenite::tungstenite::{
     Message,
 };
 
+#[path = "tls_tests.rs"]
+mod tls_tests;
+
 const TOKEN: &str = "test-token";
 
 fn fast() -> ReconnectPolicy {

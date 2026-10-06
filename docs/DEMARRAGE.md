@@ -162,6 +162,14 @@ d’authentification) arrête les tentatives
 l’écoute sans redémarrage, ou relancer l’app avec de nouvelles variables). L’état est lu par la
 commande `publication_state` et émis avec l’événement `publication-state`.
 
+La recette de transport TLS se lance avec `cargo test -p olc-build-client wss_` :
+véritable serveur WSS sur un port loopback éphémère, authentification dans la
+première frame et deux publications reçues. L'autorité synthétique n'est approuvée
+que par le client du test positif ; le test négatif garde les autorités de
+production et refuse le certificat avant toute authentification. Aucun trousseau
+système ni dépendance OpenSSL à l'exécution. Ce contrôle ne remplace pas la
+[recette application–API sur les deux OS](recettes/2026-10-06-publications-125.md).
+
 ## 4. Où coder quoi
 
 Les commandes Tauri `import_runes`, `import_spells` et `import_items` sont décrites
